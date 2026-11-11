@@ -107,6 +107,11 @@
       .pending-note{display:none;background:#fdf0d5;border:1px solid #eec27a;color:#7a4d05;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
       @media (prefers-color-scheme: dark){.pending-note{background:#3a2c10;color:#f5c877;border-color:#6b5518}}
       .pending-note.show{display:block}
+      .pad button:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+      .sync-gate{display:none;background:#e8eff8;border:1px solid #b9d2ea;color:#175d8f;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
+      @media (prefers-color-scheme: dark){.sync-gate{background:#16283a;color:#a8cdf0;border-color:#2c4a68}}
+      .sync-gate.show{display:block}
+      .conn.err{background:var(--red-bg);border-color:#e5a49c;color:var(--red)}
       .players-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
       @media (max-width:820px){.players-grid{grid-template-columns:1fr}}
       .striker-tag{font-size:11px;background:var(--gold);color:#241a02;border-radius:5px;padding:1px 6px;font-weight:700;margin-left:5px;vertical-align:middle}
@@ -584,6 +589,7 @@
 
         <div class="card">
           <h2>Scoring Pad</h2>
+          <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase — loading the live match first. Scoring unlocks as soon as it loads, so a refresh can never wipe the real score.</div>
           <div class="pending-note" id="pendingNote"></div>
           <div class="pad" role="group" aria-label="Scoring pad">
             <button onclick="scoreRuns(0)">0</button>
@@ -908,9 +914,12 @@
     <script>
       /* ============================================================
          Live Cricket Score — 1 input, 2 outputs
-         State lives in memory; syncs via:
+         State syncs via:
          (a) BroadcastChannel — other tabs/windows of this browser
-         (b) Firebase Realtime Database — when the user connects it
+         (b) Firebase Realtime Database — when connected (auto by default)
+         (c) an on-device backup (localStorage), rewritten on every
+             change, so a refresh restores the score instantly and
+             Firebase then re-syncs on top of it
          ============================================================ */
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
@@ -955,6 +964,81 @@
       var undoStack = [];
       var pendingExtra = null; /* 'wide' | 'noball' | 'bye' | 'legbye' */
       var fbApp = null, fbRef = null, fbPushing = false, fbIsDefault = false;
+      /* Sync state machine. fbReady turns true only after the first
+         Firebase snapshot has actually been read — until then the scoring
+         pad stays locked and NOTHING is pushed, so a fresh or refreshed
+         tab can never overwrite the real match in the database with the
+         local 0/0 demo state. fbLocalDirty marks scoring done locally
+         while Firebase was unreachable (kept safe in the on-device
+         backup below). */
+      var fbReady = false, fbConnecting = false, fbLocalDirty = false, fbErrorShown = false, fbGateTimer = null;
+      /* On-device backup of the whole state (Firebase stays the shared
+         source of truth; this backup is what makes a refresh of the
+         control page restore the score instantly, before — and even
+         without — Firebase answering). */
+      var LS_BACKUP_KEY = 'live-cricket-score-backup-v1';
+      var localRestored = false;
+      function saveLocalBackup(){
+        try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(S)); } catch(e){}
+      }
+      function loadLocalBackup(){
+        try {
+          var raw = localStorage.getItem(LS_BACKUP_KEY);
+          if (!raw) return null;
+          var v = JSON.parse(raw);
+          if (!v || typeof v !== 'object' || !v.current || typeof v.current !== 'object') return null;
+          if (typeof v.teamA !== 'string' || typeof v.teamB !== 'string') return null;
+          return v;
+        } catch(e){ return null; }
+      }
+      function hasMeaningfulState(st){
+        if (!st || !st.current) return false;
+        var c = st.current;
+        if (c.runs > 0 || c.wickets > 0 || c.legalBalls > 0) return true;
+        if (st.prevInnings) return true;
+        if (st.status === 'finished') return true;
+        if (st.tournament && ((st.tournament.matches||[]).length || (st.tournament.fixtures||[]).length)) return true;
+        return false;
+      }
+      /* ---------- connection status (always honest) ---------- */
+      function setConnStatus(mode, detail){
+        var pill = $('connPill'); if (!pill) return;
+        pill.classList.remove('on'); pill.classList.remove('err');
+        if (mode === 'live'){ pill.textContent = '● Firebase Live — Everyone online is watching'; pill.classList.add('on'); }
+        else if (mode === 'connecting'){ pill.textContent = '● Connecting to Firebase…'; }
+        else if (mode === 'error'){ pill.textContent = '● Firebase problem — viewers may not be updating'; pill.classList.add('err'); }
+        else { pill.textContent = '● Local Mode — Live across tabs in this browser'; }
+        if (detail){
+          var st = $('fbStatus'); if (st) st.textContent = detail;
+        }
+      }
+      function showFirebaseError(err, where){
+        var msg = (err && err.message) ? err.message : String(err || 'unknown error');
+        setConnStatus('error', '⚠️ Firebase ' + where + ' failed: ' + msg + ' — your score is backed up on this device and scoring can continue, but viewers will not update until Firebase works again. Check the connection and the database rules, then reconnect.');
+        if (!fbErrorShown){ fbErrorShown = true; toast('⚠️ Firebase problem — viewers may not be updating. Score is backed up on this device.'); }
+      }
+      /* ---------- scoring gate (locked until first Firebase read) ---------- */
+      function setPadLocked(locked){
+        var note = $('syncGateNote'); if (note) note.classList.toggle('show', !!locked);
+        var padCard = note ? note.closest('.card') : null;
+        if (padCard){
+          padCard.querySelectorAll('button').forEach(function(b){ b.disabled = !!locked; });
+        }
+        var startBtns = document.querySelectorAll('#setupCard .fold-body .btn');
+        startBtns.forEach(function(b){ b.disabled = !!locked; });
+        var squadBtns = document.querySelectorAll('#squadCard .fold-body button');
+        squadBtns.forEach(function(b){ b.disabled = !!locked; });
+      }
+      function scoringLocked(){
+        if (!fbConnecting) return false;
+        toast('⏳ Still loading the live match from Firebase — scoring unlocks in a moment');
+        return true;
+      }
+      function pushToFirebase(){
+        if (!fbRef || fbPushing || !fbReady) return;
+        var ref = fbRef;
+        ref.set(S).then(function(){ fbErrorShown = false; }).catch(function(err){ showFirebaseError(err, 'update'); });
+      }
       /* Built-in default Firebase config — baked in so the site auto-connects
          for everyone (scorer, viewers and the GitHub Pages copy) with no
          pasting. A config pasted manually in Firebase Setup takes precedence
@@ -1013,7 +1097,7 @@
         inn.bowler = $('bowlerName').value.trim() || 'Bowler';
         getBatter(inn, inn.striker); getBatter(inn, inn.nonStriker); getBowler(inn, inn.bowler);
       }
-      function onPlayerNameChange(){ syncPlayersFromInputs(); renderAll(false); }
+      function onPlayerNameChange(){ syncPlayersFromInputs(); saveLocalBackup(); renderAll(false); }
 
       /* ---------- squads & player picker ---------- */
       function normalizeSquads(){ if(!Array.isArray(S.squadA)) S.squadA=[]; if(!Array.isArray(S.squadB)) S.squadB=[]; }
@@ -1192,7 +1276,7 @@
       /* ---------- scoring ---------- */
       function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
 
-      function scoreRuns(n){ if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
+      function scoreRuns(n){ if (scoringLocked()) return; if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
 
       function applyBatRuns(n){
         snapshot(); syncPlayersFromInputs();
@@ -1206,6 +1290,7 @@
         maybeBowlerPrompt();
       }
       function setPending(type){
+        if (scoringLocked()) return;
         pendingExtra = (pendingExtra===type) ? null : type;
         renderPending();
         if (pendingExtra) toast(pendingExtra==='wide'
@@ -1256,6 +1341,7 @@
       function pendingLabelFor(k){ return k==='bye' ? 'Bye' : 'Leg-Bye'; }
 
       function scoreWicket(){
+        if (scoringLocked()) return;
         if (pendingExtra){ toast('Finish the pending extra ball first'); return; }
         snapshot(); syncPlayersFromInputs();
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
@@ -1277,6 +1363,7 @@
         }
       }
       function undoBall(){
+        if (scoringLocked()) return;
         if (!undoStack.length){ toast('No ball to undo'); return; }
         S = undoStack.pop(); pendingExtra=null; renderPending();
         $('strikerName').value = S.current.striker||''; $('nonStrikerName').value = S.current.nonStriker||''; $('bowlerName').value = S.current.bowler||'';
@@ -1285,6 +1372,7 @@
 
       /* ---------- match flow ---------- */
       function startMatch(){
+        if (scoringLocked()) return;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var newA = $('teamA').value.trim() || 'Team 1';
@@ -1311,6 +1399,7 @@
         commit('Match started');
       }
       function resetMatch(){
+        if (scoringLocked()) return;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         S = freshState(); S.squadA = keepA; S.squadB = keepB; S.tournament = keepTn2; S.matchId = Date.now();
@@ -1321,6 +1410,7 @@
         commit('New match reset', true);
       }
       function endInnings(auto){
+        if (!auto && scoringLocked()) return;
         if (S.inningsNo===2){ finishMatch(auto); return; }
         var inn=S.current;
         S.prevInnings = deep(inn);
@@ -1333,6 +1423,7 @@
         openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
       }
       function finishMatch(auto){
+        if (!auto && scoringLocked()) return;
         S.status='finished';
         var inn=S.current, t=target(), txt='';
         if (S.inningsNo===2 && t){
@@ -1404,8 +1495,10 @@
         try { renderTournamentHome(); } catch(e){}
         /* save silently without a toast on every keystroke */
         S.updatedAt = Date.now();
+        if (fbRef && !fbReady) fbLocalDirty = true;
+        saveLocalBackup();
         if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
-        if (fbRef && !fbPushing){ fbRef.set(S).catch(function(){}); }
+        pushToFirebase();
       }
       function addTournamentTeam(){
         var inp = $('tnNewTeam');
@@ -2128,61 +2221,124 @@
       /* ---------- sync ---------- */
       function commit(msg, silent){
         S.updatedAt = Date.now();
+        /* Every change is backed up on this device first, so refreshing
+           the control page restores the score instantly. Firebase is
+           pushed only once its first snapshot has been read (fbReady) —
+           before that, a push could overwrite the real match with this
+           tab's not-yet-loaded state. */
+        if (fbRef && !fbReady) fbLocalDirty = true;
+        saveLocalBackup();
         renderAll(true);
         if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
-        if (fbRef && !fbPushing){ fbRef.set(S).catch(function(){}); }
+        pushToFirebase();
         if (msg && !silent) toast(msg + ' — updated in both outputs ✓');
       }
       if (bc){
         bc.onmessage = function(ev){
           if (ev.data && ev.data.type==='state' && ev.data.state && ev.data.state.updatedAt !== S.updatedAt){
-            S = ev.data.state; renderAll(false);
+            S = ev.data.state; saveLocalBackup(); renderAll(false);
           }
         };
       }
 
       /* ---------- Firebase ---------- */
       /* Shared connect path for both the built-in default (auto-connect on
-         load) and a manually pasted config. Safety rule: connecting NEVER
-         pushes the local state over data already in the database. It first
-         reads liveMatch once — if a match is already there it is adopted,
-         and only when the database is completely empty is the current local
-         state seeded. After connecting, the scorer's normal scoring still
-         pushes through commit() (fbRef.set in commit). */
+         load) and a manually pasted config. Safety rules: the pad stays
+         locked and nothing is pushed until the first snapshot has been
+         read; existing database data is adopted, never overwritten; an
+         empty database is seeded only with a state carrying a real
+         match, never with a fresh 0/0 demo; and every failure is shown
+         in the status pill instead of a false "Firebase Live". After
+         connecting, the scorer's normal scoring pushes through commit()
+         (pushToFirebase). */
+      /* Adopt a state that arrived from Firebase: it becomes the state,
+         is backed up on this device, and is rendered (render brings the
+         form inputs in line with it — names included). */
+      function adoptRemoteState(v){
+        fbPushing = true; S = v; fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
+      }
+      function shouldAdoptRemote(v){
+        if (!v || !v.updatedAt) return false;
+        if (v.updatedAt === S.updatedAt) return false; /* our own push echoing back */
+        /* If this tab scored locally while Firebase was unreachable, only
+           a genuinely newer remote state may replace that work. */
+        if (fbLocalDirty && v.updatedAt < S.updatedAt) return false;
+        return true;
+      }
+      function markFirebaseReady(isDefault){
+        if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+        fbConnecting = false; fbReady = true; fbErrorShown = false;
+        setPadLocked(false);
+        setConnStatus('live', isDefault
+          ? '✅ Firebase connected with the built-in default config — the live match was loaded from the database and everyone online can now watch live.'
+          : '✅ Firebase connected — the live match was loaded from the database and everyone online can now watch live.');
+      }
       function initFirebaseWithConfig(cfg, isDefault){
         if (typeof firebase === 'undefined'){ throw new Error('Firebase library did not load'); }
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
         if (fbApp) { try{ fbApp.delete(); }catch(e){} fbApp = null; }
+        if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbIsDefault = !!isDefault;
+        fbReady = false; fbConnecting = true; fbErrorShown = false;
+        setPadLocked(true);
+        setConnStatus('connecting', '⏳ Connecting to Firebase — loading the live match from the database before scoring unlocks…');
         fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
         fbRef = fbApp.database().ref('liveMatch');
         var myRef = fbRef;
         myRef.on('value', function(snap){
+          if (fbRef !== myRef) return;
           var v = snap.val();
-          if (v && v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
-            fbPushing = true; S = v; renderAll(false); fbPushing = false;
-          }
+          if (shouldAdoptRemote(v)) adoptRemoteState(v);
+        }, function(err){
+          if (fbRef !== myRef) return;
+          /* A failed read must never leave the pad locked forever or the
+             pill claiming "Live": surface it and fall back to local. */
+          if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+          fbConnecting = false; fbReady = false;
+          setPadLocked(false);
+          showFirebaseError(err, 'read');
         });
-        /* One-time read before any write: adopt remote if it exists,
-           seed only if it does not. No unconditional set() here. */
+        /* One-time read before any write: adopt remote if it exists. The
+           database is seeded ONLY with a state that carries a real match
+           (restored from this device's backup or already scored) — a
+           fresh tab's untouched 0/0 demo state is never written. */
         myRef.once('value').then(function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
-          if (!v){
-            /* Database is empty — seed it with the current local state so
-               viewers are not left looking at a blank database. */
-            fbPushing = false;
-            myRef.set(S).catch(function(){});
-          } else if (v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
-            fbPushing = true; S = v; renderAll(false); fbPushing = false;
+          if (v){
+            if (shouldAdoptRemote(v)) adoptRemoteState(v);
+            markFirebaseReady(isDefault);
+            /* This device holds newer work scored while Firebase was
+               unreachable (restored backup) — publish it now instead of
+               letting the older database state stand. */
+            if (fbLocalDirty && hasMeaningfulState(S) && v.updatedAt && v.updatedAt < S.updatedAt){
+              myRef.set(S).then(function(){ fbLocalDirty = false; }).catch(function(err){ showFirebaseError(err, 'sync'); });
+            }
+          } else {
+            markFirebaseReady(isDefault);
+            if (hasMeaningfulState(S)){
+              myRef.set(S).then(function(){ fbLocalDirty = false; saveLocalBackup(); }).catch(function(err){ showFirebaseError(err, 'seed'); });
+            }
           }
-          /* If v exists and is current, do nothing — never overwrite it. */
-        }).catch(function(){});
-        $('fbStatus').textContent = isDefault
-          ? '✅ Firebase auto-connected with the built-in default config — everyone online can now watch live.'
-          : '✅ Firebase connected — everyone online can now watch live.';
-        $('connPill').textContent = '● Firebase Live — Everyone online is watching';
-        $('connPill').classList.add('on');
+        }).catch(function(err){
+          if (fbRef !== myRef) return;
+          if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+          fbConnecting = false; fbReady = false;
+          setPadLocked(false);
+          showFirebaseError(err, 'read');
+        });
+        /* If Firebase never answers at all, do not sit on "Connecting"
+           forever: unlock the pad in local mode and say so honestly.
+           Scoring done meanwhile is backed up on this device, and the
+           live listener above will still adopt / sync when it can. */
+        fbGateTimer = setTimeout(function(){
+          fbGateTimer = null;
+          if (fbRef !== myRef || fbReady || !fbConnecting) return;
+          fbConnecting = false;
+          setPadLocked(false);
+          setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. Check the connection, then reconnect from Firebase Setup.');
+          toast('⚠️ Firebase is not responding — Local Mode. Score is backed up on this device.');
+        }, 8000);
       }
       function connectFirebase(){
         var raw = $('fbConfig').value.trim();
@@ -2208,9 +2364,9 @@
         if (!cfg.databaseURL){ $('fbStatus').textContent='The config has no databaseURL — enable Realtime Database and copy it again.'; return; }
         try {
           initFirebaseWithConfig(cfg, false);
-          toast('Firebase connected — Live Mode on');
         } catch(e){
-          $('fbStatus').textContent = 'Connection failed: ' + e.message;
+          fbConnecting = false; fbReady = false; setPadLocked(false);
+          setConnStatus('error', 'Connection failed: ' + e.message + ' — running in Local Mode; scoring is backed up on this device only.');
         }
       }
       function autoConnectFirebase(){
@@ -2232,18 +2388,16 @@
           if (box && !existing) box.value = JSON.stringify(DEFAULT_FB_CONFIG, null, 2);
           initFirebaseWithConfig(deep(DEFAULT_FB_CONFIG), true);
         } catch(e){
-          var st = $('fbStatus');
-          if (st) st.textContent = 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode. You can paste a config and tap Connect.';
-          $('connPill').textContent = '● Local Mode — Live across tabs in this browser';
-          $('connPill').classList.remove('on');
+          fbConnecting = false; fbReady = false; setPadLocked(false);
+          setConnStatus('local', 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode; scoring is backed up on this device only. You can paste a config and tap Connect.');
         }
       }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
-        fbRef=null; fbApp=null; fbIsDefault=false;
-        $('fbStatus').textContent='Firebase disconnected — running in Local Mode.';
-        $('connPill').textContent='● Local Mode — Live across tabs in this browser';
-        $('connPill').classList.remove('on');
+        if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+        fbRef=null; fbApp=null; fbIsDefault=false; fbReady=false; fbConnecting=false;
+        setPadLocked(false);
+        setConnStatus('local', 'Firebase disconnected — running in Local Mode. Scoring continues and is backed up on this device.');
       }
 
       /* ---------- rendering ---------- */
@@ -2347,10 +2501,33 @@
         try { renderLiveHome(); } catch(e){}
       }
       function syncPlayersFromInputsSilent(){
+        /* State wins over the form. Render must never overwrite batter /
+           bowler names that arrived from Firebase (or the backup) with
+           whatever default text happens to sit in the inputs — instead
+           the inputs are brought in line with the state. A field the
+           scorer is actively typing in is left alone, and an input only
+           fills a name the state does not have yet (first load). */
         var inn=S.current;
-        var s=$('strikerName').value.trim(), ns=$('nonStrikerName').value.trim(), bw=$('bowlerName').value.trim();
-        if (s) inn.striker=s; if (ns) inn.nonStriker=ns; if (bw) inn.bowler=bw;
-        if (!inn.striker) inn.striker='Batter 1'; if (!inn.nonStriker) inn.nonStriker='Batter 2'; if (!inn.bowler) inn.bowler='Bowler';
+        var pairs=[['strikerName','striker','Batter 1'],['nonStrikerName','nonStriker','Batter 2'],['bowlerName','bowler','Bowler']];
+        pairs.forEach(function(p){
+          var el=$(p[0]); if (!el) return;
+          var stateVal = inn[p[1]];
+          if (stateVal){
+            if (document.activeElement !== el && el.value !== stateVal) el.value = stateVal;
+          } else {
+            var typed = el.value.trim();
+            if (typed) inn[p[1]] = typed; else inn[p[1]] = p[2];
+          }
+        });
+        /* Match-setup fields follow the same rule, so a restored match
+           shows its own teams / overs / venue after a refresh. */
+        var setupPairs=[['teamA','teamA'],['teamB','teamB'],['venue','venue'],['tossInfo','tossInfo']];
+        setupPairs.forEach(function(p){
+          var el=$(p[0]); if (!el) return;
+          if (document.activeElement !== el && S[p[1]] != null && el.value !== S[p[1]]) el.value = S[p[1]];
+        });
+        var ovEl=$('oversLimit');
+        if (ovEl && document.activeElement !== ovEl && S.oversLimit && ovEl.value !== String(S.oversLimit)) ovEl.value = S.oversLimit;
       }
 
       /* ---------- views ---------- */
@@ -2387,7 +2564,26 @@
 
       /* ---------- init from URL ---------- */
       (function init(){
-        syncPlayersFromInputs();
+        /* Restore this device's backup first, so refreshing the control
+           page brings the score straight back instead of resetting to
+           the 0/0 demo. Firebase (auto-connect below) then takes over:
+           a newer match already in the database is adopted over it. */
+        var backup = loadLocalBackup();
+        if (backup){
+          S = backup;
+          localRestored = true;
+          /* If the backup carries a real match, treat it as local work
+             Firebase may not have yet: an older database state must not
+             replace it on load (see shouldAdoptRemote / the first-read
+             sync in initFirebaseWithConfig). */
+          fbLocalDirty = hasMeaningfulState(S);
+          try { normalizeTournament(); normalizeSquads(); } catch(e){}
+          /* Inputs are filled from the restored state by renderAll's
+             state-to-input sync — do NOT pull the form's default names
+             over the restored batters / bowler. */
+        } else {
+          syncPlayersFromInputs();
+        }
         renderAll(false);
         var q = '';
         try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
