@@ -260,6 +260,70 @@
       #historyList{max-height:240px;overflow:auto}
       #sbHistory{max-height:300px;overflow:auto}
 
+      /* ---------- scorer centre (clean Match Centre-style scoring view) ---------- */
+      .mc{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+      .mc-head{text-align:center;padding:16px 14px 0}
+      .mc-team{font-size:19px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.2}
+      .mc-inn{font-size:14px;color:var(--muted);margin-top:2px}
+      .mc-score{font-family:"Barlow Condensed",sans-serif;font-size:66px;font-weight:700;line-height:1.08;text-align:center;color:#0d9488}
+      @media (prefers-color-scheme: dark){.mc-score{color:#2dd4bf}}
+      .mc-status{text-align:center;color:#e0653a;font-size:15px;font-weight:600;padding:0 14px 2px;min-height:0}
+      .mc-status:empty{display:none}
+      @media (prefers-color-scheme: dark){.mc-status{color:#f0926e}}
+      .mc-meta{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:10px;padding:7px 12px;display:flex;flex-direction:column;gap:2px}
+      .mc-meta .mrow{display:flex;justify-content:center;gap:6px 30px;flex-wrap:wrap;font-size:15px;font-weight:600;text-align:center}
+      .mc-meta .mrow span{white-space:nowrap}
+      .mc-meta b{font-variant-numeric:tabular-nums;font-weight:800}
+      .mc table{font-size:15px}
+      .mc table th{font-size:14.5px;color:var(--ink);font-weight:700;border-bottom:1px solid var(--line);padding:10px 10px 6px;text-align:center}
+      .mc table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
+      .mc table th:first-child,.mc table td:first-child{text-align:left;padding-left:14px}
+      .mc table th:last-child,.mc table td:last-child{padding-right:14px}
+      .mc table tr:last-child td{border-bottom:none}
+      .mc-edit{background:none;border:none;color:#d97706;font-size:15px;padding:0 2px;cursor:pointer;vertical-align:middle;line-height:1}
+      .mc-pname{font-weight:600;color:var(--muted)}
+      .mc-pname.on{color:var(--ink)}
+      .mc-striker-pill{display:inline-block;background:#f59e0b;color:#241a02;border-radius:7px;padding:3px 10px;font-weight:700}
+      .mc-missing{color:var(--muted);font-style:italic}
+      .mc-balls{display:flex;gap:8px;padding:11px 14px;flex-wrap:wrap;align-items:center}
+      .mc-ball{width:38px;height:38px;flex:none;border-radius:50%;background:#8a8f8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;font-family:"Barlow Condensed",sans-serif}
+      .mc-ball.b4{background:#0d9488}
+      .mc-ball.b6{background:#2563eb}
+      .mc-ball.bw{background:#c0392b}
+      .mc-balls .mc-noballs{font-size:13.5px;color:var(--muted)}
+      .mc-notes{padding:12px 14px 0}
+      .mc-notes:empty{display:none}
+      .mc-hint{display:none;background:#e8eff8;border:1px solid #b9d2ea;color:#175d8f;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
+      @media (prefers-color-scheme: dark){.mc-hint{background:#16283a;color:#a8cdf0;border-color:#2c4a68}}
+      .mc-hint.show{display:block}
+      .mc-hint button{background:none;border:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0;font-size:inherit}
+      .mc-other{display:none;background:var(--surface2);border-top:1px solid var(--line);padding:10px 14px;align-items:center;gap:8px;flex-wrap:wrap}
+      .mc-other.show{display:flex}
+      .mc-other .lab{font-size:13.5px;font-weight:700;color:var(--muted);margin-right:2px}
+      .mc-other button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;min-width:52px;padding:10px 6px;font-size:18px;font-weight:700;font-family:"Barlow Condensed",sans-serif}
+      .mc-other button:active{transform:scale(.96)}
+      .mc-pad{display:grid;grid-template-columns:repeat(5,1fr);background:#f59e0b;margin-top:12px}
+      .mc-pad button{background:none;border:none;border-right:1px solid rgba(122,62,0,.35);border-bottom:1px solid rgba(122,62,0,.35);color:#fff;font-size:22px;font-weight:700;min-height:62px;padding:10px 2px;font-family:inherit;-webkit-tap-highlight-color:transparent}
+      .mc-pad button:nth-child(5n){border-right:none}
+      .mc-pad button:nth-child(n+11){border-bottom:none}
+      .mc-pad button:active{background:rgba(122,62,0,.25)}
+      .mc-pad button.lbl{font-size:16.5px}
+      .mc-pad button.darklbl{color:#241a02;font-size:16.5px}
+      .mc-pad button.pending{background:#b45309;box-shadow:inset 0 0 0 3px #fde68a;color:#fff}
+      .mc-pad button:disabled{opacity:.45;cursor:not-allowed}
+      .mc-pad button svg{display:block;margin:0 auto}
+      .mc-more{display:none;background:#f59e0b;padding:6px 16px 20px}
+      .mc-more.show{display:block}
+      .mc-more-head{display:flex;align-items:center;gap:14px;padding:8px 0 14px}
+      .mc-more-head .x{background:none;border:none;font-size:24px;line-height:1;color:#241a02;cursor:pointer;padding:2px 4px}
+      .mc-more-head .t{font-size:21px;font-weight:800;color:#241a02}
+      .mc-more-grid{display:flex;flex-wrap:wrap;gap:10px}
+      .mc-more-grid button{background:none;border:1.5px solid rgba(84,42,0,.6);color:#241a02;border-radius:10px;padding:11px 15px;font-size:15.5px;font-weight:700;cursor:pointer}
+      .mc-more-grid button:active{background:rgba(122,62,0,.18)}
+      .mc-more-grid button:disabled{opacity:.4;cursor:not-allowed}
+      .mc-wktwrap{padding:0 14px 14px}
+      .mc-wktwrap:empty{display:none}
+
       /* ---------- tournament ---------- */
       .ptable{font-size:13px}
       .ptable th,.ptable td{padding:6px 4px;text-align:center}
@@ -702,26 +766,72 @@
           </div>
         </div>
 
-        <div id="scorerLive"></div>
+        <div id="scorerLive" hidden></div>
 
-        <div class="card">
-          <h2>Scoring Pad</h2>
-          <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase — loading the live match first. Scoring unlocks as soon as it loads, so a refresh can never wipe the real score.</div>
-          <div class="pending-note" id="pendingNote"></div>
-          <div class="pad" role="group" aria-label="Scoring pad">
+        <div class="mc" id="scorerCentre">
+          <div class="mc-head">
+            <div class="mc-team" id="mcTeam">—</div>
+            <div class="mc-inn" id="mcInn">1st Innings</div>
+          </div>
+          <div class="mc-score num" id="mcScore">0-0</div>
+          <div class="mc-status" id="mcStatus"></div>
+          <div class="mc-meta" id="mcMeta"></div>
+          <div id="mcBatters"></div>
+          <div id="mcBowler"></div>
+          <div class="mc-balls" id="mcBalls"></div>
+          <div class="mc-notes">
+            <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase — loading the live match first. Scoring unlocks as soon as it loads, so a refresh can never wipe the real score.</div>
+            <div class="mc-hint" id="slotHint" role="status"></div>
+            <div class="pending-note" id="pendingNote"></div>
+          </div>
+          <div class="mc-other" id="mcOtherRuns">
+            <span class="lab">Other runs on this ball:</span>
             <button onclick="scoreRuns(0)">0</button>
+            <button onclick="scoreRuns(5)">5</button>
+            <button onclick="scoreRuns(7)">7</button>
+            <button onclick="scoreRuns(8)">8</button>
+          </div>
+          <div class="mc-pad" role="group" aria-label="Scoring pad">
             <button onclick="scoreRuns(1)">1</button>
             <button onclick="scoreRuns(2)">2</button>
             <button onclick="scoreRuns(3)">3</button>
-            <button onclick="scoreRuns(4)" class="bnd4">4</button>
-            <button onclick="scoreRuns(5)">5</button>
-            <button onclick="scoreRuns(6)" class="bnd6">6</button>
-            <button class="wkt" onclick="scoreWicket()">Wicket (W)</button>
-            <button class="ext" id="btnWide" onclick="setPending('wide')">Wide + Runs</button>
-            <button class="ext" id="btnNB" onclick="setPending('noball')">No-Ball + Runs</button>
-            <button class="ext" id="btnBye" onclick="setPending('bye')">Bye</button>
-            <button class="ext" id="btnLB" onclick="setPending('legbye')">Leg-Bye</button>
+            <button onclick="scoreRuns(4)">4</button>
+            <button onclick="scoreRuns(6)">6</button>
+            <button class="lbl" id="btnLB" onclick="setPending('legbye')">LB</button>
+            <button class="lbl" id="btnBye" onclick="setPending('bye')">Bye</button>
+            <button class="lbl" id="btnWide" onclick="setPending('wide')">Wide</button>
+            <button class="lbl" id="btnNB" onclick="setPending('noball')">NB</button>
+            <button onclick="scoreRuns(0)" aria-label="Dot ball">•</button>
+            <button class="darklbl" id="btnMcMore" onclick="toggleMcMore()">More</button>
+            <button onclick="scrollToHistory()" aria-label="Ball-by-ball history"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><path d="M6.5 5.5c3 3.5 3 9.5 0 13M17.5 5.5c-3 3.5-3 9.5 0 13" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.5 2.2"/></svg></button>
+            <button class="lbl" onclick="toggleMcOther()" aria-label="More run values — 0, 5, 7, 8">4 5 6 7</button>
+            <button class="lbl" onclick="undoBall()">Undo</button>
+            <button class="lbl" onclick="scoreWicket()">Out</button>
           </div>
+          <div class="mc-more" id="mcMore">
+            <div class="mc-more-head"><button type="button" class="x" onclick="toggleMcMore()" aria-label="Close More menu">✕</button><span class="t">More</span></div>
+            <div class="mc-more-grid">
+              <button type="button" onclick="openAbandon()">Abandon</button>
+              <button type="button" onclick="openPenalty()">Penalty</button>
+              <button type="button" onclick="openRetiredHurt()">Retired Hurt</button>
+              <button type="button" onclick="openDL()">D / L</button>
+              <button type="button" onclick="openChangeTarget()">Change Target</button>
+              <button type="button" onclick="openFormat()">Overs/Format/Wickets</button>
+              <button type="button" id="btnEndInnings" onclick="endInnings()">End Innings</button>
+              <button type="button" onclick="finishMatch()">Finish Match</button>
+              <button type="button" id="btnSaveTournament" onclick="archiveCurrentMatch()">🏆 Save Result to Tournament</button>
+              <button type="button" onclick="changeBowler()">Change Bowler</button>
+              <button type="button" onclick="openFoldById('playersCard')">Batters &amp; Bowler</button>
+              <button type="button" onclick="openFoldById('setupCard')">Match Setup</button>
+              <button type="button" onclick="openFoldById('squadCard')">Team Squads</button>
+              <button type="button" onclick="resetMatch()">New Match (Clear Everything)</button>
+            </div>
+          </div>
+          <div class="mc-wktwrap" id="mcWktWrap"></div>
+        </div>
+
+        <div class="card" id="padLegacy" hidden>
+          <div class="pad" role="group" aria-label="Scoring pad (legacy)"></div>
           <div id="wicketPanel" hidden style="margin-top:12px;border:1.5px solid #e5a49c;background:var(--red-bg);border-radius:12px;padding:12px">
             <div style="font-weight:800;font-size:15.5px">Wicket — how was the batter out?</div>
             <p class="note" id="wktContext" style="margin:4px 0 10px"></p>
@@ -737,15 +847,9 @@
               <span class="note grow">The bowler is credited with the wicket only for bowled, caught, LBW, stumped and hit wicket — never for a run out.</span>
             </div>
           </div>
-          <div class="rowflex" style="margin-top:8px">
-            <button class="btn ghost sm" onclick="undoBall()">↩️ Undo Last Ball</button>
-            <button class="btn gold sm" onclick="endInnings()">End Innings</button>
-            <button class="btn red sm" onclick="finishMatch()">Declare Match Finished</button>
-            <button class="btn sm" id="btnSaveTournament" onclick="archiveCurrentMatch()">🏆 Save Result to Tournament</button>
-          </div>
         </div>
 
-        <div class="card fold">
+        <div class="card fold" id="playersCard">
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Batters &amp; Bowler</button>
           <div class="fold-body" hidden>
           <div class="players-grid">
@@ -763,7 +867,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="historyCard">
           <h2>Ball-by-Ball History</h2>
           <div id="historyList"><p class="note">No balls bowled yet.</p></div>
         </div>
@@ -1102,6 +1206,21 @@
       </div>
     </div>
 
+    <div class="modal-back" id="moreModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+        <div class="modal-head">
+          <h2 id="moreTitle">More</h2>
+          <button class="sq-x big" onclick="closeMoreModal()" aria-label="Close">×</button>
+        </div>
+        <p class="sub" id="moreSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div id="moreBody" style="margin-top:12px"></div>
+        <div class="rowflex" style="margin-top:16px">
+          <button class="btn" id="moreApply" onclick="applyMoreModal()">Apply</button>
+          <button class="btn ghost" onclick="closeMoreModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast" id="toast" role="status"></div>
 
     <script>
@@ -1140,7 +1259,10 @@
       function freshState(){
         return {
           teamA: 'BB YOUNG BLOODS', teamB: 'BB POWER STRIKERS',
-          oversLimit: 20, venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
+          oversLimit: 20, wicketsLimit: 10, /* wickets that end an innings (all out) */
+          targetOverride: null, dlTarget: null, dlOvers: null, /* More-menu match adjustments */
+          abandoned: false, pendingPenalty: null,
+          venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
           status: 'live', /* live | inningsBreak | finished */
           inningsNo: 1,
           current: blankInnings('BB YOUNG BLOODS','BB POWER STRIKERS'),
@@ -1220,7 +1342,7 @@
       /* ---------- scoring gate (locked until first Firebase read) ---------- */
       function setPadLocked(locked){
         var note = $('syncGateNote'); if (note) note.classList.toggle('show', !!locked);
-        var padCard = note ? note.closest('.card') : null;
+        var padCard = note ? (note.closest('.mc') || note.closest('.card')) : null;
         if (padCard){
           padCard.querySelectorAll('button').forEach(function(b){
             /* The Save Result button's enabled state belongs to
@@ -1356,7 +1478,7 @@
         }
         inn.batters = (inn.batters || []).filter(function(b){
           if (!b || !b.name) return false;
-          if (b.balls > 0 || b.runs > 0 || b.out) return true;
+          if (b.balls > 0 || b.runs > 0 || b.out || b.retiredHurt) return true;
           if (b.name === inn.striker || b.name === inn.nonStriker) return true;
           if (batSquad.indexOf(b.name) > -1) return true;
           if (isPlaceholderName(b.name)) return false;
@@ -1375,6 +1497,49 @@
         cleanGhostPlayersInInnings(S.current);
         cleanGhostPlayersInInnings(S.prevInnings);
       }
+      /* ---------- innings shape repair ----------
+         Firebase Realtime Database does not store empty arrays: an
+         innings whose ball record is still empty (exactly the state a
+         fresh 2nd innings is in at the innings break) is written
+         WITHOUT its balls / batters / bowlers keys, and every tab that
+         then loads or adopts that stored state holds an innings with
+         no ball array at all. Recording a ball or an announcement into
+         such an innings had nowhere to land, so the aggregate fields
+         (runs, wickets, legalBalls — plain numbers, always stored)
+         kept updating and syncing while the ball-by-ball record stayed
+         empty: viewers saw the right score with "Partnership —", no
+         2nd-innings balls, and only the previous innings in the feed —
+         the "ghost" 2nd innings. Every state that enters this page
+         (Firebase snapshot, another tab's broadcast, the on-device
+         backup, an undo snapshot) is passed through this repair, and
+         the recorders below also heal the array before writing, so a
+         missing ball record can never silently swallow an innings
+         again. */
+      function normalizeInningsShape(inn){
+        if (!inn || typeof inn !== 'object') return inn;
+        if (!Array.isArray(inn.balls)) inn.balls = [];
+        if (!Array.isArray(inn.batters)) inn.batters = [];
+        if (!Array.isArray(inn.bowlers)) inn.bowlers = [];
+        if (!inn.extras || typeof inn.extras !== 'object') inn.extras = { wide:0, noball:0, bye:0, legbye:0 };
+        ['wide','noball','bye','legbye'].forEach(function(k){ if (typeof inn.extras[k] !== 'number') inn.extras[k] = 0; });
+        if (typeof inn.runs !== 'number') inn.runs = 0;
+        if (typeof inn.wickets !== 'number') inn.wickets = 0;
+        if (typeof inn.legalBalls !== 'number') inn.legalBalls = 0;
+        return inn;
+      }
+      function normalizeStateShape(){
+        if (!S || typeof S !== 'object') return;
+        normalizeInningsShape(S.current);
+        if (S.prevInnings) normalizeInningsShape(S.prevInnings);
+        /* More-menu match adjustments — states saved before these
+           features existed simply do not carry the fields. */
+        if (typeof S.wicketsLimit !== 'number' || S.wicketsLimit < 1 || S.wicketsLimit > 10) S.wicketsLimit = 10;
+        if (S.targetOverride === undefined) S.targetOverride = null;
+        if (S.dlTarget === undefined) S.dlTarget = null;
+        if (S.dlOvers === undefined) S.dlOvers = null;
+        if (typeof S.abandoned !== 'boolean') S.abandoned = false;
+        if (S.pendingPenalty === undefined) S.pendingPenalty = null;
+      }
       function syncPlayersFromInputs(){
         /* The dropdowns start empty on purpose: no batter or bowler is
            ever auto-selected or invented. A name enters the state only
@@ -1387,6 +1552,14 @@
         if (inn.nonStriker) getBatter(inn, inn.nonStriker);
         if (inn.bowler) getBowler(inn, inn.bowler);
       }
+      /* Mark the still-empty player dropdowns (and un-mark the filled
+         ones), so the missing pick is visible, not just toasted. */
+      function markMissingPlayerSlots(){
+        var inn = S.current; if (!inn) return;
+        [['strikerName', inn.striker], ['nonStrikerName', inn.nonStriker], ['bowlerName', inn.bowler]].forEach(function(p){
+          var el = $(p[0]); if (el) el.classList.toggle('req-missing', !p[1]);
+        });
+      }
       function playersSelected(){
         var inn = S.current;
         if (inn.awaitingBowler){
@@ -1395,6 +1568,7 @@
           return false;
         }
         if (!inn.striker || !inn.nonStriker || !inn.bowler){
+          markMissingPlayerSlots();
           toast('Select the striker, non-striker and bowler from the dropdowns first');
           return false;
         }
@@ -1469,6 +1643,7 @@
          player in the public commentary feed. */
       function onPlayerNameSettled(el){
         var inn = S.current; if (!inn) return;
+        if (el && el.value) el.classList.remove('req-missing');
         var id = el ? el.id : '';
         var val = el ? el.value.trim() : '';
         /* Validate the pick that was just made BEFORE it reaches the
@@ -1580,6 +1755,7 @@
            line belongs so it groups with the right over. */
         var e = { over: '', overNo: Math.floor(inn.legalBalls / 6) + 1, text: line, cls: 'evt', evt: kind, who: name, bowler: '', batter: '', atBalls: inn.legalBalls };
         if (extra) for (var k in extra) e[k] = extra[k];
+        if (!Array.isArray(inn.balls)) inn.balls = []; /* heal a record Firebase dropped while it was empty */
         inn.balls.push(e);
         /* No length cap: a 20-over innings with extras holds far more
            than 120 records (deliveries + announcement lines), and
@@ -1821,6 +1997,19 @@
         $('pickerModal').classList.remove('show');
         if (!picked && mode === 'batter'){ try { $('strikerName').focus(); } catch(e){} }
         if (after) after();
+        /* Closed without everything picked (e.g. "Decide Later" on
+           the innings-break opening-bowler picker): if any of
+           striker / non-striker / bowler is still missing, open the
+           Batters & Bowler fold and mark the empty dropdowns, so the
+           scorer lands exactly where the missing pick is made
+           instead of facing a pad that silently does nothing. */
+        if (!picked && mode && !$('pickerModal').classList.contains('show')){
+          var ci = S.current;
+          if (ci && (!ci.striker || !ci.nonStriker || !ci.bowler)){
+            markMissingPlayerSlots();
+            openFoldById('playersCard');
+          }
+        }
       }
       function pickPlayer(name){
         if (!name) return;
@@ -1870,7 +2059,7 @@
       function maybeBowlerAsk(){
         var inn = S.current;
         if (S.status !== 'live') return;
-        if (inn.legalBalls > 0 && inn.legalBalls % 6 === 0 && inn.legalBalls < S.oversLimit*6 && inn.wickets < 10){
+        if (inn.legalBalls > 0 && inn.legalBalls % 6 === 0 && inn.legalBalls < effMaxBalls() && inn.wickets < wicketsLimit()){
           var excl = prevOverBowlers(inn);
           if (!inn.awaitingBowler){
             /* The over is over and its bowler is DONE: the slot is
@@ -1908,6 +2097,7 @@
            extras, and corrupted the over summaries built from it. */
         var rec = { over: oversText(inn.legalBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
         if (extraFields) for (var k in extraFields) rec[k] = extraFields[k];
+        if (!Array.isArray(inn.balls)) inn.balls = []; /* heal a record Firebase dropped while it was empty */
         inn.balls.push(rec);
       }
       function afterLegalBall(inn){
@@ -1916,17 +2106,36 @@
       }
       function checkInningsEnd(){
         var inn = S.current;
-        var maxBalls = S.oversLimit * 6;
-        if (inn.wickets >= 10 || inn.legalBalls >= maxBalls){
+        if (inn.wickets >= wicketsLimit() || inn.legalBalls >= effMaxBalls()){
           if (S.inningsNo === 1){ endInnings(true); }
           else { finishMatch(true); }
-        } else if (S.inningsNo === 2 && S.prevInnings && inn.runs > S.prevInnings.runs){
-          finishMatch(true);
+        } else if (S.inningsNo === 2 && S.prevInnings){
+          var tg = target();
+          if (tg && inn.runs >= tg) finishMatch(true);
         }
       }
-      function target(){ return S.prevInnings ? S.prevInnings.runs + 1 : null; }
+      /* The target for the chase: a D/L revised target wins, then a
+         target set with Change Target, then the natural target (first
+         innings runs + 1) — which already includes any penalty runs
+         credited to the first innings. */
+      function target(){
+        if (S.inningsNo === 2){
+          if (typeof S.dlTarget === 'number' && S.dlTarget > 0) return S.dlTarget;
+          if (typeof S.targetOverride === 'number' && S.targetOverride > 0) return S.targetOverride;
+        }
+        return S.prevInnings ? S.prevInnings.runs + 1 : null;
+      }
+      /* Wickets that end an innings ("all out") — 10 in a standard
+         11-a-side match, changeable in More → Overs/Format/Wickets
+         for short-sided games. */
+      function wicketsLimit(){ return (typeof S.wicketsLimit === 'number' && S.wicketsLimit >= 1 && S.wicketsLimit <= 10) ? S.wicketsLimit : 10; }
+      /* Overs available in THIS innings: a D/L revision shortens the
+         chase, so the 2nd innings can have fewer overs than the match
+         format's overs per innings. */
+      function effOversLimit(){ return (S.inningsNo === 2 && typeof S.dlOvers === 'number' && S.dlOvers > 0) ? S.dlOvers : S.oversLimit; }
+      function effMaxBalls(){ return effOversLimit() * 6; }
       function crr(){ var inn=S.current; return inn.legalBalls>0 ? (inn.runs/(inn.legalBalls/6)) : 0; }
-      function rrr(){ var t=target(); if(!t) return null; var inn=S.current; var ballsLeft=S.oversLimit*6-inn.legalBalls; if(ballsLeft<=0) return null; var need=t-inn.runs; return need>0 ? (need/(ballsLeft/6)) : 0; }
+      function rrr(){ var t=target(); if(!t) return null; var inn=S.current; var ballsLeft=effMaxBalls()-inn.legalBalls; if(ballsLeft<=0) return null; var need=t-inn.runs; return need>0 ? (need/(ballsLeft/6)) : 0; }
 
       /* ---------- scoring ---------- */
       function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
@@ -1968,6 +2177,113 @@
           $(pendingExtra==='wide'?'btnWide':(pendingExtra==='noball'?'btnNB':(pendingExtra==='bye'?'btnBye':'btnLB'))).classList.add('pending');
         } else { note.classList.remove('show'); note.textContent=''; }
       }
+      /* ---------- clean scorer centre (Match Centre-style) ---------- */
+      function toggleMcMore(){ var m = $('mcMore'); if (m) m.classList.toggle('show'); }
+      function toggleMcOther(){ var m = $('mcOtherRuns'); if (m) m.classList.toggle('show'); }
+      function scrollToHistory(){ var h = $('historyCard'); if (h){ try { h.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} } }
+      function openFoldById(id){
+        var card = $(id); if (!card) return;
+        var body = card.querySelector('.fold-body');
+        if (body && body.hidden){
+          body.hidden = false; card.classList.add('open');
+          var btn = card.querySelector('.fold-sum'); if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+        try { card.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+      }
+      /* Maidens for a bowler, rebuilt from the ball record: an over
+         counts only when this bowler bowled every ball of it, all six
+         legal deliveries, and conceded no runs at all. */
+      function bowlerMaidens(inn, name){
+        if (!name) return 0;
+        var m = 0;
+        groupOvers(inn).forEach(function(g){
+          var legal = 0, runs = 0, others = false;
+          g.balls.forEach(function(b){
+            if (b.evt) return;
+            runs += parseBallRuns(b.text);
+            if (b.bowler && b.bowler !== name) others = true;
+            if (b.bowler === name && isLegalDelivery(b.text)) legal++;
+          });
+          if (!others && legal === 6 && runs === 0) m++;
+        });
+        return m;
+      }
+      function renderScorerCentre(){
+        /* The wicket dismissal panel lives inside the scorer centre,
+           directly under the pad — move it there once. */
+        var wrap = $('mcWktWrap'), wp = $('wicketPanel');
+        if (wrap && wp && wp.parentNode !== wrap) wrap.appendChild(wp);
+        var inn = S.current, t = target();
+        var teamEl = $('mcTeam'); if (!teamEl) return;
+        teamEl.textContent = inn.battingTeam || '—';
+        $('mcInn').textContent = (S.inningsNo === 1 ? '1st' : '2nd') + ' Innings'
+          + (S.status === 'inningsBreak' ? ' — Innings Break' : (S.status === 'finished' ? ' — Match Finished' : ''));
+        $('mcScore').textContent = inn.runs + '-' + inn.wickets;
+        var status = '';
+        if (S.status === 'finished' && S.resultText) status = S.resultText;
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — Target ' + target();
+        else if (S.inningsNo === 2 && S.prevInnings && t){
+          var need = t - inn.runs, bl = effMaxBalls() - inn.legalBalls;
+          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + bl + (bl === 1 ? ' ball' : ' balls') + '.';
+        }
+        else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
+        $('mcStatus').textContent = status;
+        var ex = inn.extras.wide + inn.extras.noball + inn.extras.bye + inn.extras.legbye;
+        var pship = partnershipFigures(inn);
+        var proj = projectedScore();
+        var row2 = (S.inningsNo === 2 && t)
+          ? '<span>Target - <b>' + t + '</b></span><span>REQ - <b>' + (rrr() !== null ? rrr().toFixed(2) : '—') + '</b></span>'
+          : '<span>Proj. Score - <b>' + (proj === null ? '—' : proj) + '</b></span>';
+        row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
+        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b></span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + effOversLimit() + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
+          + '<div class="mrow">' + row2 + '</div>';
+        var pencil = '<button type="button" class="mc-edit" onclick="openFoldById(\'playersCard\')" aria-label="Edit batters and bowler">✎</button>';
+        function batRow(name, isStriker){
+          if (!name) return '<tr><td><span class="mc-missing">' + (isStriker ? 'Select striker batter' : 'Select non-striker') + '</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>';
+          var b = cbBatterFull(inn, name);
+          var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
+          var nameHtml = isStriker
+            ? '<span class="mc-striker-pill">' + esc(name) + ' *</span>'
+            : '<span class="mc-pname on">' + esc(name) + '</span>';
+          return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
+        }
+        $('mcBatters').innerHTML = '<table><thead><tr><th>' + pencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
+          + batRow(inn.striker, true) + batRow(inn.nonStriker, false) + '</tbody></table>';
+        var bwHead = '<table><thead><tr><th>' + pencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
+        if (inn.bowler){
+          var bw = cbBowlerFull(inn, inn.bowler);
+          var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + esc(inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
+        } else {
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
+        }
+        var groups = groupOvers(inn).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
+        var curG = groups.length ? groups[groups.length - 1] : null;
+        var curBalls = curG ? curG.balls.filter(function(b){ return !b.evt; }) : [];
+        $('mcBalls').innerHTML = curBalls.length ? curBalls.map(function(b){
+          var cls = isWicketBall(b) ? 'bw' : (b.text === '4' ? 'b4' : (b.text === '6' ? 'b6' : ''));
+          return '<span class="mc-ball ' + cls + '">' + esc(b.text) + '</span>';
+        }).join('') : '<span class="mc-noballs">This over: no balls yet</span>';
+        /* Persistent hint: exactly which slot is still missing, so a
+           blocked pad never fails silently behind a fading toast. */
+        var hint = $('slotHint'), msg = '', showOpen = false;
+        if (S.status === 'finished') msg = 'This match is finished — scoring is closed. Start again from More → New Match.';
+        else if (inn.awaitingBowler) msg = 'Pick the bowler for the next over to continue scoring.';
+        else {
+          var miss = [];
+          if (!inn.striker) miss.push('striker batter');
+          if (!inn.nonStriker) miss.push('non-striker');
+          if (!inn.bowler) miss.push('bowler');
+          if (miss.length){ msg = 'Select the ' + miss.join(', ') + ' first — then scoring starts.'; showOpen = true; }
+        }
+        if (msg){
+          hint.innerHTML = esc(msg) + (showOpen ? ' <button type="button" onclick="openFoldById(\'playersCard\')">Open Batters &amp; Bowler</button>' : '');
+          hint.classList.add('show');
+        } else { hint.classList.remove('show'); hint.innerHTML = ''; }
+        var ei = $('btnEndInnings');
+        if (ei) ei.disabled = (S.status === 'inningsBreak' || S.status === 'finished');
+      }
+
       function completeExtra(n){
         var type=pendingExtra; pendingExtra=null; renderPending();
         snapshot(); syncPlayersFromInputs();
@@ -2110,7 +2426,7 @@
         var innNoBefore = S.inningsNo;
         var overCompleted = legal && inn.legalBalls > 0 && inn.legalBalls % 6 === 0;
         var vacantSlot = null;
-        if (inn.wickets < 10){
+        if (inn.wickets < wicketsLimit()){
           var flips = (runs % 2 === 1 ? 1 : 0) + (overCompleted ? 1 : 0);
           var notOutSlot = outWhich === 'striker' ? 'nonStriker' : 'striker';
           if (flips % 2 === 1) notOutSlot = notOutSlot === 'striker' ? 'nonStriker' : 'striker';
@@ -2125,7 +2441,7 @@
         $('nonStrikerName').value = inn.nonStriker || '';
         checkInningsEnd();
         commit('Wicket! ' + outName + ' — ' + howOut);
-        if (S.inningsNo === innNoBefore && S.status === 'live' && inn.wickets < 10 && vacantSlot){
+        if (S.inningsNo === innNoBefore && S.status === 'live' && inn.wickets < wicketsLimit() && vacantSlot){
           if (batterCandidates(vacantSlot === 'striker' ? inn.nonStriker : inn.striker).length){
             openPicker('batter', { slot: vacantSlot, after: overCompleted ? maybeBowlerAsk : null });
           } else {
@@ -2137,7 +2453,7 @@
       function undoBall(){
         if (scoringLocked()) return;
         if (!undoStack.length){ toast('No ball to undo'); return; }
-        S = undoStack.pop(); pendingExtra=null; renderPending();
+        S = undoStack.pop(); try { normalizeStateShape(); } catch(e){} pendingExtra=null; renderPending();
         /* Dismiss any open picker without running its callbacks — it
            was opened for the state that has just been undone (e.g. the
            innings-break opening-bowler picker shown after the last
@@ -2182,6 +2498,7 @@
       }
       function doStartMatch(newA, newB, tw, td){
         var prevTeamA = S.teamA, prevTeamB = S.teamB;
+        var keepWk = (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         /* Players entered for a team in the Tournament tab become that team's match squad */
@@ -2194,6 +2511,7 @@
         S.squadA = squadForMatch(newA, tnSquads, prevTeamA, keepA);
         S.squadB = squadForMatch(newB, tnSquads, prevTeamB, keepB);
         S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
+        S.wicketsLimit = keepWk; /* a format set in More survives Start Match */
         S.venue = $('venue').value.trim();
         S.tossWinner = tw; S.tossDecision = td;
         S.tossInfo = tw + ' won the toss and chose to ' + (td === 'bat' ? 'bat' : 'bowl') + '.';
@@ -2256,6 +2574,10 @@
       function endInnings(auto){
         if (!auto && scoringLocked()) return;
         if (S.status === 'finished'){ if (!auto) toast('This match is already finished'); return; }
+        /* During the innings break the innings has ALREADY ended:
+           a second manual tap here must not fall through to
+           finishMatch() and end the whole match by accident. */
+        if (!auto && S.status === 'inningsBreak'){ toast('The innings has already ended — pick the 2nd-innings openers and bowler to continue'); return; }
         var inn0 = S.current;
         var deliveries = (inn0.balls || []).filter(function(b){ return !b.evt; }).length;
         if (!deliveries){ if (!auto) toast('⚠️ Cannot end the innings — no ball has been bowled yet'); return; }
@@ -2271,6 +2593,14 @@
            innings 2 is scored, which flips it back to live. */
         S.inningsNo = 2; S.status='inningsBreak';
         S.current = blankInnings(inn.bowlingTeam, inn.battingTeam);
+        /* Penalty runs awarded earlier to the side batting now — their
+           innings had not started when the penalty was given — are
+           credited to the new innings before it begins. */
+        if (S.pendingPenalty && S.pendingPenalty.team === S.current.battingTeam && S.pendingPenalty.runs > 0){
+          S.current.runs += S.pendingPenalty.runs;
+          pushFeedEvent(S.current, 'note', '', 'Penalty: ' + S.pendingPenalty.runs + (S.pendingPenalty.runs === 1 ? ' run' : ' runs') + ' awarded to ' + S.current.battingTeam + (S.pendingPenalty.reason ? ' — ' + S.pendingPenalty.reason : '') + '.');
+          S.pendingPenalty = null;
+        }
         $('strikerName').value=''; $('nonStrikerName').value=''; $('bowlerName').value='';
         /* The undo stack deliberately SURVIVES the innings change:
            the snapshot taken before the innings-ending ball restores
@@ -2288,12 +2618,226 @@
         S.status='finished';
         var inn=S.current, t=target(), txt='';
         if (S.inningsNo===2 && t){
-          if (inn.runs >= t){ var wk=10-inn.wickets; txt = inn.battingTeam + ' won by ' + wk + ' wickets 🏆'; }
+          if (inn.runs >= t){ var wk=wicketsLimit()-inn.wickets; txt = inn.battingTeam + ' won by ' + wk + ' wickets 🏆'; }
           else if (inn.runs === t-1){ txt = 'Match drawn / tied'; }
           else { txt = S.prevInnings.battingTeam + ' won by ' + ((t-1)-inn.runs) + ' runs 🏆'; }
         } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
         S.resultText = txt;
         commit(auto ? 'Match finished: ' + txt : txt);
+      }
+
+      /* ---------- More menu: Abandon / Penalty / Retired Hurt / D/L / Change Target / Overs-Format-Wickets ----------
+         The six match-management actions from the pad's orange More
+         menu. Each opens the shared More dialog, validates its input,
+         snapshots first (so Undo can take the action back), writes a
+         'note' line into the innings feed (so the Public Scoreboard
+         explains what happened), and commits — which backs up,
+         broadcasts and pushes to Firebase exactly like a scored ball.
+         Nothing here touches squads or tournament data. */
+      var moreApplyFn = null;
+      function openMoreModal(title, sub, bodyHTML, applyFn, applyLabel){
+        var mm = $('mcMore'); if (mm) mm.classList.remove('show');
+        $('moreTitle').textContent = title;
+        var subEl = $('moreSub');
+        subEl.textContent = sub || '';
+        subEl.style.display = sub ? 'block' : 'none';
+        $('moreBody').innerHTML = bodyHTML;
+        $('moreApply').textContent = applyLabel || 'Apply';
+        moreApplyFn = applyFn;
+        $('moreModal').classList.add('show');
+      }
+      function closeMoreModal(){ $('moreModal').classList.remove('show'); moreApplyFn = null; }
+      function applyMoreModal(){ if (moreApplyFn) moreApplyFn(); }
+      function moreNum(id){ var el = $(id); return el ? parseInt(el.value, 10) : NaN; }
+      function selOptions(names, selected){
+        return names.map(function(n){ return '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+      }
+
+      /* ----- Abandon: the match ends now, with no result ----- */
+      function openAbandon(){
+        if (scoringLocked()) return;
+        if (S.status === 'finished'){ toast('This match is already finished'); return; }
+        openMoreModal('Abandon Match',
+          'The match ends now with no result. The score stays on record and everyone watching sees “Match abandoned”. Undo can still take this back.',
+          '<label for="abReason">Reason (optional)</label><input id="abReason" placeholder="e.g. Rain, bad light, wet outfield" />',
+          applyAbandon, 'Abandon Match');
+      }
+      function applyAbandon(){
+        var reason = $('abReason').value.trim();
+        snapshot();
+        pendingExtra = null; renderPending();
+        cancelWicket();
+        S.abandoned = true;
+        S.status = 'finished';
+        S.resultText = 'Match abandoned' + (reason ? ' — ' + reason : '');
+        pushFeedEvent(S.current, 'note', '', 'Match abandoned' + (reason ? ' — ' + reason : '') + '.');
+        closeMoreModal();
+        commit('Match abandoned');
+      }
+
+      /* ----- Penalty: runs awarded to a team, no ball bowled ----- */
+      function openPenalty(){
+        if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
+        openMoreModal('Penalty Runs',
+          'Penalty runs go straight onto that team’s innings score — no ball is bowled, and no batter or bowler is charged with them. If that team has not batted yet, the runs are held and credited the moment their innings starts.',
+          '<div class="grid2">'
+          + '<div><label for="penTeam">Award runs to</label><select id="penTeam">' + selOptions([S.teamA, S.teamB], S.current.battingTeam) + '</select></div>'
+          + '<div><label for="penRuns">Penalty runs</label><input id="penRuns" type="number" min="1" max="100" value="5" /></div>'
+          + '</div>'
+          + '<div style="margin-top:10px"><label for="penReason">Reason (optional)</label><input id="penReason" placeholder="e.g. Slow over rate, ball tampering, fielder offence" /></div>',
+          applyPenalty, 'Add Penalty Runs');
+      }
+      function applyPenalty(){
+        var team = $('penTeam').value;
+        var runs = moreNum('penRuns');
+        var reason = $('penReason').value.trim();
+        if (!team){ toast('Pick the team to award the runs to'); return; }
+        if (isNaN(runs) || runs < 1){ toast('Enter the penalty runs (1 or more)'); return; }
+        snapshot();
+        var inn = null;
+        if (S.current.battingTeam === team) inn = S.current;
+        else if (S.prevInnings && S.prevInnings.battingTeam === team) inn = S.prevInnings;
+        var line = 'Penalty: ' + runs + (runs === 1 ? ' run' : ' runs') + ' awarded to ' + team + (reason ? ' — ' + reason : '') + '.';
+        if (inn){
+          inn.runs += runs;
+          pushFeedEvent(inn, 'note', '', line);
+          closeMoreModal();
+          commit('Penalty: ' + runs + (runs === 1 ? ' run' : ' runs') + ' to ' + team);
+          /* A penalty can complete a chase (or raise the target when
+             it goes to the first innings) — re-check the match state. */
+          if (inn === S.current) checkInningsEnd();
+        } else {
+          var held = (S.pendingPenalty && S.pendingPenalty.team === team) ? S.pendingPenalty.runs : 0;
+          S.pendingPenalty = { team: team, runs: held + runs, reason: reason };
+          closeMoreModal();
+          commit('Penalty noted', true);
+          toast('Penalty: ' + runs + (runs === 1 ? ' run' : ' runs') + ' will be credited to ' + team + ' when their innings starts');
+        }
+      }
+
+      /* ----- Retired Hurt: a batter leaves hurt — no wicket falls ----- */
+      function openRetiredHurt(){
+        if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
+        var inn = S.current;
+        var atCrease = [inn.striker, inn.nonStriker].filter(Boolean);
+        if (!atCrease.length){ toast('Pick the batters at the crease first'); return; }
+        var repls = battingSquad().filter(function(n){
+          if (atCrease.indexOf(n) > -1) return false;
+          return !batterIsOut(inn, n);
+        });
+        openMoreModal('Retired Hurt',
+          'The batter leaves the field hurt. No wicket falls and the bowler gets no credit — the score does not change. A retired-hurt batter is NOT out: they may bat again later in this innings (pick them again in Batters & Bowler).',
+          '<div class="grid2">'
+          + '<div><label for="rhWho">Batter retiring hurt</label><select id="rhWho">' + selOptions(atCrease, inn.striker || atCrease[0]) + '</select></div>'
+          + '<div><label for="rhNew">Replacement batter</label><select id="rhNew"><option value="">Decide later — leave the slot empty</option>' + selOptions(repls, '') + '</select></div>'
+          + '</div>',
+          applyRetiredHurt, 'Retire Batter Hurt');
+      }
+      function applyRetiredHurt(){
+        var inn = S.current;
+        var who = $('rhWho').value;
+        var repl = $('rhNew').value;
+        if (!who || (who !== inn.striker && who !== inn.nonStriker)){ toast('Pick the batter who is retiring hurt'); return; }
+        if (repl && batterIsOut(inn, repl)){ toast('⚠️ ' + repl + ' is already out in this innings — pick another batter'); return; }
+        if (repl && (repl === inn.striker || repl === inn.nonStriker)){ toast('⚠️ ' + repl + ' is already at the crease — pick someone else'); return; }
+        snapshot();
+        var bat = getBatter(inn, who);
+        bat.retiredHurt = true;
+        bat.howOut = 'retired hurt';
+        var slot = (inn.striker === who) ? 'striker' : 'nonStriker';
+        inn[slot] = repl || null;
+        var sel = $(slot === 'striker' ? 'strikerName' : 'nonStrikerName');
+        if (sel){ ensureSelectOption(sel, repl); sel.value = repl || ''; }
+        if (repl) getBatter(inn, repl);
+        pushFeedEvent(inn, 'note', '', who + ' retired hurt.');
+        if (repl) pushFeedEvent(inn, 'crease', repl, repl + ' comes to the crease.');
+        closeMoreModal();
+        commit(who + ' retired hurt');
+      }
+
+      /* ----- D/L: a revised target and overs for a shortened chase ----- */
+      function openDL(){
+        if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
+        if (S.inningsNo !== 2 || !S.prevInnings){ toast('D/L applies to a 2nd-innings chase — use it after the innings break, when the target is known'); return; }
+        openMoreModal('D / L — Revised Target',
+          'For a rain-shortened chase, enter the revised target and overs from the Duckworth-Lewis calculation. The target, overs left, required rate and the “needs …” line update on the Scorer Console, the Public Scoreboard and the overlay at once.',
+          '<p class="note" style="margin:0 0 10px">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + '</b> • Current target: <b>' + target() + '</b> • ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + ' in ' + oversText(S.current.legalBalls) + ' overs.</p>'
+          + '<div class="grid2">'
+          + '<div><label for="dlTargetInput">Revised target (runs)</label><input id="dlTargetInput" type="number" min="1" value="' + target() + '" /></div>'
+          + '<div><label for="dlOversInput">Overs for the chase</label><input id="dlOversInput" type="number" min="1" max="' + S.oversLimit + '" value="' + effOversLimit() + '" /></div>'
+          + '</div>',
+          applyDL, 'Apply D/L Target');
+      }
+      function applyDL(){
+        var nt = moreNum('dlTargetInput');
+        var no = moreNum('dlOversInput');
+        if (isNaN(nt) || nt < 1){ toast('Enter the revised target (1 run or more)'); return; }
+        if (isNaN(no) || no < 1 || no > S.oversLimit){ toast('Overs for the chase must be between 1 and ' + S.oversLimit); return; }
+        snapshot();
+        S.dlTarget = nt;
+        S.targetOverride = null; /* the D/L target is now the target */
+        S.dlOvers = (no < S.oversLimit) ? no : null;
+        pushFeedEvent(S.current, 'note', '', 'D/L: target revised — ' + S.current.battingTeam + ' need ' + nt + (nt === 1 ? ' run' : ' runs') + ' in ' + no + (no === 1 ? ' over' : ' overs') + '.');
+        closeMoreModal();
+        commit('D/L target applied: ' + nt + ' in ' + no + ' overs');
+        checkInningsEnd(); /* fewer overs (or a lower target) can end the match right here */
+      }
+
+      /* ----- Change Target: set the chase target directly ----- */
+      function openChangeTarget(){
+        if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
+        if (S.inningsNo !== 2 || !S.prevInnings){ toast('There is no target to change yet — a target exists only in the 2nd innings'); return; }
+        var how = (typeof S.dlTarget === 'number' && S.dlTarget > 0) ? 'set by D/L'
+          : ((typeof S.targetOverride === 'number' && S.targetOverride > 0) ? 'changed earlier' : '1st innings ' + S.prevInnings.runs + ' runs + 1');
+        openMoreModal('Change Target',
+          'Sets a new target for the chase. Everything that reads the target — the “needs …” line, Target and required rate on both outputs and the overlay — follows the new number.',
+          '<p class="note" style="margin:0 0 10px">Current target: <b>' + target() + '</b> (' + how + '). ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + '.</p>'
+          + '<label for="ctTargetInput">New target (runs)</label><input id="ctTargetInput" type="number" min="1" value="' + target() + '" />',
+          applyChangeTarget, 'Change Target');
+      }
+      function applyChangeTarget(){
+        var nt = moreNum('ctTargetInput');
+        if (isNaN(nt) || nt < 1){ toast('Enter the new target (1 run or more)'); return; }
+        snapshot();
+        S.targetOverride = nt;
+        S.dlTarget = null; /* the changed target replaces any D/L target */
+        pushFeedEvent(S.current, 'note', '', 'Target changed to ' + nt + (nt === 1 ? ' run' : ' runs') + '.');
+        closeMoreModal();
+        commit('Target changed to ' + nt);
+        checkInningsEnd(); /* a target at or below the current score ends the match */
+      }
+
+      /* ----- Overs / Format / Wickets ----- */
+      function openFormat(){
+        if (scoringLocked()) return;
+        if (S.status === 'finished'){ toast('This match is finished — start a new match to change the format'); return; }
+        openMoreModal('Overs / Format / Wickets',
+          'Change the match format from now on: overs per innings and how many wickets end an innings (10 for 11-a-side, fewer for short-sided games). Overs already bowled stay bowled — if the new limit is already reached, the innings ends.',
+          '<div><label for="fmtPreset">Format</label><select id="fmtPreset" onchange="fmtPresetChanged(this)"><option value="">Custom</option><option value="20">T20 — 20 overs</option><option value="10">T10 — 10 overs</option><option value="40">40 overs</option><option value="50">ODI — 50 overs</option></select></div>'
+          + '<div class="grid2" style="margin-top:10px">'
+          + '<div><label for="fmtOvers">Overs per innings</label><input id="fmtOvers" type="number" min="1" max="50" value="' + S.oversLimit + '" /></div>'
+          + '<div><label for="fmtWickets">Wickets (all out at)</label><input id="fmtWickets" type="number" min="1" max="10" value="' + wicketsLimit() + '" /></div>'
+          + '</div>',
+          applyFormat, 'Apply Format');
+      }
+      function fmtPresetChanged(sel){ if (sel && sel.value) $('fmtOvers').value = sel.value; }
+      function applyFormat(){
+        var ov = moreNum('fmtOvers');
+        var wk = moreNum('fmtWickets');
+        if (isNaN(ov) || ov < 1 || ov > 50){ toast('Overs per innings must be between 1 and 50'); return; }
+        if (isNaN(wk) || wk < 1 || wk > 10){ toast('Wickets must be between 1 and 10'); return; }
+        snapshot();
+        S.oversLimit = ov;
+        S.wicketsLimit = wk;
+        if (S.dlOvers && S.dlOvers >= ov) S.dlOvers = null; /* a D/L shortening cannot exceed the new format */
+        pushFeedEvent(S.current, 'note', '', 'Match format: ' + ov + (ov === 1 ? ' over' : ' overs') + ' per innings, all out at ' + wk + (wk === 1 ? ' wicket' : ' wickets') + '.');
+        closeMoreModal();
+        commit('Format updated: ' + ov + ' overs, ' + wk + ' wickets');
+        checkInningsEnd(); /* the new limit may already be reached */
       }
 
       /* ---------- tournament ---------- */
@@ -2442,7 +2986,7 @@
         if (match.resultText) return match.resultText;
         if (!match.innings || match.innings.length < 2) return '';
         var a = match.innings[0], b = match.innings[1];
-        if (b.runs > a.runs) return b.battingTeam + ' won by ' + (10 - b.wickets) + ' wickets';
+        if (b.runs > a.runs) return b.battingTeam + ' won by ' + ((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + ' wickets';
         if (a.runs > b.runs) return a.battingTeam + ' won by ' + (a.runs - b.runs) + ' runs';
         return 'Match tied';
       }
@@ -2455,12 +2999,16 @@
           toast('⚠️ Save Result works only after the match is finished — both innings complete and the result decided');
           return;
         }
+        if (S.abandoned){
+          toast('⚠️ This match was abandoned — there is no result to save to the tournament');
+          return;
+        }
         var mid = S.matchId || S.updatedAt || 1;
         if (!S.matchId) S.matchId = mid;
         var inningsArr = [deep(S.prevInnings), deep(S.current)];
         var match = {
           id: mid, at: Date.now(), manual: false,
-          oversLimit: S.oversLimit, venue: S.venue || '',
+          oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
           innings: inningsArr, resultText: S.resultText || ''
         };
         if (!match.resultText) match.resultText = matchResultText(match);
@@ -2555,7 +3103,7 @@
           var limBalls = (m.oversLimit || 20) * 6;
           m.innings.forEach(function(inn){
             var bat = rowFor(inn.battingTeam), bowl = rowFor(inn.bowlingTeam);
-            var adj = inn.wickets >= 10 ? limBalls : inn.legalBalls;
+            var adj = inn.wickets >= (typeof m.wicketsLimit === 'number' ? m.wicketsLimit : 10) ? limBalls : inn.legalBalls;
             bat.rf += inn.runs; bat.of += adj;
             bowl.ra += inn.runs; bowl.oa += adj;
           });
@@ -3116,6 +3664,7 @@
            stored state carries them is repaired on the scorer's next
            action and the cleaned card is what Firebase sends viewers. */
         try { cleanGhostPlayers(); } catch(e){}
+        try { normalizeStateShape(); } catch(e){}
         /* Every change is backed up on this device first, so refreshing
            the control page restores the score instantly. Firebase is
            pushed only once its first snapshot has been read (fbReady) —
@@ -3130,8 +3679,18 @@
       }
       if (bc){
         bc.onmessage = function(ev){
-          if (ev.data && ev.data.type==='state' && ev.data.state && ev.data.state.updatedAt !== S.updatedAt){
-            S = ev.data.state; try { cleanGhostPlayers(); } catch(e){} saveLocalBackup(); renderAll(false);
+          if (ev.data && ev.data.type==='state' && ev.data.state){
+            /* A broadcast from another tab may only move this tab
+               FORWARD: only a state with a strictly newer updatedAt
+               is adopted. A stale tab's older (or equal, or
+               timestamp-less) state must never roll back this tab —
+               an older state arriving after the scorer had just
+               picked the 2nd-innings batters and bowler used to wipe
+               those fresh picks and leave the pad silently dead. */
+            var incAt = ev.data.state.updatedAt, curAt = S.updatedAt;
+            if (typeof incAt !== 'number') return;
+            if (typeof curAt === 'number' && incAt <= curAt) return;
+            S = ev.data.state; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} saveLocalBackup(); renderAll(false);
           }
         };
       }
@@ -3150,7 +3709,7 @@
          is backed up on this device, and is rendered (render brings the
          form inputs in line with it — names included). */
       function adoptRemoteState(v){
-        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
+        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
       }
       function shouldAdoptRemote(v){
         if (!v || !v.updatedAt) return false;
@@ -3303,14 +3862,14 @@
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
         var chips='';
-        chips += '<span class="ss-chip">Overs <b>' + oversText(inn.legalBalls) + ' / ' + S.oversLimit + '</b></span>';
+        chips += '<span class="ss-chip">Overs <b>' + oversText(inn.legalBalls) + ' / ' + effOversLimit() + '</b></span>';
         chips += '<span class="ss-chip">CRR <b>' + crr().toFixed(2) + '</b></span>';
         if (t){ var r=rrr(); chips += '<span class="ss-chip">Target <b>' + t + '</b></span>';
-          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs off ' + (S.oversLimit*6-inn.legalBalls) + ' balls</b></span>';
+          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs off ' + (effMaxBalls()-inn.legalBalls) + ' balls</b></span>';
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
         chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(S.resultText) + '</b></span>';
-        var recent = inn.balls.filter(function(b){ return !b.evt; }).slice(-12);
+        var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
         return '<div class="scorestrip">'
           + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam) + '</div>'
@@ -3337,7 +3896,7 @@
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
           return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + esc(b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
-            + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : ''))
+            + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = inn.extras;
@@ -3360,7 +3919,7 @@
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
         var short = inn.battingTeam.length>16 ? inn.battingTeam.slice(0,16) : inn.battingTeam;
-        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs off ' + (S.oversLimit*6-inn.legalBalls) + ' balls') : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam) + ' batting vs ' + esc(inn.bowlingTeam));
+        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs off ' + (effMaxBalls()-inn.legalBalls) + ' balls') : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam) + ' batting vs ' + esc(inn.bowlingTeam));
         if (S.status==='finished' && S.resultText) subLeft = '🏆 ' + esc(S.resultText);
         return '<div class="lowerthird"><div class="lt-main">'
           + '<div class="lt-team">' + esc(short) + '</div>'
@@ -3371,7 +3930,7 @@
           + '</div><div class="lt-sub"><span>' + subLeft + '</span><span>' + esc(inn.bowlingTeam) + ' bowling</span></div></div>';
       }
       function historyHTML(inn){
-        if (!inn.balls.length) return '<p class="note">No balls bowled yet.</p>';
+        if (!(inn.balls || []).length) return '<p class="note">No balls bowled yet.</p>';
         var items = inn.balls.slice().reverse().slice(0,30).map(function(b){
           if (b.evt) return '<div class="hist-item"><span></span><b>' + esc(b.text) + '</b></div>';
           return '<div class="hist-item"><span>Over ' + esc(b.over) + '</span><b>' + esc(b.text) + '</b></div>';
@@ -3528,6 +4087,21 @@
           runs += parseBallRuns(list[i].text);
           if (isLegalDelivery(list[i].text)) balls++;
         }
+        /* Fallback for a state whose ball record never arrived (the
+           Firebase empty-array drop repaired by normalizeInningsShape
+           can only heal the shape, not invent balls that were never
+           stored): with no wicket down, the pair at the crease IS the
+           partnership, so their combined figures are exact — the
+           scoreboard must not claim "Partnership —" over a live
+           8 (4) stand. With wickets down and no record, the honest
+           answer stays empty. Extras belong to the partnership too:
+           team runs minus the pair's bat runs are all extras, since
+           no other pair has batted. */
+        if (!list.length && inn.legalBalls > 0 && inn.wickets === 0 && inn.striker && inn.nonStriker){
+          var b1 = cbBatterFull(inn, inn.striker), b2 = cbBatterFull(inn, inn.nonStriker);
+          var batRuns = b1.runs + b2.runs, batBalls = b1.balls + b2.balls;
+          if (batBalls > 0) return { runs: inn.runs, balls: batBalls };
+        }
         return { runs: runs, balls: balls };
       }
       function overSnapshots(inn){
@@ -3621,9 +4195,9 @@
         var status = '';
         var t = target();
         if (S.status === 'finished' && S.resultText) status = S.resultText;
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + (S.prevInnings.runs + 1);
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t;
         else if (S.inningsNo === 2 && S.prevInnings){
-          var need = t - inn.runs, ballsLeft = S.oversLimit * 6 - inn.legalBalls;
+          var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
           if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') + '.';
           else status = inn.battingTeam + ' have reached the target of ' + t;
         }
@@ -3683,8 +4257,8 @@
            next over and its own over, and it stays there permanently. */
         /* Builds one innings' commentary feed (newest ball first, one
            summary card per completed over). Used for the current
-           innings and — once innings 2 begins — for the previous one
-           too, so its balls stay visible below the live feed. */
+           innings only — the LIVE feed never shows a finished
+           innings underneath the live one. */
         function feedHTMLFor(innX){
           if (!innX || !innX.balls || !innX.balls.length) return '';
           var snapsX = overSnapshots(innX);
@@ -3726,31 +4300,53 @@
         }
         var commEl = $('cbCommentary');
         if (commEl){
+          /* The LIVE feed belongs to the innings being played NOW —
+             only the current innings' balls, announcements and over
+             summary cards render here. Appending the previous innings'
+             feed underneath made the 2nd innings look haunted: its
+             header, pair and bowler were live, yet the feed below
+             rolled straight into the 1st innings' over cards and
+             balls (an "Over 2 | 33-1" card from innings 1 sitting
+             under a 2nd-innings 8-0), and whenever the current
+             innings' own record was missing the old innings was all
+             anyone saw. The 1st innings stays fully on the record —
+             its batting / bowling cards in the Scorecard tab and
+             every one of its overs, including the last-ball wicket,
+             in the Overs tab — but it never bleeds into this feed. */
           var feedCur = feedHTMLFor(inn);
-          /* When innings 2 begins, innings 1 moves out of S.current —
-             its balls used to vanish from this LIVE feed entirely, so
-             a wicket on the LAST ball of innings 1 (the ball that
-             ended the innings) never appeared on the public
-             scoreboard at all. The previous innings' feed now stays
-             below the current one, exactly as it was shown live. */
-          var feedPrev = (S.inningsNo === 2 && S.prevInnings) ? feedHTMLFor(S.prevInnings) : '';
-          if (!feedCur && !feedPrev){
-            commEl.innerHTML = '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
+          if (!feedCur){
+            commEl.innerHTML = (S.inningsNo === 2 && S.prevInnings)
+              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings is in the Overs and Scorecard tabs.</p>'
+              : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
           } else {
-            commEl.innerHTML = feedCur + feedPrev;
+            commEl.innerHTML = feedCur;
           }
         }
         /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
         if (sumEl) sumEl.innerHTML = '';
-        /* overs panel — every over grouped */
+        /* overs panel — every over grouped, per innings. The previous
+           innings lives here (and in the Scorecard tab), under its own
+           heading, instead of inside the LIVE feed: its overs —
+           including the over whose last ball ended the innings — stay
+           on the public record without haunting the live innings. */
         var ovEl = $('cbOversList');
         if (ovEl){
-          var gs = groupOvers(inn).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
-          ovEl.innerHTML = gs.length ? gs.slice().reverse().map(function(g){
-            var seq = g.balls.filter(function(b){ return !b.evt; }).map(function(b){ return esc(b.text); }).join('  ');
-            return '<div class="cb-overcard"><div class="cb-overcard-top" style="border-bottom:none;padding-bottom:0"><span class="cb-overcard-title">Over ' + g.no + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + g.runs + (g.runs === 1 ? ' run' : ' runs') + ')</span></div></div>';
-          }).join('') : '';
+          function oversHTMLFor(innY){
+            var gsY = groupOvers(innY).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
+            return gsY.slice().reverse().map(function(g){
+              var seq = g.balls.filter(function(b){ return !b.evt; }).map(function(b){ return esc(b.text); }).join('  ');
+              return '<div class="cb-overcard"><div class="cb-overcard-top" style="border-bottom:none;padding-bottom:0"><span class="cb-overcard-title">Over ' + g.no + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + g.runs + (g.runs === 1 ? ' run' : ' runs') + ')</span></div></div>';
+            }).join('');
+          }
+          var ovHtml = '';
+          if (S.prevInnings){
+            ovHtml += '<p class="note" style="margin:2px 2px 8px"><b>' + (S.inningsNo === 2 ? '2nd' : '1st') + ' Innings</b> — ' + esc(inn.battingTeam) + ' ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</p>' + oversHTMLFor(inn);
+            ovHtml += '<p class="note" style="margin:14px 2px 8px"><b>1st Innings</b> — ' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' ov)</p>' + oversHTMLFor(S.prevInnings);
+          } else {
+            ovHtml = oversHTMLFor(inn);
+          }
+          ovEl.innerHTML = ovHtml;
         }
         /* squads panel — two teams side by side. Once the scorer has
            confirmed the squad, viewers see the FINAL squad frozen for
@@ -3789,12 +4385,12 @@
            routing and the Firebase auto-connect that run after it — the
            viewer link then sat on the home chooser in "Local Mode". */
         function step(fn){ try { fn(); } catch(e){} }
-        step(function(){ normalizeSquads(); syncPlayersFromInputsSilent(); });
+        step(function(){ normalizeSquads(); normalizeStateShape(); syncPlayersFromInputsSilent(); });
         step(function(){
           var strip = scoreStripHTML();
-          $('scorerLive').innerHTML = strip;
           $('sbLive').innerHTML = strip;
         });
+        try { renderScorerCentre(); } catch(e){}
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
         step(function(){
           $('sbBatting').innerHTML = battingTableHTML(S.current);
@@ -3899,6 +4495,7 @@
         if (backup){
           S = backup;
           try { cleanGhostPlayers(); } catch(e){}
+          try { normalizeStateShape(); } catch(e){}
           localRestored = true;
           /* If the backup carries a real match, treat it as local work
              Firebase may not have yet: an older database state must not
