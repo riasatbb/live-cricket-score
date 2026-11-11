@@ -1,0 +1,12 @@
+{
+	"appId": "com.riasatbb.livecricketscore",
+	"appName": "Live Cricket Score",
+	"webDir": "www",
+	"server": {
+		"url": "https://riasatbb.github.io/live-cricket-score/?view=live",
+		"cleartext": false
+	},
+	"android": {
+		"allowMixedContent": false
+	}
+}

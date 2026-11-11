@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Live Cricket Score</string>
+    <string name="title_activity_main">Live Cricket Score</string>
+    <string name="package_name">com.riasatbb.livecricketscore</string>
+    <string name="custom_url_scheme">com.riasatbb.livecricketscore</string>
+</resources>
