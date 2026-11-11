@@ -293,6 +293,13 @@
       .mc-balls .mc-noballs{font-size:13.5px;color:var(--muted)}
       .mc-notes{padding:12px 14px 0}
       .mc-notes:empty{display:none}
+      /* Player of the Match picker — appears in the Scorer Centre once
+         the match is finished, and stays there so the choice can be
+         made or changed later, not only at the final ball. */
+      .mc-potm{border-top:1px solid var(--line);margin-top:12px;padding:13px 14px 15px;background:var(--surface2)}
+      .mc-potm label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:7px}
+      .mc-potm .note{margin:8px 0 0}
+      .mc-potm select{flex:1;min-width:0;width:auto}
       .mc-hint{display:none;background:#e8eff8;border:1px solid #b9d2ea;color:#175d8f;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
       @media (prefers-color-scheme: dark){.mc-hint{background:#16283a;color:#a8cdf0;border-color:#2c4a68}}
       .mc-hint.show{display:block}
@@ -480,22 +487,32 @@
 
       /* ---------- viewer landing: live matches list ---------- */
       body.viewer-mode .viewtabs{display:none !important}
-      .live-badge{display:inline-flex;align-items:center;gap:6px;background:#c22;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;text-transform:uppercase;flex:none}
-      .live-badge i{width:8px;height:8px;border-radius:50%;background:#fff;flex:none;animation:blinkdot 1.6s infinite}
-      .live-badge.result{background:var(--green)}
       @keyframes blinkdot{0%,100%{opacity:1}50%{opacity:.3}}
-      @media (prefers-reduced-motion: reduce){.live-badge i{animation:none}}
-      .live-match-card{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);cursor:pointer;margin:14px 0 12px}
-      .live-match-card:active{transform:scale(.99)}
-      .live-match-card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-      .live-card-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}
-      .live-card-title{font-weight:700;color:var(--muted);font-size:13.5px}
-      .live-vs{font-family:"Barlow Condensed",sans-serif;font-size:27px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.15;margin-bottom:10px;word-break:break-word}
-      .live-vs-sep{color:var(--gold);font-size:20px;vertical-align:2px}
-      .live-strip .scorestrip{margin-bottom:0}
-      .live-wait{font-size:14px;color:var(--muted);margin:0 0 4px}
-      .live-result-text{font-weight:800;color:var(--green);font-size:16px;margin-top:12px}
-      .live-cta{margin-top:12px;font-weight:800;color:var(--green);font-size:15.5px}
+      @media (prefers-reduced-motion: reduce){.ml-live i,.cb-livepill i{animation:none}}
+      /* Compact match list (Cricbuzz-style): one small row per match —
+         a label line, one score line per innings with the team
+         abbreviation, and a blue result / status line underneath.
+         The live match sits at the top; the most recent results
+         follow below it, newest first. */
+      .ml-list{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-top:14px}
+      .ml-row{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:12px 15px 13px;color:var(--ink);font-size:15px}
+      .ml-row:last-child{border-bottom:none}
+      .ml-row.tap{cursor:pointer}
+      .ml-row.tap:active{background:var(--surface2)}
+      .ml-row.tap:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+      .ml-group{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:14px 15px 1px}
+      .ml-label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-bottom:6px}
+      .ml-lab-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .ml-live{flex:none;display:inline-flex;align-items:center;gap:5px;color:#d43a2f;font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+      .ml-live i{width:7px;height:7px;border-radius:50%;background:#d43a2f;flex:none;animation:blinkdot 1.6s infinite}
+      .ml-line{display:flex;align-items:baseline;gap:16px;padding:2px 0;font-size:17.5px}
+      .ml-abbr{flex:none;min-width:62px;font-weight:700;letter-spacing:.02em}
+      .ml-score{font-weight:600;font-variant-numeric:tabular-nums}
+      .ml-score .ml-ov{font-size:15px;font-weight:500;color:var(--muted)}
+      .ml-line.dim{color:var(--muted)}
+      .ml-line.dim .ml-abbr{font-weight:600}
+      .ml-status{color:var(--blue);font-size:14.5px;line-height:1.4;margin-top:6px}
+      .ml-status.muted{color:var(--muted)}
       .scorer-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;padding:12px 2px;color:var(--muted);font-size:14px;font-weight:600}
 
       /* ---------- separate links: control vs viewer ---------- */
@@ -575,13 +592,43 @@
       .cb-overballs{font-size:15.5px;letter-spacing:.14em;color:#d8d8d8;font-variant-numeric:tabular-nums}
       .cb-overballs .ob4{color:#64b5e8;font-weight:700}
       .cb-overballs .obw{color:#ff8a7a;font-weight:700}
-      .cb-overgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;padding:12px 0;border-bottom:1px dashed #3a3a3a}
-      @media (max-width:480px){.cb-overgrid{grid-template-columns:1fr}}
+      /* Over Summary alignment (per reference): the ball sequence sits
+         right-aligned on the title row, and below it the batters form
+         the LEFT column and the bowler the RIGHT column, split by a
+         dashed divider — two columns at every width, phones included.
+         The old grid collapsed to a single column under 480px, which
+         stacked batter / bowler / batter into one unreadable list. */
+      .cb-overcard-top{flex-wrap:nowrap}
+      .cb-overcard-title{flex:none}
+      .cb-overballs{text-align:right;min-width:0}
+      .cb-overgrid{display:flex;gap:0;padding:12px 0 4px;border-bottom:1px dashed #3a3a3a}
+      .cb-overgrid .og-col{flex:1 1 0;min-width:0}
+      .cb-overgrid .og-col.og-right{border-left:1px dashed #3a3a3a;margin-left:16px;padding-left:16px}
       .cb-overgrid .og-row{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;padding:3px 0}
       .cb-overgrid .og-row span:first-child{color:#cfcfcf;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .cb-overgrid .og-row b{font-weight:600;color:#fff;font-variant-numeric:tabular-nums;flex:none}
       .cb-overcard-foot{display:flex;gap:26px;flex-wrap:wrap;padding-top:11px}
       .cb-overcard-foot button{background:none;border:none;color:#64b5e8;font-size:14.5px;font-weight:600;cursor:pointer;padding:0}
+      /* finished match (per reference): both innings listed as plain
+         score lines — the earlier innings dimmed — then the result in
+         blue, then the Player of the Match band. No button row. */
+      .cb-fin-row{display:flex;align-items:baseline;gap:18px;padding:4px 0;font-size:21px;color:#fff;font-variant-numeric:tabular-nums}
+      .cb-fin-row .cb-fin-team{font-weight:600;letter-spacing:.02em;min-width:74px;flex:none}
+      .cb-fin-row .cb-fin-score{font-weight:500}
+      .cb-fin-row .cb-fin-score span{font-size:16.5px;color:#bdbdbd;font-weight:400}
+      .cb-fin-row.dim{color:#a3a3a3}
+      .cb-fin-row.dim .cb-fin-score span{color:#8f8f8f}
+      .cb-fin-result{color:#64b5e8;font-size:16.5px;font-weight:500;line-height:1.45;margin-top:10px}
+      .cb-potm-wrap{background:#2b2b2b;border-top:1px solid #3a3a3a;padding:14px 16px 16px}
+      .cb-potm-lab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:10px}
+      .cb-potm-row{display:flex;align-items:center;gap:14px}
+      .cb-potm-ava{flex:none;width:54px;height:54px;border-radius:50%;background:#e6e6e6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+      .cb-potm-name{font-size:18.5px;font-weight:600;color:#fff;line-height:1.25}
+      .cb-potm-fig{font-size:15px;color:#bdbdbd;margin-top:2px;font-variant-numeric:tabular-nums}
+      /* nickname chip in the squad MANAGEMENT lists — the full name
+         stays; the chip only shows the scorer that a nickname is set */
+      .sq-nick{flex:none;background:var(--chip);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
+      .nick-inp{height:38px}
       /* scorecard / squads / info panels inside the dark scoreboard */
       #view-scoreboard .cb-panel .card{background:#262626;border-color:#3a3a3a;color:#e9e9e9;box-shadow:none;margin:12px}
       #view-scoreboard .cb-panel .card h2{color:#fff;border-bottom-color:#3a3a3a}
@@ -642,17 +689,9 @@
       <section class="view" id="view-live">
         <div class="mode-intro">
           <h2>Live Matches</h2>
-          <p>Matches being scored right now. Tap a match to watch its live score — it updates ball by ball, automatically.</p>
+          <p>Tap the live match to watch its score — it updates ball by ball, automatically.</p>
         </div>
-        <div id="liveNow"></div>
-        <div class="card" id="liveFixturesCard" hidden>
-          <h2>Upcoming Fixtures</h2>
-          <div id="liveFixtures"></div>
-        </div>
-        <div class="card" id="liveResultsCard" hidden>
-          <h2>Recent Results</h2>
-          <div id="liveResults"></div>
-        </div>
+        <div id="liveList"></div>
         <div class="scorer-entry">
           <span>Scoring a match yourself?</span>
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
@@ -716,9 +755,9 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
           <div class="fold-body" hidden>
           <div class="grid3">
-            <div><label for="teamA">Team 1</label><input id="teamA" value="BB YOUNG BLOODS" list="dlTeams" oninput="refreshTossOptions()" /></div>
-            <div><label for="teamB">Team 2</label><input id="teamB" value="BB POWER STRIKERS" list="dlTeams" oninput="refreshTossOptions()" /></div>
-            <div><label for="oversLimit">Total Overs (per innings)</label><input id="oversLimit" type="number" min="1" max="50" value="20" /></div>
+            <div><label for="teamA">Team 1</label><input id="teamA" placeholder="Pick or type Team 1" list="dlTeams" oninput="refreshTossOptions();clearReqMark(this)" /></div>
+            <div><label for="teamB">Team 2</label><input id="teamB" placeholder="Pick or type Team 2" list="dlTeams" oninput="refreshTossOptions();clearReqMark(this)" /></div>
+            <div><label for="oversLimit">Total Overs (per innings)</label><input id="oversLimit" type="number" min="1" max="50" placeholder="e.g. 20" oninput="clearReqMark(this)" /></div>
           </div>
           <div class="grid2" style="margin-top:12px">
             <div><label for="venue">Venue / Match Name (optional)</label><input id="venue" placeholder="e.g. Sheikh Abu Naser Stadium" /></div>
@@ -732,7 +771,7 @@
             <button class="btn" onclick="startMatch()">🏏 Start Match</button>
             <button class="btn ghost" onclick="resetMatch()">New Match (Clear Everything)</button>
             <button class="btn gold" id="btnRetryPublish" onclick="publishReset()" hidden>Retry Publishing New Match</button>
-            <span class="note grow" id="matchStatusText">No match started yet — you can test the pad on the default demo score.</span>
+            <span class="note grow" id="matchStatusText">No match started yet — pick Team 1, Team 2 and Total Overs above, then tap Start Match.</span>
           </div>
           </div>
         </div>
@@ -748,6 +787,9 @@
                 <textarea id="addPlayerA" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
                 <button class="btn sm" onclick="addPlayer('A')">Add</button>
               </div>
+              <div class="rowflex" style="margin-top:8px">
+                <input id="addNickA" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" />
+              </div>
             </div>
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadBName">Team 2</h3><span class="note" id="squadBCount"></span></div>
@@ -755,6 +797,9 @@
               <div class="rowflex names-row" style="margin-top:10px">
                 <textarea id="addPlayerB" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
                 <button class="btn sm" onclick="addPlayer('B')">Add</button>
+              </div>
+              <div class="rowflex" style="margin-top:8px">
+                <input id="addNickB" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" />
               </div>
             </div>
           </div>
@@ -783,6 +828,14 @@
             <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase — loading the live match first. Scoring unlocks as soon as it loads, so a refresh can never wipe the real score.</div>
             <div class="mc-hint" id="slotHint" role="status"></div>
             <div class="pending-note" id="pendingNote"></div>
+          </div>
+          <div class="mc-potm" id="mcPotm" hidden>
+            <label for="potmSelect">🏆 Player of the Match</label>
+            <div class="rowflex" style="flex-wrap:nowrap">
+              <select id="potmSelect" aria-label="Choose the Player of the Match"></select>
+              <button type="button" class="btn gold sm" style="flex:none" onclick="applyPotm()">Set</button>
+            </div>
+            <p class="note" id="potmCurrent"></p>
           </div>
           <div class="mc-other" id="mcOtherRuns">
             <span class="lab">Other runs on this ball:</span>
@@ -1258,17 +1311,31 @@
       };
       function freshState(){
         return {
-          teamA: 'BB YOUNG BLOODS', teamB: 'BB POWER STRIKERS',
-          oversLimit: 20, wicketsLimit: 10, /* wickets that end an innings (all out) */
+          /* No team and no overs are pre-selected: Team 1, Team 2 and
+             Total Overs start empty and the scorer picks them in Match
+             Setup before Start Match will run. Squads load from the
+             tournament squad of whichever teams get picked. */
+          teamA: '', teamB: '',
+          oversLimit: null, wicketsLimit: 10, /* wickets that end an innings (all out) */
           targetOverride: null, dlTarget: null, dlOvers: null, /* More-menu match adjustments */
           abandoned: false, pendingPenalty: null,
           venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
           status: 'live', /* live | inningsBreak | finished */
           inningsNo: 1,
-          current: blankInnings('BB YOUNG BLOODS','BB POWER STRIKERS'),
+          current: blankInnings('',''),
           prevInnings: null,
-          squadA: DEFAULT_TOURNAMENT_SQUADS['BB YOUNG BLOODS'].slice(),
-          squadB: DEFAULT_TOURNAMENT_SQUADS['BB POWER STRIKERS'].slice(),
+          squadA: [],
+          squadB: [],
+          /* Optional player nicknames: [{t: team, n: full name, k: nickname}].
+             An ARRAY of entries, never an object keyed by player name —
+             names are full of dots ("Md. …"), which Firebase forbids in
+             keys. The scoreboard shows the nickname wherever the player
+             appears; squad lists keep the full name. */
+          nicknames: [],
+          /* Player of the Match — chosen BY THE SCORER after the match
+             finishes (never auto-picked). Empty until chosen; the
+             scoreboard then shows "Not Decided Yet". */
+          potmName: '', potmTeam: '',
           squadConfirmed: false, finalSquadA: [], finalSquadB: [],
           resultText: '',
           matchId: Date.now(),
@@ -1427,6 +1494,74 @@
         });
         return out;
       }
+      /* Player-name entries with an optional nickname: one per line,
+         and a line may carry its nickname after a "|" —
+         "Md. Mahbubul Hasan | Miraz". Returns [{name, nick}]. */
+      function parseNameEntries(text){
+        var out = [], seen = {};
+        String(text == null ? '' : text).split(/\r\n|\r|\n/).forEach(function(part){
+          var seg = String(part).split('|');
+          var n = (seg[0] || '').trim().replace(/\s+/g, ' ');
+          var nk = seg.length > 1 ? seg.slice(1).join('|').trim().replace(/\s+/g, ' ') : '';
+          if (n && !seen[n]){ seen[n] = true; out.push({ name: n, nick: nk }); }
+        });
+        return out;
+      }
+      /* ---------- nicknames ----------
+         Set at squad / team entry time, stored in S.nicknames as
+         {t: team, n: full name, k: nickname} entries, and synced with
+         the rest of the state like everything else. dispName() is the
+         ONLY way scoreboard surfaces should print a player: it returns
+         the nickname when one is set for that player in that team,
+         otherwise the full name. Squad lists keep the full name. */
+      function nickOf(team, name){
+        if (!name || !Array.isArray(S.nicknames)) return '';
+        var fallback = '';
+        for (var i = 0; i < S.nicknames.length; i++){
+          var e = S.nicknames[i];
+          if (!e || e.n !== name || !e.k) continue;
+          if (e.t === team) return e.k;
+          if (!fallback) fallback = e.k;
+        }
+        return fallback;
+      }
+      function dispName(team, name){
+        if (!name) return name;
+        return nickOf(team, name) || name;
+      }
+      function setNickname(team, name, nick){
+        if (!Array.isArray(S.nicknames)) S.nicknames = [];
+        var found = -1;
+        for (var i = 0; i < S.nicknames.length; i++){
+          if (S.nicknames[i] && S.nicknames[i].t === team && S.nicknames[i].n === name){ found = i; break; }
+        }
+        if (!nick){ if (found > -1) S.nicknames.splice(found, 1); return; }
+        if (found > -1) S.nicknames[found].k = nick;
+        else S.nicknames.push({ t: team || '', n: name, k: nick });
+      }
+      function dropNicknamesFor(team, name){
+        if (!Array.isArray(S.nicknames)) return;
+        S.nicknames = S.nicknames.filter(function(e){
+          if (!e) return false;
+          if (name != null) return !(e.t === team && e.n === name);
+          return e.t !== team;
+        });
+      }
+      /* Apply parsed name entries (with their nicknames) to a squad
+         array. The separate Nickname field applies when exactly one
+         player is being entered. Returns the add / skip counts and how
+         many nicknames were set. */
+      function applyNameEntries(arr, team, entries, nickFieldValue){
+        var nickField = String(nickFieldValue || '').trim().replace(/\s+/g, ' ');
+        if (entries.length === 1 && nickField && !entries[0].nick) entries[0].nick = nickField;
+        var added = 0, skipped = 0, nicks = 0;
+        entries.forEach(function(en){
+          if (arr.indexOf(en.name) > -1) skipped++;
+          else { arr.push(en.name); added++; }
+          if (en.nick){ setNickname(team, en.name, en.nick); nicks++; }
+        });
+        return { added: added, skipped: skipped, nicks: nicks };
+      }
       function toggleFold(btn){
         var wrap = btn.closest('.fold'); if (!wrap) return;
         var body = wrap.querySelector('.fold-body'); if (!body) return;
@@ -1539,6 +1674,17 @@
         if (S.dlOvers === undefined) S.dlOvers = null;
         if (typeof S.abandoned !== 'boolean') S.abandoned = false;
         if (S.pendingPenalty === undefined) S.pendingPenalty = null;
+        /* Nicknames: an array of {t, n, k} entries. Firebase hands
+           arrays back as objects with numeric keys when it feels like
+           it, and older states carry no field at all — coerce both. */
+        if (!Array.isArray(S.nicknames)){
+          if (S.nicknames && typeof S.nicknames === 'object'){
+            S.nicknames = Object.keys(S.nicknames).sort().map(function(k){ return S.nicknames[k]; });
+          } else S.nicknames = [];
+        }
+        S.nicknames = S.nicknames.filter(function(e){ return e && typeof e === 'object' && e.n && e.k; });
+        if (typeof S.potmName !== 'string') S.potmName = '';
+        if (typeof S.potmTeam !== 'string') S.potmTeam = '';
       }
       function syncPlayersFromInputs(){
         /* The dropdowns start empty on purpose: no batter or bowler is
@@ -1855,11 +2001,15 @@
       function bowlingSquad(){ return squadForTeam(S.current.bowlingTeam); }
       function squadListHTML(arr, which){
         if (!arr.length) return '<p class="note">No players yet — add the squad below.</p>';
+        var team = which === 'A' ? S.teamA : S.teamB;
         return arr.map(function(n,i){
           /* ↑ / ↓ set the player's position (batting order) before the
              squad is confirmed; the first row cannot move up and the
-             last cannot move down. */
-          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span>'
+             last cannot move down. The full name always stays here —
+             the chip only shows that a nickname is set for the
+             scoreboard. */
+          var nk = nickOf(team, n);
+          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '')
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',-1)" aria-label="Move ' + esc(n) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',1)" aria-label="Move ' + esc(n) + ' down"' + (i === arr.length - 1 ? ' disabled' : '') + '>↓</button>'
             + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
@@ -1869,8 +2019,8 @@
         normalizeSquads();
         $('squadAList').innerHTML = squadListHTML(S.squadA,'A');
         $('squadBList').innerHTML = squadListHTML(S.squadB,'B');
-        $('squadAName').textContent = S.teamA;
-        $('squadBName').textContent = S.teamB;
+        $('squadAName').textContent = S.teamA || 'Team 1';
+        $('squadBName').textContent = S.teamB || 'Team 2';
         $('squadACount').textContent = S.squadA.length + (S.squadA.length===1 ? ' player' : ' players');
         $('squadBCount').textContent = S.squadB.length + (S.squadB.length===1 ? ' player' : ' players');
         $('dlBat').innerHTML = battingSquad().map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
@@ -1881,7 +2031,7 @@
         if (S.squadConfirmed){
           if (cBtn) cBtn.textContent = '✓ Squad Confirmed';
           if (cStatus) cStatus.textContent = '✓ Squad confirmed — the final squad for this match is shown below and in the scoreboard\'s Squads tab.';
-          if (fsEl) fsEl.innerHTML = '<div class="grid2">' + [[S.teamA, S.finalSquadA],[S.teamB, S.finalSquadB]].map(function(pair){
+          if (fsEl) fsEl.innerHTML = '<div class="grid2">' + [[S.teamA || 'Team 1', S.finalSquadA],[S.teamB || 'Team 2', S.finalSquadB]].map(function(pair){
             var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + esc(n) + '</span></div>'; }).join('') : '<p class="note">No players.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(pair[0]) + ' — Final Squad</h3><span class="note">' + pair[1].length + (pair[1].length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
@@ -1893,28 +2043,29 @@
       }
       function addPlayer(which){
         var inp = $('addPlayer'+which);
-        var names = parseNameList(inp ? inp.value : '');
-        if (!names.length){ toast('Type or paste player names first — one name per line'); return; }
+        var entries = parseNameEntries(inp ? inp.value : '');
+        if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
+        var nickInp = $('addNick'+which);
         var arr = which==='A' ? S.squadA : S.squadB;
-        var added = 0, skipped = 0;
-        names.forEach(function(name){
-          if (arr.indexOf(name) > -1) skipped++;
-          else { arr.push(name); added++; }
-        });
+        var team = which==='A' ? S.teamA : S.teamB;
+        var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
         inp.value = '';
+        if (nickInp) nickInp.value = '';
         S.squadConfirmed = false;
         syncMatchSquadToTournament(which);
         commit('Squad updated', true);
-        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to the squad');
+        if (res.added === 1 && res.skipped === 0 && !res.nicks) toast('✓ ' + entries[0].name + ' added to the squad');
         else {
-          var msg = '✓ ' + added + (added === 1 ? ' player' : ' players') + ' added to the squad';
-          if (skipped) msg += ' — ' + skipped + ' already in the squad, skipped';
+          var msg = '✓ ' + res.added + (res.added === 1 ? ' player' : ' players') + ' added to the squad';
+          if (res.skipped) msg += ' — ' + res.skipped + ' already in the squad, skipped';
+          if (res.nicks) msg += ' — nickname set for ' + res.nicks + (res.nicks === 1 ? ' player' : ' players');
           toast(msg);
         }
       }
       function removePlayer(which, i){
         var arr = which==='A' ? S.squadA : S.squadB;
         var name = arr[i]; arr.splice(i,1);
+        dropNicknamesFor(which==='A' ? S.teamA : S.teamB, name);
         S.squadConfirmed = false;
         syncMatchSquadToTournament(which);
         commit('Squad updated', true); toast(name + ' removed from the squad');
@@ -2132,10 +2283,10 @@
       /* Overs available in THIS innings: a D/L revision shortens the
          chase, so the 2nd innings can have fewer overs than the match
          format's overs per innings. */
-      function effOversLimit(){ return (S.inningsNo === 2 && typeof S.dlOvers === 'number' && S.dlOvers > 0) ? S.dlOvers : S.oversLimit; }
-      function effMaxBalls(){ return effOversLimit() * 6; }
+      function effOversLimit(){ return (S.inningsNo === 2 && typeof S.dlOvers === 'number' && S.dlOvers > 0) ? S.dlOvers : ((typeof S.oversLimit === 'number' && S.oversLimit > 0) ? S.oversLimit : null); }
+      function effMaxBalls(){ var lim = effOversLimit(); return lim ? lim * 6 : Infinity; }
       function crr(){ var inn=S.current; return inn.legalBalls>0 ? (inn.runs/(inn.legalBalls/6)) : 0; }
-      function rrr(){ var t=target(); if(!t) return null; var inn=S.current; var ballsLeft=effMaxBalls()-inn.legalBalls; if(ballsLeft<=0) return null; var need=t-inn.runs; return need>0 ? (need/(ballsLeft/6)) : 0; }
+      function rrr(){ var t=target(); if(!t) return null; var inn=S.current; var ballsLeft=effMaxBalls()-inn.legalBalls; if(!isFinite(ballsLeft) || ballsLeft<=0) return null; var need=t-inn.runs; return need>0 ? (need/(ballsLeft/6)) : 0; }
 
       /* ---------- scoring ---------- */
       function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
@@ -2224,7 +2375,7 @@
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — Target ' + target();
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, bl = effMaxBalls() - inn.legalBalls;
-          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + bl + (bl === 1 ? ' ball' : ' balls') + '.';
+          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(bl) ? ' in ' + bl + (bl === 1 ? ' ball' : ' balls') : '') + '.';
         }
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
         $('mcStatus').textContent = status;
@@ -2235,7 +2386,7 @@
           ? '<span>Target - <b>' + t + '</b></span><span>REQ - <b>' + (rrr() !== null ? rrr().toFixed(2) : '—') + '</b></span>'
           : '<span>Proj. Score - <b>' + (proj === null ? '—' : proj) + '</b></span>';
         row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
-        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b></span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + effOversLimit() + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
+        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b></span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
           + '<div class="mrow">' + row2 + '</div>';
         var pencil = '<button type="button" class="mc-edit" onclick="openFoldById(\'playersCard\')" aria-label="Edit batters and bowler">✎</button>';
         function batRow(name, isStriker){
@@ -2243,8 +2394,8 @@
           var b = cbBatterFull(inn, name);
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
           var nameHtml = isStriker
-            ? '<span class="mc-striker-pill">' + esc(name) + ' *</span>'
-            : '<span class="mc-pname on">' + esc(name) + '</span>';
+            ? '<span class="mc-striker-pill">' + esc(dispName(inn.battingTeam, name)) + ' *</span>'
+            : '<span class="mc-pname on">' + esc(dispName(inn.battingTeam, name)) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
         $('mcBatters').innerHTML = '<table><thead><tr><th>' + pencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
@@ -2253,7 +2404,7 @@
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
           var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + esc(inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + esc(dispName(inn.bowlingTeam, inn.bowler)) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
         } else {
           $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
         }
@@ -2282,6 +2433,8 @@
         } else { hint.classList.remove('show'); hint.innerHTML = ''; }
         var ei = $('btnEndInnings');
         if (ei) ei.disabled = (S.status === 'inningsBreak' || S.status === 'finished');
+        /* Player of the Match picker — finished matches only. */
+        try { renderPotmPicker(); } catch(e){}
       }
 
       function completeExtra(n){
@@ -2467,8 +2620,28 @@
       /* ---------- match flow ---------- */
       function startMatch(){
         if (scoringLocked()) return;
-        var newA = $('teamA').value.trim() || 'Team 1';
-        var newB = $('teamB').value.trim() || 'Team 2';
+        var newA = $('teamA').value.trim();
+        var newB = $('teamB').value.trim();
+        /* Team 1, Team 2 and Total Overs are never pre-selected: all
+           three start empty in Match Setup and the scorer must pick
+           them — there is no default team and no default 20 overs to
+           fall back to, so a match cannot start until all are set. */
+        var ovRaw = $('oversLimit').value.trim();
+        var ovParsed = parseInt(ovRaw, 10);
+        var missingTeams = !newA || !newB;
+        var missingOvers = !ovRaw || isNaN(ovParsed) || ovParsed < 1;
+        if (missingTeams || missingOvers){
+          openSetupFold();
+          $('teamA').classList.toggle('req-missing', !newA);
+          $('teamB').classList.toggle('req-missing', !newB);
+          $('oversLimit').classList.toggle('req-missing', missingOvers);
+          toast(missingTeams
+            ? '⚠️ Pick Team 1 and Team 2 first — teams are not selected by default'
+            : '⚠️ Enter the Total Overs for the match — overs are not selected by default');
+          try { (!newA ? $('teamA') : (!newB ? $('teamB') : $('oversLimit'))).focus(); } catch(e){}
+          return;
+        }
+        $('oversLimit').classList.remove('req-missing');
         /* The same team on both sides is not a match. */
         if (newA.toLowerCase() === newB.toLowerCase()){
           openSetupFold();
@@ -2501,10 +2674,12 @@
         var keepWk = (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
+        var keepNick = deep(S.nicknames || []);
         /* Players entered for a team in the Tournament tab become that team's match squad */
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
         S = freshState();
         S.tournament = keepTn;
+        S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
         S.matchId = Date.now(); S.archivedMatchId = null;
         S.teamA = newA;
         S.teamB = newB;
@@ -2541,19 +2716,17 @@
         askVerify('Start a new match?', 'New Match clears the current live match — score, batters, bowlers and the innings — for you and for everyone watching. Squads and tournament data are kept. Continue?', doResetMatch);
       }
       function doResetMatch(){
-        var prevTeamA = S.teamA, prevTeamB = S.teamB;
-        var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
-        var tnSquads2 = (keepTn2 && keepTn2.squads && typeof keepTn2.squads === 'object') ? keepTn2.squads : {};
-        var typedA = $('teamA').value.trim(), typedB = $('teamB').value.trim();
-        S = freshState(); S.tournament = keepTn2; S.matchId = Date.now();
-        S.teamA = typedA || S.teamA; S.teamB = typedB || S.teamB;
-        /* Fresh players for the NEW match: each team's squad is loaded
-           from that team's own tournament squad. The previous match's
-           squad is kept only for a slot whose team did not change, so a
-           new pairing never opens with another team's players. */
-        S.squadA = squadForMatch(S.teamA, tnSquads2, prevTeamA, keepA);
-        S.squadB = squadForMatch(S.teamB, tnSquads2, prevTeamB, keepB);
+        var keepNick2 = deep(S.nicknames || []);
+        S = freshState(); S.tournament = keepTn2; S.nicknames = keepNick2; S.matchId = Date.now();
+        /* A new match starts with NO team and NO overs selected: the
+           Match Setup fields are cleared along with the state, and the
+           scorer picks Team 1, Team 2 and Total Overs fresh. Each
+           picked team's squad then loads from its tournament squad at
+           Start Match — tournament data itself is kept, as before. */
+        ['teamA','teamB','oversLimit'].forEach(function(id){
+          var el = $(id); if (el){ el.value = ''; el.classList.remove('req-missing'); }
+        });
         undoStack=[]; pendingExtra=null; renderPending();
         cancelWicket();
         S.current=blankInnings(S.teamA,S.teamB);
@@ -2565,7 +2738,7 @@
         /* Batter / bowler dropdowns open unselected for the new match. */
         clearPlayerInputs();
         syncPlayersFromInputs();
-        $('matchStatusText').textContent='Ready for a new match.';
+        $('matchStatusText').textContent='Ready for a new match — pick Team 1, Team 2 and Total Overs in Match Setup.';
         commit('New match reset', true);
         /* The reset itself must reach Firebase, not just this device's
            backup — publish it explicitly and report the result. */
@@ -2624,6 +2797,81 @@
         } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
         S.resultText = txt;
         commit(auto ? 'Match finished: ' + txt : txt);
+      }
+
+      /* ---------- Player of the Match — the scorer's choice, never automatic ----------
+         The picker appears in the Scorer Centre as soon as the match
+         is finished and stays for as long as the finished match is on
+         record, so the award can be decided (or changed) later — at
+         the presentation, after a discussion, whenever. Until the
+         scorer picks someone, S.potmName stays empty and the public
+         scoreboard shows "Not Decided Yet": no name is ever guessed
+         or auto-picked from the figures. */
+      var potmCandidateList = [];
+      function potmCandidates(){
+        var out = [], seen = {};
+        [S.prevInnings, S.current].forEach(function(inn){
+          if (!inn) return;
+          (inn.batters || []).forEach(function(b){ var k = inn.battingTeam + '|' + b.name; if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.battingTeam }); } });
+          (inn.bowlers || []).forEach(function(b){ var k = inn.bowlingTeam + '|' + b.name; if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.bowlingTeam }); } });
+        });
+        out.sort(function(a, b){ return a.name.localeCompare(b.name); });
+        return out;
+      }
+      function renderPotmPicker(){
+        var wrap = $('mcPotm'); if (!wrap) return;
+        if (S.status !== 'finished'){ wrap.hidden = true; return; }
+        wrap.hidden = false;
+        potmCandidateList = potmCandidates();
+        var sel = $('potmSelect'); if (!sel) return;
+        var sig = potmCandidateList.map(function(c){ return c.team + '|' + c.name; }).join(';;') + '##' + S.potmName + '|' + S.potmTeam;
+        if (sel.getAttribute('data-sig') !== sig && document.activeElement !== sel){
+          sel.setAttribute('data-sig', sig);
+          var cur = -1;
+          potmCandidateList.forEach(function(c, i){ if (c.name === S.potmName && c.team === S.potmTeam) cur = i; });
+          sel.innerHTML = '<option value="">— Not decided yet —</option>' + potmCandidateList.map(function(c, i){
+            return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(dispName(c.team, c.name)) + ' (' + esc(c.team) + ')</option>';
+          }).join('');
+          sel.value = cur > -1 ? String(cur) : '';
+        }
+        var curEl = $('potmCurrent');
+        if (curEl){
+          curEl.textContent = S.potmName
+            ? 'Current: ' + dispName(S.potmTeam, S.potmName) + ' — shown on the public scoreboard. Pick someone else and tap Set to change it.'
+            : 'Not decided yet — the scoreboard shows “Not Decided Yet” until you pick the Player of the Match here.';
+        }
+      }
+      function applyPotm(){
+        if (scoringLocked()) return;
+        var sel = $('potmSelect'); if (!sel) return;
+        var v = sel.value;
+        if (v === '' || v == null){
+          S.potmName = ''; S.potmTeam = '';
+          commit('Player of the Match cleared', true);
+          toast('Player of the Match cleared — the scoreboard shows “Not Decided Yet”');
+          return;
+        }
+        var c = potmCandidateList[parseInt(v, 10)];
+        if (!c) return;
+        S.potmName = c.name; S.potmTeam = c.team;
+        commit('Player of the Match: ' + c.name, true);
+        toast('🏆 Player of the Match: ' + dispName(c.team, c.name));
+      }
+      /* The chosen player's match figures, in the reference format:
+         batting "15*(8)" (star when not out) and bowling "1-22",
+         joined with " • " — either part omitted when they did not
+         bat / bowl. */
+      function potmFigures(name, team){
+        var bat = null, bowl = null;
+        [S.prevInnings, S.current].forEach(function(inn){
+          if (!inn) return;
+          if (inn.battingTeam === team) (inn.batters || []).forEach(function(b){ if (b.name === name) bat = b; });
+          if (inn.bowlingTeam === team) (inn.bowlers || []).forEach(function(b){ if (b.name === name) bowl = b; });
+        });
+        var parts = [];
+        if (bat) parts.push(bat.runs + (bat.out ? '' : '*') + '(' + bat.balls + ')');
+        if (bowl) parts.push(bowl.wickets + '-' + bowl.runs);
+        return parts.join(' • ');
       }
 
       /* ---------- More menu: Abandon / Penalty / Retired Hurt / D/L / Change Target / Overs-Format-Wickets ----------
@@ -2767,7 +3015,7 @@
           '<p class="note" style="margin:0 0 10px">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + '</b> • Current target: <b>' + target() + '</b> • ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + ' in ' + oversText(S.current.legalBalls) + ' overs.</p>'
           + '<div class="grid2">'
           + '<div><label for="dlTargetInput">Revised target (runs)</label><input id="dlTargetInput" type="number" min="1" value="' + target() + '" /></div>'
-          + '<div><label for="dlOversInput">Overs for the chase</label><input id="dlOversInput" type="number" min="1" max="' + S.oversLimit + '" value="' + effOversLimit() + '" /></div>'
+          + '<div><label for="dlOversInput">Overs for the chase</label><input id="dlOversInput" type="number" min="1" max="' + (S.oversLimit || 50) + '" value="' + (effOversLimit() || '') + '" /></div>'
           + '</div>',
           applyDL, 'Apply D/L Target');
       }
@@ -2775,11 +3023,11 @@
         var nt = moreNum('dlTargetInput');
         var no = moreNum('dlOversInput');
         if (isNaN(nt) || nt < 1){ toast('Enter the revised target (1 run or more)'); return; }
-        if (isNaN(no) || no < 1 || no > S.oversLimit){ toast('Overs for the chase must be between 1 and ' + S.oversLimit); return; }
+        if (isNaN(no) || no < 1 || no > (S.oversLimit || 50)){ toast('Overs for the chase must be between 1 and ' + (S.oversLimit || 50)); return; }
         snapshot();
         S.dlTarget = nt;
         S.targetOverride = null; /* the D/L target is now the target */
-        S.dlOvers = (no < S.oversLimit) ? no : null;
+        S.dlOvers = (typeof S.oversLimit === 'number' && no < S.oversLimit) ? no : null;
         pushFeedEvent(S.current, 'note', '', 'D/L: target revised — ' + S.current.battingTeam + ' need ' + nt + (nt === 1 ? ' run' : ' runs') + ' in ' + no + (no === 1 ? ' over' : ' overs') + '.');
         closeMoreModal();
         commit('D/L target applied: ' + nt + ' in ' + no + ' overs');
@@ -2819,7 +3067,7 @@
           'Change the match format from now on: overs per innings and how many wickets end an innings (10 for 11-a-side, fewer for short-sided games). Overs already bowled stay bowled — if the new limit is already reached, the innings ends.',
           '<div><label for="fmtPreset">Format</label><select id="fmtPreset" onchange="fmtPresetChanged(this)"><option value="">Custom</option><option value="20">T20 — 20 overs</option><option value="10">T10 — 10 overs</option><option value="40">40 overs</option><option value="50">ODI — 50 overs</option></select></div>'
           + '<div class="grid2" style="margin-top:10px">'
-          + '<div><label for="fmtOvers">Overs per innings</label><input id="fmtOvers" type="number" min="1" max="50" value="' + S.oversLimit + '" /></div>'
+          + '<div><label for="fmtOvers">Overs per innings</label><input id="fmtOvers" type="number" min="1" max="50" value="' + (S.oversLimit || '') + '" /></div>'
           + '<div><label for="fmtWickets">Wickets (all out at)</label><input id="fmtWickets" type="number" min="1" max="10" value="' + wicketsLimit() + '" /></div>'
           + '</div>',
           applyFormat, 'Apply Format');
@@ -2928,6 +3176,7 @@
         normalizeTournament();
         var name = S.tournament.teams[i]; S.tournament.teams.splice(i,1);
         if (name && S.tournament.squads) delete S.tournament.squads[name];
+        if (name) dropNicknamesFor(name, null);
         commit('Team removed', true); toast(name + ' removed');
       }
       function addTournamentPlayer(teamIdx){
@@ -2935,21 +3184,20 @@
         var team = S.tournament.teams[teamIdx];
         if (!team) return;
         var inp = $('tnPlayer-' + teamIdx);
-        var names = parseNameList(inp ? inp.value : '');
-        if (!names.length){ toast('Type or paste player names first — one name per line'); return; }
+        var entries = parseNameEntries(inp ? inp.value : '');
+        if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
+        var nickInp = $('tnNick-' + teamIdx);
         var arr = tournamentSquad(team);
-        var added = 0, skipped = 0;
-        names.forEach(function(name){
-          if (arr.indexOf(name) > -1) skipped++;
-          else { arr.push(name); added++; }
-        });
+        var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
         if (inp) inp.value = '';
+        if (nickInp) nickInp.value = '';
         syncTournamentSquadToMatch(team);
         commit('Player added', true);
-        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to ' + team);
+        if (res.added === 1 && res.skipped === 0 && !res.nicks) toast('✓ ' + entries[0].name + ' added to ' + team);
         else {
-          var pmsg = '✓ ' + added + (added === 1 ? ' player' : ' players') + ' added to ' + team;
-          if (skipped) pmsg += ' — ' + skipped + ' already in the squad, skipped';
+          var pmsg = '✓ ' + res.added + (res.added === 1 ? ' player' : ' players') + ' added to ' + team;
+          if (res.skipped) pmsg += ' — ' + res.skipped + ' already in the squad, skipped';
+          if (res.nicks) pmsg += ' — nickname set for ' + res.nicks + (res.nicks === 1 ? ' player' : ' players');
           toast(pmsg);
         }
         /* keep focus in the same team's player box for fast entry */
@@ -2962,6 +3210,7 @@
         var arr = tournamentSquad(team);
         var name = arr[playerIdx];
         arr.splice(playerIdx, 1);
+        dropNicknamesFor(team, name);
         syncTournamentSquadToMatch(team);
         commit('Player removed', true); toast(name + ' removed from ' + team);
       }
@@ -3165,7 +3414,7 @@
         var rows = st.slice(0,10).map(function(s,i){
           var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
           var ave = s.outs > 0 ? (s.runs/s.outs).toFixed(1) : '—';
-          return '<tr><td><b>' + esc(s.name) + '</b>' + (i===0 ? '<span class="stat-cap">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + ' • HS ' + s.best + '</span></td><td class="r">' + s.inns + '</td><td class="r"><b>' + s.runs + '</b></td><td class="r">' + ave + '</td><td class="r">' + sr + '</td><td class="r">' + s.fours + '/' + s.sixes + '</td></tr>';
+          return '<tr><td><b>' + esc(dispName(s.team, s.name)) + '</b>' + (i===0 ? '<span class="stat-cap">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + ' • HS ' + s.best + '</span></td><td class="r">' + s.inns + '</td><td class="r"><b>' + s.runs + '</b></td><td class="r">' + ave + '</td><td class="r">' + sr + '</td><td class="r">' + s.fours + '/' + s.sixes + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Player</th><th class="r">Inn</th><th class="r">Runs</th><th class="r">Ave</th><th class="r">SR</th><th class="r">4s/6s</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -3174,7 +3423,7 @@
         if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up from matches saved to the tournament.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><b>' + esc(s.name) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><b>' + esc(dispName(s.team, s.name)) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Player</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wkts</th><th class="r">Econ</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -3198,10 +3447,10 @@
         items.push('<div class="hist-item"><span>Matches completed</span><b>' + completedMatches + '</b></div>');
         items.push('<div class="hist-item"><span>Total runs in tournament</span><b>' + totalRuns + '</b></div>');
         items.push('<div class="hist-item"><span>Total wickets</span><b>' + totalWkts + '</b></div>');
-        if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + esc(bySix.name) + ' — ' + bySix.sixes + '</b></div>');
-        if (byFour && byFour.fours > 0) items.push('<div class="hist-item"><span>Most fours</span><b>' + esc(byFour.name) + ' — ' + byFour.fours + '</b></div>');
-        if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + esc(bySR.name) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
-        if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + esc(byEcon.name) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
+        if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + esc(dispName(bySix.team, bySix.name)) + ' — ' + bySix.sixes + '</b></div>');
+        if (byFour && byFour.fours > 0) items.push('<div class="hist-item"><span>Most fours</span><b>' + esc(dispName(byFour.team, byFour.name)) + ' — ' + byFour.fours + '</b></div>');
+        if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + esc(dispName(bySR.team, bySR.name)) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
+        if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + esc(dispName(byEcon.team, byEcon.name)) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
         return items.join('');
       }
       var currentTnTab = 'home';
@@ -3316,16 +3565,16 @@
         var topBowl = st.bowling.length ? st.bowling[0] : null;
         var pot = topBat || null;
         var potName = $('tnPotName'), potTeam = $('tnPotTeam'), potAv = $('tnPotAvatar');
-        if (potName) potName.textContent = pot ? pot.name.toUpperCase() : '—';
+        if (potName) potName.textContent = pot ? dispName(pot.team, pot.name).toUpperCase() : '—';
         if (potTeam) potTeam.textContent = pot ? pot.team : '';
-        if (potAv) potAv.textContent = pot ? tnInitials(pot.name) : '—';
+        if (potAv) potAv.textContent = pot ? tnInitials(dispName(pot.team, pot.name)) : '—';
         var trN = $('tnTopRunsNum'), trName = $('tnTopRunsName'), trTeam = $('tnTopRunsTeam');
         if (trN) trN.textContent = topBat ? topBat.runs : 0;
-        if (trName) trName.textContent = topBat ? topBat.name : '—';
+        if (trName) trName.textContent = topBat ? dispName(topBat.team, topBat.name) : '—';
         if (trTeam) trTeam.textContent = topBat ? topBat.team : '';
         var twN = $('tnTopWktsNum'), twName = $('tnTopWktsName'), twTeam = $('tnTopWktsTeam');
         if (twN) twN.textContent = topBowl ? topBowl.wickets : 0;
-        if (twName) twName.textContent = topBowl ? topBowl.name : '—';
+        if (twName) twName.textContent = topBowl ? dispName(topBowl.team, topBowl.name) : '—';
         if (twTeam) twTeam.textContent = topBowl ? topBowl.team : '';
         var tot4 = 0, tot6 = 0;
         st.batting.forEach(function(s){ tot4 += s.fours || 0; tot6 += s.sixes || 0; });
@@ -3355,57 +3604,110 @@
         if (q.indexOf('viewer') === -1 && !inFlow && !pureViewer) document.body.classList.remove('viewer-mode');
         setView('scoreboard');
       }
-      /* ---------- viewer landing: live matches list ----------
-         What viewers see when they open the public link: the match(es)
-         being scored right now, as tappable cards. A tap opens the Public
-         Scoreboard for that match, read-only. Viewers never get the
-         scorer controls — the scorer enters them from this page. */
-      function liveCardHTML(){
+      /* ---------- viewer landing: compact match list ----------
+         What viewers see when they open the public link: a compact
+         list of matches, Cricbuzz-style. Each match is one small row:
+         a label line (match name / tournament name), one score line
+         per innings (team abbreviation + score + overs), and a blue
+         result or status line underneath. The match being scored now
+         sits at the TOP of the list; the most recent finished matches
+         follow below it, newest first, then the upcoming fixtures.
+         Tapping the live row opens that match's Public Scoreboard,
+         read-only. Viewers never get the scorer controls — the scorer
+         enters them from this page. */
+      function mlOvers(balls){ return (balls % 6 === 0) ? String(balls / 6) : oversText(balls); }
+      function mlInnLine(inn, dim){
+        return '<div class="ml-line' + (dim ? ' dim' : '') + '"><span class="ml-abbr">' + esc(teamShort(inn.battingTeam)) + '</span><span class="ml-score num">' + inn.runs + '-' + inn.wickets + ' <span class="ml-ov">(' + mlOvers(inn.legalBalls) + ')</span></span></div>';
+      }
+      function mlTeamLine(name){
+        return '<div class="ml-line"><span class="ml-abbr">' + esc(teamShort(name)) + '</span></div>';
+      }
+      function mlLabel(parts, live){
+        var seen = {}, txt = [];
+        (parts || []).forEach(function(p){
+          var s = String(p || '').trim();
+          var key = s.toLowerCase();
+          if (s && !seen[key]){ seen[key] = 1; txt.push(s); }
+        });
+        return '<div class="ml-label"><span class="ml-lab-text">' + esc(txt.join(' • ') || 'Match') + '</span>'
+          + (live ? '<span class="ml-live"><i></i>Live</span>' : '') + '</div>';
+      }
+      function liveRowHTML(){
         var inn = S.current;
         var tn = S.tournament || {};
         var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
         var finished = S.status === 'finished';
         var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
-        var badge = finished
-          ? '<span class="live-badge result">✓ Result</span>'
-          : '<span class="live-badge"><i></i>Live</span>';
-        var titleLine = tnName || 'Live Match';
-        var meta = S.venue ? ' • ' + esc(S.venue) : '';
-        var vs = esc(S.teamA) + ' <span class="live-vs-sep">vs</span> ' + esc(S.teamB);
-        return '<div class="live-match-card" role="button" tabindex="0" aria-label="Watch ' + esc(S.teamA) + ' vs ' + esc(S.teamB) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
-          + '<div class="live-card-top">' + badge + '<span class="live-card-title">' + esc(titleLine) + meta + '</span></div>'
-          + '<div class="live-vs">' + vs + '</div>'
-          + (!finished && !started ? '<p class="live-wait">The match is set up and about to start — the score will appear here ball by ball.</p>' : '')
-          + '<div class="live-strip">' + scoreStripHTML() + '</div>'
-          + (finished && S.resultText ? '<div class="live-result-text">🏆 ' + esc(S.resultText) + '</div>' : '')
-          + '<div class="live-cta">' + (finished ? 'See the full scorecard →' : 'Watch live score →') + '</div>'
+        var t = target();
+        var status = '', statusMuted = false;
+        if (S.abandoned) status = String(S.resultText || 'Match abandoned').replace(/🏆/g, '').trim();
+        else if (finished) status = String(S.resultText || 'Match finished').replace(/🏆/g, '').trim();
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '');
+        else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet' : 'No match is being scored right now'; statusMuted = true; }
+        else if (S.inningsNo === 2 && S.prevInnings && t){
+          var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
+          status = need > 0
+            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
+            : inn.battingTeam + ' have reached the target of ' + t;
+        }
+        else if (S.tossInfo) status = S.tossInfo;
+        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam;
+        var lines = '';
+        if (S.prevInnings){
+          lines += mlInnLine(S.prevInnings, true);
+          lines += mlInnLine(inn, false);
+        } else if (started){
+          lines += mlInnLine(inn, false);
+          if (inn.bowlingTeam) lines += mlTeamLine(inn.bowlingTeam);
+        } else if (S.teamA || S.teamB){
+          var batFirst = inn.battingTeam || S.teamA;
+          var other = batFirst === S.teamA ? S.teamB : S.teamA;
+          if (batFirst) lines += mlTeamLine(batFirst);
+          if (other && other !== batFirst) lines += mlTeamLine(other);
+        }
+        var aria = (S.teamA || S.teamB) ? ('Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2')) : 'Open the scoreboard';
+        return '<div class="ml-row tap" role="button" tabindex="0" aria-label="' + esc(aria) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
+          + mlLabel([S.venue, tnName], !finished && started)
+          + lines
+          + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
       }
+      function resultRowHTML(m, tnName){
+        var inns = m.innings || [];
+        var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
+        var res = matchResultText(m);
+        return '<div class="ml-row">' + mlLabel([m.venue, tnName], false) + lines
+          + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
+      }
+      function fixtureRowHTML(f, tnName){
+        return '<div class="ml-row">' + mlLabel([f.label, tnName], false)
+          + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
+          + '<div class="ml-status muted">Upcoming</div></div>';
+      }
       function renderLiveHome(){
-        var nowEl = $('liveNow'); if (!nowEl) return;
+        var listEl = $('liveList'); if (!listEl) return;
         normalizeTournament();
         var tn = S.tournament;
-        nowEl.innerHTML = liveCardHTML();
-        var fxCard = $('liveFixturesCard'), fxEl = $('liveFixtures');
-        if (fxCard && fxEl){
-          if (tn.fixtures.length){
-            fxCard.hidden = false;
-            fxEl.innerHTML = tn.fixtures.map(function(f){
-              return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>';
-            }).join('');
-          } else { fxCard.hidden = true; }
+        var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
+        var html = '<div class="ml-list">' + liveRowHTML();
+        /* Most recent first. When the match on top is finished and has
+           already been saved to the tournament, its saved copy is the
+           same match — don't list it twice. */
+        var results = tn.matches.slice().reverse();
+        if (S.status === 'finished'){
+          results = results.filter(function(m){ return m.id !== S.archivedMatchId && m.id !== S.matchId; });
         }
-        var rsCard = $('liveResultsCard'), rsEl = $('liveResults');
-        if (rsCard && rsEl){
-          if (tn.matches.length){
-            rsCard.hidden = false;
-            rsEl.innerHTML = tn.matches.slice().reverse().slice(0,4).map(function(m){
-              var lines = (m.innings || []).map(function(i2){ return '<div>' + esc(i2.battingTeam) + ' <span class="mr-score num">' + i2.runs + '/' + i2.wickets + '</span> <span class="note">(' + oversText(i2.legalBalls) + ' ov)</span></div>'; }).join('');
-              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
-            }).join('');
-          } else { rsCard.hidden = true; }
+        results = results.slice(0, 6);
+        if (results.length){
+          html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){ return resultRowHTML(m, tnName); }).join('');
         }
+        if (tn.fixtures.length){
+          html += '<div class="ml-group">Upcoming Fixtures</div>' + tn.fixtures.map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
+        }
+        html += '</div>';
+        listEl.innerHTML = html;
       }
+
       function enterViewerHome(pure){
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
@@ -3550,13 +3852,13 @@
           if (teamBat.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Batting</b></p>' + teamBat.map(function(s){
               var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
-              return '<div class="hist-item"><span>' + esc(s.name) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
+              return '<div class="hist-item"><span>' + esc(dispName(s.team, s.name)) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
             }).join(''));
           }
           if (teamBowl.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Bowling</b></p>' + teamBowl.map(function(s){
               var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
-              return '<div class="hist-item"><span>' + esc(s.name) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
+              return '<div class="hist-item"><span>' + esc(dispName(s.team, s.name)) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
             }).join(''));
           }
           if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet — statistics build up from matches saved to the tournament.</p>');
@@ -3587,22 +3889,23 @@
         $('tnTitle').textContent = tn.name.trim() || 'Tournament';
         /* Keep text already typed/pasted into the per-team player boxes —
            this section is rebuilt on every render. */
-        var keptPlayerText = {};
-        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el) keptPlayerText[i] = el.value; });
+        var keptPlayerText = {}, keptNickText = {};
+        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el) keptPlayerText[i] = el.value; var ne = $('tnNick-' + i); if (ne) keptNickText[i] = ne.value; });
         $('tnTeamList').innerHTML = tn.teams.length
           ? tn.teams.map(function(n,i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
               var playerRows = players.length
-                ? players.map(function(p,pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span><button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                ? players.map(function(p,pi){ var nk = nickOf(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
                 : '<div class="tn-empty">No players yet for this team — add players below.</div>';
               return '<div class="squad-box tn-team-box">'
                 + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
                 + playerRows
                 + '<div class="rowflex names-row" style="margin-top:10px"><textarea id="tnPlayer-' + i + '" class="grow namebox" rows="1" placeholder="Player names for ' + esc(n) + ' — one per line. Paste a whole list and tap Add Players."></textarea><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
+                + '<div class="rowflex" style="margin-top:8px"><input id="tnNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" /></div>'
                 + '</div>';
             }).join('')
           : '<p class="note">No teams entered yet — add a team below, then add its players here.</p>';
-        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el && keptPlayerText[i]) el.value = keptPlayerText[i]; });
+        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el && keptPlayerText[i]) el.value = keptPlayerText[i]; var ne = $('tnNick-' + i); if (ne && keptNickText[i]) ne.value = keptNickText[i]; });
         if ($('sbSquads')) $('sbSquads').innerHTML = tn.teams.length
           ? '<div class="sb-squad-grid">' + tn.teams.map(function(n){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
@@ -3862,22 +4165,23 @@
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
         var chips='';
-        chips += '<span class="ss-chip">Overs <b>' + oversText(inn.legalBalls) + ' / ' + effOversLimit() + '</b></span>';
+        chips += '<span class="ss-chip">Overs <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span>';
         chips += '<span class="ss-chip">CRR <b>' + crr().toFixed(2) + '</b></span>';
         if (t){ var r=rrr(); chips += '<span class="ss-chip">Target <b>' + t + '</b></span>';
-          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs off ' + (effMaxBalls()-inn.legalBalls) + ' balls</b></span>';
+          var ballsLeftChip = effMaxBalls()-inn.legalBalls;
+          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs' + (isFinite(ballsLeftChip) ? ' off ' + ballsLeftChip + ' balls' : '') + '</b></span>';
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
         chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(S.resultText) + '</b></span>';
         var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
         return '<div class="scorestrip">'
-          + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam) + '</div>'
+          + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam || '—') + '</div>'
           + '<div class="ss-score num">' + inn.runs + '/' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ' ov)</span></div></div>'
-          + '<div class="ss-team" style="text-align:right">vs<br><b style="color:#fff;font-size:16px">' + esc(inn.bowlingTeam) + '</b><br>Innings ' + S.inningsNo + '</div></div>'
-          + '<div class="ss-bats"><div><span class="onstrike">' + esc(inn.striker||'—') + ' *</span> — ' + bat1.runs + ' (' + bat1.balls + ')</div>'
-          + '<div>' + esc(inn.nonStriker||'—') + ' — ' + bat2.runs + ' (' + bat2.balls + ')</div>'
-          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: ' + esc(inn.bowler||'—') + ' • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
+          + '<div class="ss-team" style="text-align:right">vs<br><b style="color:#fff;font-size:16px">' + esc(inn.bowlingTeam || '—') + '</b><br>Innings ' + S.inningsNo + '</div></div>'
+          + '<div class="ss-bats"><div><span class="onstrike">' + esc(inn.striker ? dispName(inn.battingTeam, inn.striker) : '—') + ' *</span> — ' + bat1.runs + ' (' + bat1.balls + ')</div>'
+          + '<div>' + esc(inn.nonStriker ? dispName(inn.battingTeam, inn.nonStriker) : '—') + ' — ' + bat2.runs + ' (' + bat2.balls + ')</div>'
+          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: ' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + ' • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
           + '<div class="ss-meta">' + chips + '</div>'
           + (ballsHtml ? '<div class="balls-row"><span class="over-label">Recent balls:</span>' + ballsHtml + '</div>' : '')
           + '</div>';
@@ -3895,13 +4199,13 @@
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
-          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + esc(b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
+          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + esc(dispName(inn.battingTeam, b.name)) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
             + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = inn.extras;
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(esc).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return esc(dispName(inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
           + '<tr><td>Extras (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</td><td class="r"><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b></td><td colspan="4"></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
@@ -3911,23 +4215,24 @@
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td>' + esc(b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td>' + esc(dispName(inn.bowlingTeam, b.name)) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
       function overlayHTML(){
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
-        var short = inn.battingTeam.length>16 ? inn.battingTeam.slice(0,16) : inn.battingTeam;
-        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs off ' + (effMaxBalls()-inn.legalBalls) + ' balls') : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam) + ' batting vs ' + esc(inn.bowlingTeam));
+        var short = (inn.battingTeam || '—').length>16 ? (inn.battingTeam || '—').slice(0,16) : (inn.battingTeam || '—');
+        var ballsLeftLt = effMaxBalls()-inn.legalBalls;
+        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs' + (isFinite(ballsLeftLt) ? ' off ' + ballsLeftLt + ' balls' : '')) : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam || '—') + ' batting vs ' + esc(inn.bowlingTeam || '—'));
         if (S.status==='finished' && S.resultText) subLeft = '🏆 ' + esc(S.resultText);
         return '<div class="lowerthird"><div class="lt-main">'
           + '<div class="lt-team">' + esc(short) + '</div>'
           + '<div class="lt-score"><div class="big num">' + inn.runs + '/' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></div></div>'
-          + '<div class="lt-mid"><div class="bat"><b>' + esc(inn.striker||'—') + ' *</b> ' + bat1.runs + ' (' + bat1.balls + ')</div>'
-          + '<div class="bat">' + esc(inn.nonStriker||'—') + ' ' + bat2.runs + ' (' + bat2.balls + ')</div></div>'
-          + '<div class="lt-right"><div>Bowler <b>' + esc(inn.bowler||'—') + '</b></div><div>' + bowlerFig(inn, inn.bowler) + '</div><div>CRR <b>' + crr().toFixed(2) + '</b></div></div>'
-          + '</div><div class="lt-sub"><span>' + subLeft + '</span><span>' + esc(inn.bowlingTeam) + ' bowling</span></div></div>';
+          + '<div class="lt-mid"><div class="bat"><b>' + esc(inn.striker ? dispName(inn.battingTeam, inn.striker) : '—') + ' *</b> ' + bat1.runs + ' (' + bat1.balls + ')</div>'
+          + '<div class="bat">' + esc(inn.nonStriker ? dispName(inn.battingTeam, inn.nonStriker) : '—') + ' ' + bat2.runs + ' (' + bat2.balls + ')</div></div>'
+          + '<div class="lt-right"><div>Bowler <b>' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</b></div><div>' + bowlerFig(inn, inn.bowler) + '</div><div>CRR <b>' + crr().toFixed(2) + '</b></div></div>'
+          + '</div><div class="lt-sub"><span>' + subLeft + '</span><span>' + esc(inn.bowlingTeam || '—') + ' bowling</span></div></div>';
       }
       function historyHTML(inn){
         if (!(inn.balls || []).length) return '<p class="note">No balls bowled yet.</p>';
@@ -4160,24 +4465,32 @@
         });
         return snaps;
       }
-      function overSummaryCardHTML(snap, showFoot){
+      /* Over Summary card, aligned like the reference: title left and
+         the ball sequence right-aligned on the top row; below, TWO
+         fixed columns — batters on the left (name + runs (balls)),
+         bowler on the right (name + figures (overs)) with the over's
+         extras under the bowler — split by a dashed divider. The
+         columns are separate blocks, never interleaved grid cells, so
+         the alignment holds at phone width too. Player names print
+         through dispName(): a nickname set at squad entry shows here
+         instead of a long full name. */
+      function overSummaryCardHTML(snap, showFoot, batTeam, bowlTeam){
         var seq = snap.balls.filter(function(b){ return !b.evt; }).map(function(b){
           var cls = b.text === '4' ? ' class="ob4"' : (isWicketBall(b) ? ' class="obw"' : '');
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
-        var rightCells = snap.bowlers.map(function(bw){
-          return '<div class="og-row"><span>' + esc(bw.name) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
-        });
-        rightCells.push('<div class="og-row"><span>Extras this over</span><b>' + snap.extrasOver + '</b></div>');
-        var grid = '';
-        var rows = Math.max(snap.batters.length, rightCells.length);
-        for (var i = 0; i < rows; i++){
-          if (snap.batters[i]) grid += '<div class="og-row"><span>' + esc(snap.batters[i].name) + '</span><b>' + snap.batters[i].runs + ' (' + snap.batters[i].balls + ')</b></div>';
-          else grid += '<div class="og-row"><span></span><b></b></div>';
-          grid += rightCells[i] || '<div class="og-row"><span></span><b></b></div>';
-        }
+        var leftCol = snap.batters.map(function(bt){
+          return '<div class="og-row"><span>' + esc(dispName(batTeam, bt.name)) + '</span><b>' + bt.runs + ' (' + bt.balls + ')</b></div>';
+        }).join('');
+        var rightCol = snap.bowlers.map(function(bw){
+          return '<div class="og-row"><span>' + esc(dispName(bowlTeam, bw.name)) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
+        }).join('');
+        rightCol += '<div class="og-row"><span>Extras this over</span><b>' + snap.extrasOver + '</b></div>';
+        var grid = (leftCol || snap.bowlers.length)
+          ? '<div class="cb-overgrid"><div class="og-col">' + leftCol + '</div><div class="og-col og-right">' + rightCol + '</div></div>'
+          : '';
         return '<div class="cb-overcard"><div class="cb-overcard-top"><span class="cb-overcard-title">Over ' + snap.no + ' <span>|</span> ' + snap.cumRuns + '-' + snap.cumWkts + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + snap.runs + (snap.runs === 1 ? ' run' : ' runs') + ')</span></div>'
-          + (grid ? '<div class="cb-overgrid">' + grid + '</div>' : '')
+          + grid
           + (showFoot ? '<div class="cb-overcard-foot"><button type="button" onclick="setCbTab(\'scorecard\')">Full Scorecard ›</button><button type="button" onclick="setCbTab(\'overs\')">View all overs ›</button></div>' : '')
           + '</div>';
       }
@@ -4191,19 +4504,22 @@
           else if (S.status === 'inningsBreak') pill.innerHTML = '<i></i> BREAK';
           else pill.innerHTML = '<i></i> LIVE';
         }
-        /* orange status line */
+        /* orange status line — a finished match shows its result in
+           the finished header below instead (blue, under both innings
+           scores, like the reference), so the line stays empty then. */
+        var finished = S.status === 'finished';
         var status = '';
         var t = target();
-        if (S.status === 'finished' && S.resultText) status = S.resultText;
+        if (finished) status = '';
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t;
         else if (S.inningsNo === 2 && S.prevInnings){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
-          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') + '.';
+          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.';
           else status = inn.battingTeam + ' have reached the target of ' + t;
         }
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
         else if (S.tossInfo) status = S.tossInfo;
-        else if (S.inningsNo === 1) status = inn.battingTeam + ' chose to bat.';
+        else if (S.inningsNo === 1) status = inn.battingTeam ? inn.battingTeam + ' chose to bat.' : 'Teams not selected yet — the match has not started.';
         else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam;
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
         /* main score block */
@@ -4215,38 +4531,90 @@
         /* No venue line under the score — the ground's name lives only
            in the Info tab, not beneath the big score. */
         var mainEl = $('cbMainScore');
-        if (mainEl) mainEl.innerHTML = '<div class="cb-main-top"><div>'
-          + '<div class="cb-teamline"><span class="cb-teamshort">' + esc(teamShort(inn.battingTeam)) + '</span><span class="cb-innlab">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' inn</span></div>'
-          + '<div class="cb-bignum">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></div></div>'
-          + '<div class="cb-rates">' + rates + '</div></div>' + prevLine;
+        if (mainEl){
+          if (finished){
+            /* Finished-match header, like the reference: each innings
+               as one plain score line (short team name + score +
+               overs), the earlier innings dimmed, then the result in
+               blue. No CRR box, no partnership strip, no button row —
+               the Player of the Match band and the ball-by-ball feed
+               follow below. */
+            function finRow(x, dim){
+              return '<div class="cb-fin-row' + (dim ? ' dim' : '') + '"><span class="cb-fin-team">' + esc(teamShort(x.battingTeam)) + '</span><span class="cb-fin-score">' + x.runs + '-' + x.wickets + ' <span>(' + oversText(x.legalBalls) + ')</span></span></div>';
+            }
+            var finHtml = '';
+            if (S.prevInnings) finHtml += finRow(S.prevInnings, true);
+            finHtml += finRow(inn, false);
+            var resTxt = String(S.resultText || 'Match finished').replace(/ 🏆/g, '');
+            finHtml += '<div class="cb-fin-result">' + esc(resTxt) + '</div>';
+            mainEl.innerHTML = finHtml;
+          } else {
+            mainEl.innerHTML = '<div class="cb-main-top"><div>'
+              + '<div class="cb-teamline"><span class="cb-teamshort">' + esc(teamShort(inn.battingTeam)) + '</span><span class="cb-innlab">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' inn</span></div>'
+              + '<div class="cb-bignum">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></div></div>'
+              + '<div class="cb-rates">' + rates + '</div></div>' + prevLine;
+          }
+        }
         /* partnership (since the last wicket) + projected score line */
         var bat1 = cbBatterFull(inn, inn.striker), bat2 = cbBatterFull(inn, inn.nonStriker);
         var pship = partnershipFigures(inn);
         var pRuns = pship.runs, pBalls = pship.balls;
         var proj = projectedScore();
         var pshipEl = $('cbPship');
-        var projHtml = (S.inningsNo === 2 && t)
-          ? '<span class="ps-proj">Target:<b>' + t + '</b></span>'
-          : '<span class="ps-proj">Projected Score<b>' + (proj === null ? '—' : proj) + '</b></span>';
-        if (pshipEl) pshipEl.innerHTML = "<span class=\"ps-lab\">Partnership&nbsp; " + (pBalls ? (pRuns + ' (' + pBalls + ')') : '—') + '</span>'
-          + '<span class="ps-div"></span>'
-          + projHtml;
-        /* batter table — current pair, like the reference */
-        var pairRows = [inn.striker, inn.nonStriker].filter(Boolean).map(function(name){
-          var b = cbBatterFull(inn, name);
-          var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-          return '<tr><td><span class="pname">' + esc(name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
-        }).join('');
+        if (pshipEl){
+          if (finished){
+            /* The partnership strip becomes the Player of the Match
+               band, like the reference: label, avatar placeholder, the
+               scorer's chosen player (nickname when one is set) with
+               their match figures. Until the scorer chooses, it reads
+               "Not Decided Yet" — a name is never auto-picked. */
+            pshipEl.className = 'cb-potm-wrap';
+            pshipEl.style.display = '';
+            if (S.potmName){
+              var pFig = potmFigures(S.potmName, S.potmTeam);
+              pshipEl.innerHTML = '<div class="cb-potm-lab">Player of the Match</div><div class="cb-potm-row">'
+                + '<span class="cb-potm-ava"><svg width="34" height="34" viewBox="0 0 24 24" fill="#8a8a8a" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z"/></svg></span>'
+                + '<div><div class="cb-potm-name">' + esc(dispName(S.potmTeam, S.potmName)) + '</div>'
+                + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
+                + '</div></div>';
+            } else {
+              pshipEl.innerHTML = '<div class="cb-potm-lab">Player of the Match</div><div class="cb-potm-name" style="color:#bdbdbd">Not Decided Yet</div>';
+            }
+          } else {
+            pshipEl.className = 'cb-pship';
+            pshipEl.style.display = '';
+            var projHtml = (S.inningsNo === 2 && t)
+              ? '<span class="ps-proj">Target:<b>' + t + '</b></span>'
+              : '<span class="ps-proj">Projected Score<b>' + (proj === null ? '—' : proj) + '</b></span>';
+            pshipEl.innerHTML = "<span class=\"ps-lab\">Partnership&nbsp; " + (pBalls ? (pRuns + ' (' + pBalls + ')') : '—') + '</span>'
+              + '<span class="ps-div"></span>'
+              + projHtml;
+          }
+        }
+        /* batter table — current pair, like the reference. A finished
+           match has no "current pair" table: the finished header, the
+           Player of the Match band and the feed carry the page, and
+           the full cards live in the Scorecard tab. */
         var btEl = $('cbBatterTable');
-        if (btEl) btEl.innerHTML = '<table><thead><tr><th>Batter</th><th class="r">R</th><th class="r">B</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + (pairRows || '<tr><td colspan="6">No batters yet.</td></tr>') + '</tbody></table>';
-        /* bowler table — current bowler */
         var bwEl = $('cbBowlerTable');
-        if (bwEl){
-          if (inn.bowler){
-            var bw = cbBowlerFull(inn, inn.bowler);
-            var er = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-            bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + esc(inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
-          } else bwEl.innerHTML = '';
+        if (finished){
+          if (btEl) btEl.innerHTML = '';
+          if (bwEl) bwEl.innerHTML = '';
+        } else {
+          var pairRows = [inn.striker, inn.nonStriker].filter(Boolean).map(function(name){
+            var b = cbBatterFull(inn, name);
+            var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
+            return '<tr><td><span class="pname">' + esc(dispName(inn.battingTeam, name)) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
+          }).join('');
+          if (btEl) btEl.innerHTML = '<table><thead><tr><th>Batter</th><th class="r">R</th><th class="r">B</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + (pairRows || '<tr><td colspan="6">No batters yet.</td></tr>') + '</tbody></table>';
+          /* bowler table — current bowler */
+          if (bwEl){
+            if (inn.bowler){
+              var bw = cbBowlerFull(inn, inn.bowler);
+              var er = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
+              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + esc(dispName(inn.bowlingTeam, inn.bowler)) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
+            } else bwEl.innerHTML = '';
+          }
         }
         /* commentary — newest ball first, with an over-summary card kept
            after EVERY completed over (not just the latest one). The card
@@ -4278,21 +4646,22 @@
                   bowlers: innX.bowler ? [cbBowlerFull(innX, innX.bowler)] : []
                 });
               }
-              feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdxX);
+              feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdxX, innX.battingTeam, innX.bowlingTeam);
             }
             feed += snap.balls.slice().reverse().map(function(b){
               if (b.evt){
                 /* Announcement lines show with NO over / ball number
                    in front of them — the over column stays empty. */
                 if (b.evt === 'start'){
-                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(b.who || '') + '</b> &amp; <b>' + esc(b.ns || '') + '</b> come to the crease. <b>' + esc(b.bw || '') + '</b> will open the attack.</span></div>';
+                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(dispName(innX.battingTeam, b.who || '')) + '</b> &amp; <b>' + esc(dispName(innX.battingTeam, b.ns || '')) + '</b> come to the crease. <b>' + esc(dispName(innX.bowlingTeam, b.bw || '')) + '</b> will open the attack.</span></div>';
                 }
                 var whoName = b.who || '';
                 var rest = String(b.text || '').slice(whoName.length);
-                return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(whoName) + '</b>' + esc(rest) + '</span></div>';
+                var whoDisp = dispName(b.evt === 'attack' ? innX.bowlingTeam : innX.battingTeam, whoName);
+                return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(whoDisp) + '</b>' + esc(rest) + '</span></div>';
               }
-              var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
-              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + esc(b.outName ? (b.outName + ', ') : '') + esc(b.howOut) : '';
+              var who = (b.bowler && b.batter) ? '<b>' + esc(dispName(innX.bowlingTeam, b.bowler)) + '</b> to <b>' + esc(dispName(innX.battingTeam, b.batter)) + '</b>, ' : '';
+              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + esc(b.outName ? (dispName(innX.battingTeam, b.outName) + ', ') : '') + esc(b.howOut) : '';
               return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + dism + '</span></div>';
             }).join('');
           }
@@ -4354,22 +4723,23 @@
         var sqEl = $('cbSquads');
         if (sqEl){
           sqEl.innerHTML = (S.squadConfirmed ? '<p class="note" style="margin:0 2px 10px">✓ Final squads — confirmed for this match.</p>' : '')
-            + '<div class="cb-squads-grid">' + [S.teamA, S.teamB].map(function(team){
+            + '<div class="cb-squads-grid">' + [[S.teamA, 'Team 1'], [S.teamB, 'Team 2']].map(function(pair){
+            var team = pair[0];
             var players = displaySquadForTeam(team);
             var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
-            return '<div class="squad-box"><div class="squad-head"><h3>' + esc(team) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
+            return '<div class="squad-box"><div class="squad-head"><h3>' + esc(team || pair[1]) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         }
         /* info panel */
         var infoEl = $('cbInfoBody');
         if (infoEl){
           var rows = [];
-          rows.push(['Match', S.teamA + ' vs ' + S.teamB]);
-          rows.push(['Batting', inn.battingTeam]);
-          rows.push(['Bowling', inn.bowlingTeam]);
+          rows.push(['Match', (S.teamA || '—') + ' vs ' + (S.teamB || '—')]);
+          rows.push(['Batting', inn.battingTeam || '—']);
+          rows.push(['Bowling', inn.bowlingTeam || '—']);
           if (S.venue) rows.push(['Venue / Match', S.venue]);
           if (S.tossInfo) rows.push(['Toss', S.tossInfo]);
-          rows.push(['Overs per innings', String(S.oversLimit)]);
+          rows.push(['Overs per innings', S.oversLimit ? String(S.oversLimit) : '—']);
           rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
           if (t) rows.push(['Target', String(t)]);
           var pr = projectedScore(); if (pr !== null) rows.push(['Projected Score', String(pr) + ' (at CRR ' + crr().toFixed(2) + ')']);
@@ -4432,15 +4802,14 @@
             el.value = '';
           }
         });
-        /* Match-setup fields follow the same rule, so a restored match
-           shows its own teams / overs / venue after a refresh. */
-        var setupPairs=[['teamA','teamA'],['teamB','teamB'],['venue','venue']];
-        setupPairs.forEach(function(p){
-          var el=$(p[0]); if (!el) return;
-          if (document.activeElement !== el && S[p[1]] != null && el.value !== S[p[1]]) el.value = S[p[1]];
-        });
-        var ovEl=$('oversLimit');
-        if (ovEl && document.activeElement !== ovEl && S.oversLimit && ovEl.value !== String(S.oversLimit)) ovEl.value = S.oversLimit;
+        /* Team 1, Team 2 and Total Overs in Match Setup are NEVER
+           refilled from the state: they start empty — not pre-selected
+           with the current or previous match's teams or a default 20
+           overs — and whatever the scorer picks there is read only by
+           Start Match. (The venue field still follows the state, so a
+           restored match shows its venue after a refresh.) */
+        var venueEl=$('venue');
+        if (venueEl && document.activeElement !== venueEl && S.venue != null && venueEl.value !== S.venue) venueEl.value = S.venue;
         /* Toss dropdowns: the winner list always mirrors the two team
            names. Once a toss is saved in the state, the selects follow
            it (refresh, second device); before that, whatever the scorer
