@@ -1482,8 +1482,13 @@
          (a) BroadcastChannel — other tabs/windows of this browser
          (b) Firebase Realtime Database — when connected (auto by default)
          (c) an on-device backup (localStorage), rewritten on every
-             change, so a refresh restores the score instantly and
-             Firebase then re-syncs on top of it
+             change — a FALLBACK ONLY. Firebase is the single source
+             of truth: on every load (and whenever the page becomes
+             visible again) the latest liveMatch and matchHistory are
+             fetched from Firebase and displayed, so the GitHub Pages
+             link, the APK and this preview all show the same updated
+             data. The backup is used only while Firebase has not
+             answered yet, or when Firebase holds nothing at all.
          ============================================================ */
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
@@ -4810,6 +4815,7 @@
           histFbError = '';
           mergeRemoteHistory(snap.val());
           flushHistoryPending();
+          flushHistoryDeletes();
         }, function(err){
           if (fbHistRef !== myHistRef) return;
           histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
@@ -4974,7 +4980,13 @@
         try {
           var arr = Object.keys(HIST).map(function(k){ return HIST[k]; });
           var del = Object.keys(histDeleted).filter(function(k){ return histDeleted[k]; });
-          localStorage.setItem(LS_HIST_KEY, JSON.stringify({ v:1, matches: arr, deleted: del }));
+          /* Which ids Firebase has confirmed is persisted too: after a
+             reload it is what lets the authoritative merge tell a
+             genuinely pending local write (never confirmed — keep it
+             and retry it) apart from a match another device deleted
+             from Firebase (confirmed before, gone now — drop it). */
+          var conf = Object.keys(histConfirmed).filter(function(k){ return histConfirmed[k] && HIST[k]; });
+          localStorage.setItem(LS_HIST_KEY, JSON.stringify({ v:1, matches: arr, deleted: del, confirmed: conf }));
         } catch(e){}
       }
       function loadHistLocal(){
@@ -4985,6 +4997,7 @@
           var arr = Array.isArray(v) ? v : (v && Array.isArray(v.matches) ? v.matches : []);
           arr.forEach(function(e){ if (e && e.id != null) HIST[String(e.id)] = e; });
           if (v && Array.isArray(v.deleted)) v.deleted.forEach(function(id){ histDeleted[String(id)] = true; });
+          if (v && Array.isArray(v.confirmed)) v.confirmed.forEach(function(id){ histConfirmed[String(id)] = true; });
         } catch(e){}
       }
       function buildHistoryEntry(){
@@ -5021,6 +5034,12 @@
         var started = S.current.legalBalls > 0 || S.current.runs > 0 || S.current.wickets > 0 || !!S.prevInnings;
         if (!started && !S.abandoned) return; /* nothing was ever scored — nothing to keep */
         var entry = buildHistoryEntry();
+        /* A deletion is FINAL. If the scorer deleted this match from
+           history, its tombstone wins over the still-finished live
+           state: re-archiving on the next render must never bring
+           the match back (that was the "deleted, but it returns on
+           refresh" bug — the live state kept re-filing itself). */
+        if (histDeleted[entry.id]) return;
         /* Change signature: re-archiving an unchanged match (every
            render calls ensureCurrentArchived) must not rewrite
            Firebase over and over — only a real change (a corrected
@@ -5038,14 +5057,19 @@
       function ensureCurrentArchived(){ archiveFinishedMatch(); }
       function pushHistoryEntry(entry){
         if (!histCanManage()) return;  /* viewers never write history */
-        if (!fbHistRef) return;        /* flushed when Firebase connects */
+        if (!fbHistRef){ scheduleHistoryRetry(); return; }  /* flushed when Firebase connects */
         var id = entry.id;
         fbHistRef.child(id).set(entry).then(function(){
           histConfirmed[id] = true; histFbError = '';
+          histRetryDelayMs = 5000;
+          saveHistLocal();
           try { renderHistory(); } catch(e){}
         }).catch(function(err){
           histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
           try { renderHistory(); } catch(e){}
+          /* A failed write is never left sitting at "still syncing":
+             it retries automatically until Firebase confirms it. */
+          scheduleHistoryRetry();
         });
       }
       function flushHistoryPending(){
@@ -5054,14 +5078,128 @@
           if (!histConfirmed[id] && !histDeleted[id]) pushHistoryEntry(HIST[id]);
         });
       }
+      /* ---------- pending-write retry engine ----------
+         A match whose Firebase write has not been confirmed is
+         retried automatically — with a growing delay (5s, 10s, 20s…
+         up to 60s) — until Firebase confirms it, the tab returns to
+         the foreground, or the connection comes back. It can no
+         longer sit at "still syncing" forever with nothing happening.
+         Pending DELETES retry the same way, so a deleted match stays
+         deleted on every device. */
+      var histRetryTimer = null, histRetryDelayMs = 5000;
+      function histPendingIds(){
+        return Object.keys(HIST).filter(function(id){ return !histConfirmed[id] && !histDeleted[id]; });
+      }
+      function histPendingDeleteIds(){
+        return Object.keys(histDeleted).filter(function(id){ return histDeleted[id]; });
+      }
+      function scheduleHistoryRetry(){
+        if (histRetryTimer) return;
+        if (!histCanManage()) return;
+        if (!histPendingIds().length && !histPendingDeleteIds().length) return;
+        histRetryTimer = setTimeout(function(){
+          histRetryTimer = null;
+          histRetryDelayMs = Math.min(60000, histRetryDelayMs * 2);
+          flushHistoryPending();
+          flushHistoryDeletes();
+          scheduleHistoryRetry();
+        }, histRetryDelayMs);
+      }
+      function flushHistoryDeletes(){
+        if (!histCanManage()) return;
+        histPendingDeleteIds().forEach(function(id){
+          if (!fbHistRef){ scheduleHistoryRetry(); return; }
+          fbHistRef.child(id).remove().then(function(){
+            delete histDeleted[id];
+            histFbError = '';
+            saveHistLocal();
+            try { renderHistory(); } catch(e){}
+          }).catch(function(err){
+            histFbError = 'Delete failed on Firebase: ' + ((err && err.message) ? err.message : String(err || 'unknown error'));
+            try { renderHistory(); } catch(e){}
+            scheduleHistoryRetry();
+          });
+        });
+      }
+      /* Manual retry, offered by the History sync status whenever
+         anything is unconfirmed or a write has failed: re-read the
+         authoritative history from Firebase, then push every pending
+         write and delete again, right now. */
+      function retryHistorySync(){
+        histRetryDelayMs = 5000;
+        if (histRetryTimer){ clearTimeout(histRetryTimer); histRetryTimer = null; }
+        if (fbHistRef){
+          fbHistRef.once('value').then(function(snap){
+            histFbError = '';
+            mergeRemoteHistory(snap.val());
+            flushHistoryPending();
+            flushHistoryDeletes();
+            try { renderHistory(); } catch(e){}
+          }).catch(function(err){
+            histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
+            try { renderHistory(); } catch(e){}
+          });
+        } else {
+          toast('Firebase is not connected yet — pending matches retry automatically when it connects.');
+        }
+        flushHistoryPending();
+        flushHistoryDeletes();
+        try { renderHistory(); } catch(e){}
+      }
+      /* ---------- authoritative refresh ----------
+         Firebase is the truth on every open AND on every return to
+         the page: when the tab becomes visible again, the app comes
+         back online, or the window regains focus, the latest
+         liveMatch and matchHistory are fetched again and displayed —
+         so no version (GitHub Pages link, APK, in-app preview) can
+         sit on stale on-device data while Firebase is reachable. */
+      var fbRefreshInFlight = false;
+      function refreshFromFirebaseNow(){
+        if (fbRefreshInFlight) return;
+        if (fbRef){
+          fbRefreshInFlight = true;
+          fbRef.once('value').then(function(snap){
+            fbRefreshInFlight = false;
+            var v = snap.val();
+            if (v && shouldAdoptRemote(v)) adoptRemoteState(v);
+          }).catch(function(){ fbRefreshInFlight = false; });
+        }
+        if (fbHistRef){
+          fbHistRef.once('value').then(function(snap){
+            histFbError = '';
+            mergeRemoteHistory(snap.val());
+            flushHistoryPending();
+            flushHistoryDeletes();
+          }).catch(function(err){
+            histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
+            try { renderHistory(); } catch(e){}
+          });
+        }
+        scheduleHistoryRetry();
+      }
+      document.addEventListener('visibilitychange', function(){ if (!document.hidden) refreshFromFirebaseNow(); });
+      window.addEventListener('online', function(){ refreshFromFirebaseNow(); });
+      window.addEventListener('focus', function(){ refreshFromFirebaseNow(); });
       function mergeRemoteHistory(val){
         histSyncedOnce = true;
         var remote = (val && typeof val === 'object') ? val : {};
+        /* Firebase is AUTHORITATIVE for history: whatever the
+           database holds is what every device shows. */
         Object.keys(remote).forEach(function(id){
           histConfirmed[id] = true;
           if (histDeleted[id]) return; /* our delete is still propagating */
           var e = remote[id];
           if (e && typeof e === 'object'){ e.id = String(id); HIST[id] = e; }
+        });
+        /* A match Firebase used to confirm but no longer holds was
+           deleted (by the scorer, from any device) — it must vanish
+           here too, instead of living on forever in this device's
+           backup. Only NEVER-confirmed local entries survive a
+           snapshot that lacks them: those are this device's pending
+           writes, and the retry engine keeps pushing them until
+           Firebase confirms them. */
+        Object.keys(HIST).forEach(function(id){
+          if (histConfirmed[id] && !remote[id] && !histDeleted[id]) delete HIST[id];
         });
         /* A tombstone whose remote copy is gone has done its job. */
         Object.keys(histDeleted).forEach(function(id){ if (!remote[id]) delete histDeleted[id]; });
@@ -5070,6 +5208,7 @@
            stamped in (once per entry — see stampHistEntryPids). */
         try { migratePlayerIds(); } catch(e){}
         try { renderHistory(); } catch(e){}
+        scheduleHistoryRetry();
       }
       /* ---------- delete (scorer / control side only) ---------- */
       function deleteHistoryMatch(id){
@@ -5087,13 +5226,26 @@
         delete histConfirmed[id];
         histDeleted[id] = true;
         saveHistLocal();
+        /* Success is reported ONLY after Firebase confirms the
+           delete — never before. If the remove fails, the real error
+           is shown, the match stays tombstoned (the finished live
+           state can never re-archive it), and the delete retries
+           automatically until Firebase confirms it. */
+        var deleteSettled = false;
         if (fbHistRef){
           fbHistRef.child(id).remove().then(function(){
+            deleteSettled = true;
+            delete histDeleted[id];
             histFbError = '';
+            saveHistLocal();
             try { renderHistory(); } catch(e){}
+            toast('🗑 Match deleted from history — confirmed in Firebase');
           }).catch(function(err){
+            deleteSettled = true;
             histFbError = 'Delete failed on Firebase: ' + ((err && err.message) ? err.message : String(err || 'unknown error'));
             try { renderHistory(); } catch(e){}
+            toast('⚠️ Delete failed in Firebase: ' + histFbError.replace(/^Delete failed on Firebase: /, '') + ' — it will keep retrying automatically.');
+            scheduleHistoryRetry();
           });
         }
         /* A copy saved as a tournament result must go too — otherwise
@@ -5111,7 +5263,10 @@
         } catch(e){}
         try { renderHistory(); } catch(e){}
         try { closeHistoryMatch(); } catch(e){}
-        toast('🗑 Match removed from history');
+        if (!fbHistRef && !deleteSettled){
+          toast('🗑 Deleted on this device — Firebase is not connected, so it will be removed from Firebase automatically when it reconnects.');
+          scheduleHistoryRetry();
+        }
       }
       /* ---------- the record book: archived matches + the live one ---------- */
       function liveHistoryEntry(){
@@ -5120,6 +5275,7 @@
           || (S.prevInnings && ((S.prevInnings.batters || []).length || (S.prevInnings.bowlers || []).length));
         if (!hasFigs) return null;
         var id = String(S.matchId || 'live');
+        if (histDeleted[id]) return null; /* deleted from history — the live state must not list it again */
         if (S.status === 'finished' && HIST[id]) return null; /* already filed in permanent history */
         var e = buildHistoryEntry();
         e.id = 'live:' + id; e.live = true; e.at = Date.now();
@@ -5410,23 +5566,33 @@
         var el = $('histSyncStatus'); if (!el) return;
         var ids = Object.keys(HIST);
         var total = ids.length;
-        var confirmed = ids.filter(function(id){ return histConfirmed[id]; }).length;
-        var pending = total - confirmed;
+        var pending = histPendingIds().length;
+        var pendingDel = histPendingDeleteIds().length;
+        var retryBtn = ' <button type="button" class="btn sm" style="margin-top:8px" onclick="retryHistorySync()">Retry Sync Now</button>';
         var html;
+        /* Honest status, always one of three states: SYNCED (Firebase
+           has confirmed everything this page shows), SYNCING (writes
+           or deletes are still unconfirmed — automatic retry is
+           running), or FAILED (Firebase answered with a real error,
+           shown verbatim). */
         if (histFbError){
           var perm = /permission/i.test(histFbError);
-          html = '<div class="hist-status err"><b>⚠️ History is NOT fully saved to Firebase.</b><br>Firebase said: ' + esc(histFbError)
-            + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet permanent in the cloud.'
-            + (perm ? '<br><b>Fix:</b> the database Rules allow only <span class="mono">liveMatch</span>. In Firebase Console → Realtime Database → Rules, publish:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true }, "matchHistory": { ".read": true, ".write": true } } }</span><br>Then reopen this page — the backup syncs itself.' : '')
-            + '</div>';
+          html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
+            + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
+            + (perm ? '<br><b>Fix:</b> the database Rules allow only <span class="mono">liveMatch</span>. In Firebase Console → Realtime Database → Rules, publish:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true }, "matchHistory": { ".read": true, ".write": true } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + '<br>' + retryBtn + '</div>';
+        } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
+          html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + total + (total === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
         } else if (fbHistRef && histSyncedOnce){
-          html = '<div class="hist-status ok">✓ Permanent history is on — ' + total + (total === 1 ? ' match' : ' matches') + ' archived. '
-            + (pending > 0 ? pending + (pending === 1 ? ' match is' : ' matches are') + ' still syncing to Firebase…' : 'Everything is saved to Firebase (<span class="mono">matchHistory</span>) and backed up on this device.')
-            + '</div>';
+          html = '<div class="hist-status">⏳ <b>Syncing…</b> '
+            + (pending > 0 ? pending + (pending === 1 ? ' match is' : ' matches are') + ' still syncing to Firebase. ' : '')
+            + (pendingDel > 0 ? pendingDel + (pendingDel === 1 ? ' delete is' : ' deletes are') + ' still being confirmed. ' : '')
+            + 'Automatic retry is on — this turns to “Synced” as soon as Firebase confirms, with nothing for you to do.'
+            + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef){
-          html = '<div class="hist-status">⏳ Connecting to the Firebase history… ' + total + (total === 1 ? ' match' : ' matches') + ' in the on-device backup.</div>';
+          html = '<div class="hist-status">⏳ <b>Syncing…</b> Loading the latest history from Firebase — the on-device backup (' + total + (total === 1 ? ' match' : ' matches') + ') is shown only until Firebase answers.</div>';
         } else {
-          html = '<div class="hist-status">History is being kept on this device only (' + total + (total === 1 ? ' match' : ' matches') + ') — Firebase is not connected, so viewers cannot see it yet and it is not permanent until Firebase connects.</div>';
+          html = '<div class="hist-status"><b>Not synced</b> — Firebase is not connected, so history is being kept on this device only (' + total + (total === 1 ? ' match' : ' matches') + '). Other devices cannot see it until Firebase connects; pending matches then sync automatically.</div>';
         }
         el.innerHTML = html;
       }
@@ -6445,11 +6611,18 @@
           try { cleanGhostPlayers(); } catch(e){}
           try { normalizeStateShape(); } catch(e){}
           localRestored = true;
-          /* If the backup carries a real match, treat it as local work
-             Firebase may not have yet: an older database state must not
-             replace it on load (see shouldAdoptRemote / the first-read
-             sync in initFirebaseWithConfig). */
-          fbLocalDirty = hasMeaningfulState(S);
+          /* The backup is a display fallback ONLY — it is NOT treated
+             as local work that outranks the database. The moment
+             Firebase answers, its liveMatch is adopted over the
+             backup (see initFirebaseWithConfig), even when the
+             backup's timestamp happens to be newer: a backup can be
+             stale (an old tab, a match scored on another device
+             since, a reset published from elsewhere), and Firebase
+             is the one truth every version of the app must show.
+             fbLocalDirty therefore starts false on load; it is set
+             only by scoring done in THIS session while Firebase is
+             unreachable, which the first-read sync then publishes. */
+          fbLocalDirty = false;
           try { normalizeTournament(); normalizeSquads(); } catch(e){}
           /* Inputs are filled from the restored state by renderAll's
              state-to-input sync — do NOT pull the form's default names
