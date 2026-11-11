@@ -984,8 +984,8 @@
           </div>
           <div class="rowflex" style="margin-top:14px">
             <button class="btn" onclick="startMatch()">🏏 Start Match</button>
-            <button class="btn ghost" onclick="resetMatch()">New Match (Clear Everything)</button>
-            <button class="btn gold" id="btnRetryPublish" onclick="publishReset()" hidden>Retry Publishing New Match</button>
+            <button class="btn red" onclick="resetMatch()">🗑 Delete Match</button>
+            <button class="btn gold" id="btnRetryPublish" onclick="publishReset()" hidden>Retry Delete Match</button>
             <span class="note grow" id="matchStatusText">No match started yet — pick Team 1, Team 2 and Total Overs above, then tap Start Match.</span>
           </div>
           </div>
@@ -1093,7 +1093,7 @@
               <button type="button" onclick="openFoldById('playersCard')">Batters &amp; Bowler</button>
               <button type="button" onclick="openFoldById('setupCard')">Match Setup</button>
               <button type="button" onclick="openFoldById('squadCard')">Team Squads</button>
-              <button type="button" onclick="resetMatch()">New Match (Clear Everything)</button>
+              <button type="button" onclick="resetMatch()">🗑 Delete Match</button>
             </div>
           </div>
           <div class="mc-wktwrap" id="mcWktWrap"></div>
@@ -1264,7 +1264,7 @@
           <button type="button" class="btn ghost sm" id="histBackBtn" onclick="historyBack()">← Back</button>
           <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
           <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
-          <span class="note">Permanent record — a finished match is archived the moment it ends, and starting a new match never deletes it.</span>
+          <span class="note">Permanent record — a finished match is archived the moment it ends, and Delete Match (which removes the live match) never deletes it from here.</span>
         </div>
         <div class="card">
           <h2>📜 Match History &amp; Reports</h2>
@@ -1696,11 +1696,17 @@
         var realS = S; S = liveDisplayState();
         try { fn(); } finally { S = realS; }
       }
-      /* True while a New Match reset still owes Firebase its write: a
-         fresh 0/0 state looks "empty" to the normal sync rules, so the
-         reset publishes through publishReset() instead and this flag
-         keeps the first-read sync from skipping it. */
+      /* True while a Delete Match still owes Firebase its write: the
+         cleared state looks "empty" to the normal sync rules, so the
+         delete publishes through publishReset() instead and this flag
+         keeps the first-read sync from skipping it. fbPendingDelete is
+         the delete-specific twin: while it is set, the first-read sync
+         must NOT push the not-yet-deleted match back to Firebase, and
+         the local match stays exactly as it is until Firebase confirms
+         the delete (see requestDeleteMatch). */
       var fbPendingFreshPublish = false;
+      var fbPendingDelete = false;
+      var deleteInFlight = false;
       /* On-device backup of the whole state (Firebase stays the shared
          source of truth; this backup is what makes a refresh of the
          control page restore the score instantly, before — and even
@@ -1782,35 +1788,116 @@
           try { renderAll(false); } catch(e){}
         }).catch(function(err){ showFirebaseError(err, 'update'); });
       }
-      /* Publish a New Match reset to Firebase — with real feedback. The
-         guarded pushToFirebase() above can silently skip this write: a
-         fresh 0/0 state is "empty" to the sync rules, and before the
-         first snapshot lands fbReady is still false. But a reset is the
-         scorer's explicit action, so it is written directly here and
-         the outcome is always reported: a confirmation when viewers can
-         see the fresh match, the real error plus a Retry button when
-         the write fails. */
+      /* ---------- Delete Match: publish the cleared state to Firebase FIRST ----------
+         Deleting is the scorer's explicit action, so the cleared state
+         is written directly to Firebase here — the guarded
+         pushToFirebase() above could silently skip it, because a
+         cleared 0/0 state looks "empty" to the normal sync rules.
+         Two rules make the delete actually land:
+         1. The cleared state carries the signed-in owner's UID
+            (ownerUid = currentUid(), exactly like Start Match sets).
+            freshState() leaves ownerUid '', and the UID-based Rules
+            require the written state's ownerUid to equal the writer's
+            UID — a cleared state written with '' is rejected with
+            permission_denied, which is why the old New Match reset
+            kept failing against Firebase.
+         2. The local match is NOT wiped until Firebase confirms the
+            write. If the write fails, the previous match stays on
+            screen untouched (nothing is lost, viewers keep seeing the
+            real match) and a Retry Delete Match button is offered. */
       function showResetRetry(){ var b = $('btnRetryPublish'); if (b) b.hidden = false; }
       function hideResetRetry(){ var b = $('btnRetryPublish'); if (b) b.hidden = true; }
-      function publishReset(){
-        fbPendingFreshPublish = true;
+      /* Build the state that replaces the live match when it is
+         deleted: a blank match (no teams, no overs, no toss, no
+         batters or bowler — a new match must be set up from the very
+         beginning), OWNED by the signed-in scorer so the Rules accept
+         the write. Only THIS match is deleted: tournament data,
+         squads, the player registry, parked matches and the previous
+         finished match's viewer-home record are other data and are
+         kept; permanent Match History is separate again and is never
+         touched here. */
+      function buildDeletedState(){
+        var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
+        var ns = freshState();
+        ns.tournament = keepTn;
+        ns.nicknames = deep(S.nicknames || []);
+        ns.players = deep(S.players || []);
+        ns.playerIds = deep(S.playerIds || []);
+        ns.pausedMatches = deep(S.pausedMatches || []);
+        ns.tournamentsArchive = deep(S.tournamentsArchive || []);
+        ns.lastFinishedSingle = deep(S.lastFinishedSingle || null);
+        ns.matchId = Date.now();
+        ns.updatedAt = Date.now();
+        ns.current = blankInnings('', '');
+        /* The fix for the permission_denied failure: the written
+           state must name its owner — the signed-in account deleting
+           the match — or the UID-based Rules reject the write. */
+        ns.ownerUid = currentUid();
+        ns.ownerName = authDisplayName();
+        return ns;
+      }
+      /* Swap the confirmed deleted state in locally — called ONLY
+         after Firebase has accepted it. Mirrors the old reset's local
+         cleanup: Match Setup fields, toss and player dropdowns all go
+         back to blank, so the next match starts from the beginning. */
+      function applyDeletedState(ns){
+        S = ns;
+        undoStack = []; pendingExtra = null; renderPending();
+        cancelWicket();
+        ['teamA','teamB','oversLimit','venue'].forEach(function(id){
+          var el = $(id); if (el){ el.value = ''; el.classList.remove('req-missing'); }
+        });
+        var twEl = $('tossWinner'); if (twEl){ twEl.value = ''; twEl.classList.remove('req-missing'); }
+        var tdEl = $('tossDecision'); if (tdEl){ tdEl.value = ''; tdEl.classList.remove('req-missing'); }
+        refreshTossOptions();
+        clearPlayerInputs();
+        syncPlayersFromInputs();
+        $('matchStatusText').textContent = 'Match deleted — to start a new match, pick Team 1, Team 2 and Total Overs in Match Setup and tap Start Match.';
+        fbLocalDirty = false; fbErrorShown = false;
+        saveLocalBackup();
+        renderAll(false);
+        if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
+      }
+      function requestDeleteMatch(){
+        if (deleteInFlight) return;
+        if (!currentUid()){
+          toast('🔑 Sign in with Google as the match owner to delete this match — the delete is written to Firebase under your account.');
+          return;
+        }
+        fbPendingDelete = true; fbPendingFreshPublish = true;
         if (!fbRef){
-          setConnStatus('error', '⚠️ Firebase is not connected yet — the new match is saved on this device only, so viewers cannot see it. Tap “Retry Publishing” in Match Setup once Firebase connects.');
-          toast('⚠️ New match saved on this device only — Firebase is not connected yet.');
+          setConnStatus('error', '⚠️ Firebase is not connected yet — this match has NOT been deleted. It stays live for viewers until the delete reaches Firebase. Tap “Retry Delete Match” in Match Setup once Firebase connects.');
+          toast('⚠️ Match not deleted — Firebase is not connected yet. Tap “Retry Delete Match” once it connects.');
           showResetRetry();
           return;
         }
-        var pushedReset = deep(S);
-        fbRef.set(S).then(function(){
-          fbPendingFreshPublish = false; fbLocalDirty = false; fbErrorShown = false;
-          fbConfirmedState = pushedReset;
+        deleteInFlight = true;
+        var candidate = buildDeletedState();
+        var pushedDelete = deep(candidate);
+        fbRef.set(candidate).then(function(){
+          deleteInFlight = false;
+          fbPendingDelete = false; fbPendingFreshPublish = false;
+          fbConfirmedState = pushedDelete;
           hideResetRetry();
-          toast('✓ New match is live — viewers now see the fresh match.');
-          try { renderAll(false); } catch(e){}
+          applyDeletedState(candidate);
+          toast('✓ Match deleted — viewers now see no live match. Set up the next match from the beginning in Match Setup.');
         }).catch(function(err){
-          showFirebaseError(err, 'reset');
+          deleteInFlight = false;
+          /* Firebase did not confirm, so nothing is deleted: the
+             previous match stays exactly as it was, on this device
+             and for viewers, and the delete can be retried. */
+          showFirebaseError(err, 'delete');
+          toast('⚠️ Delete failed — the match has NOT been deleted and is still live. Tap “Retry Delete Match” to try again.');
           showResetRetry();
         });
+      }
+      /* Retry button (Match Setup): re-attempts a delete that Firebase
+         has not confirmed yet. The cleared state is rebuilt from the
+         match still on screen, so it again carries the owner's UID;
+         a retry with nothing pending does nothing. */
+      function publishReset(){
+        if (!fbPendingDelete) return;
+        requestDeleteMatch();
       }
       /* Built-in default Firebase config — baked in so the site auto-connects
          for everyone (scorer, viewers and the GitHub Pages copy) with no
@@ -3214,7 +3301,7 @@
         /* Persistent hint: exactly which slot is still missing, so a
            blocked pad never fails silently behind a fading toast. */
         var hint = $('slotHint'), msg = '', showOpen = false;
-        if (S.status === 'finished') msg = 'This match is finished — scoring is closed. Start again from More → New Match.';
+        if (S.status === 'finished') msg = 'This match is finished — scoring is closed. To start again, delete this match (More → Delete Match) and set up a new one from the beginning.';
         else if (inn.awaitingBowler) msg = 'Pick the bowler for the next over to continue scoring.';
         else {
           var miss = [];
@@ -3572,54 +3659,21 @@
       }
       function resetMatch(){
         if (scoringLocked()) return;
-        if (!requireLiveOwner('clear this match and start a new one')) return;
-        /* Clearing everything wipes the live score for every viewer,
-           so it is confirmed first. */
-        askVerify('Start a new match?', 'New Match clears the current live match — score, batters, bowlers and the innings — for you and for everyone watching. Squads and tournament data are kept. Continue?', doResetMatch);
+        if (!requireLiveOwner('delete this match')) return;
+        /* Deleting wipes the live match for every viewer, so it is
+           confirmed first. */
+        askVerify('Delete this match?', 'This deletes the current live match — teams, score, batters, bowlers and the innings — for you and for everyone watching. It cannot be undone. Tournament data, squads and Match History are kept; a finished match already saved in History stays there (delete it from History if you want it gone too). After deleting, a new match must be set up from the beginning. Continue?', doResetMatch);
       }
       function doResetMatch(){
-        /* New Match clears only the LIVE match — a finished match is
-           filed into permanent history first, and history itself is
-           never cleared here. */
+        /* A finished match is filed into permanent history first (it
+           was already archived the moment it finished; this is the
+           safety net) — Delete Match removes the LIVE match only and
+           never touches history itself. The delete itself goes to
+           Firebase FIRST, carrying the owner's UID, and the local
+           match is wiped only once Firebase confirms — see
+           requestDeleteMatch. */
         try { archiveFinishedMatch(); } catch(e){}
-        try { captureLastFinishedSingle(); } catch(e){}
-        var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
-        var keepNick2 = deep(S.nicknames || []);
-        var keepPlayers2 = deep(S.players || []);
-        var keepPlayerIds2 = deep(S.playerIds || []);
-        var keepPaused2 = deep(S.pausedMatches || []);
-        var keepLastFin2 = deep(S.lastFinishedSingle || null);
-        var keepTnArc2 = deep(S.tournamentsArchive || []);
-        S = freshState(); S.tournament = keepTn2; S.nicknames = keepNick2; S.players = keepPlayers2; S.playerIds = keepPlayerIds2; S.matchId = Date.now();
-        S.lastFinishedSingle = keepLastFin2; /* the last finished Single Match stays on the viewer home */
-        /* Clearing clears THIS match only — matches parked for Resume
-           Scoring and set-aside tournaments are other matches' data
-           and are kept. */
-        S.pausedMatches = keepPaused2; S.tournamentsArchive = keepTnArc2;
-        /* A new match starts with NO team and NO overs selected: the
-           Match Setup fields are cleared along with the state, and the
-           scorer picks Team 1, Team 2 and Total Overs fresh. Each
-           picked team's squad then loads from its tournament squad at
-           Start Match — tournament data itself is kept, as before. */
-        ['teamA','teamB','oversLimit'].forEach(function(id){
-          var el = $(id); if (el){ el.value = ''; el.classList.remove('req-missing'); }
-        });
-        undoStack=[]; pendingExtra=null; renderPending();
-        cancelWicket();
-        S.current=blankInnings(S.teamA,S.teamB);
-        /* The toss starts blank as well — it must be picked fresh for
-           the new match before Start Match will run. */
-        var twEl2 = $('tossWinner'); if (twEl2){ twEl2.value=''; twEl2.classList.remove('req-missing'); }
-        var tdEl2 = $('tossDecision'); if (tdEl2){ tdEl2.value=''; tdEl2.classList.remove('req-missing'); }
-        refreshTossOptions();
-        /* Batter / bowler dropdowns open unselected for the new match. */
-        clearPlayerInputs();
-        syncPlayersFromInputs();
-        $('matchStatusText').textContent='Ready for a new match — pick Team 1, Team 2 and Total Overs in Match Setup.';
-        commit('New match reset', true);
-        /* The reset itself must reach Firebase, not just this device's
-           backup — publish it explicitly and report the result. */
-        publishReset();
+        requestDeleteMatch();
       }
       function endInnings(auto){
         if (!auto && scoringLocked()) return;
@@ -5093,6 +5147,10 @@
            the signed-in account, and the locks settle. */
         try { maybeClaimOwnership(); } catch(e){}
         try { applyOwnerLocks(); } catch(e){}
+        /* A Delete Match still owed to Firebase (tapped while it was
+           unreachable) is published now that Firebase has answered —
+           until it lands, the match on screen stays undeleted. */
+        if (fbPendingDelete){ try { publishReset(); } catch(e){} }
         setConnStatus('live', isDefault
           ? '✅ Firebase connected with the built-in default config — the live match was loaded from the database and everyone online can now watch live.'
           : '✅ Firebase connected — the live match was loaded from the database and everyone online can now watch live.');
@@ -5177,16 +5235,16 @@
             /* This device holds newer work scored while Firebase was
                unreachable (restored backup) — publish it now instead of
                letting the older database state stand. */
-            if (fbLocalDirty && (hasMeaningfulState(S) || fbPendingFreshPublish) && v.updatedAt && v.updatedAt < S.updatedAt){
+            if (!fbPendingDelete && fbLocalDirty && (hasMeaningfulState(S) || fbPendingFreshPublish) && v.updatedAt && v.updatedAt < S.updatedAt){
               var pushedSync = deep(S);
               myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSync; try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'sync'); });
             }
           } else {
             markFirebaseReady(isDefault);
-            /* A pending New Match reset is seeded too: unlike an untouched
-               demo state it is a real match the scorer explicitly started,
-               so an empty database must not leave viewers with nothing. */
-            if (hasMeaningfulState(S) || fbPendingFreshPublish){
+            /* A pending delete is never seeded with the old match:
+               the cleared state goes out through publishReset() once
+               Firebase is ready (see markFirebaseReady). */
+            if (!fbPendingDelete && (hasMeaningfulState(S) || fbPendingFreshPublish)){
               var pushedSeed = deep(S);
               myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSeed; saveLocalBackup(); try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'seed'); });
             }
