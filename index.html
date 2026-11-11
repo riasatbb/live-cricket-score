@@ -657,6 +657,7 @@
           <div class="rowflex" style="margin-top:14px">
             <button class="btn" onclick="startMatch()">🏏 Start Match</button>
             <button class="btn ghost" onclick="resetMatch()">New Match (Clear Everything)</button>
+            <button class="btn gold" id="btnRetryPublish" onclick="publishReset()" hidden>Retry Publishing New Match</button>
             <span class="note grow" id="matchStatusText">No match started yet — you can test the pad on the default demo score.</span>
           </div>
           </div>
@@ -1122,6 +1123,11 @@
          while Firebase was unreachable (kept safe in the on-device
          backup below). */
       var fbReady = false, fbConnecting = false, fbLocalDirty = false, fbErrorShown = false, fbGateTimer = null;
+      /* True while a New Match reset still owes Firebase its write: a
+         fresh 0/0 state looks "empty" to the normal sync rules, so the
+         reset publishes through publishReset() instead and this flag
+         keeps the first-read sync from skipping it. */
+      var fbPendingFreshPublish = false;
       /* On-device backup of the whole state (Firebase stays the shared
          source of truth; this backup is what makes a refresh of the
          control page restore the score instantly, before — and even
@@ -1188,6 +1194,33 @@
         if (!fbRef || fbPushing || !fbReady) return;
         var ref = fbRef;
         ref.set(S).then(function(){ fbErrorShown = false; }).catch(function(err){ showFirebaseError(err, 'update'); });
+      }
+      /* Publish a New Match reset to Firebase — with real feedback. The
+         guarded pushToFirebase() above can silently skip this write: a
+         fresh 0/0 state is "empty" to the sync rules, and before the
+         first snapshot lands fbReady is still false. But a reset is the
+         scorer's explicit action, so it is written directly here and
+         the outcome is always reported: a confirmation when viewers can
+         see the fresh match, the real error plus a Retry button when
+         the write fails. */
+      function showResetRetry(){ var b = $('btnRetryPublish'); if (b) b.hidden = false; }
+      function hideResetRetry(){ var b = $('btnRetryPublish'); if (b) b.hidden = true; }
+      function publishReset(){
+        fbPendingFreshPublish = true;
+        if (!fbRef){
+          setConnStatus('error', '⚠️ Firebase is not connected yet — the new match is saved on this device only, so viewers cannot see it. Tap “Retry Publishing” in Match Setup once Firebase connects.');
+          toast('⚠️ New match saved on this device only — Firebase is not connected yet.');
+          showResetRetry();
+          return;
+        }
+        fbRef.set(S).then(function(){
+          fbPendingFreshPublish = false; fbLocalDirty = false; fbErrorShown = false;
+          hideResetRetry();
+          toast('✓ New match is live — viewers now see the fresh match.');
+        }).catch(function(err){
+          showFirebaseError(err, 'reset');
+          showResetRetry();
+        });
       }
       /* Built-in default Firebase config — baked in so the site auto-connects
          for everyone (scorer, viewers and the GitHub Pages copy) with no
@@ -1562,6 +1595,9 @@
         S.current=blankInnings(S.teamA,S.teamB); syncPlayersFromInputs();
         $('matchStatusText').textContent='Ready for a new match.';
         commit('New match reset', true);
+        /* The reset itself must reach Firebase, not just this device's
+           backup — publish it explicitly and report the result. */
+        publishReset();
       }
       function endInnings(auto){
         if (!auto && scoringLocked()) return;
@@ -2465,13 +2501,16 @@
             /* This device holds newer work scored while Firebase was
                unreachable (restored backup) — publish it now instead of
                letting the older database state stand. */
-            if (fbLocalDirty && hasMeaningfulState(S) && v.updatedAt && v.updatedAt < S.updatedAt){
-              myRef.set(S).then(function(){ fbLocalDirty = false; }).catch(function(err){ showFirebaseError(err, 'sync'); });
+            if (fbLocalDirty && (hasMeaningfulState(S) || fbPendingFreshPublish) && v.updatedAt && v.updatedAt < S.updatedAt){
+              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; }).catch(function(err){ showFirebaseError(err, 'sync'); });
             }
           } else {
             markFirebaseReady(isDefault);
-            if (hasMeaningfulState(S)){
-              myRef.set(S).then(function(){ fbLocalDirty = false; saveLocalBackup(); }).catch(function(err){ showFirebaseError(err, 'seed'); });
+            /* A pending New Match reset is seeded too: unlike an untouched
+               demo state it is a real match the scorer explicitly started,
+               so an empty database must not leave viewers with nothing. */
+            if (hasMeaningfulState(S) || fbPendingFreshPublish){
+              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; saveLocalBackup(); }).catch(function(err){ showFirebaseError(err, 'seed'); });
             }
           }
         }).catch(function(err){
@@ -2931,24 +2970,35 @@
       }
 
       function renderAll(){
-        normalizeSquads();
-        syncPlayersFromInputsSilent();
-        var strip = scoreStripHTML();
-        $('scorerLive').innerHTML = strip;
-        $('sbLive').innerHTML = strip;
-        var ov = overlayHTML();
-        $('overlayMain').innerHTML = ov;
-        $('sbBatting').innerHTML = battingTableHTML(S.current);
-        $('sbBowling').innerHTML = bowlingTableHTML(S.current);
-        if (S.prevInnings){
-          $('sbPrevWrap').style.display='block';
-          $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
-        } else { $('sbPrevWrap').style.display='none'; }
-        $('sbHistory').innerHTML = historyHTML(S.current);
-        $('historyList').innerHTML = historyHTML(S.current);
+        /* Every section renders behind its own guard: one section failing
+           on an unusual state must never blank the rest of the page. This
+           matters most on load, where a throw here used to stop the URL
+           routing and the Firebase auto-connect that run after it — the
+           viewer link then sat on the home chooser in "Local Mode". */
+        function step(fn){ try { fn(); } catch(e){} }
+        step(function(){ normalizeSquads(); syncPlayersFromInputsSilent(); });
+        step(function(){
+          var strip = scoreStripHTML();
+          $('scorerLive').innerHTML = strip;
+          $('sbLive').innerHTML = strip;
+        });
+        step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
+        step(function(){
+          $('sbBatting').innerHTML = battingTableHTML(S.current);
+          $('sbBowling').innerHTML = bowlingTableHTML(S.current);
+          if (S.prevInnings){
+            $('sbPrevWrap').style.display='block';
+            $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+          } else { $('sbPrevWrap').style.display='none'; }
+        });
+        step(function(){
+          var h = historyHTML(S.current);
+          $('sbHistory').innerHTML = h;
+          $('historyList').innerHTML = h;
+        });
         try { renderScoreboardCB(); } catch(e){}
-        renderSquads();
-        renderTournament();
+        step(renderSquads);
+        step(renderTournament);
         try { renderLiveHome(); } catch(e){}
       }
       function syncPlayersFromInputsSilent(){
@@ -3034,9 +3084,8 @@
              state-to-input sync — do NOT pull the form's default names
              over the restored batters / bowler. */
         } else {
-          syncPlayersFromInputs();
+          try { syncPlayersFromInputs(); } catch(e){}
         }
-        renderAll(false);
         var q = '';
         try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
         if (q.indexOf('viewer')>-1){
@@ -3098,6 +3147,13 @@
            scorer entry still visible so the scorer can get in from here.
            Only the shared viewer link itself hides that entry. */
         else enterViewerHome(false);
+        /* First render comes AFTER routing: the page the link names
+           (?view=live#live → Live Matches, #scoreboard → the scoreboard)
+           is already selected even if a render section misbehaves, and
+           the Firebase auto-connect below always runs — previously an
+           early render ran first and a failure there left the viewer
+           link stuck on the home chooser showing "Local Mode". */
+        try { renderAll(false); } catch(e){}
         /* Auto-connect to Firebase with the built-in default config so the
            scorer, scoreboard, overlay and every viewer are live with no
            manual step. This adopts any match already in the database and
