@@ -438,6 +438,15 @@
       .sb-view-tour-card{text-align:center;padding:20px 16px}
       .sb-view-tour-card a.btn{display:inline-block;text-decoration:none}
       /* ---------- viewer mode (tournament opened from View Tournament) ---------- */
+      /* Public viewer pages carry no app header: the "Live Cricket
+         Score" title, the "1 Input → Public Scoreboard + Broadcast
+         Overlay" subtitle and the Firebase status pill are gone for
+         viewers (Live Matches list, Public Scoreboard, tournament
+         viewer). In viewer mode the header's nav bars are already
+         hidden, so the whole top bar goes. The Scorer Console never
+         carries viewer-mode, so it keeps its header and the live
+         connection status the scorer needs. */
+      body.viewer-mode .topbar{display:none !important}
       body.viewer-mode .segmentbar{display:none !important}
       body.viewer-mode .tn-back{visibility:hidden}
       body.viewer-mode #view-tournament .sq-x{display:none !important}
@@ -629,6 +638,31 @@
          stays; the chip only shows the scorer that a nickname is set */
       .sq-nick{flex:none;background:var(--chip);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
       .nick-inp{height:38px}
+      /* player ID chip in squad lists — every player carries one unique
+         ID and all history / statistics follow the ID, not the name */
+      .sq-pid{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 7px;white-space:nowrap;font-variant-numeric:tabular-nums}
+      /* ---------- player-name autocomplete ----------
+         Shown while typing a player name (squad entry, tournament team
+         entry, the batter / bowler picker's type-a-name box, the
+         reports player filter). Suggestions are known players from the
+         registry — history, squads and tournament rosters. Tapping one
+         reuses that player's ID; typing a different name creates a new
+         player with a new ID when the entry is added. */
+      .ac-wrap{position:relative;display:flex;min-width:0}
+      .ac-wrap.grow{flex:1}
+      .ac-wrap>textarea,.ac-wrap>input{flex:1;width:100%;min-width:0}
+      .ac-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:80;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;overflow-y:auto;max-height:272px;text-align:left}
+      .ac-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 12px;cursor:pointer;color:var(--ink);font:inherit}
+      .ac-item:last-child{border-bottom:none}
+      .ac-item.active,.ac-item:hover{background:var(--surface2)}
+      .ac-main{flex:1;min-width:0}
+      .ac-name{display:block;font-weight:700;font-size:14.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ac-meta{display:block;font-size:12px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ac-id{flex:none;font-size:10.5px;font-weight:700;background:var(--chip);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 7px;font-variant-numeric:tabular-nums}
+      .ac-item.ac-new .ac-name{color:var(--green)}
+      /* in the picker modal the type-a-name box sits near the bottom,
+         so its suggestions open upwards over the picker list */
+      .ac-list.ac-up{top:auto;bottom:calc(100% + 4px)}
       /* scorecard / squads / info panels inside the dark scoreboard */
       #view-scoreboard .cb-panel .card{background:#262626;border-color:#3a3a3a;color:#e9e9e9;box-shadow:none;margin:12px}
       #view-scoreboard .cb-panel .card h2{color:#fff;border-bottom-color:#3a3a3a}
@@ -661,6 +695,42 @@
       .cb-squads-grid .sq-row{gap:6px}
       .cb-squads-grid .sq-name{font-size:13px;line-height:1.35;word-break:break-word}
       @media (max-width:380px){.cb-squads-grid{gap:8px}.cb-squads-grid .sq-name{font-size:12.5px}.cb-squads-grid .squad-box{padding:8px}}
+      /* ---------- tappable player names (open the career profile) ---------- */
+      .pl-link{background:none;border:none;padding:0;margin:0;font:inherit;color:inherit;font-weight:inherit;letter-spacing:inherit;cursor:pointer;text-align:left}
+      .pl-link:hover,.pl-link:focus-visible{text-decoration:underline}
+      /* ---------- history & reports ---------- */
+      .modal.wide{max-width:780px}
+      body.link-viewer .scorer-entry-btn{display:none !important}
+      .hist-entry-btn{width:100%;margin-top:14px}
+      .hist-status{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.55}
+      .hist-status.ok{background:#e3f4e9;border-color:#9ed3ae;color:#14532d}
+      .hist-status.err{background:var(--red-bg);border-color:#e5a49c;color:var(--red)}
+      @media (prefers-color-scheme: dark){.hist-status.ok{background:#173527;color:#9fe6bb;border-color:#2c5c40}.hist-status.err{color:#ffb3a8}}
+      .hist-status .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+      .hist-match{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+      .hist-match-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700;margin-bottom:6px}
+      .rep-board{margin-top:18px}
+      .rep-board h3{margin:0 0 8px;font-size:16px}
+      .prof-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}
+      @media (max-width:560px){.prof-grid{grid-template-columns:1fr}}
+      .prof-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+      .prof-row span{color:var(--muted)}
+      .prof-match{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;color:var(--ink);cursor:pointer}
+      .prof-match .pm-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700}
+      .prof-match .pm-line{font-size:13.5px;color:var(--muted);margin-top:3px}
+      .hist-del{color:var(--red)}
+      /* ---------- scorer console home: three options, nothing else ---------- */
+      .console-home{display:grid;gap:12px;max-width:640px}
+      .console-opt{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer}
+      .console-opt:active{transform:scale(.99)}
+      .console-opt .co-title{display:block;font-size:19px;font-weight:700}
+      .console-opt .co-sub{display:block;font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+      .console-opt.resume{border-color:var(--green);background:linear-gradient(120deg,rgba(14,91,60,.10),rgba(14,91,60,.03))}
+      .tn-pick{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;color:var(--ink);cursor:pointer}
+      .tn-pick .tp-name{font-size:16.5px;font-weight:700;display:block}
+      .tn-pick .tp-meta{font-size:13px;color:var(--muted);display:block;margin-top:2px}
+      .tn-pick .tp-badge{flex:none;font-size:11.5px;font-weight:700;background:var(--green);color:#fff;border-radius:999px;padding:4px 10px}
+      .tn-pick .tp-open{flex:none;font-weight:700;color:var(--green)}
     </style>
   </head>
   <body>
@@ -681,6 +751,7 @@
         <button class="vtab active" data-view="scorer" onclick="setView('scorer')">🎙️ Scorer Console</button>
         <button class="vtab" data-view="scoreboard" onclick="setView('scoreboard')">📋 Public Scoreboard</button>
         <button class="vtab" data-view="overlay" onclick="setView('overlay')">📺 Broadcast Overlay</button>
+        <button class="vtab" data-view="history" onclick="setView('history')">📜 History &amp; Reports</button>
       </nav>
     </header>
 
@@ -692,6 +763,7 @@
           <p>Tap the live match to watch its score — it updates ball by ball, automatically.</p>
         </div>
         <div id="liveList"></div>
+        <button type="button" class="btn ghost hist-entry-btn" onclick="setView('history')">📜 Match History &amp; Reports — every match, every player</button>
         <div class="scorer-entry">
           <span>Scoring a match yourself?</span>
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
@@ -727,6 +799,66 @@
             </ul>
             <span class="mode-cta">Open Tournament →</span>
           </button>
+          <button type="button" class="mode-card" onclick="setView('history')">
+            <span class="mode-icon" aria-hidden="true">📜</span>
+            <h3>History &amp; Reports</h3>
+            <p class="mode-desc">Every finished match, kept forever — pull a report any time.</p>
+            <ul class="mode-list">
+              <li>Full scorecards of all past matches</li>
+              <li>Player profiles — tap any player name</li>
+              <li>Career leaderboards &amp; filters</li>
+            </ul>
+            <span class="mode-cta">Open History &amp; Reports →</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= SCORER CONSOLE HOME ================= -->
+      <section class="view" id="view-console">
+        <div class="mode-intro">
+          <h2>Scorer Console</h2>
+          <p>What would you like to do?</p>
+        </div>
+        <div class="console-home">
+          <button type="button" class="console-opt" onclick="consoleStartSingle()">
+            <span class="co-title">🏏 Start Single Match</span>
+            <span class="co-sub">Set up a new match — pick the teams, overs and toss, then score it ball by ball. A single match never goes into any tournament; it is kept in Match History and the players' own records.</span>
+          </button>
+          <button type="button" class="console-opt resume" id="consoleResume" onclick="setView('resume')" hidden>
+            <span class="co-title">▶ Resume Scoring</span>
+            <span class="co-sub" id="consoleResumeSub">Matches in progress — pick one to continue scoring.</span>
+          </button>
+          <button type="button" class="console-opt" onclick="setView('tournaments')">
+            <span class="co-title">🏆 Tournament</span>
+            <span class="co-sub">Create a tournament, or open one you have already created.</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= TOURNAMENTS: PICK OR CREATE ================= -->
+      <section class="view" id="view-tournaments">
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+          <span class="note">Tap a tournament to open its Tournament Page — Home, Teams, Matches, Points and Statistics.</span>
+        </div>
+        <div class="card">
+          <h2>🏆 Tournaments</h2>
+          <p class="sub">Create a new tournament, or open one from the list. Switching never deletes anything — the tournament you leave stays in this list.</p>
+          <button type="button" class="btn" onclick="createTournament()">➕ Create Tournament</button>
+          <div id="tnList" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- ================= RESUME SCORING: ALL LIVE MATCHES ================= -->
+      <section class="view" id="view-resume">
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+          <span class="note">Every match still in progress. Tap one to open its scoring screen and continue where you left off.</span>
+        </div>
+        <div class="card">
+          <h2>▶ Matches in Progress</h2>
+          <p class="sub">Starting a new match never throws a live one away — it is parked here, and you can swap back to it any time.</p>
+          <div id="resumeList"></div>
         </div>
       </section>
 
@@ -784,7 +916,7 @@
               <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
               <div id="squadAList"></div>
               <div class="rowflex names-row" style="margin-top:10px">
-                <textarea id="addPlayerA" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
+                <div class="ac-wrap grow"><textarea id="addPlayerA" data-ac="pick" data-ac-ctx="A" class="namebox" rows="1" placeholder="Player names — one per line. Start typing for suggestions from known players — tap one to reuse that player, or type a new name to create a new player."></textarea></div>
                 <button class="btn sm" onclick="addPlayer('A')">Add</button>
               </div>
               <div class="rowflex" style="margin-top:8px">
@@ -795,7 +927,7 @@
               <div class="squad-head"><h3 id="squadBName">Team 2</h3><span class="note" id="squadBCount"></span></div>
               <div id="squadBList"></div>
               <div class="rowflex names-row" style="margin-top:10px">
-                <textarea id="addPlayerB" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
+                <div class="ac-wrap grow"><textarea id="addPlayerB" data-ac="pick" data-ac-ctx="B" class="namebox" rows="1" placeholder="Player names — one per line. Start typing for suggestions from known players — tap one to reuse that player, or type a new name to create a new player."></textarea></div>
                 <button class="btn sm" onclick="addPlayer('B')">Add</button>
               </div>
               <div class="rowflex" style="margin-top:8px">
@@ -929,7 +1061,7 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">🌐 Firebase Setup — Internet Live</button>
           <div class="fold-body" hidden>
           <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). In the database <b>Rules</b>, make sure the <span class="mono">liveMatch</span> path is publicly readable and writable — this page reads and writes all score data at that exact path:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true } } }</span></p></div></div>
+            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). In the database <b>Rules</b>, make sure both paths are publicly readable and writable — the live score syncs at <span class="mono">liveMatch</span>, and every finished match is archived permanently under <span class="mono">matchHistory</span>:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true }, "matchHistory": { ".read": true, ".write": true } } }</span></p></div></div>
             <div class="step"><div class="step-n">2</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
             <div class="step"><div class="step-n">3</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
             <div class="step"><div class="step-n">4</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
@@ -999,10 +1131,23 @@
               <h2>Match Info</h2>
               <div id="cbInfoBody"></div>
             </div>
-            <div class="card sb-view-tour-card" id="sbTourCtaCard">
+            <!-- Tournament segment: shown ONLY when this match is a
+                 tournament match (S.matchKind === 'tournament'). For a
+                 Single Match it is not rendered at all in the Info tab —
+                 no card, no View Tournament button. Visibility is driven
+                 by renderScoreboardCB / renderSbTeams on every render,
+                 so it follows the live match as Firebase updates arrive.
+                 Hidden by default so a Single Match never flashes it
+                 before the first render runs. -->
+            <div class="card sb-view-tour-card" id="sbTourCtaCard" hidden style="display:none">
               <h2>🏆 Tournament</h2>
-              <p class="sub" id="sbTourCtaSub">This match is part of a tournament. View the full tournament — teams, fixtures, points table and statistics.</p>
-              <button type="button" class="btn" id="btnViewTournament" onclick="openTournamentViewerInPage()">View Tournament</button>
+              <p class="sub" id="sbTourCtaSub">Tournament — tap View Tournament to open the full tournament.</p>
+              <button type="button" class="btn" id="btnViewTournamentInfo" onclick="openTournamentViewerInPage()">View Tournament</button>
+            </div>
+            <div class="card sb-view-tour-card">
+              <h2>📜 History &amp; Reports</h2>
+              <p class="sub">Every finished match is kept forever — full scorecards, ball by ball, and a career profile for every player. Tap any player name to see their record.</p>
+              <button type="button" class="btn" onclick="setView('history')">Open History &amp; Reports</button>
             </div>
           </div>
 
@@ -1023,6 +1168,35 @@
             <div class="card" style="margin-bottom:0"><h2>Ball by Ball</h2><div id="sbHistory"></div></div>
             <div id="cbOversList"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- ================= HISTORY & REPORTS ================= -->
+      <section class="view" id="view-history">
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← Live Matches</button>
+          <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
+          <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
+          <span class="note">Permanent record — a finished match is archived the moment it ends, and starting a new match never deletes it.</span>
+        </div>
+        <div class="card">
+          <h2>📜 Match History &amp; Reports</h2>
+          <p class="sub">Finished matches are saved automatically — no save button to remember. Every player carries a unique Player ID and all history, statistics and profiles follow that ID — never the name alone — so two players with the same name keep separate records. Tap any player name, here or anywhere in the app, to open that player's career profile.</p>
+          <div id="histSyncStatus"></div>
+          <div class="grid3" style="margin-top:14px">
+            <div><label for="repTnFilter">Tournament</label><select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select></div>
+            <div><label for="repTeamFilter">Team</label><select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select></div>
+            <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat — suggestions appear as you type" oninput="repFilterChanged()" /></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Career Leaderboards</h2>
+          <div id="repBoards"></div>
+        </div>
+        <div class="card">
+          <h2>Past Matches</h2>
+          <p class="sub">Newest first. Open a match for its full scorecard — both innings, ball by ball, and the Player of the Match.</p>
+          <div id="histList"></div>
         </div>
       </section>
 
@@ -1239,9 +1413,9 @@
         <p class="warn" id="pickerNote" style="display:none;margin:10px 0 0"></p>
         <div class="pick-list" id="pickerList"></div>
         <div class="divider"></div>
-        <label for="pickerCustom">Or type a name</label>
+        <label for="pickerCustom">Or type a name — as you type, matching players from the history appear below: tap one to reuse that player and their Player ID, or type a different name to create a new player</label>
         <div class="rowflex">
-          <input id="pickerCustom" class="grow" placeholder="Player name" onkeydown="if(event.key==='Enter'){event.preventDefault();pickCustom();}" />
+          <div class="ac-wrap grow"><input id="pickerCustom" data-ac="pick" data-ac-ctx="picker" placeholder="Type a player name — suggestions appear as you type" /></div>
           <button class="btn sm" onclick="pickCustom()">Use This Name</button>
         </div>
         <button class="btn ghost sm" style="margin-top:12px" onclick="closePicker(false)">Decide Later</button>
@@ -1271,6 +1445,26 @@
           <button class="btn" id="moreApply" onclick="applyMoreModal()">Apply</button>
           <button class="btn ghost" onclick="closeMoreModal()">Cancel</button>
         </div>
+      </div>
+    </div>
+
+    <div class="modal-back" id="playerModal">
+      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
+        <div class="modal-head">
+          <h2 id="playerModalTitle">Player</h2>
+          <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
+        </div>
+        <div id="playerModalBody"></div>
+      </div>
+    </div>
+
+    <div class="modal-back" id="histModal">
+      <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="histModalTitle">
+        <div class="modal-head">
+          <h2 id="histModalTitle">Scorecard</h2>
+          <button class="sq-x big" onclick="closeHistoryMatch()" aria-label="Close scorecard">×</button>
+        </div>
+        <div id="histModalBody"></div>
       </div>
     </div>
 
@@ -1320,6 +1514,12 @@
           targetOverride: null, dlTarget: null, dlOvers: null, /* More-menu match adjustments */
           abandoned: false, pendingPenalty: null,
           venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
+          /* Match origin: 'single' (started via Start Single Match) or
+             'tournament' (started from a tournament fixture). A Single
+             Match NEVER enters any tournament — no points, no results,
+             no tournament statistics; its data lives only in the
+             general match history and the players' own profiles. */
+          matchKind: 'single',
           status: 'live', /* live | inningsBreak | finished */
           inningsNo: 1,
           current: blankInnings('',''),
@@ -1332,14 +1532,31 @@
              keys. The scoreboard shows the nickname wherever the player
              appears; squad lists keep the full name. */
           nicknames: [],
+          /* Player registry — every player is a PERSON with one unique
+             Player ID, and all performance history, statistics and
+             profiles are keyed by that ID, never by name alone, so two
+             players who share a name stay separate. players holds the
+             persons [{id, name}]; playerIds maps a name as used in one
+             team to a person [{t: team, n: name, id}]. Both are ARRAYS
+             (Firebase forbids dots in keys and names are full of them)
+             and sync with the rest of the state like nicknames do. */
+          players: [],
+          playerIds: [],
           /* Player of the Match — chosen BY THE SCORER after the match
              finishes (never auto-picked). Empty until chosen; the
              scoreboard then shows "Not Decided Yet". */
-          potmName: '', potmTeam: '',
+          potmName: '', potmTeam: '', potmPid: '',
           squadConfirmed: false, finalSquadA: [], finalSquadB: [],
           resultText: '',
           matchId: Date.now(),
           archivedMatchId: null,
+          /* Other live matches, parked while a different match is being
+             scored — Resume Scoring lists them and swaps one back in.
+             Kept inside the state so they sync and back up with it. */
+          pausedMatches: [],
+          /* Tournaments set aside by Create Tournament / opening another
+             one — the full list behind the Tournaments screen. */
+          tournamentsArchive: [],
           tournament: { name: '', venue: '', dates: '', teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true },
           updatedAt: Date.now()
         };
@@ -1416,7 +1633,7 @@
                renderTournament (finished two-innings matches only) —
                unlocking the pad must not re-enable it mid-match. The
                archiveCurrentMatch() guard still refuses regardless. */
-            if (b.id === 'btnSaveTournament' && !locked){ b.disabled = !(S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings); return; }
+            if (b.id === 'btnSaveTournament' && !locked){ b.disabled = !(S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings && S.matchKind === 'tournament'); return; }
             b.disabled = !!locked;
           });
         }
@@ -1547,6 +1764,394 @@
           return e.t !== team;
         });
       }
+      /* ---------- player registry & unique Player IDs ----------
+         Every player is a person with ONE unique Player ID. All
+         performance history, statistics and profiles are keyed by
+         that ID — never by name alone — so two players who share a
+         name (even in the same tournament) keep separate records,
+         while one player picked again from the suggestions keeps the
+         same ID and one continuous record.
+         IDs are DETERMINISTIC: the default ID for a player is a hash
+         of team + name, so any device migrating the same existing
+         data derives the SAME ID independently — history can never
+         split because two devices migrated at different times. An
+         explicit playerIds mapping (set when the scorer picks an
+         existing player from the autocomplete suggestions for a team
+         they were not registered under) always wins over the hash. */
+      function pidHash(team, name){
+        var s = String(team || '').trim().toLowerCase() + '|' + String(name || '').trim().toLowerCase();
+        var h1 = 0x811c9dc5, h2 = 5381;
+        for (var i = 0; i < s.length; i++){
+          var c = s.charCodeAt(i);
+          h1 = Math.imul(h1 ^ c, 0x01000193);
+          h2 = (Math.imul(h2, 33) ^ c) >>> 0;
+        }
+        return 'p' + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36);
+      }
+      function pidShort(id){ return id ? ('P-' + String(id).replace(/^p/, '').slice(-6).toUpperCase()) : ''; }
+      function ensurePlayerArrays(){
+        if (!Array.isArray(S.players)) S.players = [];
+        if (!Array.isArray(S.playerIds)) S.playerIds = [];
+      }
+      function findPerson(id){
+        if (!id) return null;
+        ensurePlayerArrays();
+        for (var i = 0; i < S.players.length; i++) if (S.players[i] && S.players[i].id === id) return S.players[i];
+        return null;
+      }
+      function ensurePerson(id, name){
+        if (!id || !name) return null;
+        var p = findPerson(id);
+        if (!p){ p = { id: id, name: name }; S.players.push(p); }
+        return p;
+      }
+      function setPlayerMapping(team, name, id){
+        if (!name || !id) return;
+        ensurePlayerArrays();
+        team = team || '';
+        for (var i = 0; i < S.playerIds.length; i++){
+          var e = S.playerIds[i];
+          if (e && e.t === team && e.n === name){ e.id = id; return; }
+        }
+        S.playerIds.push({ t: team, n: name, id: id });
+      }
+      /* The strict identity resolution: an explicit team mapping
+         (set when a player is picked from the suggestions) or the
+         deterministic team+name hash person. Deliberately NO
+         name-only matching here: the same name under two different
+         teams is two different players (e.g. Md. Ashraful Alam is in
+         two of the default squads) and must never be merged just
+         because the names match — cross-team continuity happens only
+         when the scorer explicitly picks that player from the
+         suggestions, which sets the mapping. */
+      function mappedOrHashId(team, name){
+        team = team || '';
+        ensurePlayerArrays();
+        for (var i = 0; i < S.playerIds.length; i++){
+          var e = S.playerIds[i];
+          if (e && e.t === team && e.n === name) return e.id;
+        }
+        var hid = pidHash(team, name);
+        var hp = findPerson(hid);
+        if (hp && hp.name === name) return hid;
+        return '';
+      }
+      /* Resolve the Player ID for a name used in a team WITHOUT
+         creating anyone — used for display links, where falling back
+         to a unique same-name person is harmless. '' when the name
+         is unknown, or when two different players share it. */
+      function lookupPlayerId(team, name){
+        if (!name || isPlaceholderName(name)) return '';
+        var strict = mappedOrHashId(team, name);
+        if (strict) return strict;
+        var found = '';
+        ensurePlayerArrays();
+        for (var j = 0; j < S.players.length; j++){
+          if (S.players[j] && S.players[j].name === name){
+            if (found) return ''; /* two different players share this name — ambiguous */
+            found = S.players[j].id;
+          }
+        }
+        return found;
+      }
+      /* Resolve AND register: returns the existing player's ID when
+         this team+name is known (mapping or hash); otherwise creates
+         a NEW player with a NEW unique ID for this team+name. This
+         is what runs when a name is entered without picking a
+         suggestion, and when existing data is migrated. */
+      function playerIdFor(team, name){
+        if (!name || isPlaceholderName(name)) return '';
+        team = team || '';
+        ensurePlayerArrays();
+        var existing = mappedOrHashId(team, name);
+        if (existing){
+          ensurePerson(existing, name);
+          setPlayerMapping(team, name, existing);
+          return existing;
+        }
+        var id = pidHash(team, name), k = 2;
+        while (findPerson(id)){ id = pidHash(team, name) + 'x' + k; k++; }
+        S.players.push({ id: id, name: name });
+        S.playerIds.push({ t: team, n: name, id: id });
+        return id;
+      }
+      /* Resolve a batter / bowler record inside an archived history
+         entry: the entry's own playerIds snapshot first (it travels
+         with the match, so it works on any device), then the live
+         registry, then the deterministic hash — the same ID the
+         migration assigns — so old entries join up with new ones. */
+      function entryPlayerId(e, team, name){
+        if (!e || !name) return '';
+        if (Array.isArray(e.playerIds)){
+          for (var i = 0; i < e.playerIds.length; i++){
+            var m = e.playerIds[i];
+            if (m && m.t === team && m.n === name && m.id) return m.id;
+          }
+        }
+        if (Array.isArray(e.players)){
+          var found = '';
+          for (var j = 0; j < e.players.length; j++){
+            if (e.players[j] && e.players[j].name === name && e.players[j].id){
+              if (found && found !== e.players[j].id) { found = ''; break; }
+              found = e.players[j].id;
+            }
+          }
+          if (found) return found;
+        }
+        /* Strict team-scoped resolution only (mapping / hash person /
+           the deterministic hash itself) — never a name-only merge,
+           so a same-name player from another team is never pulled in. */
+        return mappedOrHashId(team, name) || pidHash(team || '', name);
+      }
+      /* Stamp one innings' batter / bowler records with Player IDs. */
+      function stampInningsPids(inn){
+        if (!inn || typeof inn !== 'object') return;
+        (inn.batters || []).forEach(function(b){ if (b && b.name && !b.pid) b.pid = playerIdFor(inn.battingTeam, b.name); });
+        (inn.bowlers || []).forEach(function(b){ if (b && b.name && !b.pid) b.pid = playerIdFor(inn.bowlingTeam, b.name); });
+      }
+      /* Give an archived history entry stable Player IDs: stamp every
+         record, and refresh the entry's players / playerIds snapshots
+         so the IDs travel with the match to every device. Runs once
+         per entry version (_pidV); a scorer-side tab also re-publishes
+         the stamped entry to Firebase so the IDs become permanent
+         there too. Viewers only stamp their local copy. */
+      function stampHistEntryPids(e){
+        if (!e || typeof e !== 'object' || e._pidV === 2) return;
+        (e.innings || []).forEach(function(inn){
+          if (!inn) return;
+          (inn.batters || []).forEach(function(b){ if (b && b.name && !b.pid) b.pid = playerIdFor(inn.battingTeam, b.name); });
+          (inn.bowlers || []).forEach(function(b){ if (b && b.name && !b.pid) b.pid = playerIdFor(inn.bowlingTeam, b.name); });
+        });
+        if (e.potmName && !e.potmPid) e.potmPid = playerIdFor(e.potmTeam || '', e.potmName);
+        var pMap = {}, mMap = {};
+        (Array.isArray(e.players) ? e.players : []).forEach(function(p){ if (p && p.id) pMap[p.id] = p; });
+        (Array.isArray(e.playerIds) ? e.playerIds : []).forEach(function(m){ if (m && m.n && m.id) mMap[(m.t || '') + '|' + m.n] = m; });
+        (e.innings || []).forEach(function(inn){
+          if (!inn) return;
+          [[inn.batters, inn.battingTeam],[inn.bowlers, inn.bowlingTeam]].forEach(function(pair){
+            (pair[0] || []).forEach(function(b){
+              if (!b || !b.name || !b.pid) return;
+              if (!pMap[b.pid]) pMap[b.pid] = { id: b.pid, name: b.name };
+              var mk = (pair[1] || '') + '|' + b.name;
+              if (!mMap[mk]) mMap[mk] = { t: pair[1] || '', n: b.name, id: b.pid };
+            });
+          });
+        });
+        e.players = Object.keys(pMap).map(function(k){ return pMap[k]; });
+        e.playerIds = Object.keys(mMap).map(function(k){ return mMap[k]; });
+        e._pidV = 2;
+        try { saveHistLocal(); } catch(err){}
+        try { if (typeof fbHistRef !== 'undefined' && fbHistRef) pushHistoryEntry(e); } catch(err){}
+      }
+      /* Migration + upkeep for Player IDs. Registers every known
+         player — tournament rosters, match squads, confirmed squads,
+         already-scored batters / bowlers (live, parked and tournament
+         matches), the Player of the Match, and everyone in the
+         archived history — and stamps their records. Idempotent and
+         cheap once everything is stamped, so it is safe to run from
+         normalizeStateShape() on every load, adopt and commit. */
+      function migratePlayerIds(){
+        if (!S || typeof S !== 'object') return;
+        ensurePlayerArrays();
+        function regSquad(team, arr){ (arr || []).forEach(function(n){ if (n) playerIdFor(team || '', n); }); }
+        if (S.tournament && S.tournament.squads && typeof S.tournament.squads === 'object'){
+          Object.keys(S.tournament.squads).forEach(function(team){ regSquad(team, S.tournament.squads[team]); });
+        }
+        regSquad(S.teamA, S.squadA); regSquad(S.teamB, S.squadB);
+        regSquad(S.teamA, S.finalSquadA); regSquad(S.teamB, S.finalSquadB);
+        stampInningsPids(S.current); stampInningsPids(S.prevInnings);
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(sl){
+          if (!sl) return;
+          regSquad(sl.teamA, sl.squadA); regSquad(sl.teamB, sl.squadB);
+          stampInningsPids(sl.current); stampInningsPids(sl.prevInnings);
+          if (sl.potmName && !sl.potmPid) sl.potmPid = playerIdFor(sl.potmTeam || '', sl.potmName);
+        });
+        if (S.tournament && Array.isArray(S.tournament.matches)){
+          S.tournament.matches.forEach(function(m){
+            if (!m) return;
+            (m.innings || []).forEach(stampInningsPids);
+            if (!Array.isArray(m.players)) m.players = deep(S.players);
+            if (!Array.isArray(m.playerIds)) m.playerIds = deep(S.playerIds);
+          });
+        }
+        if (S.potmName && !S.potmPid) S.potmPid = playerIdFor(S.potmTeam || '', S.potmName);
+        if (typeof HIST !== 'undefined' && HIST){
+          Object.keys(HIST).forEach(function(id){ stampHistEntryPids(HIST[id]); });
+        }
+      }
+      /* Everyone the autocomplete can suggest: the registry plus the
+         players carried inside archived history entries, each with
+         the teams they are known under and any nickname. */
+      function knownPlayers(){
+        var map = {}, list = [];
+        function addP(id, name, team){
+          if (!id || !name) return;
+          var r = map[id];
+          if (!r){ r = { id: id, name: name, teams: [], nick: '' }; map[id] = r; list.push(r); }
+          if (team && r.teams.indexOf(team) === -1) r.teams.push(team);
+        }
+        ensurePlayerArrays();
+        S.players.forEach(function(p){ if (p) addP(p.id, p.name, ''); });
+        S.playerIds.forEach(function(m){ if (m) addP(m.id, (findPerson(m.id) || {}).name || m.n, m.t); });
+        if (typeof HIST !== 'undefined' && HIST){
+          Object.keys(HIST).forEach(function(id){
+            var e = HIST[id]; if (!e) return;
+            (Array.isArray(e.players) ? e.players : []).forEach(function(p){ if (p) addP(p.id, p.name, ''); });
+            (Array.isArray(e.playerIds) ? e.playerIds : []).forEach(function(m){ if (m) addP(m.id, m.n, m.t); });
+            if (!Array.isArray(e.players)){
+              (e.innings || []).forEach(function(inn){
+                if (!inn) return;
+                (inn.batters || []).forEach(function(b){ if (b && b.name) addP(entryPlayerId(e, inn.battingTeam, b.name), b.name, inn.battingTeam); });
+                (inn.bowlers || []).forEach(function(b){ if (b && b.name) addP(entryPlayerId(e, inn.bowlingTeam, b.name), b.name, inn.bowlingTeam); });
+              });
+            }
+          });
+        }
+        list.forEach(function(r){
+          for (var i = 0; i < (S.nicknames || []).length; i++){
+            var e = S.nicknames[i];
+            if (e && e.n === r.name && e.k){ r.nick = e.k; break; }
+          }
+        });
+        list.sort(function(a, b){ return a.name.localeCompare(b.name); });
+        return list;
+      }
+      /* ---------- player-name autocomplete ----------
+         While a player name is being typed — in the Scorer Console
+         squad boxes, the tournament team player boxes, the batter /
+         bowler picker's "type a name" box, and the Reports player
+         filter — a suggestion list appears under the field with the
+         known players whose names match what was typed (from the
+         registry: match history, squads and tournament rosters).
+         Tapping a suggestion fills in that player AND reuses their
+         existing Player ID (the mapping for the team being entered
+         is set to that ID). Typing a different name instead creates
+         a new player with a new unique ID when the entry is added —
+         the list's last row offers exactly that, explicitly.
+         For the multi-line entry boxes, suggestions follow the line
+         currently being typed. */
+      var acEl = null, acBox = null, acItems = [], acIdx = -1;
+      function acClose(){
+        if (acBox && acBox.parentNode) acBox.parentNode.removeChild(acBox);
+        acBox = null; acEl = null; acItems = []; acIdx = -1;
+      }
+      function acContextTeam(el){
+        var ctx = el.getAttribute('data-ac-ctx');
+        if (ctx === 'A') return S.teamA || '';
+        if (ctx === 'B') return S.teamB || '';
+        if (ctx === 'picker') return pickerMode === 'bowler' ? (S.current ? (S.current.bowlingTeam || '') : '') : (S.current ? (S.current.battingTeam || '') : '');
+        return el.getAttribute('data-ac-team') || '';
+      }
+      function acFragment(el){
+        var v = el.value || '';
+        var pos = (typeof el.selectionStart === 'number') ? el.selectionStart : v.length;
+        var upto = v.slice(0, pos);
+        var from = (el.tagName === 'TEXTAREA') ? (upto.lastIndexOf('\n') + 1) : 0;
+        var raw = upto.slice(from);
+        var lead = raw.length - raw.replace(/^\s+/, '').length;
+        var frag = raw.trim();
+        return { frag: frag, start: from + lead, end: from + lead + frag.length };
+      }
+      function acShow(el){
+        var f = acFragment(el);
+        if (f.frag.length < 2){ acClose(); return; }
+        var q = f.frag.toLowerCase();
+        var hits = knownPlayers().filter(function(p){
+          return p.name.toLowerCase().indexOf(q) > -1 || (p.nick && p.nick.toLowerCase().indexOf(q) > -1);
+        });
+        hits.sort(function(a, b){
+          var as = a.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          var bs = b.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          return (as - bs) || a.name.localeCompare(b.name);
+        });
+        var mode = el.getAttribute('data-ac');
+        var items = hits.slice(0, 8).map(function(p){ return { person: p }; });
+        var exact = hits.some(function(p){ return p.name.toLowerCase() === q; });
+        if (mode === 'pick' && !exact) items.push({ isNew: true, name: f.frag });
+        if (!items.length){ acClose(); return; }
+        acClose();
+        acEl = el; acItems = items; acIdx = 0;
+        var wrap = el.closest('.ac-wrap') || el.parentNode;
+        var box = document.createElement('div');
+        box.className = 'ac-list' + (el.id === 'pickerCustom' ? ' ac-up' : ''); box.setAttribute('role', 'listbox');
+        box.innerHTML = items.map(function(it, i){
+          if (it.isNew) return '<button type="button" class="ac-item ac-new' + (i === acIdx ? ' active' : '') + '" data-ac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">➕ New player: “' + esc(it.name) + '”</span><span class="ac-meta">Not in the player history — added as a new player with a new unique Player ID</span></span></button>';
+          var p = it.person;
+          var meta = p.teams.length ? p.teams.join(' • ') : 'Known player';
+          if (p.nick) meta += ' • “' + p.nick + '”';
+          return '<button type="button" class="ac-item' + (i === acIdx ? ' active' : '') + '" data-ac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">' + esc(p.name) + '</span><span class="ac-meta">' + esc(meta) + '</span></span><span class="ac-id">ID ' + esc(pidShort(p.id)) + '</span></button>';
+        }).join('');
+        wrap.appendChild(box);
+        acBox = box;
+      }
+      function acHighlight(){
+        if (!acBox) return;
+        acBox.querySelectorAll('.ac-item').forEach(function(b, i){ b.classList.toggle('active', i === acIdx); });
+      }
+      function acFill(el, f, text){
+        var v = el.value || '';
+        el.value = v.slice(0, f.start) + text + v.slice(f.end);
+        var caret = f.start + text.length;
+        try { el.focus(); el.setSelectionRange(caret, caret); } catch(e){}
+      }
+      function acChoose(i){
+        var el = acEl, it = acItems[i];
+        if (!el || !it) return;
+        var f = acFragment(el);
+        var ctx = el.getAttribute('data-ac-ctx');
+        if (it.person){
+          var p = it.person;
+          if (ctx === 'picker'){ acClose(); pickPlayer(p.name, p.id); return; }
+          if (el.getAttribute('data-ac') === 'pick'){
+            /* Reuse THIS player: this team's mapping for the name now
+               points at the existing player's ID. The mutation is
+               saved to the on-device backup at once and syncs with
+               the next commit (adding the player commits anyway). */
+            setPlayerMapping(acContextTeam(el), p.name, p.id);
+            ensurePerson(p.id, p.name);
+            try { saveLocalBackup(); } catch(e){}
+          }
+          acFill(el, f, p.name);
+          acClose();
+          if (el.id === 'repPlayerFilter'){ try { repFilterChanged(); } catch(e){} }
+          return;
+        }
+        if (it.isNew){
+          var nm = it.name;
+          if (ctx === 'picker'){ acClose(); pickPlayer(nm); return; }
+          var id = playerIdFor(acContextTeam(el), nm);
+          try { saveLocalBackup(); } catch(e){}
+          acFill(el, f, nm);
+          acClose();
+          toast('✓ New player “' + nm + '” — Player ID ' + pidShort(id));
+        }
+      }
+      document.addEventListener('input', function(e){
+        var el = e.target;
+        if (!el || !el.getAttribute || !el.getAttribute('data-ac')) return;
+        acShow(el);
+      });
+      document.addEventListener('mousedown', function(e){
+        var t = e.target;
+        var item = (t && t.closest) ? t.closest('[data-ac-i]') : null;
+        if (item && acBox && acBox.contains(item)){
+          e.preventDefault();
+          acChoose(parseInt(item.getAttribute('data-ac-i'), 10));
+          return;
+        }
+        if (acBox && t !== acEl && !acBox.contains(t)) acClose();
+      });
+      document.addEventListener('keydown', function(e){
+        var el = e.target;
+        if (!el || !el.getAttribute || !el.getAttribute('data-ac')) return;
+        if (acBox && acEl === el){
+          if (e.key === 'ArrowDown'){ e.preventDefault(); acIdx = Math.min(acItems.length - 1, acIdx + 1); acHighlight(); return; }
+          if (e.key === 'ArrowUp'){ e.preventDefault(); acIdx = Math.max(0, acIdx - 1); acHighlight(); return; }
+          if (e.key === 'Enter' && acIdx > -1){ e.preventDefault(); acChoose(acIdx); return; }
+          if (e.key === 'Escape'){ acClose(); return; }
+        }
+        if (e.key === 'Enter' && el.id === 'pickerCustom'){ e.preventDefault(); pickCustom(); }
+      });
       /* Apply parsed name entries (with their nicknames) to a squad
          array. The separate Nickname field applies when exactly one
          player is being entered. Returns the add / skip counts and how
@@ -1559,6 +2164,12 @@
           if (arr.indexOf(en.name) > -1) skipped++;
           else { arr.push(en.name); added++; }
           if (en.nick){ setNickname(team, en.name, en.nick); nicks++; }
+          /* Every entered name resolves to a Player ID: the existing
+             player's ID when the name is known (typed in full, or
+             picked from the autocomplete suggestions — the pick has
+             already set the mapping), otherwise a brand-new player
+             is created with a new unique ID. */
+          try { playerIdFor(team, en.name); } catch(e){}
         });
         return { added: added, skipped: skipped, nicks: nicks };
       }
@@ -1576,13 +2187,13 @@
         /* A placeholder label is a UI default, never a player: hand
            back a throwaway record instead of storing a card row for it. */
         if (isPlaceholderName(name)) return { name:name, runs:0, balls:0, fours:0, sixes:0, out:false, howOut:'' };
-        var b = { name:name, runs:0, balls:0, fours:0, sixes:0, out:false, howOut:'' };
+        var b = { name:name, pid: playerIdFor(inn.battingTeam, name), runs:0, balls:0, fours:0, sixes:0, out:false, howOut:'' };
         inn.batters.push(b); return b;
       }
       function getBowler(inn, name){
         for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name) return inn.bowlers[i];
         if (isPlaceholderName(name)) return { name:name, balls:0, runs:0, wickets:0 };
-        var b = { name:name, balls:0, runs:0, wickets:0 };
+        var b = { name:name, pid: playerIdFor(inn.bowlingTeam, name), balls:0, runs:0, wickets:0 };
         inn.bowlers.push(b); return b;
       }
       function isPlaceholderName(name){
@@ -1683,8 +2294,36 @@
           } else S.nicknames = [];
         }
         S.nicknames = S.nicknames.filter(function(e){ return e && typeof e === 'object' && e.n && e.k; });
+        /* Player registry: same Firebase array-as-object coercion as
+           nicknames; states saved before Player IDs existed carry no
+           fields at all. migratePlayerIds() then gives every existing
+           player — default squads, tournament rosters, already-scored
+           players and archived history — a stable ID, so no history
+           is lost or split. */
+        ['players','playerIds'].forEach(function(k){
+          if (!Array.isArray(S[k])){
+            if (S[k] && typeof S[k] === 'object') S[k] = Object.keys(S[k]).sort().map(function(key){ return S[k][key]; });
+            else S[k] = [];
+          }
+        });
+        S.players = S.players.filter(function(e){ return e && typeof e === 'object' && e.id && e.name; });
+        S.playerIds = S.playerIds.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; }).map(function(e){ if (typeof e.t !== 'string') e.t = ''; return e; });
         if (typeof S.potmName !== 'string') S.potmName = '';
         if (typeof S.potmTeam !== 'string') S.potmTeam = '';
+        if (typeof S.potmPid !== 'string') S.potmPid = '';
+        /* Anything not explicitly a tournament match is a Single
+           Match — the safe default, so an older state can never leak
+           a single match into a tournament. */
+        if (S.matchKind !== 'tournament') S.matchKind = 'single';
+        try { migratePlayerIds(); } catch(e){}
+        /* Parked live matches + set-aside tournaments: same Firebase
+           array-as-object coercion as nicknames. */
+        ['pausedMatches','tournamentsArchive'].forEach(function(k){
+          if (!Array.isArray(S[k])){
+            if (S[k] && typeof S[k] === 'object') S[k] = Object.keys(S[k]).sort().map(function(key){ return S[k][key]; });
+            else S[k] = [];
+          }
+        });
       }
       function syncPlayersFromInputs(){
         /* The dropdowns start empty on purpose: no batter or bowler is
@@ -2009,7 +2648,8 @@
              the chip only shows that a nickname is set for the
              scoreboard. */
           var nk = nickOf(team, n);
-          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '')
+          var pidL = lookupPlayerId(team, n);
+          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + plLink(team, n, n) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidL ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidL)) + '</span>' : '')
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',-1)" aria-label="Move ' + esc(n) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',1)" aria-label="Move ' + esc(n) + ' down"' + (i === arr.length - 1 ? ' disabled' : '') + '>↓</button>'
             + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
@@ -2032,7 +2672,7 @@
           if (cBtn) cBtn.textContent = '✓ Squad Confirmed';
           if (cStatus) cStatus.textContent = '✓ Squad confirmed — the final squad for this match is shown below and in the scoreboard\'s Squads tab.';
           if (fsEl) fsEl.innerHTML = '<div class="grid2">' + [[S.teamA || 'Team 1', S.finalSquadA],[S.teamB || 'Team 2', S.finalSquadB]].map(function(pair){
-            var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + esc(n) + '</span></div>'; }).join('') : '<p class="note">No players.</p>';
+            var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(pair[0], n, n) + '</span></div>'; }).join('') : '<p class="note">No players.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(pair[0]) + ' — Final Squad</h3><span class="note">' + pair[1].length + (pair[1].length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         } else {
@@ -2107,12 +2747,13 @@
         for (var i=0;i<inn.batters.length;i++){ var b=inn.batters[i]; if (b.name===name) return b.runs + ' (' + b.balls + ')'; }
         return 'Yet to bat';
       }
-      function pickerItem(name, det){
-        return '<button class="pick" data-name="' + esc(name) + '"><span class="pick-name">' + esc(name) + '</span><span class="pick-det">' + esc(det) + '</span></button>';
+      function pickerItem(name, det, pid){
+        return '<button class="pick" data-name="' + esc(name) + '"' + (pid ? ' data-pid="' + esc(pid) + '"' : '') + '><span class="pick-name">' + esc(name) + '</span><span class="pick-det">' + esc(det) + '</span></button>';
       }
       var pickerMode = null, pickerExclude = null, pickerAfter = null, pickerTargetSlot = 'striker';
       function openPicker(mode, opts){
         opts = opts || {};
+        try { acClose(); } catch(e){}
         pickerMode = mode; pickerAfter = opts.after || null;
         pickerExclude = !opts.exclude ? [] : (Array.isArray(opts.exclude) ? opts.exclude.slice() : [opts.exclude]);
         pickerTargetSlot = opts.slot || 'striker';
@@ -2128,7 +2769,7 @@
           } else { note.style.display = 'none'; }
           var list = bowlingSquad().filter(function(n){ return pickerExclude.indexOf(n) === -1; });
           $('pickerList').innerHTML = list.length
-            ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n)); }).join('')
+            ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n), lookupPlayerId(inn.bowlingTeam, n)); }).join('')
             : '<p class="note">No squad players to pick from — type a name below, or add the bowling team\'s squad first.</p>';
         } else {
           $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
@@ -2137,12 +2778,13 @@
           var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
           var cands = batterCandidates(otherEnd);
           $('pickerList').innerHTML = cands.length
-            ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n)); }).join('')
+            ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n), lookupPlayerId(inn.battingTeam, n)); }).join('')
             : '<p class="note">No squad players left to pick — type a name below.</p>';
         }
         $('pickerModal').classList.add('show');
       }
       function closePicker(picked){
+        try { acClose(); } catch(e){}
         var mode = pickerMode, after = pickerAfter;
         pickerMode = null; pickerAfter = null; pickerExclude = null;
         $('pickerModal').classList.remove('show');
@@ -2162,10 +2804,18 @@
           }
         }
       }
-      function pickPlayer(name){
+      function pickPlayer(name, pid){
         if (!name) return;
         var mode = pickerMode;
         var inn = S.current;
+        /* A pick made from the autocomplete suggestions carries the
+           existing player's ID: record the mapping for this team so
+           the player's figures land on that ID. A name typed fresh
+           resolves (or is created) by getBatter / getBowler below. */
+        if (pid && inn){
+          ensurePerson(pid, name);
+          setPlayerMapping(mode === 'bowler' ? inn.bowlingTeam : inn.battingTeam, name, pid);
+        }
         /* The same state rules apply inside the picker: an invalid
            pick is rejected and the picker stays open. */
         if (mode === 'bowler'){
@@ -2229,7 +2879,7 @@
       document.addEventListener('click', function(e){
         var t = e.target;
         var b = (t && t.closest) ? t.closest('#pickerList [data-name]') : null;
-        if (b) pickPlayer(b.getAttribute('data-name'));
+        if (b) pickPlayer(b.getAttribute('data-name'), b.getAttribute('data-pid') || '');
       });
 
       function swapStrike(inn){ var t=inn.striker; inn.striker=inn.nonStriker; inn.nonStriker=t;
@@ -2394,8 +3044,8 @@
           var b = cbBatterFull(inn, name);
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
           var nameHtml = isStriker
-            ? '<span class="mc-striker-pill">' + esc(dispName(inn.battingTeam, name)) + ' *</span>'
-            : '<span class="mc-pname on">' + esc(dispName(inn.battingTeam, name)) + '</span>';
+            ? '<span class="mc-striker-pill">' + plLink(inn.battingTeam, name) + ' *</span>'
+            : '<span class="mc-pname on">' + plLink(inn.battingTeam, name) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
         $('mcBatters').innerHTML = '<table><thead><tr><th>' + pencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
@@ -2404,7 +3054,7 @@
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
           var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + esc(dispName(inn.bowlingTeam, inn.bowler)) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
         } else {
           $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
         }
@@ -2670,16 +3320,29 @@
         askVerify('Start this match?', 'Start ' + newA + ' vs ' + newB + '? The current live score will be replaced for everyone watching.', function(){ doStartMatch(newA, newB, tw, td); });
       }
       function doStartMatch(newA, newB, tw, td){
+        /* Safety net: a finished match still on the table is filed
+           into permanent history before the new match replaces it,
+           and a match still IN PROGRESS is parked — never discarded —
+           so Resume Scoring can bring it back. */
+        try { archiveFinishedMatch(); } catch(e){}
+        try { parkCurrentMatch(); } catch(e){}
         var prevTeamA = S.teamA, prevTeamB = S.teamB;
         var keepWk = (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var keepNick = deep(S.nicknames || []);
+        var keepPlayers = deep(S.players || []);
+        var keepPlayerIds = deep(S.playerIds || []);
+        var keepPaused = deep(S.pausedMatches || []);
+        var keepTnArc = deep(S.tournamentsArchive || []);
         /* Players entered for a team in the Tournament tab become that team's match squad */
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
         S = freshState();
         S.tournament = keepTn;
         S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
+        S.players = keepPlayers; S.playerIds = keepPlayerIds; /* the player registry is permanent — Player IDs never reset with a match */
+        S.pausedMatches = keepPaused; /* parked live matches survive a new match starting */
+        S.tournamentsArchive = keepTnArc;
         S.matchId = Date.now(); S.archivedMatchId = null;
         S.teamA = newA;
         S.teamB = newB;
@@ -2694,9 +3357,18 @@
         var battingFirst = (td === 'bat') ? tw : (tw === newA ? newB : newA);
         var bowlingFirst = (battingFirst === newA) ? newB : newA;
         S.current = blankInnings(battingFirst, bowlingFirst);
-        ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
-        if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
-        if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
+        /* The match's origin is fixed at start: only a match started
+           from a tournament fixture is a tournament match. A Single
+           Match writes NOTHING into any tournament — its teams and
+           squads are not registered there; tournament squads are only
+           READ (above, via squadForMatch) to load the players. */
+        S.matchKind = (pendingMatchKind === 'tournament') ? 'tournament' : 'single';
+        pendingMatchKind = null;
+        if (S.matchKind === 'tournament'){
+          ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
+          if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
+          if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
+        }
         undoStack = [];
         /* No half-scored extra ball may leak into the new match. */
         pendingExtra = null; renderPending();
@@ -2716,9 +3388,21 @@
         askVerify('Start a new match?', 'New Match clears the current live match — score, batters, bowlers and the innings — for you and for everyone watching. Squads and tournament data are kept. Continue?', doResetMatch);
       }
       function doResetMatch(){
+        /* New Match clears only the LIVE match — a finished match is
+           filed into permanent history first, and history itself is
+           never cleared here. */
+        try { archiveFinishedMatch(); } catch(e){}
         var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var keepNick2 = deep(S.nicknames || []);
-        S = freshState(); S.tournament = keepTn2; S.nicknames = keepNick2; S.matchId = Date.now();
+        var keepPlayers2 = deep(S.players || []);
+        var keepPlayerIds2 = deep(S.playerIds || []);
+        var keepPaused2 = deep(S.pausedMatches || []);
+        var keepTnArc2 = deep(S.tournamentsArchive || []);
+        S = freshState(); S.tournament = keepTn2; S.nicknames = keepNick2; S.players = keepPlayers2; S.playerIds = keepPlayerIds2; S.matchId = Date.now();
+        /* Clearing clears THIS match only — matches parked for Resume
+           Scoring and set-aside tournaments are other matches' data
+           and are kept. */
+        S.pausedMatches = keepPaused2; S.tournamentsArchive = keepTnArc2;
         /* A new match starts with NO team and NO overs selected: the
            Match Setup fields are cleared along with the state, and the
            scorer picks Team 1, Team 2 and Total Overs fresh. Each
@@ -2797,6 +3481,10 @@
         } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
         S.resultText = txt;
         commit(auto ? 'Match finished: ' + txt : txt);
+        /* The match is filed into permanent history the moment it
+           finishes — no manual save step, and New Match can never
+           delete it afterwards. */
+        try { archiveFinishedMatch(); } catch(e){}
       }
 
       /* ---------- Player of the Match — the scorer's choice, never automatic ----------
@@ -2812,8 +3500,8 @@
         var out = [], seen = {};
         [S.prevInnings, S.current].forEach(function(inn){
           if (!inn) return;
-          (inn.batters || []).forEach(function(b){ var k = inn.battingTeam + '|' + b.name; if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.battingTeam }); } });
-          (inn.bowlers || []).forEach(function(b){ var k = inn.bowlingTeam + '|' + b.name; if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.bowlingTeam }); } });
+          (inn.batters || []).forEach(function(b){ var pid = b.pid || lookupPlayerId(inn.battingTeam, b.name); var k = pid || (inn.battingTeam + '|' + b.name); if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.battingTeam, pid: pid }); } });
+          (inn.bowlers || []).forEach(function(b){ var pid = b.pid || lookupPlayerId(inn.bowlingTeam, b.name); var k = pid || (inn.bowlingTeam + '|' + b.name); if (!seen[k]){ seen[k] = 1; out.push({ name: b.name, team: inn.bowlingTeam, pid: pid }); } });
         });
         out.sort(function(a, b){ return a.name.localeCompare(b.name); });
         return out;
@@ -2846,15 +3534,19 @@
         var sel = $('potmSelect'); if (!sel) return;
         var v = sel.value;
         if (v === '' || v == null){
-          S.potmName = ''; S.potmTeam = '';
+          S.potmName = ''; S.potmTeam = ''; S.potmPid = '';
           commit('Player of the Match cleared', true);
+          try { archiveFinishedMatch(); } catch(e){}
           toast('Player of the Match cleared — the scoreboard shows “Not Decided Yet”');
           return;
         }
         var c = potmCandidateList[parseInt(v, 10)];
         if (!c) return;
-        S.potmName = c.name; S.potmTeam = c.team;
+        S.potmName = c.name; S.potmTeam = c.team; S.potmPid = c.pid || playerIdFor(c.team, c.name);
         commit('Player of the Match: ' + c.name, true);
+        /* The award can be picked (or changed) long after the finish —
+           the archived copy in permanent history follows it. */
+        try { archiveFinishedMatch(); } catch(e){}
         toast('🏆 Player of the Match: ' + dispName(c.team, c.name));
       }
       /* The chosen player's match figures, in the reference format:
@@ -2921,6 +3613,9 @@
         pushFeedEvent(S.current, 'note', '', 'Match abandoned' + (reason ? ' — ' + reason : '') + '.');
         closeMoreModal();
         commit('Match abandoned');
+        /* An abandoned match is a finished match too — it goes into
+           permanent history with the score as it stood. */
+        try { archiveFinishedMatch(); } catch(e){}
       }
 
       /* ----- Penalty: runs awarded to a team, no ball bowled ----- */
@@ -3102,9 +3797,12 @@
           if (!Array.isArray(S.tournament.squads[n])) S.tournament.squads[n] = [];
         });
         /* Migrate players saved before tournament squads existed: the two
-           match squads become their teams' tournament squads. */
-        if (S.teamA && Array.isArray(S.squadA) && S.squadA.length && Array.isArray(S.tournament.squads[S.teamA]) && !S.tournament.squads[S.teamA].length) S.tournament.squads[S.teamA] = S.squadA.slice();
-        if (S.teamB && Array.isArray(S.squadB) && S.squadB.length && Array.isArray(S.tournament.squads[S.teamB]) && !S.tournament.squads[S.teamB].length) S.tournament.squads[S.teamB] = S.squadB.slice();
+           match squads become their teams' tournament squads. Never for
+           a Single Match — its squads must not enter any tournament. */
+        if (S.matchKind !== 'single'){
+          if (S.teamA && Array.isArray(S.squadA) && S.squadA.length && Array.isArray(S.tournament.squads[S.teamA]) && !S.tournament.squads[S.teamA].length) S.tournament.squads[S.teamA] = S.squadA.slice();
+          if (S.teamB && Array.isArray(S.squadB) && S.squadB.length && Array.isArray(S.tournament.squads[S.teamB]) && !S.tournament.squads[S.teamB].length) S.tournament.squads[S.teamB] = S.squadB.slice();
+        }
         /* Seed the built-in default teams & squads once, so they are already
            there on every device / saved state and never need re-adding.
            A team the user later removes stays removed (flag is kept). */
@@ -3127,6 +3825,10 @@
         if (teamName === S.teamB){ S.squadB = deep(arr); S.squadConfirmed = false; }
       }
       function syncMatchSquadToTournament(which){
+        /* A Single Match's squads are never written back into a
+           tournament — squad edits during a single match stay with
+           the match (and the player registry) only. */
+        if (S.matchKind === 'single') return;
         normalizeTournament();
         var teamName = which === 'A' ? S.teamA : S.teamB;
         var arr = which === 'A' ? S.squadA : S.squadB;
@@ -3241,6 +3943,13 @@
       }
       function archiveCurrentMatch(){
         normalizeTournament();
+        /* A Single Match NEVER goes into a tournament — no points, no
+           result, no statistics. It is already kept where it belongs:
+           the general Match History and the players' own profiles. */
+        if (S.matchKind !== 'tournament'){
+          toast('🏏 This is a Single Match — single matches are never added to a tournament. Its record stays in Match History & Reports and in the players\' profiles.');
+          return;
+        }
         /* A result can be saved only for a FINISHED match with both
            innings complete — saving mid-match used to store a
            half-finished "result" in the points table and statistics. */
@@ -3258,7 +3967,8 @@
         var match = {
           id: mid, at: Date.now(), manual: false,
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
-          innings: inningsArr, resultText: S.resultText || ''
+          innings: inningsArr, resultText: S.resultText || '',
+          players: deep(S.players || []), playerIds: deep(S.playerIds || [])
         };
         if (!match.resultText) match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
@@ -3325,6 +4035,7 @@
         var fx = null;
         S.tournament.fixtures.forEach(function(f){ if (f.id === id) fx = f; });
         if (!fx) return;
+        pendingMatchKind = 'tournament'; /* a fixture's match belongs to the tournament */
         $('teamA').value = fx.teamA; $('teamB').value = fx.teamB;
         if (fx.label) $('venue').value = fx.label;
         setView('scorer');
@@ -3379,26 +4090,31 @@
         var bat = {}, bowl = {};
         S.tournament.matches.forEach(function(m){
           (m.innings || []).forEach(function(inn){
-            /* Players are keyed by name AND team: the same name in two
-               squads (e.g. Md. Ashraful Alam plays for two of the
-               default teams) is two different players, and keying by
-               name alone merged their figures into one row. Manual
+            /* Players are keyed by Player ID, never by name alone:
+               two different players who share a name hold different
+               IDs and stay in separate rows, while one player keeps
+               one row even across teams (when picked from the
+               suggestions, their ID — and record — follows them).
+               Records saved before Player IDs existed resolve through
+               the registry / hash fallback in entryPlayerId. Manual
                results carry team scores only — no player figures were
                entered for them — so they count in the points table and
                the tournament totals exactly like scored matches, and
                simply add no player rows here. */
             (inn.batters || []).forEach(function(b){
-              var bk = b.name + '' + inn.battingTeam;
-              if (!bat[bk]) bat[bk] = { name:b.name, team:inn.battingTeam, runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, notouts:0, best:0 };
+              var bk = b.pid || entryPlayerId(m, inn.battingTeam, b.name);
+              if (!bat[bk]) bat[bk] = { pid:bk, name:b.name, team:inn.battingTeam, teams:[inn.battingTeam], runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, notouts:0, best:0 };
               var s = bat[bk];
+              if (s.teams.indexOf(inn.battingTeam) === -1) s.teams.push(inn.battingTeam);
               s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; s.inns++;
               if (b.out) s.outs++; else s.notouts++;
               if (b.runs > s.best) s.best = b.runs;
             });
             (inn.bowlers || []).forEach(function(b){
-              var wk = b.name + '' + inn.bowlingTeam;
-              if (!bowl[wk]) bowl[wk] = { name:b.name, team:inn.bowlingTeam, balls:0, runs:0, wickets:0, inns:0, bestW:0 };
+              var wk = b.pid || entryPlayerId(m, inn.bowlingTeam, b.name);
+              if (!bowl[wk]) bowl[wk] = { pid:wk, name:b.name, team:inn.bowlingTeam, teams:[inn.bowlingTeam], balls:0, runs:0, wickets:0, inns:0, bestW:0 };
               var s = bowl[wk];
+              if (s.teams.indexOf(inn.bowlingTeam) === -1) s.teams.push(inn.bowlingTeam);
               s.balls += b.balls; s.runs += b.runs; s.wickets += b.wickets; s.inns++;
               if (b.wickets > s.bestW) s.bestW = b.wickets;
             });
@@ -3414,7 +4130,7 @@
         var rows = st.slice(0,10).map(function(s,i){
           var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
           var ave = s.outs > 0 ? (s.runs/s.outs).toFixed(1) : '—';
-          return '<tr><td><b>' + esc(dispName(s.team, s.name)) + '</b>' + (i===0 ? '<span class="stat-cap">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + ' • HS ' + s.best + '</span></td><td class="r">' + s.inns + '</td><td class="r"><b>' + s.runs + '</b></td><td class="r">' + ave + '</td><td class="r">' + sr + '</td><td class="r">' + s.fours + '/' + s.sixes + '</td></tr>';
+          return '<tr><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b>' + (i===0 ? '<span class="stat-cap">TOP</span>' : '') + '<span class="howout">' + esc(s.teams.join(' / ')) + ' • HS ' + s.best + '</span></td><td class="r">' + s.inns + '</td><td class="r"><b>' + s.runs + '</b></td><td class="r">' + ave + '</td><td class="r">' + sr + '</td><td class="r">' + s.fours + '/' + s.sixes + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Player</th><th class="r">Inn</th><th class="r">Runs</th><th class="r">Ave</th><th class="r">SR</th><th class="r">4s/6s</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -3423,7 +4139,7 @@
         if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up from matches saved to the tournament.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><b>' + esc(dispName(s.team, s.name)) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.teams.join(' / ')) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Player</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wkts</th><th class="r">Econ</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -3447,10 +4163,10 @@
         items.push('<div class="hist-item"><span>Matches completed</span><b>' + completedMatches + '</b></div>');
         items.push('<div class="hist-item"><span>Total runs in tournament</span><b>' + totalRuns + '</b></div>');
         items.push('<div class="hist-item"><span>Total wickets</span><b>' + totalWkts + '</b></div>');
-        if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + esc(dispName(bySix.team, bySix.name)) + ' — ' + bySix.sixes + '</b></div>');
-        if (byFour && byFour.fours > 0) items.push('<div class="hist-item"><span>Most fours</span><b>' + esc(dispName(byFour.team, byFour.name)) + ' — ' + byFour.fours + '</b></div>');
-        if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + esc(dispName(bySR.team, bySR.name)) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
-        if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + esc(dispName(byEcon.team, byEcon.name)) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
+        if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + plLink(bySix.team, bySix.name, null, bySix.pid) + ' — ' + bySix.sixes + '</b></div>');
+        if (byFour && byFour.fours > 0) items.push('<div class="hist-item"><span>Most fours</span><b>' + plLink(byFour.team, byFour.name, null, byFour.pid) + ' — ' + byFour.fours + '</b></div>');
+        if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + plLink(bySR.team, bySR.name, null, bySR.pid) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
+        if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + plLink(byEcon.team, byEcon.name, null, byEcon.pid) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
         return items.join('');
       }
       var currentTnTab = 'home';
@@ -3503,7 +4219,7 @@
         var teamIdx = tn.teams.indexOf(team);
         var players = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
         var body = players.length
-          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('')
+          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('')
           : '<p class="note">No players entered for this team yet.</p>';
         wrap.innerHTML = '<div class="tn-team-players">'
           + '<div class="tn-team-players-head"><span class="sb-team-logo c' + (teamIdx >= 0 ? (teamIdx % 4) : 0) + '">' + esc(tnInitials(team)) + '</span><div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</div></div></div>'
@@ -3565,16 +4281,16 @@
         var topBowl = st.bowling.length ? st.bowling[0] : null;
         var pot = topBat || null;
         var potName = $('tnPotName'), potTeam = $('tnPotTeam'), potAv = $('tnPotAvatar');
-        if (potName) potName.textContent = pot ? dispName(pot.team, pot.name).toUpperCase() : '—';
+        if (potName) potName.innerHTML = pot ? plLink(pot.team, pot.name, dispName(pot.team, pot.name).toUpperCase()) : '—';
         if (potTeam) potTeam.textContent = pot ? pot.team : '';
         if (potAv) potAv.textContent = pot ? tnInitials(dispName(pot.team, pot.name)) : '—';
         var trN = $('tnTopRunsNum'), trName = $('tnTopRunsName'), trTeam = $('tnTopRunsTeam');
         if (trN) trN.textContent = topBat ? topBat.runs : 0;
-        if (trName) trName.textContent = topBat ? dispName(topBat.team, topBat.name) : '—';
+        if (trName) trName.innerHTML = topBat ? plLink(topBat.team, topBat.name) : '—';
         if (trTeam) trTeam.textContent = topBat ? topBat.team : '';
         var twN = $('tnTopWktsNum'), twName = $('tnTopWktsName'), twTeam = $('tnTopWktsTeam');
         if (twN) twN.textContent = topBowl ? topBowl.wickets : 0;
-        if (twName) twName.textContent = topBowl ? dispName(topBowl.team, topBowl.name) : '—';
+        if (twName) twName.innerHTML = topBowl ? plLink(topBowl.team, topBowl.name) : '—';
         if (twTeam) twTeam.textContent = topBowl ? topBowl.team : '';
         var tot4 = 0, tot6 = 0;
         st.batting.forEach(function(s){ tot4 += s.fours || 0; tot6 += s.sixes || 0; });
@@ -3727,7 +4443,10 @@
         document.body.classList.remove('viewer-flow');
         document.body.classList.remove('link-viewer');
         document.body.classList.add('link-control');
-        setView('scorer');
+        /* The control link opens the simple console home — three
+           options (Start Single Match / Resume Scoring / Tournament),
+           not the full scoring pad. */
+        setView('console');
       }
       function openLiveMatch(){
         document.body.classList.add('viewer-mode');
@@ -3790,7 +4509,16 @@
           cta.textContent = tnName + ' — ' + tn.teams.length + (tn.teams.length===1 ? ' team' : ' teams') + ' • ' + tn.matches.length + (tn.matches.length===1 ? ' match' : ' matches') + ' completed • ' + tn.fixtures.length + ' upcoming. Tap View Tournament to open the full tournament.';
         }
         var ctaCard = $('sbTourCtaCard');
-        if (ctaCard) ctaCard.style.display = tn.teams.length ? '' : 'none';
+        if (ctaCard){
+          /* The Tournament segment in the scoreboard Info tab exists
+             ONLY for a tournament match. A Single Match shows no
+             tournament card at all — even though tournament teams and
+             data exist in the app — so visibility follows the match
+             itself (S.matchKind), never the tournament's contents. */
+          var isTournamentMatch = S.matchKind === 'tournament';
+          ctaCard.hidden = !isTournamentMatch;
+          ctaCard.style.display = isTournamentMatch ? '' : 'none';
+        }
         if (!grid) return;
         if (sbSelectedTeam && tn.teams.indexOf(sbSelectedTeam) === -1) sbSelectedTeam = null;
         grid.innerHTML = tn.teams.length
@@ -3825,7 +4553,7 @@
         var body = '';
         if (sbTeamDetailTab === 'players'){
           body = players.length
-            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('')
+            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('')
             : '<p class="note">No players entered for this team yet.</p>';
         } else if (sbTeamDetailTab === 'matches'){
           var tm = sbTeamMatches(team);
@@ -3842,8 +4570,8 @@
           body = parts.length ? parts.join('') : '<p class="note">No matches for this team yet — no fixtures or results involve ' + esc(team) + '.</p>';
         } else {
           var st = computePlayerStats();
-          var teamBat = st.batting.filter(function(s){ return s.team === team; });
-          var teamBowl = st.bowling.filter(function(s){ return s.team === team; });
+          var teamBat = st.batting.filter(function(s){ return s.teams.indexOf(team) > -1; });
+          var teamBowl = st.bowling.filter(function(s){ return s.teams.indexOf(team) > -1; });
           var sParts = [];
           sParts.push('<div class="hist-item"><span>Matches played</span><b>' + (ptsRow ? ptsRow.p : 0) + '</b></div>');
           sParts.push('<div class="hist-item"><span>Won / Lost / Tied</span><b>' + (ptsRow ? (ptsRow.w + ' / ' + ptsRow.l + ' / ' + ptsRow.t) : '0 / 0 / 0') + '</b></div>');
@@ -3852,13 +4580,13 @@
           if (teamBat.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Batting</b></p>' + teamBat.map(function(s){
               var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
-              return '<div class="hist-item"><span>' + esc(dispName(s.team, s.name)) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
+              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
             }).join(''));
           }
           if (teamBowl.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Bowling</b></p>' + teamBowl.map(function(s){
               var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
-              return '<div class="hist-item"><span>' + esc(dispName(s.team, s.name)) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
+              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
             }).join(''));
           }
           if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet — statistics build up from matches saved to the tournament.</p>');
@@ -3895,12 +4623,12 @@
           ? tn.teams.map(function(n,i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
               var playerRows = players.length
-                ? players.map(function(p,pi){ var nk = nickOf(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                ? players.map(function(p,pi){ var nk = nickOf(n, p); var pidT = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidT ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidT)) + '</span>' : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
                 : '<div class="tn-empty">No players yet for this team — add players below.</div>';
               return '<div class="squad-box tn-team-box">'
                 + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
                 + playerRows
-                + '<div class="rowflex names-row" style="margin-top:10px"><textarea id="tnPlayer-' + i + '" class="grow namebox" rows="1" placeholder="Player names for ' + esc(n) + ' — one per line. Paste a whole list and tap Add Players."></textarea><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
+                + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="tnPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names for ' + esc(n) + ' — one per line. Start typing for suggestions from known players."></textarea></div><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
                 + '<div class="rowflex" style="margin-top:8px"><input id="tnNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" /></div>'
                 + '</div>';
             }).join('')
@@ -3951,11 +4679,19 @@
         try { renderTournamentHome(); } catch(e){}
         var saveBtn = $('btnSaveTournament');
         if (saveBtn){
-          var already = S.archivedMatchId && S.archivedMatchId === S.matchId;
-          var canSave = S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings;
-          saveBtn.textContent = already ? '↻ Update Saved Result' : '🏆 Save Result to Tournament';
-          saveBtn.disabled = !canSave;
-          saveBtn.title = canSave ? '' : 'Available once the match is finished (both innings complete)';
+          if (S.matchKind !== 'tournament'){
+            /* Single Match: the tournament save path is closed, and
+               the button says why instead of silently doing nothing. */
+            saveBtn.textContent = '🏏 Single Match — never added to a tournament';
+            saveBtn.disabled = true;
+            saveBtn.title = 'A Single Match is kept in Match History & Reports and in the players\' profiles only — it never enters a tournament (no points, no results, no tournament statistics).';
+          } else {
+            var already = S.archivedMatchId && S.archivedMatchId === S.matchId;
+            var canSave = S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings;
+            saveBtn.textContent = already ? '↻ Update Saved Result' : '🏆 Save Result to Tournament';
+            saveBtn.disabled = !canSave;
+            saveBtn.title = canSave ? '' : 'Available once the match is finished (both innings complete)';
+          }
         }
       }
 
@@ -4033,6 +4769,7 @@
       function initFirebaseWithConfig(cfg, isDefault){
         if (typeof firebase === 'undefined'){ throw new Error('Firebase library did not load'); }
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
+        if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbApp) { try{ fbApp.delete(); }catch(e){} fbApp = null; }
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbIsDefault = !!isDefault;
@@ -4042,6 +4779,25 @@
         fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
         fbRef = fbApp.database().ref('liveMatch');
         var myRef = fbRef;
+        /* Permanent history lives at its own path, matchHistory —
+           separate from the live match, so a New Match reset of
+           liveMatch can never touch it. Everyone reads it (viewers
+           see the same record book); only the scorer's side writes.
+           A rejected read/write (e.g. Rules that still allow only
+           liveMatch) surfaces the real error in the History view. */
+        histSyncedOnce = false;
+        fbHistRef = fbApp.database().ref('matchHistory');
+        var myHistRef = fbHistRef;
+        myHistRef.on('value', function(snap){
+          if (fbHistRef !== myHistRef) return;
+          histFbError = '';
+          mergeRemoteHistory(snap.val());
+          flushHistoryPending();
+        }, function(err){
+          if (fbHistRef !== myHistRef) return;
+          histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
+          try { renderHistory(); } catch(e){}
+        });
         myRef.on('value', function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
@@ -4154,10 +4910,595 @@
       }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
+        if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
+        histSyncedOnce = false;
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbRef=null; fbApp=null; fbIsDefault=false; fbReady=false; fbConnecting=false;
         setPadLocked(false);
         setConnStatus('local', 'Firebase disconnected — running in Local Mode. Scoring continues and is backed up on this device.');
+      }
+
+      /* ============================================================
+         PERMANENT MATCH HISTORY & PLAYER RECORDS
+         Where match data lives:
+         (a) the LIVE match — state S, synced through Firebase at
+             liveMatch and backed up on this device;
+         (b) PERMANENT HISTORY — the moment a match finishes,
+             archiveFinishedMatch() files a full copy (both innings,
+             every batter / bowler figure, ball by ball, result,
+             Player of the Match) into HIST. There is NO manual save
+             step. HIST is stored in Firebase under
+             matchHistory/<matchId> and backed up on this device, so
+             New Match — which only replaces the live state — can
+             never delete a past match.
+         Honesty rule: a match is only ever reported as "saved to
+         Firebase" after Firebase confirms it (the write resolves,
+         or the id shows up in a matchHistory snapshot). If the
+         database Rules still allow only liveMatch, the write is
+         rejected and the REAL error is shown in the History view —
+         the match then lives only in this device's backup, and the
+         page says exactly that.
+         ============================================================ */
+      var LS_HIST_KEY = 'live-cricket-score-history-v1';
+      var HIST = {};            /* matchId (string) -> archived match entry */
+      var histDeleted = {};     /* matchId -> true: deleted here, remote delete not yet confirmed */
+      var histConfirmed = {};   /* matchId -> true: known to be stored in Firebase */
+      var fbHistRef = null, histSyncedOnce = false, histFbError = '';
+      var repTn = '', repTeam = '', repPlayer = '', repSig = '';
+
+      function histCanManage(){
+        /* Delete is a scorer / control-side action only. The shared
+           viewer link (link-viewer) never sees it; every other entry
+           into this app is the scorer's own (the control link, or the
+           plain link that still offers the scorer entry). */
+        return !document.body.classList.contains('link-viewer');
+      }
+      function saveHistLocal(){
+        try {
+          var arr = Object.keys(HIST).map(function(k){ return HIST[k]; });
+          var del = Object.keys(histDeleted).filter(function(k){ return histDeleted[k]; });
+          localStorage.setItem(LS_HIST_KEY, JSON.stringify({ v:1, matches: arr, deleted: del }));
+        } catch(e){}
+      }
+      function loadHistLocal(){
+        try {
+          var raw = localStorage.getItem(LS_HIST_KEY);
+          if (!raw) return;
+          var v = JSON.parse(raw);
+          var arr = Array.isArray(v) ? v : (v && Array.isArray(v.matches) ? v.matches : []);
+          arr.forEach(function(e){ if (e && e.id != null) HIST[String(e.id)] = e; });
+          if (v && Array.isArray(v.deleted)) v.deleted.forEach(function(id){ histDeleted[String(id)] = true; });
+        } catch(e){}
+      }
+      function buildHistoryEntry(){
+        var inns = [];
+        if (S.prevInnings) inns.push(deep(S.prevInnings));
+        if (S.current && (S.current.batters.length || S.current.bowlers.length || S.current.legalBalls > 0 || S.prevInnings)) inns.push(deep(S.current));
+        return {
+          id: String(S.matchId || S.updatedAt || Date.now()),
+          at: Date.now(),
+          teamA: S.teamA || '', teamB: S.teamB || '',
+          venue: S.venue || '',
+          /* A Single Match is not attributed to any tournament in the
+             history either — only a tournament match carries the name. */
+          tournamentName: (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '',
+          matchKind: (S.matchKind === 'tournament') ? 'tournament' : 'single',
+          tossInfo: S.tossInfo || '',
+          oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(),
+          abandoned: !!S.abandoned,
+          resultText: S.resultText || '',
+          potmName: S.potmName || '', potmTeam: S.potmTeam || '', potmPid: S.potmPid || '',
+          innings: inns,
+          squadA: deep((S.finalSquadA && S.finalSquadA.length) ? S.finalSquadA : (S.squadA || [])),
+          squadB: deep((S.finalSquadB && S.finalSquadB.length) ? S.finalSquadB : (S.squadB || [])),
+          nicknames: deep(S.nicknames || []),
+          /* The Player ID snapshots travel with the archived match,
+             so profiles and statistics resolve by ID on any device —
+             even one whose live registry never saw this match. */
+          players: deep(S.players || []),
+          playerIds: deep(S.playerIds || [])
+        };
+      }
+      function archiveFinishedMatch(){
+        if (!S || S.status !== 'finished' || !S.current) return;
+        var started = S.current.legalBalls > 0 || S.current.runs > 0 || S.current.wickets > 0 || !!S.prevInnings;
+        if (!started && !S.abandoned) return; /* nothing was ever scored — nothing to keep */
+        var entry = buildHistoryEntry();
+        /* Change signature: re-archiving an unchanged match (every
+           render calls ensureCurrentArchived) must not rewrite
+           Firebase over and over — only a real change (a corrected
+           score, a Player of the Match picked later) writes again. */
+        entry._sig = JSON.stringify([entry.innings, entry.resultText, entry.potmName, entry.potmTeam, entry.potmPid, entry.abandoned]);
+        var prev = HIST[entry.id];
+        if (prev && prev._sig === entry._sig) return;
+        if (prev && prev.at) entry.at = prev.at; /* keep the original finish time */
+        HIST[entry.id] = entry;
+        delete histDeleted[entry.id];
+        saveHistLocal();
+        pushHistoryEntry(entry);
+        try { renderHistory(); } catch(e){}
+      }
+      function ensureCurrentArchived(){ archiveFinishedMatch(); }
+      function pushHistoryEntry(entry){
+        if (!histCanManage()) return;  /* viewers never write history */
+        if (!fbHistRef) return;        /* flushed when Firebase connects */
+        var id = entry.id;
+        fbHistRef.child(id).set(entry).then(function(){
+          histConfirmed[id] = true; histFbError = '';
+          try { renderHistory(); } catch(e){}
+        }).catch(function(err){
+          histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
+          try { renderHistory(); } catch(e){}
+        });
+      }
+      function flushHistoryPending(){
+        if (!histCanManage()) return;
+        Object.keys(HIST).forEach(function(id){
+          if (!histConfirmed[id] && !histDeleted[id]) pushHistoryEntry(HIST[id]);
+        });
+      }
+      function mergeRemoteHistory(val){
+        histSyncedOnce = true;
+        var remote = (val && typeof val === 'object') ? val : {};
+        Object.keys(remote).forEach(function(id){
+          histConfirmed[id] = true;
+          if (histDeleted[id]) return; /* our delete is still propagating */
+          var e = remote[id];
+          if (e && typeof e === 'object'){ e.id = String(id); HIST[id] = e; }
+        });
+        /* A tombstone whose remote copy is gone has done its job. */
+        Object.keys(histDeleted).forEach(function(id){ if (!remote[id]) delete histDeleted[id]; });
+        saveHistLocal();
+        /* Archived matches that predate Player IDs get stable IDs
+           stamped in (once per entry — see stampHistEntryPids). */
+        try { migratePlayerIds(); } catch(e){}
+        try { renderHistory(); } catch(e){}
+      }
+      /* ---------- delete (scorer / control side only) ---------- */
+      function deleteHistoryMatch(id){
+        id = String(id);
+        var e = HIST[id]; if (!e) return;
+        if (!histCanManage()){ toast('Only the scorer can delete a match from history'); return; }
+        var label = (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2');
+        askVerify('Delete this match from history?',
+          label + (e.resultText ? ' — ' + String(e.resultText).replace(/ 🏆/g, '') : '')
+          + '. It will be removed from the permanent history in Firebase and from this device. If it was also saved as a tournament result, that result is removed too, so the points table and statistics stay correct. This cannot be undone.',
+          function(){ doDeleteHistoryMatch(id); });
+      }
+      function doDeleteHistoryMatch(id){
+        delete HIST[id];
+        delete histConfirmed[id];
+        histDeleted[id] = true;
+        saveHistLocal();
+        if (fbHistRef){
+          fbHistRef.child(id).remove().then(function(){
+            histFbError = '';
+            try { renderHistory(); } catch(e){}
+          }).catch(function(err){
+            histFbError = 'Delete failed on Firebase: ' + ((err && err.message) ? err.message : String(err || 'unknown error'));
+            try { renderHistory(); } catch(e){}
+          });
+        }
+        /* A copy saved as a tournament result must go too — otherwise
+           the points table and the statistics would keep counting a
+           match that no longer exists. */
+        try {
+          normalizeTournament();
+          var idx = -1;
+          S.tournament.matches.forEach(function(m, i){ if (String(m.id) === id) idx = i; });
+          if (idx > -1){
+            S.tournament.matches.splice(idx, 1);
+            if (String(S.archivedMatchId) === id) S.archivedMatchId = null;
+            commit('Match deleted from history and tournament results', true);
+          }
+        } catch(e){}
+        try { renderHistory(); } catch(e){}
+        try { closeHistoryMatch(); } catch(e){}
+        toast('🗑 Match removed from history');
+      }
+      /* ---------- the record book: archived matches + the live one ---------- */
+      function liveHistoryEntry(){
+        if (!S || !S.current) return null;
+        var hasFigs = (S.current.batters || []).length || (S.current.bowlers || []).length
+          || (S.prevInnings && ((S.prevInnings.batters || []).length || (S.prevInnings.bowlers || []).length));
+        if (!hasFigs) return null;
+        var id = String(S.matchId || 'live');
+        if (S.status === 'finished' && HIST[id]) return null; /* already filed in permanent history */
+        var e = buildHistoryEntry();
+        e.id = 'live:' + id; e.live = true; e.at = Date.now();
+        if (S.status !== 'finished') e.resultText = '';
+        return e;
+      }
+      function histSorted(){
+        return Object.keys(HIST).map(function(k){ return HIST[k]; }).sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
+      }
+      function allRecordMatches(){
+        var arr = histSorted();
+        var lv = liveHistoryEntry();
+        if (lv) arr = [lv].concat(arr);
+        return arr;
+      }
+      /* ---------- reports: filters + career aggregation ---------- */
+      function repFilterChanged(){
+        var t = $('repTnFilter'); if (t) repTn = t.value;
+        var tm = $('repTeamFilter'); if (tm) repTeam = tm.value;
+        var p = $('repPlayerFilter'); if (p) repPlayer = p.value;
+        renderHistory();
+      }
+      function matchInFilter(e){
+        if (repTn !== '' && (e.tournamentName || '') !== repTn) return false;
+        if (repTeam !== '' && e.teamA !== repTeam && e.teamB !== repTeam) return false;
+        if (repPlayer && repPlayer.trim()){
+          var q = repPlayer.trim().toLowerCase(), found = false;
+          (e.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){ if (String(b.name).toLowerCase().indexOf(q) > -1) found = true; });
+            (inn.bowlers || []).forEach(function(b){ if (String(b.name).toLowerCase().indexOf(q) > -1) found = true; });
+          });
+          if (!found) return false;
+        }
+        return true;
+      }
+      function aggregatePlayers(matches){
+        /* Career figures are aggregated by Player ID — never by name
+           alone. Two players who share a name hold different IDs and
+           never merge; one player's record follows their ID across
+           matches and teams. Records saved before Player IDs existed
+           resolve through entryPlayerId (the entry's own snapshot,
+           then the registry, then the same deterministic hash the
+           migration assigns), so old and new matches join up. */
+        var map = {};
+        function rec(name, team, pid){
+          if (!map[pid]) map[pid] = { pid:pid, name:name, team:team, teams:[team], matchIds:{}, matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0 };
+          var r = map[pid];
+          if (r.teams.indexOf(team) === -1) r.teams.push(team);
+          return r;
+        }
+        matches.forEach(function(m){
+          var seen = {};
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){
+              var pid = b.pid || entryPlayerId(m, inn.battingTeam, b.name);
+              var r = rec(b.name, inn.battingTeam, pid);
+              if (!seen[pid]){ seen[pid] = 1; r.matchIds[m.id] = 1; }
+              r.batInns++; r.runs += b.runs || 0; r.balls += b.balls || 0; r.fours += b.fours || 0; r.sixes += b.sixes || 0;
+              if (b.out) r.outs++;
+              if (b.runs > r.best || (b.runs === r.best && !b.out && !r.bestNO)){ r.best = b.runs; r.bestNO = !b.out; }
+            });
+            (inn.bowlers || []).forEach(function(b){
+              var pid = b.pid || entryPlayerId(m, inn.bowlingTeam, b.name);
+              var r = rec(b.name, inn.bowlingTeam, pid);
+              if (!seen[pid]){ seen[pid] = 1; r.matchIds[m.id] = 1; }
+              r.bowlBalls += b.balls || 0; r.bowlRuns += b.runs || 0; r.wkts += b.wickets || 0;
+              if (b.wickets > r.bestBW || (b.wickets === r.bestBW && (b.runs || 0) < r.bestBR)){ r.bestBW = b.wickets; r.bestBR = b.runs || 0; }
+            });
+          });
+        });
+        return Object.keys(map).map(function(k){ var r = map[k]; r.matches = Object.keys(r.matchIds).length; return r; });
+      }
+      /* ---------- tappable player names ---------- */
+      function nickIn(nicks, team, name){
+        if (!name || !Array.isArray(nicks)) return '';
+        var fallback = '';
+        for (var i = 0; i < nicks.length; i++){
+          var e = nicks[i];
+          if (!e || e.n !== name || !e.k) continue;
+          if (e.t === team) return e.k;
+          if (!fallback) fallback = e.k;
+        }
+        return fallback;
+      }
+      function dispIn(nicks, team, name){ return nickIn(nicks, team, name) || name; }
+      function plLink(team, name, disp, pid){
+        if (!name) return '';
+        var d = (disp != null) ? disp : dispName(team, name);
+        var id = pid || lookupPlayerId(team || '', name);
+        return '<button type="button" class="pl-link" data-pl-team="' + esc(team || '') + '" data-pl-name="' + esc(name) + '"' + (id ? ' data-pl-pid="' + esc(id) + '"' : '') + '>' + esc(d) + '</button>';
+      }
+      function plLinkIn(e, team, name){
+        if (!name) return '';
+        var id = (e && e.potmPid && name === e.potmName && team === e.potmTeam) ? e.potmPid : (e ? entryPlayerId(e, team, name) : lookupPlayerId(team || '', name));
+        return '<button type="button" class="pl-link" data-pl-team="' + esc(team || '') + '" data-pl-name="' + esc(name) + '"' + (id ? ' data-pl-pid="' + esc(id) + '"' : '') + '>' + esc(dispIn(e ? e.nicknames : null, team, name)) + '</button>';
+      }
+      document.addEventListener('click', function(e){
+        var t = e.target;
+        var el = (t && t.closest) ? t.closest('[data-pl-name]') : null;
+        if (el) openPlayerProfile(el.getAttribute('data-pl-team'), el.getAttribute('data-pl-name'), el.getAttribute('data-pl-pid') || '');
+      });
+      /* ---------- player profile ---------- */
+      var profileCtx = null;
+      function openPlayerProfile(team, name, pid){
+        if (!name) return;
+        profileCtx = { team: team || '', name: name, pid: pid || lookupPlayerId(team || '', name) || '' };
+        renderPlayerProfile();
+        var m = $('playerModal'); if (m) m.classList.add('show');
+      }
+      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); profileCtx = null; }
+      /* Does this batter / bowler record belong to the profile's
+         player? By Player ID whenever either side carries one (an
+         unstamped record resolves through the match's own snapshot);
+         same name in a different team is a different player unless
+         the IDs say otherwise. */
+      function recBelongsTo(e, inn, team, b, ctx){
+        if (!b) return false;
+        if (ctx.pid){
+          var rp = b.pid || entryPlayerId(e, team, b.name);
+          return rp === ctx.pid;
+        }
+        return b.name === ctx.name && team === ctx.team;
+      }
+      function playerMatchRows(team, name, pid){
+        var ctx = { team: team || '', name: name, pid: pid || '' };
+        var out = [];
+        allRecordMatches().forEach(function(m){
+          var bat = null, bowl = null;
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){ if (recBelongsTo(m, inn, inn.battingTeam, b, ctx)) bat = b; });
+            (inn.bowlers || []).forEach(function(b){ if (recBelongsTo(m, inn, inn.bowlingTeam, b, ctx)) bowl = b; });
+          });
+          if (bat || bowl) out.push({ m: m, bat: bat, bowl: bowl });
+        });
+        return out;
+      }
+      function renderPlayerProfile(){
+        if (!profileCtx) return;
+        var name = profileCtx.name, team = profileCtx.team, ctxPid = profileCtx.pid || '';
+        /* The profile follows the Player ID: another player with the
+           same name is a different profile and never appears here. */
+        var recs = aggregatePlayers(allRecordMatches()).filter(function(r){ return ctxPid ? r.pid === ctxPid : r.name === name; });
+        var rec = null;
+        recs.forEach(function(r){ if (r.team === team) rec = r; });
+        if (!rec) rec = recs[0] || null;
+        var useTeam = rec ? rec.team : team;
+        var usePid = rec ? rec.pid : (ctxPid || lookupPlayerId(team, name) || pidHash(team, name));
+        if (!rec) rec = { pid:usePid, name:name, team:useTeam, teams:[useTeam], matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0 };
+        var titleName = dispName(useTeam, name);
+        if (titleName === name){
+          var nk = '';
+          allRecordMatches().forEach(function(m){ if (!nk) nk = nickIn(m.nicknames, useTeam, name); });
+          if (nk) titleName = nk;
+        }
+        var titleEl = $('playerModalTitle'); if (titleEl) titleEl.textContent = titleName;
+        var sr = rec.balls > 0 ? (rec.runs / rec.balls * 100).toFixed(1) : '0.0';
+        var ave = rec.outs > 0 ? (rec.runs / rec.outs).toFixed(2) : '—';
+        var econ = rec.bowlBalls > 0 ? (rec.bowlRuns / (rec.bowlBalls / 6)).toFixed(2) : '0.00';
+        function prow(l, v){ return '<div class="prof-row"><span>' + l + '</span><b>' + v + '</b></div>'; }
+        var teamsLine = (rec.teams && rec.teams.length) ? rec.teams.join(' • ') : (useTeam || '—');
+        var sameNameCount = knownPlayers().filter(function(p){ return p.name === name; }).length;
+        var html = '<p class="sub" style="color:var(--muted);font-size:14px;margin:2px 0 12px">' + esc(teamsLine) + ' • Player ID <b>' + esc(pidShort(usePid)) + '</b> • Career across every recorded match, including the live one'
+          + (sameNameCount > 1 ? '<br>Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID ' + esc(pidShort(usePid)) + ' only, so their records never mix.' : '')
+          + '</p>';
+        html += '<h3 style="margin:0 0 4px">Batting</h3><div class="prof-grid">'
+          + prow('Matches', rec.matches) + prow('Innings', rec.batInns)
+          + prow('Runs', rec.runs) + prow('Balls faced', rec.balls)
+          + prow('Fours', rec.fours) + prow('Sixes', rec.sixes)
+          + prow('Strike rate', sr) + prow('Average', ave)
+          + prow('Best score', rec.best < 0 ? '—' : (rec.best + (rec.bestNO ? '*' : '')))
+          + '</div>';
+        html += '<h3 style="margin:16px 0 4px">Bowling</h3><div class="prof-grid">'
+          + prow('Wickets', rec.wkts) + prow('Overs bowled', oversText(rec.bowlBalls))
+          + prow('Runs conceded', rec.bowlRuns) + prow('Economy', econ)
+          + prow('Best bowling', rec.bestBW < 0 ? '—' : (rec.bestBW + '/' + rec.bestBR))
+          + '</div>';
+        var rows = playerMatchRows(useTeam, name, usePid);
+        html += '<h3 style="margin:18px 0 8px">Match by Match</h3>';
+        if (!rows.length){
+          html += '<p class="note">No recorded innings yet — this player has not batted or bowled in a recorded match.</p>';
+        } else {
+          html += rows.map(function(rw){
+            var m = rw.m;
+            var date = m.at ? new Date(m.at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+            var batLine = rw.bat
+              ? '🏏 ' + rw.bat.runs + (rw.bat.out ? '' : '*') + ' (' + rw.bat.balls + ') • ' + (rw.bat.fours || 0) + '×4, ' + (rw.bat.sixes || 0) + '×6'
+              : '🏏 Did not bat';
+            var bowlLine = rw.bowl
+              ? '🎯 ' + rw.bowl.wickets + '/' + rw.bowl.runs + ' (' + oversText(rw.bowl.balls) + ' ov)'
+              : '🎯 Did not bowl';
+            var res = m.live ? (m.resultText ? String(m.resultText).replace(/ 🏆/g, '') : '● Live now') : (m.resultText ? String(m.resultText).replace(/ 🏆/g, '') : matchResultText({ innings: m.innings, wicketsLimit: m.wicketsLimit, resultText: '' }));
+            return '<button type="button" class="prof-match" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">'
+              + '<span class="pm-top"><span>' + esc((m.teamA || 'Team 1') + ' vs ' + (m.teamB || 'Team 2')) + '</span><span class="note">' + esc(date) + '</span></span>'
+              + '<span class="pm-line" style="display:block">' + esc(batLine) + ' &nbsp;•&nbsp; ' + esc(bowlLine) + '</span>'
+              + (res ? '<span class="pm-line" style="display:block">' + esc(res) + '</span>' : '')
+              + '</button>';
+          }).join('');
+        }
+        var body = $('playerModalBody'); if (body) body.innerHTML = html;
+      }
+      /* ---------- archived match: full scorecard ---------- */
+      function potmFiguresIn(e, name, team){
+        var bat = null, bowl = null;
+        var ctx = { team: team, name: name, pid: e.potmPid || '' };
+        (e.innings || []).forEach(function(inn){
+          (inn.batters || []).forEach(function(b){ if (recBelongsTo(e, inn, inn.battingTeam, b, ctx)) bat = b; });
+          (inn.bowlers || []).forEach(function(b){ if (recBelongsTo(e, inn, inn.bowlingTeam, b, ctx)) bowl = b; });
+        });
+        var parts = [];
+        if (bat) parts.push(bat.runs + (bat.out ? '' : '*') + '(' + bat.balls + ')');
+        if (bowl) parts.push(bowl.wickets + '-' + bowl.runs);
+        return parts.join(' • ');
+      }
+      function archBattingTable(e, inn){
+        if (!(inn.batters || []).length) return '<p class="note">No batting recorded.</p>';
+        var rows = inn.batters.map(function(b){
+          var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
+          return '<tr class="' + (b.out ? 'out' : '') + '"><td>' + plLinkIn(e, inn.battingTeam, b.name)
+            + (b.out ? '<span class="howout">' + esc(b.howOut || 'out') + '</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '<span class="howout">not out</span>'))
+            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
+        }).join('');
+        var squad = inn.battingTeam === e.teamA ? e.squadA : (inn.battingTeam === e.teamB ? e.squadB : []);
+        var batted = {}; (inn.batters || []).forEach(function(b){ batted[b.name] = 1; });
+        var ytb = (squad || []).filter(function(n){ return !batted[n]; });
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
+        var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
+        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
+          + '<tr><td>Extras (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')</td><td class="r"><b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b></td><td colspan="4"></td></tr>'
+          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
+          + '</tbody></table>';
+      }
+      function archBowlingTable(e, inn){
+        if (!(inn.bowlers || []).length) return '<p class="note">No bowling recorded.</p>';
+        var rows = inn.bowlers.map(function(b){
+          var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
+          return '<tr><td>' + plLinkIn(e, inn.bowlingTeam, b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      function archFeedHTML(inn){
+        if (!(inn.balls || []).length) return '<p class="note">No ball-by-ball recorded.</p>';
+        return inn.balls.slice().reverse().map(function(b){
+          if (b.evt) return '<div class="hist-item"><span></span><b>' + esc(b.text) + '</b></div>';
+          return '<div class="hist-item"><span>Over ' + esc(b.over) + '</span><b>' + esc(b.text) + '</b></div>';
+        }).join('');
+      }
+      function openHistoryMatch(id){
+        id = String(id);
+        if (id.indexOf('live:') === 0){ closePlayerProfile(); setView('scoreboard'); return; }
+        var e = HIST[id]; if (!e) return;
+        var titleEl = $('histModalTitle');
+        if (titleEl) titleEl.textContent = teamShort(e.teamA) + ' v ' + teamShort(e.teamB);
+        var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+        var res = e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' });
+        var html = '<p class="sub" style="color:var(--muted);font-size:14px;margin:2px 0 10px">'
+          + esc([e.tournamentName, e.venue, date].filter(Boolean).join(' • ') || 'Match') + '</p>';
+        if (e.tossInfo) html += '<p class="note" style="margin:0 0 8px">Toss: ' + esc(e.tossInfo) + '</p>';
+        if (res) html += '<div class="mr-result" style="font-size:16px;margin-bottom:10px">' + esc(res) + '</div>';
+        if (e.potmName){
+          var fig = potmFiguresIn(e, e.potmName, e.potmTeam);
+          html += '<div class="hist-item"><span>🏆 Player of the Match</span><b>' + plLinkIn(e, e.potmTeam, e.potmName) + (fig ? ' — ' + esc(fig) : '') + '</b></div>';
+        } else if (!e.abandoned){
+          html += '<div class="hist-item"><span>🏆 Player of the Match</span><b>Not Decided Yet</b></div>';
+        }
+        (e.innings || []).forEach(function(inn, i){
+          html += '<h3 style="margin:18px 0 6px">' + esc(inn.battingTeam) + ' — ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</h3>';
+          html += '<p class="note" style="margin:0 0 4px"><b>Batting</b></p>' + archBattingTable(e, inn);
+          html += '<p class="note" style="margin:12px 0 4px"><b>Bowling</b> — ' + esc(inn.bowlingTeam) + '</p>' + archBowlingTable(e, inn);
+          html += '<p class="note" style="margin:12px 0 4px"><b>Ball by Ball</b></p>' + archFeedHTML(inn);
+        });
+        if (histCanManage()){
+          html += '<div class="divider"></div><button type="button" class="btn ghost sm hist-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete this match from history</button>';
+        }
+        var body = $('histModalBody'); if (body) body.innerHTML = html;
+        var m = $('histModal'); if (m) m.classList.add('show');
+      }
+      function closeHistoryMatch(){ var m = $('histModal'); if (m) m.classList.remove('show'); }
+      /* ---------- History & Reports view ---------- */
+      function renderHistory(){
+        renderHistStatus();
+        renderHistFilters();
+        renderReports();
+        renderHistList();
+        if (profileCtx) { try { renderPlayerProfile(); } catch(e){} }
+      }
+      function renderHistStatus(){
+        var el = $('histSyncStatus'); if (!el) return;
+        var ids = Object.keys(HIST);
+        var total = ids.length;
+        var confirmed = ids.filter(function(id){ return histConfirmed[id]; }).length;
+        var pending = total - confirmed;
+        var html;
+        if (histFbError){
+          var perm = /permission/i.test(histFbError);
+          html = '<div class="hist-status err"><b>⚠️ History is NOT fully saved to Firebase.</b><br>Firebase said: ' + esc(histFbError)
+            + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet permanent in the cloud.'
+            + (perm ? '<br><b>Fix:</b> the database Rules allow only <span class="mono">liveMatch</span>. In Firebase Console → Realtime Database → Rules, publish:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true }, "matchHistory": { ".read": true, ".write": true } } }</span><br>Then reopen this page — the backup syncs itself.' : '')
+            + '</div>';
+        } else if (fbHistRef && histSyncedOnce){
+          html = '<div class="hist-status ok">✓ Permanent history is on — ' + total + (total === 1 ? ' match' : ' matches') + ' archived. '
+            + (pending > 0 ? pending + (pending === 1 ? ' match is' : ' matches are') + ' still syncing to Firebase…' : 'Everything is saved to Firebase (<span class="mono">matchHistory</span>) and backed up on this device.')
+            + '</div>';
+        } else if (fbHistRef){
+          html = '<div class="hist-status">⏳ Connecting to the Firebase history… ' + total + (total === 1 ? ' match' : ' matches') + ' in the on-device backup.</div>';
+        } else {
+          html = '<div class="hist-status">History is being kept on this device only (' + total + (total === 1 ? ' match' : ' matches') + ') — Firebase is not connected, so viewers cannot see it yet and it is not permanent until Firebase connects.</div>';
+        }
+        el.innerHTML = html;
+      }
+      function renderHistFilters(){
+        var all = allRecordMatches();
+        var tns = {}, teams = {};
+        all.forEach(function(e){ tns[e.tournamentName || ''] = 1; if (e.teamA) teams[e.teamA] = 1; if (e.teamB) teams[e.teamB] = 1; });
+        var sig = Object.keys(tns).sort().join('|') + '#' + Object.keys(teams).sort().join('|') + '#' + repTn + '#' + repTeam;
+        if (sig === repSig) return;
+        repSig = sig;
+        var tSel = $('repTnFilter'), tmSel = $('repTeamFilter');
+        if (tSel && document.activeElement !== tSel){
+          tSel.innerHTML = '<option value="">All tournaments</option>' + Object.keys(tns).sort().map(function(n){ return '<option value="' + esc(n) + '"' + (n === repTn ? ' selected' : '') + '>' + esc(n || '(No tournament name)') + '</option>'; }).join('');
+          tSel.value = repTn;
+        }
+        if (tmSel && document.activeElement !== tmSel){
+          tmSel.innerHTML = '<option value="">All teams</option>' + Object.keys(teams).sort().map(function(n){ return '<option value="' + esc(n) + '"' + (n === repTeam ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+          tmSel.value = repTeam;
+        }
+      }
+      function boardTable(title, rowsHtml, headHtml){
+        if (!rowsHtml) return '';
+        return '<div class="rep-board"><h3>' + title + '</h3><table><thead><tr>' + headHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+      }
+      function renderReports(){
+        var wrap = $('repBoards'); if (!wrap) return;
+        var matches = allRecordMatches().filter(matchInFilter);
+        var players = aggregatePlayers(matches);
+        if (!players.length){
+          wrap.innerHTML = '<p class="sub" style="margin:0">No recorded matches match the filters yet — the boards build up automatically as matches finish.</p>';
+          return;
+        }
+        function nm(r){ return '<td><b>' + plLink(r.team, r.name, null, r.pid) + '</b><span class="howout">' + esc(r.teams.join(' / ')) + ' • ' + esc(pidShort(r.pid)) + '</span></td>'; }
+        function sr(r){ return r.balls > 0 ? (r.runs / r.balls * 100).toFixed(1) : '0.0'; }
+        function ave(r){ return r.outs > 0 ? (r.runs / r.outs).toFixed(1) : '—'; }
+        function econ(r){ return r.bowlBalls > 0 ? (r.bowlRuns / (r.bowlBalls / 6)).toFixed(2) : '0.00'; }
+        var html = '<p class="sub" style="margin:0">Across ' + matches.length + (matches.length === 1 ? ' recorded match' : ' recorded matches') + ' (filters above applied). Tap a name for the full profile.</p>';
+        var byRuns = players.slice().sort(function(a, b){ return (b.runs - a.runs) || (b.balls - a.balls); }).slice(0, 10);
+        html += boardTable('Most Runs', byRuns.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r">' + r.batInns + '</td><td class="r"><b>' + r.runs + '</b></td><td class="r">' + ave(r) + '</td><td class="r">' + sr(r) + '</td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Inn</th><th class="r">Runs</th><th class="r">Ave</th><th class="r">SR</th>');
+        var byWkts = players.filter(function(r){ return r.bowlBalls > 0; }).sort(function(a, b){ return (b.wkts - a.wkts) || (a.bowlRuns - b.bowlRuns); }).slice(0, 10);
+        html += boardTable('Most Wickets', byWkts.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r">' + oversText(r.bowlBalls) + '</td><td class="r">' + r.bowlRuns + '</td><td class="r"><b>' + r.wkts + '</b></td><td class="r">' + econ(r) + '</td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wkts</th><th class="r">Econ</th>');
+        var byAve = players.filter(function(r){ return r.outs >= 3; }).sort(function(a, b){ return (b.runs / b.outs) - (a.runs / a.outs); }).slice(0, 5);
+        html += boardTable('Best Average (min. 3 dismissals)', byAve.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + r.batInns + '</td><td class="r">' + r.runs + '</td><td class="r"><b>' + ave(r) + '</b></td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Inn</th><th class="r">Runs</th><th class="r">Ave</th>');
+        var bySR = players.filter(function(r){ return r.balls >= 30; }).sort(function(a, b){ return (b.runs / b.balls) - (a.runs / a.balls); }).slice(0, 5);
+        html += boardTable('Best Strike Rate (min. 30 balls)', bySR.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + r.runs + '</td><td class="r">' + r.balls + '</td><td class="r"><b>' + sr(r) + '</b></td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">SR</th>');
+        var byEcon = players.filter(function(r){ return r.bowlBalls >= 12; }).sort(function(a, b){ return (a.bowlRuns / (a.bowlBalls / 6)) - (b.bowlRuns / (b.bowlBalls / 6)); }).slice(0, 5);
+        html += boardTable('Best Economy (min. 2 overs)', byEcon.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + oversText(r.bowlBalls) + '</td><td class="r">' + r.bowlRuns + '</td><td class="r"><b>' + econ(r) + '</b></td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Econ</th>');
+        if (repPlayer && repPlayer.trim()){
+          var q = repPlayer.trim().toLowerCase();
+          var found = players.filter(function(r){ return r.name.toLowerCase().indexOf(q) > -1; });
+          if (found.length){
+            html += boardTable('Players matching “' + esc(repPlayer.trim()) + '”', found.map(function(r){
+              return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r"><b>' + r.runs + '</b> runs</td><td class="r"><b>' + r.wkts + '</b> wkts</td></tr>';
+            }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Batting</th><th class="r">Bowling</th>');
+          }
+        }
+        wrap.innerHTML = html;
+      }
+      function renderHistList(){
+        var el = $('histList'); if (!el) return;
+        var matches = allRecordMatches().filter(matchInFilter);
+        if (!matches.length){
+          el.innerHTML = '<p class="note">No matches recorded yet. When a match finishes it appears here automatically — and stays.</p>';
+          return;
+        }
+        el.innerHTML = matches.map(function(e){
+          var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+          var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+          var res = e.live
+            ? (e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : '● Match in progress')
+            : (e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
+          var potm = e.potmName
+            ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
+            : (!e.live && !e.abandoned ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: Not Decided Yet</div>' : '');
+          var head = '<div class="hist-match-head"><span>' + esc([e.tournamentName, e.venue].filter(Boolean).join(' • ') || 'Match') + '</span><span class="note">' + esc(date) + (e.live ? ' • <b style="color:var(--red)">● LIVE</b>' : '') + '</span></div>';
+          var btns = '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="openHistoryMatch(\'' + esc(e.id) + '\')">' + (e.live ? 'Watch Live Scoreboard' : 'Full Scorecard') + '</button>'
+            + (!e.live && histCanManage() ? '<button type="button" class="btn ghost sm hist-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
+            + '</div>';
+          return '<div class="hist-match">' + head + lines + (res ? '<div class="mr-result">' + esc(res) + '</div>' : '') + potm + btns + '</div>';
+        }).join('');
       }
 
       /* ---------- rendering ---------- */
@@ -4199,13 +5540,13 @@
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
-          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + esc(dispName(inn.battingTeam, b.name)) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
+          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + plLink(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
             + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = inn.extras;
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return esc(dispName(inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return plLink(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
           + '<tr><td>Extras (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</td><td class="r"><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b></td><td colspan="4"></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
@@ -4215,7 +5556,7 @@
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td>' + esc(dispName(inn.bowlingTeam, b.name)) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td>' + plLink(inn.bowlingTeam, b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -4480,10 +5821,10 @@
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
         var leftCol = snap.batters.map(function(bt){
-          return '<div class="og-row"><span>' + esc(dispName(batTeam, bt.name)) + '</span><b>' + bt.runs + ' (' + bt.balls + ')</b></div>';
+          return '<div class="og-row"><span>' + plLink(batTeam, bt.name) + '</span><b>' + bt.runs + ' (' + bt.balls + ')</b></div>';
         }).join('');
         var rightCol = snap.bowlers.map(function(bw){
-          return '<div class="og-row"><span>' + esc(dispName(bowlTeam, bw.name)) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
+          return '<div class="og-row"><span>' + plLink(bowlTeam, bw.name) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
         }).join('');
         rightCol += '<div class="og-row"><span>Extras this over</span><b>' + snap.extrasOver + '</b></div>';
         var grid = (leftCol || snap.bowlers.length)
@@ -4574,7 +5915,7 @@
               var pFig = potmFigures(S.potmName, S.potmTeam);
               pshipEl.innerHTML = '<div class="cb-potm-lab">Player of the Match</div><div class="cb-potm-row">'
                 + '<span class="cb-potm-ava"><svg width="34" height="34" viewBox="0 0 24 24" fill="#8a8a8a" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z"/></svg></span>'
-                + '<div><div class="cb-potm-name">' + esc(dispName(S.potmTeam, S.potmName)) + '</div>'
+                + '<div><div class="cb-potm-name">' + plLink(S.potmTeam, S.potmName) + '</div>'
                 + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
                 + '</div></div>';
             } else {
@@ -4604,7 +5945,7 @@
           var pairRows = [inn.striker, inn.nonStriker].filter(Boolean).map(function(name){
             var b = cbBatterFull(inn, name);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-            return '<tr><td><span class="pname">' + esc(dispName(inn.battingTeam, name)) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
+            return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
           }).join('');
           if (btEl) btEl.innerHTML = '<table><thead><tr><th>Batter</th><th class="r">R</th><th class="r">B</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + (pairRows || '<tr><td colspan="6">No batters yet.</td></tr>') + '</tbody></table>';
           /* bowler table — current bowler */
@@ -4612,7 +5953,7 @@
             if (inn.bowler){
               var bw = cbBowlerFull(inn, inn.bowler);
               var er = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + esc(dispName(inn.bowlingTeam, inn.bowler)) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
+              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
             } else bwEl.innerHTML = '';
           }
         }
@@ -4653,15 +5994,14 @@
                 /* Announcement lines show with NO over / ball number
                    in front of them — the over column stays empty. */
                 if (b.evt === 'start'){
-                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(dispName(innX.battingTeam, b.who || '')) + '</b> &amp; <b>' + esc(dispName(innX.battingTeam, b.ns || '')) + '</b> come to the crease. <b>' + esc(dispName(innX.bowlingTeam, b.bw || '')) + '</b> will open the attack.</span></div>';
+                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + plLink(innX.battingTeam, b.who || '') + '</b> &amp; <b>' + plLink(innX.battingTeam, b.ns || '') + '</b> come to the crease. <b>' + plLink(innX.bowlingTeam, b.bw || '') + '</b> will open the attack.</span></div>';
                 }
                 var whoName = b.who || '';
                 var rest = String(b.text || '').slice(whoName.length);
-                var whoDisp = dispName(b.evt === 'attack' ? innX.bowlingTeam : innX.battingTeam, whoName);
-                return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(whoDisp) + '</b>' + esc(rest) + '</span></div>';
+                return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + plLink(b.evt === 'attack' ? innX.bowlingTeam : innX.battingTeam, whoName) + '</b>' + esc(rest) + '</span></div>';
               }
-              var who = (b.bowler && b.batter) ? '<b>' + esc(dispName(innX.bowlingTeam, b.bowler)) + '</b> to <b>' + esc(dispName(innX.battingTeam, b.batter)) + '</b>, ' : '';
-              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + esc(b.outName ? (dispName(innX.battingTeam, b.outName) + ', ') : '') + esc(b.howOut) : '';
+              var who = (b.bowler && b.batter) ? '<b>' + plLink(innX.bowlingTeam, b.bowler) + '</b> to <b>' + plLink(innX.battingTeam, b.batter) + '</b>, ' : '';
+              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + (b.outName ? (plLink(innX.battingTeam, b.outName) + ', ') : '') + esc(b.howOut) : '';
               return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + dism + '</span></div>';
             }).join('');
           }
@@ -4726,7 +6066,7 @@
             + '<div class="cb-squads-grid">' + [[S.teamA, 'Team 1'], [S.teamB, 'Team 2']].map(function(pair){
             var team = pair[0];
             var players = displaySquadForTeam(team);
-            var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
+            var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(team || pair[1]) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         }
@@ -4745,6 +6085,19 @@
           var pr = projectedScore(); if (pr !== null) rows.push(['Projected Score', String(pr) + ' (at CRR ' + crr().toFixed(2) + ')']);
           if (S.status === 'finished' && S.resultText) rows.push(['Result', S.resultText]);
           infoEl.innerHTML = rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
+        }
+        /* Tournament segment (Info tab): conditional on the match kind.
+           Tournament match → the TOURNAMENT card with its View
+           Tournament button is shown under Match Info, exactly as in
+           the reference screenshot. Single Match → the card is removed
+           from view entirely (hidden + display:none), so the Info tab
+           carries no tournament segment at all. renderSbTeams applies
+           the same rule and fills in the card's summary text. */
+        var tourCardEl = $('sbTourCtaCard');
+        if (tourCardEl){
+          var isTnMatch = S.matchKind === 'tournament';
+          tourCardEl.hidden = !isTnMatch;
+          tourCardEl.style.display = isTnMatch ? '' : 'none';
         }
       }
 
@@ -4779,6 +6132,13 @@
         step(renderSquads);
         step(renderTournament);
         try { renderLiveHome(); } catch(e){}
+        /* Permanent history: a finished match that is somehow not
+           filed yet (restored backup, adopted remote state) is filed
+           here — archiveFinishedMatch is a no-op once it is on record
+           unchanged, so this costs nothing on ordinary renders. */
+        step(function(){ ensureCurrentArchived(); });
+        step(renderHistory);
+        step(renderConsoleHome);
       }
       function syncPlayersFromInputsSilent(){
         /* State wins over the form. Render must never overwrite batter /
@@ -4821,12 +6181,209 @@
         if (tdSync && S.tossDecision && document.activeElement !== tdSync && tdSync.value !== S.tossDecision) tdSync.value = S.tossDecision;
       }
 
+      /* ============================================================
+         SCORER CONSOLE HOME + RESUME SCORING + TOURNAMENTS LIST
+         The control side opens on a simple home with exactly three
+         options: Start Single Match, Resume Scoring (only while at
+         least one match is in progress — otherwise it is not shown
+         at all) and Tournament.
+         The scoring engine still scores ONE match at a time, so
+         "all live matches" are kept as parked copies inside the
+         state (S.pausedMatches): starting a new match parks the
+         in-progress one instead of discarding it, and Resume
+         Scoring lists the live match plus every parked one —
+         tapping one swaps it back into the scoring screen.
+         Tournaments work the same way: one tournament is current
+         (S.tournament, the existing Tournament Page); Create
+         Tournament and opening another one set the current aside
+         into S.tournamentsArchive — nothing is ever deleted.
+         ============================================================ */
+      function liveMatchInProgress(){
+        if (!S || S.status === 'finished' || !S.current) return false;
+        if (!S.teamA || !S.teamB) return false;
+        var c = S.current;
+        return c.legalBalls > 0 || c.runs > 0 || c.wickets > 0 || !!S.prevInnings
+          || S.status === 'inningsBreak' || typeof S.oversLimit === 'number';
+      }
+      function pausedMatches(){
+        if (!Array.isArray(S.pausedMatches)) S.pausedMatches = [];
+        return S.pausedMatches;
+      }
+      /* The per-match slice of the state: everything that belongs to
+         one match and nothing shared (tournament, nicknames, the
+         parked list itself and the tournaments archive stay global). */
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchKind','status','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','matchId','archivedMatchId'];
+      function matchSlice(){
+        var o = {};
+        MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
+        return o;
+      }
+      function applyMatchSlice(slice){
+        MATCH_SLICE_KEYS.forEach(function(k){ if (slice[k] !== undefined) S[k] = deep(slice[k]); });
+      }
+      function parkCurrentMatch(){
+        if (!liveMatchInProgress()) return;
+        var slice = matchSlice();
+        var list = pausedMatches();
+        var idx = -1;
+        list.forEach(function(p, i){ if (String(p.matchId) === String(slice.matchId)) idx = i; });
+        if (idx > -1) list[idx] = slice; else list.push(slice);
+      }
+      /* The origin chosen for the NEXT match started: 'single' from
+         Start Single Match, 'tournament' from a fixture's "Score This
+         Match". Consumed by doStartMatch and stored on the match
+         itself (S.matchKind), so the distinction survives parking,
+         resuming, refresh and Firebase sync. */
+      var pendingMatchKind = null;
+      function consoleStartSingle(){
+        pendingMatchKind = 'single';
+        setView('scorer');
+        try { openSetupFold(); } catch(e){}
+      }
+      function renderConsoleHome(){
+        var btn = $('consoleResume'); if (!btn) return;
+        var parked = pausedMatches().length;
+        var live = liveMatchInProgress();
+        var count = (live ? 1 : 0) + parked;
+        /* Resume Scoring exists ONLY while a match is in progress. */
+        btn.hidden = count === 0;
+        if (count > 0){
+          var sub = $('consoleResumeSub');
+          if (sub){
+            sub.textContent = count === 1 && live && !parked
+              ? (S.teamA + ' vs ' + S.teamB + ' — ' + S.current.battingTeam + ' ' + S.current.runs + '/' + S.current.wickets + ' (' + oversText(S.current.legalBalls) + ' ov)')
+              : count + (count === 1 ? ' match' : ' matches') + ' in progress — tap to choose which one to score.';
+          }
+        }
+        renderResumeList();
+        renderTournamentList();
+      }
+      function resumeRowHTML(slice, isCurrent){
+        var inns = [];
+        if (slice.prevInnings) inns.push(slice.prevInnings);
+        if (slice.current) inns.push(slice.current);
+        var lines = inns.map(function(x){ return esc(x.battingTeam) + ' ' + x.runs + '/' + x.wickets + ' (' + oversText(x.legalBalls) + ' ov)'; }).join(' • ');
+        var when = slice.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (slice.inningsNo || 1));
+        var kind = slice.matchKind === 'tournament' ? 'Tournament match' : 'Single match';
+        return '<button type="button" class="tn-pick" onclick="resumeMatch(\'' + esc(String(slice.matchId)) + '\')">'
+          + '<span><span class="tp-name">' + esc((slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2')) + '</span>'
+          + '<span class="tp-meta">' + esc(lines || 'Not started yet') + ' • ' + esc(when) + ' • ' + esc(kind) + '</span></span>'
+          + (isCurrent ? '<span class="tp-badge">SCORING NOW</span>' : '<span class="tp-open">Resume →</span>')
+          + '</button>';
+      }
+      function renderResumeList(){
+        var el = $('resumeList'); if (!el) return;
+        var html = '';
+        if (liveMatchInProgress()) html += resumeRowHTML(matchSlice(), true);
+        pausedMatches().slice().reverse().forEach(function(p){ html += resumeRowHTML(p, false); });
+        el.innerHTML = html || '<p class="note">No matches in progress right now.</p>';
+      }
+      function resumeMatch(id){
+        id = String(id);
+        if (liveMatchInProgress() && String(S.matchId) === id){ setView('scorer'); return; }
+        var list = pausedMatches();
+        var idx = -1;
+        list.forEach(function(p, i){ if (String(p.matchId) === id) idx = i; });
+        if (idx < 0){ setView('scorer'); return; }
+        /* Swap: the match being scored now is parked, the picked one
+           takes its place — neither is lost. */
+        parkCurrentMatch();
+        var list2 = pausedMatches();
+        var j = -1;
+        list2.forEach(function(p, i){ if (String(p.matchId) === id) j = i; });
+        if (j < 0) return;
+        var slice = list2.splice(j, 1)[0];
+        applyMatchSlice(slice);
+        undoStack = []; pendingExtra = null; renderPending();
+        try { cancelWicket(); } catch(e){}
+        commit('Resumed: ' + (S.teamA || '') + ' vs ' + (S.teamB || ''), true);
+        setView('scorer');
+        toast('▶ Scoring resumed — ' + S.teamA + ' vs ' + S.teamB);
+      }
+      /* ---------- tournaments: create / open (nothing is deleted) ---------- */
+      function tournamentsArchive(){
+        if (!Array.isArray(S.tournamentsArchive)) S.tournamentsArchive = [];
+        return S.tournamentsArchive;
+      }
+      function tournamentHasContent(tn){
+        return !!(tn && ((tn.name || '').trim() || (tn.matches || []).length || (tn.fixtures || []).length));
+      }
+      function archiveCurrentTournament(){
+        var tn = S.tournament;
+        if (!tournamentHasContent(tn)) return;
+        if (!tn.id) tn.id = 'tn' + Date.now();
+        var arc = tournamentsArchive();
+        var entry = { id: tn.id, at: Date.now(), name: tn.name || '', data: deep(tn) };
+        var idx = -1;
+        arc.forEach(function(a, i){ if (a.id === tn.id) idx = i; });
+        if (idx > -1) arc[idx] = entry; else arc.push(entry);
+      }
+      function createTournament(){
+        var doIt = function(){
+          archiveCurrentTournament();
+          var fresh = deep(freshState().tournament);
+          fresh.id = 'tn' + Date.now();
+          S.tournament = fresh;
+          commit('New tournament created', true);
+          setView('tournament');
+          toast('🏆 New tournament created — set its name, venue and dates in Tournament Details, then add teams.');
+        };
+        if (tournamentHasContent(S.tournament)){
+          askVerify('Create a new tournament?',
+            'The current tournament' + (S.tournament.name ? ' (“' + S.tournament.name + '”)' : '') + ' will be kept in your tournament list — nothing is deleted, and you can reopen it any time. Continue?',
+            doIt);
+        } else doIt();
+      }
+      function openArchivedTournament(id){
+        if (S.tournament && S.tournament.id === id){ setView('tournament'); return; }
+        var doIt = function(){
+          archiveCurrentTournament();
+          var arc = tournamentsArchive();
+          var idx = -1;
+          arc.forEach(function(a, i){ if (a.id === id) idx = i; });
+          if (idx < 0) return;
+          var entry = arc.splice(idx, 1)[0];
+          S.tournament = deep(entry.data);
+          if (!S.tournament.id) S.tournament.id = entry.id;
+          commit('Tournament opened', true);
+          setView('tournament');
+          toast('🏆 ' + (S.tournament.name || 'Tournament') + ' opened');
+        };
+        if (tournamentHasContent(S.tournament)){
+          askVerify('Open this tournament?',
+            'The current tournament' + (S.tournament.name ? ' (“' + S.tournament.name + '”)' : '') + ' will be kept in your tournament list — nothing is deleted. Continue?',
+            doIt);
+        } else doIt();
+      }
+      function renderTournamentList(){
+        var el = $('tnList'); if (!el) return;
+        try { normalizeTournament(); } catch(e){}
+        var tn = S.tournament || { name:'', teams:[], matches:[] };
+        function meta(t){
+          return (t.teams || []).length + ((t.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (t.matches || []).length + ((t.matches || []).length === 1 ? ' match' : ' matches') + ' completed';
+        }
+        var html = '<button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
+          + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
+          + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
+          + '<span class="tp-badge">CURRENT</span></button>';
+        var arc = tournamentsArchive().slice().reverse();
+        html += arc.map(function(a){
+          var d = a.data || {};
+          var date = a.at ? new Date(a.at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+          return '<button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
+            + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
+            + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span>'
+            + '<span class="tp-open">Open →</span></button>';
+        }).join('');
+        el.innerHTML = html;
+      }
+
       /* ---------- views ---------- */
       var cleanMode=false;
       var currentSegment=null; /* 'single' | 'tournament' | null (home) */
       function setSegment(seg){
-        if (seg==='tournament'){ setView('tournament'); }
-        else if (seg==='single'){ setView('scorer'); }
+        if (seg==='tournament'){ setView('tournaments'); }
+        else if (seg==='single'){ setView('console'); }
         else { setView('home'); }
       }
       function setView(v){
@@ -4860,6 +6417,9 @@
            page brings the score straight back instead of resetting to
            the 0/0 demo. Firebase (auto-connect below) then takes over:
            a newer match already in the database is adopted over it. */
+        /* The permanent history's on-device backup loads first too —
+           past matches are on the record even before Firebase answers. */
+        try { loadHistLocal(); } catch(e){}
         var backup = loadLocalBackup();
         if (backup){
           S = backup;
@@ -4911,12 +6471,15 @@
           setView('scoreboard');
         }
         else if (hashView === 'live' || hashView === 'viewer') enterViewerHome(true);
-        else if (hashView === 'scorer' || hashView === 'control') enterControlMode();
+        else if (hashView === 'scorer' || hashView === 'control' || hashView === 'console') enterControlMode();
+        else if (hashView === 'resume') setView('resume');
+        else if (hashView === 'tournaments') setView('tournaments');
         else if (hashView === 'overlay'){
           document.body.classList.add('viewer-mode');
           document.body.classList.add('link-viewer');
           setView('overlay');
         }
+        else if (hashView === 'history') setView('history');
         else if (hashView === 'tournament') setView('tournament');
         else if (hashView === 'home') setView('home');
         else if (q.indexOf('overlay')>-1){
@@ -4933,6 +6496,7 @@
           document.body.classList.add('link-viewer');
           setView('scoreboard');
         }
+        else if (q.indexOf('history')>-1) setView('history');
         else if (q.indexOf('tournament')>-1) setView('tournament');
         else if (q.indexOf('single')>-1) enterControlMode();
         /* Default landing (no link ending): the Live Matches list, with the
