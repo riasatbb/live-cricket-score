@@ -456,6 +456,10 @@
       body.viewer-mode #tnPanel-matches .match-row .rowflex{display:none !important}
       .viewer-backbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
       body.viewer-inpage .viewer-backbar{display:flex}
+      /* The History & Reports page keeps its back bar in every mode —
+         a scorer arriving from the console must always have a way back,
+         not only viewers in the in-page viewer flow. */
+      #view-history .viewer-backbar{display:flex}
       .sb-view-tour-card h2{border:none;text-align:center}
       .sb-view-tour-card .sub{max-width:520px;margin-left:auto;margin-right:auto}
       .sb-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px;padding:6px 2px 2px}
@@ -1174,7 +1178,7 @@
       <!-- ================= HISTORY & REPORTS ================= -->
       <section class="view" id="view-history">
         <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← Live Matches</button>
+          <button type="button" class="btn ghost sm" id="histBackBtn" onclick="historyBack()">← Back</button>
           <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
           <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
           <span class="note">Permanent record — a finished match is archived the moment it ends, and starting a new match never deletes it.</span>
@@ -1452,6 +1456,7 @@
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
         <div class="modal-head">
           <h2 id="playerModalTitle">Player</h2>
+          <button type="button" class="btn ghost sm" onclick="closePlayerProfile()">← Back</button>
           <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
         </div>
         <div id="playerModalBody"></div>
@@ -4457,6 +4462,18 @@
         try { renderLiveHome(); } catch(e){}
         setView('live');
       }
+      /* Back from Match History & Reports goes to where the user came
+         from: viewers return to the Live Matches list, the scorer
+         returns to the Scorer Console home. */
+      function historyBack(){
+        if (document.body.classList.contains('viewer-inpage') || document.body.classList.contains('viewer-mode')) backToLiveMatches();
+        else setView('console');
+      }
+      function syncHistBackLabel(){
+        var b = $('histBackBtn'); if (!b) return;
+        var viewer = document.body.classList.contains('viewer-inpage') || document.body.classList.contains('viewer-mode');
+        b.textContent = viewer ? '← Back to Live Matches' : '← Back to Scorer Console';
+      }
       function exitViewerMode(){
         document.body.classList.remove('viewer-mode');
         document.body.classList.remove('viewer-inpage');
@@ -5301,6 +5318,7 @@
               + '</button>';
           }).join('');
         }
+        html += '<div style="margin-top:20px"><button type="button" class="btn ghost" onclick="closePlayerProfile()">← Back</button></div>';
         var body = $('playerModalBody'); if (body) body.innerHTML = html;
       }
       /* ---------- archived match: full scorecard ---------- */
@@ -6394,6 +6412,7 @@
         document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('show'); });
         var target = $('view-'+v);
         if (target) target.classList.add('show');
+        if (v==='history'){ try { syncHistBackLabel(); } catch(e){} }
         document.querySelectorAll('.vtab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
         var segBar = $('segmentBar'); if (segBar) segBar.hidden = !currentSegment;
         var tabs = $('singleTabs'); if (tabs) tabs.hidden = !isSingle;
