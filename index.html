@@ -497,6 +497,10 @@
       .cb-comm-text .c4{color:#7ddb9a;font-weight:700}
       .cb-comm-text .c6{color:#f0ab3c;font-weight:700}
       .cb-comm-text .cw{color:#ff8a7a;font-weight:700}
+      .cb-comm-row.evt{background:#22301f}
+      .cb-comm-row.evt .cb-comm-over{color:#9ed3ae}
+      .cb-comm-row.evt .cb-comm-text{color:#cfe8d4}
+      .req-missing{border-color:#e5484d !important;box-shadow:0 0 0 2px rgba(229,72,77,.35)}
       .cb-empty{padding:16px;font-size:14.5px;color:#a8a8a8}
       .cb-overcard{margin:12px;background:#141414;border:1px solid #2c2c2c;border-radius:13px;padding:16px 16px 12px;color:#e9e9e9}
       .cb-overcard-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;border-bottom:1px dashed #3a3a3a;padding-bottom:12px}
@@ -646,13 +650,17 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
           <div class="fold-body" hidden>
           <div class="grid3">
-            <div><label for="teamA">Team 1</label><input id="teamA" value="BB YOUNG BLOODS" list="dlTeams" /></div>
-            <div><label for="teamB">Team 2</label><input id="teamB" value="BB POWER STRIKERS" list="dlTeams" /></div>
+            <div><label for="teamA">Team 1</label><input id="teamA" value="BB YOUNG BLOODS" list="dlTeams" oninput="refreshTossOptions()" /></div>
+            <div><label for="teamB">Team 2</label><input id="teamB" value="BB POWER STRIKERS" list="dlTeams" oninput="refreshTossOptions()" /></div>
             <div><label for="oversLimit">Total Overs (per innings)</label><input id="oversLimit" type="number" min="1" max="50" value="20" /></div>
           </div>
           <div class="grid2" style="margin-top:12px">
             <div><label for="venue">Venue / Match Name (optional)</label><input id="venue" placeholder="e.g. Sheikh Abu Naser Stadium" /></div>
-            <div><label for="tossInfo">Toss (optional)</label><input id="tossInfo" placeholder="e.g. BB POWER STRIKERS won the toss and chose to bowl" /></div>
+            <div><label for="tossWinner">Toss Winner * (required)</label><select id="tossWinner" onchange="clearReqMark(this)"><option value="">Select the toss winner</option></select></div>
+          </div>
+          <div class="grid2" style="margin-top:12px">
+            <div><label for="tossDecision">Toss Decision * (required)</label><select id="tossDecision" onchange="clearReqMark(this)"><option value="">Select the decision</option><option value="bat">Bat first</option><option value="bowl">Bowl first</option></select></div>
+            <div><label aria-hidden="true">&nbsp;</label><p class="note" style="margin:0">Start Match needs both toss fields: the winner and the decision set who bats first, and the toss line is shown on the public scoreboard.</p></div>
           </div>
           <div class="rowflex" style="margin-top:14px">
             <button class="btn" onclick="startMatch()">🏏 Start Match</button>
@@ -719,9 +727,9 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Batters &amp; Bowler</button>
           <div class="fold-body" hidden>
           <div class="players-grid">
-            <div><label for="strikerName">Striker Batter *</label><input id="strikerName" value="A. K. M. Faisal Ahammed" list="dlBat" oninput="onPlayerNameChange()" /></div>
-            <div><label for="nonStrikerName">Non-Striker</label><input id="nonStrikerName" value="Avijit Roy" list="dlBat" oninput="onPlayerNameChange()" /></div>
-            <div><label for="bowlerName">Current Bowler</label><input id="bowlerName" value="Alif Islam" list="dlBowl" oninput="onPlayerNameChange()" /></div>
+            <div><label for="strikerName">Striker Batter *</label><input id="strikerName" value="A. K. M. Faisal Ahammed" list="dlBat" oninput="onPlayerNameChange()" onchange="onPlayerNameSettled()" /></div>
+            <div><label for="nonStrikerName">Non-Striker</label><input id="nonStrikerName" value="Avijit Roy" list="dlBat" oninput="onPlayerNameChange()" onchange="onPlayerNameSettled()" /></div>
+            <div><label for="bowlerName">Current Bowler</label><input id="bowlerName" value="Alif Islam" list="dlBowl" oninput="onPlayerNameChange()" onchange="onPlayerNameSettled()" /></div>
           </div>
           <datalist id="dlBat"></datalist>
           <datalist id="dlBowl"></datalist>
@@ -1097,7 +1105,7 @@
       function freshState(){
         return {
           teamA: 'BB YOUNG BLOODS', teamB: 'BB POWER STRIKERS',
-          oversLimit: 20, venue: '', tossInfo: '',
+          oversLimit: 20, venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
           status: 'live', /* live | inningsBreak | finished */
           inningsNo: 1,
           current: blankInnings('BB YOUNG BLOODS','BB POWER STRIKERS'),
@@ -1281,6 +1289,98 @@
         getBatter(inn, inn.striker); getBatter(inn, inn.nonStriker); getBowler(inn, inn.bowler);
       }
       function onPlayerNameChange(){ syncPlayersFromInputs(); saveLocalBackup(); renderAll(false); }
+      /* Fires when a name field is committed (blur / Enter / picked from
+         the suggestion list) — as opposed to onPlayerNameChange, which
+         runs per keystroke. A name settled here can announce the player
+         in the public commentary feed. */
+      function onPlayerNameSettled(){
+        syncPlayersFromInputs();
+        announceCurrentPlayers();
+        commit(null, true);
+      }
+
+      /* ---------- toss (mandatory dropdowns in Match Setup) ---------- */
+      function refreshTossOptions(){
+        var sel = $('tossWinner'); if (!sel) return;
+        var aEl = $('teamA'), bEl = $('teamB'); if (!aEl || !bEl) return;
+        var a = aEl.value.trim(), b = bEl.value.trim();
+        var cur = sel.value || S.tossWinner || '';
+        var opts = '<option value="">Select the toss winner</option>';
+        if (a) opts += '<option value="' + esc(a) + '">' + esc(a) + '</option>';
+        if (b && b !== a) opts += '<option value="' + esc(b) + '">' + esc(b) + '</option>';
+        if (sel.innerHTML !== opts) sel.innerHTML = opts;
+        if (cur && (cur === a || cur === b) && sel.value !== cur) sel.value = cur;
+      }
+      function clearReqMark(el){ if (el) el.classList.remove('req-missing'); }
+      function openSetupFold(){
+        var card = $('setupCard'); if (!card) return;
+        var body = card.querySelector('.fold-body'); if (!body) return;
+        if (body.hidden){
+          body.hidden = false; card.classList.add('open');
+          var btn = card.querySelector('.fold-sum'); if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+      }
+
+      /* ---------- fresh squads for a (possibly new) pair of teams ----------
+         A team's players always come from that team's own tournament
+         squad. The previous match's squad is kept only when it is the
+         same team in the same slot — players never carry across to a
+         different team. */
+      function squadForMatch(teamName, tnSquads, prevTeam, prevSquad){
+        var tn = tnSquads ? tnSquads[teamName] : null;
+        if (Array.isArray(tn) && tn.length) return deep(tn);
+        if (teamName === prevTeam && Array.isArray(prevSquad)) return deep(prevSquad);
+        if (DEFAULT_TOURNAMENT_SQUADS[teamName]) return DEFAULT_TOURNAMENT_SQUADS[teamName].slice();
+        return [];
+      }
+      /* Point the Striker / Non-Striker / Bowler boxes at the first
+         players of the CURRENT teams' squads, so a new match never opens
+         with the previous match's names in them. */
+      function seedPlayerInputsFromSquads(){
+        var batSq = squadForTeam(S.current.battingTeam), bowlSq = squadForTeam(S.current.bowlingTeam);
+        var st = $('strikerName'), ns = $('nonStrikerName'), bw = $('bowlerName');
+        if (st){ st.value = batSq[0] || ''; st.placeholder = 'Striker name'; }
+        if (ns){ ns.value = batSq[1] || ''; ns.placeholder = 'Non-striker name'; }
+        if (bw){ bw.value = bowlSq[0] || ''; bw.placeholder = 'Bowler name'; }
+      }
+
+      /* ---------- commentary feed announcements ----------
+         "X comes into the attack" / "X comes to the crease" lines are
+         stored as entries in the innings ball record (evt-flagged, so
+         they never count as deliveries), which means they persist in
+         the on-device backup and sync through Firebase exactly like
+         balls do. An attack line is added only the FIRST time a bowler
+         bowls in the innings — a bowler returning after a break gets
+         no line; a crease line only for a batter who has not batted
+         yet in the innings. Each name is announced at most once. */
+      function alreadyAnnounced(inn, kind, name){
+        return (inn.balls || []).some(function(b){ return b.evt === kind && b.who === name; });
+      }
+      function pushFeedEvent(inn, kind, name, line){
+        /* Labelled with the NEXT delivery's over number, so the line
+           groups with the over it belongs to: right after the previous
+           over's summary card and before that over's first ball. */
+        inn.balls.push({ over: oversText(inn.legalBalls + 1), text: line, cls: 'evt', evt: kind, who: name, bowler: '', batter: '' });
+        if (inn.balls.length > 120) inn.balls.shift();
+      }
+      function announceAttack(inn, name){
+        if (!name || name === 'Bowler') return;
+        for (var i = 0; i < inn.bowlers.length; i++) if (inn.bowlers[i].name === name && inn.bowlers[i].balls > 0) return;
+        if (alreadyAnnounced(inn, 'attack', name)) return;
+        pushFeedEvent(inn, 'attack', name, name + ' comes into the attack');
+      }
+      function announceCrease(inn, name){
+        if (!name || name === 'Batter 1' || name === 'Batter 2' || name === 'New Batter') return;
+        for (var i = 0; i < inn.batters.length; i++){ var b = inn.batters[i]; if (b.name === name && (b.balls > 0 || b.out)) return; }
+        if (alreadyAnnounced(inn, 'crease', name)) return;
+        pushFeedEvent(inn, 'crease', name, name + ' comes to the crease');
+      }
+      function announceCurrentPlayers(){
+        var inn = S.current; if (!inn) return;
+        announceCrease(inn, inn.striker);
+        announceCrease(inn, inn.nonStriker);
+        announceAttack(inn, inn.bowler);
+      }
 
       /* ---------- squads & player picker ---------- */
       function normalizeSquads(){ if(!Array.isArray(S.squadA)) S.squadA=[]; if(!Array.isArray(S.squadB)) S.squadB=[]; }
@@ -1402,10 +1502,12 @@
         closePicker(true);
         if (mode === 'bowler'){
           $('bowlerName').value = name; S.current.bowler = name; getBowler(S.current, name);
+          announceAttack(S.current, name);
           commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl the next over');
         } else if (mode === 'batter'){
           $('strikerName').value = name; $('strikerName').placeholder = 'Striker name';
           S.current.striker = name; getBatter(S.current, name);
+          announceCrease(S.current, name);
           commit('New batter in', true); toast('🏏 ' + name + ' comes in to bat');
         }
       }
@@ -1560,39 +1662,79 @@
       /* ---------- match flow ---------- */
       function startMatch(){
         if (scoringLocked()) return;
-        var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
-        var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var newA = $('teamA').value.trim() || 'Team 1';
         var newB = $('teamB').value.trim() || 'Team 2';
+        /* Toss is mandatory: the winner and the decision must both be
+           picked — they decide who bats first and are shown on the
+           public scoreboard. Without them the match does not start. */
+        var twEl = $('tossWinner'), tdEl = $('tossDecision');
+        var tw = twEl ? twEl.value : '';
+        var td = tdEl ? tdEl.value : '';
+        if (!tw || !td){
+          openSetupFold();
+          if (twEl && !tw) twEl.classList.add('req-missing');
+          if (tdEl && !td) tdEl.classList.add('req-missing');
+          toast('⚠️ Toss is required — pick the toss winner and the decision (Bat / Bowl) to start the match');
+          try { (!tw ? twEl : tdEl).focus(); } catch(e){}
+          return;
+        }
+        var prevTeamA = S.teamA, prevTeamB = S.teamB;
+        var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
+        var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         /* Players entered for a team in the Tournament tab become that team's match squad */
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
-        var fromTnA = Array.isArray(tnSquads[newA]) && tnSquads[newA].length ? deep(tnSquads[newA]) : null;
-        var fromTnB = Array.isArray(tnSquads[newB]) && tnSquads[newB].length ? deep(tnSquads[newB]) : null;
         S = freshState();
         S.tournament = keepTn;
         S.matchId = Date.now(); S.archivedMatchId = null;
-        S.squadA = fromTnA || keepA; S.squadB = fromTnB || keepB;
         S.teamA = newA;
         S.teamB = newB;
+        S.squadA = squadForMatch(newA, tnSquads, prevTeamA, keepA);
+        S.squadB = squadForMatch(newB, tnSquads, prevTeamB, keepB);
         S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
-        S.venue = $('venue').value.trim(); S.tossInfo = $('tossInfo').value.trim();
-        S.current = blankInnings(S.teamA, S.teamB);
+        S.venue = $('venue').value.trim();
+        S.tossWinner = tw; S.tossDecision = td;
+        S.tossInfo = tw + ' won the toss and chose to ' + (td === 'bat' ? 'bat' : 'bowl');
+        /* The toss decision sets the batting order for innings 1. */
+        var battingFirst = (td === 'bat') ? tw : (tw === newA ? newB : newA);
+        var bowlingFirst = (battingFirst === newA) ? newB : newA;
+        S.current = blankInnings(battingFirst, bowlingFirst);
         ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
         if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
         if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
         undoStack = [];
+        /* New teams in the setup: open with THEIR players, not the
+           previous match's names still sitting in the boxes. */
+        if (newA !== prevTeamA || newB !== prevTeamB) seedPlayerInputsFromSquads();
         syncPlayersFromInputs();
+        announceCurrentPlayers();
         $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + S.oversLimit + ' overs';
         commit('Match started');
       }
       function resetMatch(){
         if (scoringLocked()) return;
+        var prevTeamA = S.teamA, prevTeamB = S.teamB;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
-        S = freshState(); S.squadA = keepA; S.squadB = keepB; S.tournament = keepTn2; S.matchId = Date.now();
+        var tnSquads2 = (keepTn2 && keepTn2.squads && typeof keepTn2.squads === 'object') ? keepTn2.squads : {};
+        var typedA = $('teamA').value.trim(), typedB = $('teamB').value.trim();
+        S = freshState(); S.tournament = keepTn2; S.matchId = Date.now();
+        S.teamA = typedA || S.teamA; S.teamB = typedB || S.teamB;
+        /* Fresh players for the NEW match: each team's squad is loaded
+           from that team's own tournament squad. The previous match's
+           squad is kept only for a slot whose team did not change, so a
+           new pairing never opens with another team's players. */
+        S.squadA = squadForMatch(S.teamA, tnSquads2, prevTeamA, keepA);
+        S.squadB = squadForMatch(S.teamB, tnSquads2, prevTeamB, keepB);
         undoStack=[]; pendingExtra=null; renderPending();
-        S.teamA=$('teamA').value.trim()||S.teamA; S.teamB=$('teamB').value.trim()||S.teamB;
-        S.current=blankInnings(S.teamA,S.teamB); syncPlayersFromInputs();
+        S.current=blankInnings(S.teamA,S.teamB);
+        /* The toss starts blank as well — it must be picked fresh for
+           the new match before Start Match will run. */
+        var twEl2 = $('tossWinner'); if (twEl2){ twEl2.value=''; twEl2.classList.remove('req-missing'); }
+        var tdEl2 = $('tossDecision'); if (tdEl2){ tdEl2.value=''; tdEl2.classList.remove('req-missing'); }
+        refreshTossOptions();
+        /* Batter / bowler boxes open on the new teams' own players. */
+        seedPlayerInputsFromSquads();
+        syncPlayersFromInputs();
         $('matchStatusText').textContent='Ready for a new match.';
         commit('New match reset', true);
         /* The reset itself must reach Firebase, not just this device's
@@ -2605,7 +2747,7 @@
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
         chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(S.resultText) + '</b></span>';
-        var recent = inn.balls.slice(-12);
+        var recent = inn.balls.filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
         return '<div class="scorestrip">'
           + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam) + (S.venue ? ' • ' + esc(S.venue) : '') + '</div>'
@@ -2773,6 +2915,7 @@
         var snaps = groups.map(function(g){
           var overBatters = [], overBowlers = [], extrasOver = 0;
           g.balls.forEach(function(b){
+            if (b.evt) return; /* announcement lines are not deliveries */
             cumRuns += parseBallRuns(b.text);
             if (b.text === 'W') cumWkts++;
             if (isLegalDelivery(b.text)) cumLegal++;
@@ -2810,7 +2953,7 @@
         return snaps;
       }
       function overSummaryCardHTML(snap, showFoot){
-        var seq = snap.balls.map(function(b){
+        var seq = snap.balls.filter(function(b){ return !b.evt; }).map(function(b){
           var cls = b.text === '4' ? ' class="ob4"' : (b.text === 'W' ? ' class="obw"' : '');
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
@@ -2895,9 +3038,12 @@
           } else bwEl.innerHTML = '';
         }
         /* commentary — newest ball first, with an over-summary card kept
-           after EVERY completed over (not just the latest one). The feed
-           runs newest-first, so each over's card sits directly below that
-           over's balls and stays there for the rest of the innings. */
+           after EVERY completed over (not just the latest one). The card
+           belongs where the over ends: after that over's last ball and
+           before the next over's first ball. The feed runs newest-first,
+           so each card is printed directly ABOVE the balls of its own
+           over — reading the feed top-down it still sits between the
+           next over and its own over, and it stays there permanently. */
         var snaps = overSnapshots(inn);
         var lastCompletedIdx = -1;
         snaps.forEach(function(s, i){ if (s.completed) lastCompletedIdx = i; });
@@ -2909,10 +3055,6 @@
             var feed = '';
             for (var gi = snaps.length - 1; gi >= 0; gi--){
               var snap = snaps[gi];
-              feed += snap.balls.slice().reverse().map(function(b){
-                var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
-                return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + '</span></div>';
-              }).join('');
               if (snap.completed){
                 var cardSnap = snap;
                 /* Balls scored before bowler/batter names were recorded
@@ -2926,6 +3068,15 @@
                 }
                 feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdx);
               }
+              feed += snap.balls.slice().reverse().map(function(b){
+                if (b.evt){
+                  var whoName = b.who || '';
+                  var rest = String(b.text || '').slice(whoName.length);
+                  return '<div class="cb-comm-row evt"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text"><b>' + esc(whoName) + '</b>' + esc(rest) + '</span></div>';
+                }
+                var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
+                return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + '</span></div>';
+              }).join('');
             }
             commEl.innerHTML = feed;
           }
@@ -2938,7 +3089,7 @@
         if (ovEl){
           var gs = groupOvers(inn);
           ovEl.innerHTML = gs.length ? gs.slice().reverse().map(function(g){
-            var seq = g.balls.map(function(b){ return esc(b.text); }).join('  ');
+            var seq = g.balls.filter(function(b){ return !b.evt; }).map(function(b){ return esc(b.text); }).join('  ');
             return '<div class="cb-overcard"><div class="cb-overcard-top" style="border-bottom:none;padding-bottom:0"><span class="cb-overcard-title">Over ' + g.no + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + g.runs + (g.runs === 1 ? ' run' : ' runs') + ')</span></div></div>';
           }).join('') : '';
         }
@@ -3022,13 +3173,22 @@
         });
         /* Match-setup fields follow the same rule, so a restored match
            shows its own teams / overs / venue after a refresh. */
-        var setupPairs=[['teamA','teamA'],['teamB','teamB'],['venue','venue'],['tossInfo','tossInfo']];
+        var setupPairs=[['teamA','teamA'],['teamB','teamB'],['venue','venue']];
         setupPairs.forEach(function(p){
           var el=$(p[0]); if (!el) return;
           if (document.activeElement !== el && S[p[1]] != null && el.value !== S[p[1]]) el.value = S[p[1]];
         });
         var ovEl=$('oversLimit');
         if (ovEl && document.activeElement !== ovEl && S.oversLimit && ovEl.value !== String(S.oversLimit)) ovEl.value = S.oversLimit;
+        /* Toss dropdowns: the winner list always mirrors the two team
+           names. Once a toss is saved in the state, the selects follow
+           it (refresh, second device); before that, whatever the scorer
+           is picking in the form is left untouched. */
+        refreshTossOptions();
+        var twSync = $('tossWinner');
+        if (twSync && S.tossWinner && document.activeElement !== twSync && twSync.value !== S.tossWinner) twSync.value = S.tossWinner;
+        var tdSync = $('tossDecision');
+        if (tdSync && S.tossDecision && document.activeElement !== tdSync && tdSync.value !== S.tossDecision) tdSync.value = S.tossDecision;
       }
 
       /* ---------- views ---------- */
