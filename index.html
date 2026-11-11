@@ -1,0 +1,2175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Live Cricket Score — 1 Input, 2 Outputs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <style>
+      :root{
+        --bg:#f2f5f1; --surface:#ffffff; --surface2:#e9efe9; --ink:#132018; --muted:#5c6d62;
+        --line:#d7e0d7; --green:#0e5b3c; --green2:#0a4630; --gold:#e19a26; --gold-ink:#7a4d05;
+        --red:#c0392b; --red-bg:#fdecea; --blue:#175d8f; --chip:#eef3ee;
+        --shadow:0 10px 30px rgba(14,50,35,.10);
+        --radius:14px;
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#0b100d; --surface:#141c17; --surface2:#1a241e; --ink:#e9f2ec; --muted:#9db3a5;
+          --line:#27352c; --green:#2f9e6e; --green2:#1f7a54; --gold:#f0ab3c; --gold-ink:#f5c877;
+          --red:#ff7a6b; --red-bg:#3a1d1a; --blue:#6db3e8; --chip:#1c2820;
+          --shadow:0 10px 30px rgba(0,0,0,.4);
+        }
+      }
+      *{box-sizing:border-box}
+      html,body{margin:0;padding:0}
+      body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+      .num{font-family:"Barlow Condensed",system-ui,sans-serif;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+      button{font-family:inherit;cursor:pointer}
+      input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;width:100%}
+      input:focus,select:focus,textarea:focus{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+      label{font-size:13px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px}
+
+      /* ---------- top bar ---------- */
+      .topbar{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--line)}
+      .topbar-in{max-width:1180px;margin:0 auto;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+      .brand{display:flex;align-items:center;gap:10px;min-width:0}
+      .live-dot{width:11px;height:11px;border-radius:50%;background:#d33;flex:none;box-shadow:0 0 0 0 rgba(221,51,51,.5);animation:pulse 1.6s infinite}
+      @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(221,51,51,.45)}70%{box-shadow:0 0 0 9px rgba(221,51,51,0)}100%{box-shadow:0 0 0 0 rgba(221,51,51,0)}}
+      @media (prefers-reduced-motion: reduce){.live-dot{animation:none}}
+      .brand h1{font-size:19px;margin:0;line-height:1.15}
+      .brand small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+      .conn{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:999px;background:var(--chip);border:1px solid var(--line);white-space:nowrap}
+      .conn.on{background:#e3f4e9;border-color:#9ed3ae;color:#14532d}
+      @media (prefers-color-scheme: dark){.conn.on{background:#173527;color:#9fe6bb;border-color:#2c5c40}}
+
+      .viewtabs{max-width:1180px;margin:0 auto;padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap}
+      .vtab{flex:1 1 150px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:12px;padding:11px 10px;font-size:15px;font-weight:700;text-align:center}
+      .vtab small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:1px}
+      .vtab.active{background:var(--green);border-color:var(--green);color:#fff}
+      .vtab.active small{color:#cfe8d9}
+
+      main{max-width:1180px;margin:0 auto;padding:16px 14px 60px}
+      .view{display:none}
+      .view.show{display:block}
+
+      .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+      .card h2{margin:0 0 4px;font-size:18px}
+      .card .sub{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+      .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      @media (max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+      .btn{border:none;border-radius:11px;padding:12px 16px;font-size:15.5px;font-weight:700;background:var(--green);color:#fff}
+      .btn:hover{background:var(--green2)}
+      .btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line)}
+      .btn.gold{background:var(--gold);color:#241a02}
+      .btn.red{background:var(--red);color:#fff}
+      .btn.sm{padding:8px 12px;font-size:13.5px;border-radius:9px}
+      .rowflex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+      .grow{flex:1}
+
+      /* ---------- score strip ---------- */
+      .scorestrip{background:linear-gradient(120deg,#0b3d29,#0e5b3c 55%,#0b3d29);color:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:16px;position:relative;overflow:hidden}
+      .scorestrip::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;border:26px solid rgba(255,255,255,.06)}
+      .ss-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
+      .ss-team{font-size:15px;font-weight:600;color:#bfe3cf}
+      .ss-score{font-size:clamp(44px,9vw,64px);font-weight:700;line-height:1;margin-top:2px}
+      .ss-score span{font-size:.45em;color:#cfe8d9;font-weight:600}
+      .ss-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;position:relative;z-index:1}
+      .ss-chip{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);padding:5px 10px;border-radius:999px;font-size:13px;font-weight:600}
+      .ss-chip b{color:#ffd98a}
+      .ss-bats{margin-top:12px;position:relative;z-index:1;display:grid;gap:4px;font-size:15px}
+      .ss-bats .onstrike{color:#ffd98a;font-weight:700}
+      .balls-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;position:relative;z-index:1}
+      .ball{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13.5px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);font-family:"Barlow Condensed",sans-serif}
+      .ball.b4{background:#1f9d63;border-color:#1f9d63}
+      .ball.b6{background:#e19a26;border-color:#e19a26;color:#241a02}
+      .ball.bw{background:#c0392b;border-color:#c0392b}
+      .ball.bx{background:#5b7a68}
+      .over-label{font-size:12.5px;color:#bfe3cf;align-self:center;font-weight:600;margin-right:2px}
+
+      /* ---------- scoring pad ---------- */
+      .pad{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+      @media (max-width:560px){.pad{grid-template-columns:repeat(4,1fr)}}
+      .pad button{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:13px;padding:16px 4px;font-size:23px;font-weight:700;font-family:"Barlow Condensed",sans-serif}
+      .pad button:active{transform:scale(.96)}
+      .pad button.bnd4{background:#e3f4e9;border-color:#9ed3ae}
+      .pad button.bnd6{background:#fdf0d5;border-color:#eec27a}
+      .pad button.wkt{background:var(--red-bg);border-color:#e5a49c;color:var(--red);font-family:system-ui,sans-serif;font-size:16px}
+      .pad button.ext{background:var(--chip);font-family:system-ui,sans-serif;font-size:15px}
+      .pad button.pending{outline:3px solid var(--gold);background:#fdf0d5;color:#241a02}
+      .pending-note{display:none;background:#fdf0d5;border:1px solid #eec27a;color:#7a4d05;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
+      @media (prefers-color-scheme: dark){.pending-note{background:#3a2c10;color:#f5c877;border-color:#6b5518}}
+      .pending-note.show{display:block}
+      .players-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+      @media (max-width:820px){.players-grid{grid-template-columns:1fr}}
+      .striker-tag{font-size:11px;background:var(--gold);color:#241a02;border-radius:5px;padding:1px 6px;font-weight:700;margin-left:5px;vertical-align:middle}
+
+      /* ---------- tables ---------- */
+      table{width:100%;border-collapse:collapse;font-size:14.5px}
+      th{ text-align:left;font-size:12.5px;color:var(--muted);font-weight:700;padding:7px 8px;border-bottom:2px solid var(--line)}
+      td{padding:7px 8px;border-bottom:1px solid var(--line)}
+      td.r,th.r{text-align:right}
+      tr.out td{color:var(--muted)}
+      .howout{font-size:12px;color:var(--muted);display:block}
+      .notout{font-weight:700}
+
+      /* ---------- overlay ---------- */
+      .overlay-stage{border-radius:var(--radius);padding:26px 14px;background:
+        repeating-conic-gradient(#3a3f3a 0% 25%, #313631 0% 50%) 0 0/28px 28px;
+        display:flex;align-items:flex-end;justify-content:center;min-height:230px;border:1px solid var(--line)}
+      .overlay-stage.clean{background:transparent;border:1.5px dashed var(--line)}
+      .lowerthird{width:100%;max-width:880px;color:#fff;font-family:system-ui,sans-serif;filter:drop-shadow(0 8px 22px rgba(0,0,0,.45))}
+      .lt-main{display:flex;align-items:stretch;background:linear-gradient(90deg,#081f14,#0e5b3c 70%);border-radius:10px;overflow:hidden;border-bottom:4px solid var(--gold)}
+      .lt-team{background:#e19a26;color:#241a02;font-weight:700;display:flex;align-items:center;padding:10px 14px;font-size:19px;white-space:nowrap}
+      .lt-score{padding:8px 16px;display:flex;flex-direction:column;justify-content:center}
+      .lt-score .big{font-family:"Barlow Condensed",sans-serif;font-size:36px;font-weight:700;line-height:1}
+      .lt-score .big span{font-size:19px;color:#cfe8d9;font-weight:600}
+      .lt-mid{flex:1;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:14.5px;min-width:0}
+      .lt-mid .bat b{color:#ffd98a}
+      .lt-right{padding:8px 14px;text-align:right;display:flex;flex-direction:column;justify-content:center;font-size:13.5px;color:#cfe8d9;min-width:0}
+      .lt-right b{color:#fff;font-size:15px}
+      .lt-sub{background:rgba(6,20,13,.92);padding:6px 14px;font-size:13px;color:#d8ecdf;border-radius:0 0 10px 10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+      @media (max-width:640px){
+        .lt-mid{display:none}.lt-score .big{font-size:29px}.lt-team{font-size:15px;padding:8px 10px}
+        .lt-main{flex-wrap:wrap}
+        .lt-right{flex-direction:row;flex-wrap:wrap;gap:2px 12px;width:100%;justify-content:space-between;text-align:left;border-top:1px solid rgba(255,255,255,.18);padding:6px 12px;font-size:12.5px}
+      }
+      .steps{counter-reset:st;display:grid;gap:12px}
+      .step{display:flex;gap:12px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+      .step-n{counter-increment:st;flex:none;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+      .step h3{margin:2px 0 4px;font-size:15.5px}
+      .step p{margin:0;font-size:14px;color:var(--muted)}
+      .step code, .mono{background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px;word-break:break-all}
+      .urlbox{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+      .urlbox .mono{flex:1;padding:9px 11px;font-size:13.5px}
+      details{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface2)}
+      details summary{font-weight:700;cursor:pointer;font-size:15px}
+      textarea{width:100%;min-height:110px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+      .note{font-size:13.5px;color:var(--muted)}
+      .warn{background:#fdf0d5;border:1px solid #eec27a;color:#7a4d05;border-radius:10px;padding:10px 13px;font-size:14px;margin-bottom:14px}
+      @media (prefers-color-scheme: dark){.warn{background:#3a2c10;color:#f5c877;border-color:#6b5518}}
+      .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#132018;color:#fff;padding:11px 18px;border-radius:999px;font-size:14.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:99;box-shadow:var(--shadow);max-width:92vw;text-align:center}
+      .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+      .divider{height:1px;background:var(--line);margin:14px 0}
+      .hist-item{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+      .hist-item:last-child{border-bottom:none}
+      body.overlay-only{background:transparent}
+      body.overlay-only .topbar, body.overlay-only main .view:not(#view-overlay){display:none}
+
+      /* ---------- design refresh ---------- */
+      .topbar{box-shadow:0 4px 18px rgba(10,40,25,.08)}
+      .brand h1{font-family:"Barlow Condensed",sans-serif;font-size:24px;letter-spacing:.03em;text-transform:uppercase}
+      .brand small{text-transform:none;letter-spacing:0}
+      .vtab{border-radius:14px;transition:transform .12s ease,background .12s ease}
+      .vtab:active{transform:scale(.98)}
+      .vtab.active{background:linear-gradient(135deg,var(--green),var(--green2))}
+      .card{border-radius:16px;padding:18px}
+      .card h2{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid var(--line);padding-bottom:8px;margin-bottom:8px}
+      .btn{transition:transform .1s ease,background .12s ease}
+      .btn:active{transform:scale(.97)}
+      .scorestrip{border-bottom:5px solid var(--gold)}
+      .pad{gap:10px}
+      .pad button{min-height:60px;box-shadow:0 2px 6px rgba(10,40,25,.08);transition:transform .08s ease}
+      .pad button.bnd4{color:#14532d}
+      .pad button.bnd6{color:#7a4d05}
+      @media (prefers-color-scheme: dark){
+        .pad button.bnd4{background:#173527;border-color:#2c5c40;color:#9fe6bb}
+        .pad button.bnd6{background:#3a2c10;border-color:#6b5518;color:#f5c877}
+      }
+      tbody tr{transition:background .1s ease}
+
+      /* ---------- squads ---------- */
+      .squad-box{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+      .squad-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+      .squad-head h3{margin:0;font-size:17px;font-family:"Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase}
+      .sq-row{display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px dashed var(--line)}
+      .sq-row:last-child{border-bottom:none}
+      .sq-num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif}
+      .sq-name{flex:1;font-weight:600;font-size:14.5px;min-width:0}
+      .sq-x{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--red);font-size:16px;line-height:1;padding:0;cursor:pointer}
+      .sq-x.big{width:34px;height:34px;font-size:20px}
+      .rowflex input.grow{width:auto;min-width:110px}
+
+      /* ---------- player picker modal ---------- */
+      .modal-back{position:fixed;inset:0;background:rgba(5,12,8,.55);display:none;align-items:flex-end;justify-content:center;z-index:90}
+      .modal-back.show{display:flex}
+      .modal{background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px;box-shadow:var(--shadow)}
+      @media (min-width:640px){.modal-back{align-items:center;padding:18px}.modal{border-radius:18px}}
+      .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+      .modal-head h2{margin:0;font-family:"Barlow Condensed",sans-serif;font-size:24px;letter-spacing:.04em;text-transform:uppercase}
+      .pick-list{display:grid;gap:8px;margin-top:8px}
+      .pick{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;background:var(--surface2);border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;font-size:15.5px;color:var(--ink);width:100%;cursor:pointer}
+      .pick:active{transform:scale(.98)}
+      .pick-name{font-weight:700}
+      .pick-det{font-size:12.5px;color:var(--muted);text-align:right;flex:none}
+
+      /* ---------- compact layout & collapsible sections ---------- */
+      .card.fold{padding:0}
+      .fold-sum{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:none;text-align:left;padding:12px 15px;font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+      .fold-sum::after{content:"";width:9px;height:9px;flex:none;border-right:2.5px solid var(--muted);border-bottom:2.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s ease;margin-right:3px}
+      .fold.open>.fold-sum{border-bottom:2px solid var(--line)}
+      .fold.open>.fold-sum::after{transform:rotate(225deg)}
+      .fold-body{padding:12px 15px 15px}
+      .fold-body[hidden]{display:none}
+      .warn{margin-bottom:10px}
+      .warn-sum{display:block;width:100%;background:none;border:none;padding:0;color:inherit;font-weight:700;font-size:14.5px;text-align:left;cursor:pointer}
+      .warn .fold-body{padding:8px 0 0}
+      .warn .fold-body p{margin:0;font-size:14px}
+      main{padding:10px 12px 34px}
+      .card{padding:13px;margin-bottom:10px}
+      .card h2{font-size:20px;padding-bottom:6px;margin-bottom:6px}
+      .card .sub{margin-bottom:9px}
+      .topbar-in{padding:7px 12px}
+      .brand h1{font-size:20px}
+      .brand small{font-size:11px}
+      .viewtabs{padding:0 12px 8px;gap:6px}
+      .vtab{flex:1 1 0;padding:7px 6px;font-size:13.5px;border-radius:10px}
+      .vtab small{font-size:10.5px}
+      .scorestrip{padding:12px 14px;margin-bottom:10px}
+      .ss-score{font-size:clamp(34px,8vw,48px)}
+      .ss-meta{margin-top:7px}
+      .ss-chip{padding:4px 9px;font-size:12.5px}
+      .ss-bats{margin-top:8px;font-size:14px}
+      .balls-row{margin-top:8px}
+      .ball{width:29px;height:29px;font-size:12px}
+      .pad{gap:7px}
+      .pad button{min-height:48px;padding:10px 4px;font-size:20px}
+      .pad button.wkt{font-size:14px}
+      .pad button.ext{font-size:13.5px}
+      .btn{padding:10px 14px}
+      input,select,textarea{padding:8px 10px}
+      textarea{min-height:84px}
+      .sq-row{padding:4px 2px}
+      .step{padding:10px 12px}
+      .steps{gap:9px}
+      .overlay-stage{min-height:170px}
+      #historyList{max-height:240px;overflow:auto}
+      #sbHistory{max-height:300px;overflow:auto}
+
+      /* ---------- tournament ---------- */
+      .ptable{font-size:13px}
+      .ptable th,.ptable td{padding:6px 4px;text-align:center}
+      .ptable th:first-child,.ptable td:first-child{text-align:left}
+      .ptable td.teamcell{font-weight:700;text-align:left;max-width:110px}
+      .ptable tr.toprow td{background:var(--surface2)}
+      .qdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle}
+      .match-row{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;background:var(--surface2)}
+      .match-row .mr-score{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700}
+      .match-row .mr-result{font-weight:700;color:var(--green);font-size:14px;margin-top:2px}
+      .stat-cap{display:inline-block;background:var(--gold);color:#241a02;font-size:11px;font-weight:800;border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+      .stat-cap.purple{background:#6b3fa0;color:#fff}
+      select.tn-select{width:100%}
+      @media (max-width:560px){ .viewtabs{display:grid;grid-template-columns:1fr 1fr} .vtab{flex:none} }
+      /* ---------- tournament team squads ---------- */
+      .tn-team-box{margin-bottom:12px}
+      .tn-team-box:last-child{margin-bottom:2px}
+      .tn-team-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+      .tn-team-head h3{margin:0;font-size:17px;font-family:"Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase;flex:1;min-width:0}
+      .tn-team-head .note{flex:none}
+      .tn-team-head .sq-x{flex:none}
+      .tn-empty{font-size:13.5px;color:var(--muted);padding:6px 2px}
+      .sb-squad-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      @media (max-width:720px){.sb-squad-grid{grid-template-columns:1fr}}
+      .sb-squad-names{font-size:14px;line-height:1.55;padding:4px 2px 2px}
+
+      /* ---------- mode chooser: Single Match vs Tournament ---------- */
+      .segmentbar{max-width:1180px;margin:0 auto;padding:0 12px 8px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+      .segmentbar[hidden],.viewtabs[hidden]{display:none !important}
+      .segbtn{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700;cursor:pointer}
+      .segbtn.active{background:var(--green);border-color:var(--green);color:#fff}
+      .segbtn.seg-home{background:transparent;font-weight:600;color:var(--muted)}
+      .mode-intro h2{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:4px 0 4px}
+      .mode-intro p{color:var(--muted);font-size:15px;margin:0}
+      .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+      @media (max-width:720px){.mode-grid{grid-template-columns:1fr}}
+      .mode-card{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:22px 20px 18px;cursor:pointer;box-shadow:var(--shadow);color:var(--ink);width:100%;display:block}
+      .mode-card:hover{border-color:var(--green)}
+      .mode-card:active{transform:scale(.99)}
+      .mode-card.tournament:hover{border-color:var(--gold)}
+      .mode-icon{font-size:38px;line-height:1;display:block;margin-bottom:10px}
+      .mode-card h3{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0 0 4px}
+      .mode-card .mode-desc{font-size:14.5px;color:var(--muted);margin:0 0 12px;line-height:1.45}
+      .mode-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px}
+      .mode-list li{font-size:14.5px;font-weight:600;display:flex;gap:8px;align-items:baseline}
+      .mode-list li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);flex:none;transform:translateY(-1px)}
+      .mode-card.tournament .mode-list li::before{background:var(--gold)}
+      .mode-cta{display:inline-flex;align-items:center;gap:6px;background:var(--green);color:#fff;font-weight:700;font-size:15px;border-radius:11px;padding:11px 16px}
+      .mode-card.tournament .mode-cta{background:var(--gold);color:#241a02}
+
+      /* ---------- bulk name entry (one name per line) ---------- */
+      .btn.sm{height:38px;padding-top:0;padding-bottom:0;display:inline-flex;align-items:center;justify-content:center}
+      textarea.namebox{font-family:inherit;font-size:15px;height:38px;min-height:38px;max-height:38px;line-height:20px;padding:8px 10px;resize:none;overflow-y:auto}
+      .rowflex textarea.grow{width:auto;min-width:110px}
+      .rowflex input.grow{height:38px}
+      .names-row{align-items:center}
+
+      /* ---------- tournament interface (tabbed, like reference) ---------- */
+      .tn-shell{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+      .tn-top{display:flex;align-items:center;gap:10px;padding:12px 14px 6px}
+      .tn-back{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center}
+      .tn-top h2{flex:1;text-align:center;margin:0;font-size:20px;font-weight:800;letter-spacing:.01em;border:none;padding:0;text-transform:none;font-family:system-ui,sans-serif}
+      .tn-top-spacer{flex:none;width:38px}
+      .tn-tabs{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line);margin-top:6px}
+      .tn-tab{border:none;background:none;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.06em;padding:12px 2px 10px;text-transform:uppercase;border-bottom:2.5px solid transparent;white-space:nowrap}
+      .tn-tab.active{color:var(--ink);border-bottom-color:var(--ink)}
+      @media (max-width:380px){.tn-tab{font-size:11px;letter-spacing:.03em}}
+      .tn-panel{display:none;padding:14px}
+      .tn-panel.show{display:block}
+      .tn-panel .card{box-shadow:none;margin-bottom:12px}
+      .tn-banner{margin:0;padding:18px 16px 16px;background:#ffffff;color:#122f57;position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line)}
+      @media (prefers-color-scheme: dark){.tn-banner{background:#10161d;color:#dcebfb}}
+      .tn-banner-art{flex:none;width:108px;max-width:30vw;height:auto}
+      .tn-banner-main{flex:1;min-width:0}
+      .tn-banner-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#c8402a;margin:0 0 5px}
+      .tn-banner-title{font-family:"Barlow Condensed",sans-serif;font-size:clamp(38px,10vw,58px);font-weight:700;line-height:.95;letter-spacing:.02em;text-transform:uppercase;margin:0;word-break:break-word}
+      .tn-banner-title em{font-style:normal;color:#e23b2e}
+      .tn-banner-sub{margin:7px 0 0;color:#5c6d7d;font-size:13px;font-weight:600;line-height:1.4}
+      @media (prefers-color-scheme: dark){.tn-banner-sub{color:#9db3a5}}
+      .tn-info{padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+      .tn-info h3{margin:0;font-size:26px;font-weight:800;line-height:1.1}
+      .tn-info p{margin:4px 0 0;color:var(--muted);font-size:14.5px;line-height:1.45}
+      .tn-info p:empty{display:none}
+      .tn-info #tnIdLine{font-weight:600}
+      .tn-info #tnMetaLine{font-size:13px;margin-top:8px}
+      .tn-podium{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:10px;align-items:end;padding:18px 14px 16px;border-bottom:1px solid var(--line);text-align:center}
+      .tn-podium-col{min-width:0}
+      .tn-pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);text-transform:uppercase}
+      .tn-pill.winner{background:#111;color:#fff;border-color:#111}
+      @media (prefers-color-scheme: dark){.tn-pill.winner{background:#fff;color:#111;border-color:#fff}}
+      .tn-avatar{width:62px;height:62px;margin:10px auto 8px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;color:var(--green);overflow:hidden;text-align:center;line-height:1;padding:4px}
+      .tn-podium-col.main .tn-avatar{width:84px;height:84px;font-size:15px;background:#fdf0d5;border-color:#eec27a;color:#7a4d05}
+      .tn-podium-name{font-size:13.5px;font-weight:800;line-height:1.25;word-break:break-word}
+      .tn-section{padding:16px;border-bottom:1px solid var(--line)}
+      .tn-section:last-child{border-bottom:none}
+      .tn-section h4{margin:0 0 14px;font-size:15px;font-weight:700;color:var(--muted)}
+      .tn-topgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+      .tn-topgrid .lbl{font-size:13.5px;color:var(--muted);font-weight:600}
+      .tn-bignum{font-family:"Barlow Condensed",sans-serif;font-size:64px;font-weight:700;line-height:1;margin:4px 0 2px}
+      .tn-topname{font-size:16.5px;font-weight:800;line-height:1.2}
+      .tn-topteam{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+      .tn-empty-big{font-size:15px;color:var(--muted);text-align:center;padding:8px 0}
+
+      /* ---------- public scoreboard: View Tournament & team explorer ---------- */
+      .sb-view-tour-card{text-align:center;padding:20px 16px}
+      .sb-view-tour-card a.btn{display:inline-block;text-decoration:none}
+      /* ---------- viewer mode (tournament opened from View Tournament) ---------- */
+      body.viewer-mode .segmentbar{display:none !important}
+      body.viewer-mode .tn-back{visibility:hidden}
+      body.viewer-mode #view-tournament .sq-x{display:none !important}
+      body.viewer-mode #view-tournament .names-row{display:none !important}
+      body.viewer-mode #tnPanel-home .card.fold{display:none !important}
+      body.viewer-mode #tnPanel-matches .card.fold{display:none !important}
+      body.viewer-mode #tnPanel-matches .match-row .rowflex{display:none !important}
+      .viewer-backbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+      body.viewer-inpage .viewer-backbar{display:flex}
+      .sb-view-tour-card h2{border:none;text-align:center}
+      .sb-view-tour-card .sub{max-width:520px;margin-left:auto;margin-right:auto}
+      .sb-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px;padding:6px 2px 2px}
+      @media (max-width:380px){.sb-teams-grid{gap:16px 8px}}
+      .sb-team-tile{background:none;border:none;color:var(--ink);text-align:center;cursor:pointer;padding:4px 2px;width:100%}
+      .sb-team-tile:active{transform:scale(.98)}
+      .sb-team-logo{width:118px;height:118px;max-width:34vw;aspect-ratio:1/1;margin:0 auto 10px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);box-shadow:0 8px 20px rgba(10,40,25,.14);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;letter-spacing:.03em;color:var(--green);line-height:1;padding:10px;overflow:hidden}
+      .sb-team-logo.c1{background:#fdf0d5;color:#7a4d05;border-color:#eec27a}
+      .sb-team-logo.c2{background:#e3f4e9;color:#14532d;border-color:#9ed3ae}
+      .sb-team-logo.c3{background:#e8eff8;color:#175d8f;border-color:#b9d2ea}
+      .sb-team-logo.c0{background:#fdecea;color:#8f2a20;border-color:#e5a49c}
+      @media (prefers-color-scheme: dark){
+        .sb-team-logo.c1{background:#3a2c10;color:#f5c877;border-color:#6b5518}
+        .sb-team-logo.c2{background:#173527;color:#9fe6bb;border-color:#2c5c40}
+        .sb-team-logo.c3{background:#16283a;color:#a8cdf0;border-color:#2c4a68}
+        .sb-team-logo.c0{background:#3a1d1a;color:#ffb0a6;border-color:#6b3530}
+      }
+      .sb-team-tile.active .sb-team-logo{outline:3px solid var(--gold);outline-offset:2px}
+      .sb-team-name{font-size:16px;font-weight:800;line-height:1.25;text-transform:uppercase;word-break:break-word}
+      .sb-team-count{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
+      .sb-team-detail{margin-top:18px;border-top:2px solid var(--line);padding-top:14px}
+      .sb-detail-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+      .sb-detail-head .sb-team-logo{width:64px;height:64px;font-size:19px;margin:0;flex:none}
+      .sb-detail-head h3{margin:0;font-size:20px;line-height:1.2;text-transform:uppercase}
+      .sb-detail-head .note{margin-top:2px}
+      .sb-detail-tabs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px}
+      .sb-detail-tab{border:none;background:var(--surface2);color:var(--muted);font-size:13.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:11px 4px;cursor:pointer}
+      .sb-detail-tab + .sb-detail-tab{border-left:1px solid var(--line)}
+      .sb-detail-tab.active{background:var(--green);color:#fff}
+      /* ---------- tournament TEAMS gallery: logo on top, name below ---------- */
+      .sb-team-tile .sb-team-name{display:block}
+      body.viewer-mode #tnPanel-teams .tn-editor-card{display:none !important}
+      .tn-team-players{margin-top:18px;border-top:2px solid var(--line);padding-top:14px;text-align:left}
+      .tn-team-players-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+      .tn-team-players-head .sb-team-logo{width:64px;height:64px;font-size:19px;margin:0;flex:none}
+      .tn-team-players-head h3{margin:0;font-size:20px;line-height:1.2;text-transform:uppercase}
+      .tn-team-players-head .note{margin-top:2px}
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="brand">
+          <span class="live-dot" aria-hidden="true"></span>
+          <h1>Live Cricket Score <small>1 Input → Public Scoreboard + Broadcast Overlay</small></h1>
+        </div>
+        <span class="conn" id="connPill">● Local Mode — Live across tabs in this browser</span>
+      </div>
+      <nav class="segmentbar" id="segmentBar" aria-label="Choose mode" hidden>
+        <button class="segbtn seg-home" onclick="setView('home')">← All Modes</button>
+        <button class="segbtn" id="segBtnSingle" onclick="setSegment('single')">🏏 Single Match</button>
+        <button class="segbtn" id="segBtnTournament" onclick="setSegment('tournament')">🏆 Tournament</button>
+      </nav>
+      <nav class="viewtabs" id="singleTabs" aria-label="Single Match views" hidden>
+        <button class="vtab active" data-view="scorer" onclick="setView('scorer')">🎙️ Scorer Console</button>
+        <button class="vtab" data-view="scoreboard" onclick="setView('scoreboard')">📋 Public Scoreboard</button>
+        <button class="vtab" data-view="overlay" onclick="setView('overlay')">📺 Broadcast Overlay</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ================= HOME: CHOOSE MODE ================= -->
+      <section class="view show" id="view-home">
+        <div class="mode-intro">
+          <h2>What are you covering?</h2>
+          <p>Choose a mode to get started — each one opens only its own tools, neatly in one place.</p>
+        </div>
+        <div class="mode-grid">
+          <button type="button" class="mode-card" onclick="setSegment('single')">
+            <span class="mode-icon" aria-hidden="true">🏏</span>
+            <h3>Single Match</h3>
+            <p class="mode-desc">Score one match ball by ball and share it live.</p>
+            <ul class="mode-list">
+              <li>Scorer Console — scoring pad, squads &amp; bowlers</li>
+              <li>Public Scoreboard — what viewers see</li>
+              <li>Broadcast Overlay — for OBS</li>
+            </ul>
+            <span class="mode-cta">Open Single Match →</span>
+          </button>
+          <button type="button" class="mode-card tournament" onclick="setSegment('tournament')">
+            <span class="mode-icon" aria-hidden="true">🏆</span>
+            <h3>Tournament</h3>
+            <p class="mode-desc">Run a full tournament across many matches and teams.</p>
+            <ul class="mode-list">
+              <li>Team Entry &amp; Players</li>
+              <li>Points Table, Fixtures &amp; Match Results</li>
+              <li>Statistics — most runs, wickets, 4s &amp; 6s</li>
+            </ul>
+            <span class="mode-cta">Open Tournament →</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ================= SCORER ================= -->
+      <section class="view" id="view-scorer">
+
+        <div class="card fold" id="setupCard">
+          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
+          <div class="fold-body" hidden>
+          <div class="grid3">
+            <div><label for="teamA">Team 1</label><input id="teamA" value="BB YOUNG BLOODS" list="dlTeams" /></div>
+            <div><label for="teamB">Team 2</label><input id="teamB" value="BB POWER STRIKERS" list="dlTeams" /></div>
+            <div><label for="oversLimit">Total Overs (per innings)</label><input id="oversLimit" type="number" min="1" max="50" value="20" /></div>
+          </div>
+          <div class="grid2" style="margin-top:12px">
+            <div><label for="venue">Venue / Match Name (optional)</label><input id="venue" placeholder="e.g. Sheikh Abu Naser Stadium" /></div>
+            <div><label for="tossInfo">Toss (optional)</label><input id="tossInfo" placeholder="e.g. BB POWER STRIKERS won the toss and chose to bowl" /></div>
+          </div>
+          <div class="rowflex" style="margin-top:14px">
+            <button class="btn" onclick="startMatch()">🏏 Start Match</button>
+            <button class="btn ghost" onclick="resetMatch()">New Match (Clear Everything)</button>
+            <span class="note grow" id="matchStatusText">No match started yet — you can test the pad on the default demo score.</span>
+          </div>
+          </div>
+        </div>
+
+        <div class="card fold" id="squadCard">
+          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Team Squads</button>
+          <div class="fold-body" hidden>
+          <div class="grid2">
+            <div class="squad-box">
+              <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
+              <div id="squadAList"></div>
+              <div class="rowflex names-row" style="margin-top:10px">
+                <textarea id="addPlayerA" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
+                <button class="btn sm" onclick="addPlayer('A')">Add</button>
+              </div>
+            </div>
+            <div class="squad-box">
+              <div class="squad-head"><h3 id="squadBName">Team 2</h3><span class="note" id="squadBCount"></span></div>
+              <div id="squadBList"></div>
+              <div class="rowflex names-row" style="margin-top:10px">
+                <textarea id="addPlayerB" class="grow namebox" rows="1" placeholder="Player names — one per line. Paste a whole list and tap Add."></textarea>
+                <button class="btn sm" onclick="addPlayer('B')">Add</button>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <div id="scorerLive"></div>
+
+        <div class="card">
+          <h2>Scoring Pad</h2>
+          <div class="pending-note" id="pendingNote"></div>
+          <div class="pad" role="group" aria-label="Scoring pad">
+            <button onclick="scoreRuns(0)">0</button>
+            <button onclick="scoreRuns(1)">1</button>
+            <button onclick="scoreRuns(2)">2</button>
+            <button onclick="scoreRuns(3)">3</button>
+            <button onclick="scoreRuns(4)" class="bnd4">4</button>
+            <button onclick="scoreRuns(5)">5</button>
+            <button onclick="scoreRuns(6)" class="bnd6">6</button>
+            <button class="wkt" onclick="scoreWicket()">Wicket (W)</button>
+            <button class="ext" id="btnWide" onclick="setPending('wide')">Wide + Runs</button>
+            <button class="ext" id="btnNB" onclick="setPending('noball')">No-Ball + Runs</button>
+            <button class="ext" id="btnBye" onclick="setPending('bye')">Bye</button>
+            <button class="ext" id="btnLB" onclick="setPending('legbye')">Leg-Bye</button>
+          </div>
+          <div class="rowflex" style="margin-top:8px">
+            <button class="btn ghost sm" onclick="undoBall()">↩️ Undo Last Ball</button>
+            <button class="btn gold sm" onclick="endInnings()">End Innings</button>
+            <button class="btn red sm" onclick="finishMatch()">Declare Match Finished</button>
+            <button class="btn sm" id="btnSaveTournament" onclick="archiveCurrentMatch()">🏆 Save Result to Tournament</button>
+          </div>
+        </div>
+
+        <div class="card fold">
+          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Batters &amp; Bowler</button>
+          <div class="fold-body" hidden>
+          <div class="players-grid">
+            <div><label for="strikerName">Striker Batter *</label><input id="strikerName" value="A. K. M. Faisal Ahammed" list="dlBat" oninput="onPlayerNameChange()" /></div>
+            <div><label for="nonStrikerName">Non-Striker</label><input id="nonStrikerName" value="Avijit Roy" list="dlBat" oninput="onPlayerNameChange()" /></div>
+            <div><label for="bowlerName">Current Bowler</label><input id="bowlerName" value="Alif Islam" list="dlBowl" oninput="onPlayerNameChange()" /></div>
+          </div>
+          <datalist id="dlBat"></datalist>
+          <datalist id="dlBowl"></datalist>
+          <datalist id="dlTeams"></datalist>
+          <div class="rowflex" style="margin-top:12px">
+            <button class="btn ghost sm" onclick="changeBowler()">🔄 Change Bowler Now</button>
+          </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Ball-by-Ball History</h2>
+          <div id="historyList"><p class="note">No balls bowled yet.</p></div>
+        </div>
+
+        <div class="card fold">
+          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">🌐 Firebase Setup — Internet Live</button>
+          <div class="fold-body" hidden>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). In the database <b>Rules</b>, make sure the <span class="mono">liveMatch</span> path is publicly readable and writable — this page reads and writes all score data at that exact path:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true } } }</span></p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div><h3>Host this page on GitHub Pages (for a public link)</h3><p>Put this page file in a GitHub repo and turn on Settings → Pages to get a free public link. Give viewers the <span class="mono">…/?view=scoreboard</span> link, put the <span class="mono">…/?view=overlay</span> link in OBS, and score on the <span class="mono">…/?view=scorer</span> page — all three read the same Firebase data.</p></div></div>
+          </div>
+          <div class="divider"></div>
+          <label for="fbConfig">Firebase config (paste JSON or the firebaseConfig object)</label>
+          <textarea id="fbConfig" placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"https://….firebaseio.com","projectId":"…"}'></textarea>
+          <div class="rowflex" style="margin-top:10px">
+            <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
+            <button class="btn ghost" onclick="disconnectFirebase()">Disconnect</button>
+            <span class="note" id="fbStatus">Firebase is not connected yet — running in Local Mode.</span>
+          </div>
+          </div>
+        </div>
+
+        <div class="card fold">
+          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">📺 Adding the Overlay in OBS</button>
+          <div class="fold-body" hidden>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://your-name.github.io/live-cricket-score/?view=overlay</span></div></div></div>
+            <div class="step"><div class="step-n">2</div><div><h3>Set the size</h3><p>Set Width <b>1920</b> and Height <b>1080</b>. The overlay page background is transparent, so the score bar floats directly over the video — preview it below in “transparent background” mode.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h3>Score once, update in two places</h3><p>Now score a ball on the Scorer page from your phone or laptop and both the Public Scoreboard and the OBS score bar change instantly. No refresh needed.</p></div></div>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SCOREBOARD ================= -->
+      <section class="view" id="view-scoreboard">
+        <div id="sbLive"></div>
+        <div class="grid2">
+          <div class="card"><h2>Batting Card</h2><div id="sbBatting"></div></div>
+          <div class="card"><h2>Bowling Card</h2><div id="sbBowling"></div></div>
+        </div>
+        <div class="card" id="sbPrevWrap" style="display:none"><h2>Previous Innings</h2><div id="sbPrev"></div></div>
+        <div class="card"><h2>Recent Balls</h2><div id="sbHistory"></div></div>
+        <div class="card sb-view-tour-card" id="sbTourCtaCard">
+          <h2>🏆 Tournament</h2>
+          <p class="sub" id="sbTourCtaSub">This match is part of a tournament. View the full tournament — teams, fixtures, points table and statistics.</p>
+          <button type="button" class="btn" id="btnViewTournament" onclick="openTournamentViewerInPage()">View Tournament</button>
+        </div>
+      </section>
+
+      <!-- ================= TOURNAMENT ================= -->
+      <section class="view" id="view-tournament">
+        <div class="viewer-backbar" id="viewerBackBar">
+          <button type="button" class="btn ghost sm" onclick="closeTournamentViewerInPage()">← Back to Scoreboard</button>
+          <span class="note">Tournament — read-only viewer view.</span>
+        </div>
+        <div class="tn-shell">
+          <div class="tn-top">
+            <button type="button" class="tn-back" onclick="setView('home')" aria-label="Back to all modes">←</button>
+            <h2>Tournament</h2>
+            <span class="tn-top-spacer" aria-hidden="true"></span>
+          </div>
+          <nav class="tn-tabs" aria-label="Tournament menu">
+            <button type="button" class="tn-tab active" data-tntab="home" onclick="setTnTab('home')">Home</button>
+            <button type="button" class="tn-tab" data-tntab="teams" onclick="setTnTab('teams')">Teams</button>
+            <button type="button" class="tn-tab" data-tntab="matches" onclick="setTnTab('matches')">Matches</button>
+            <button type="button" class="tn-tab" data-tntab="points" onclick="setTnTab('points')">Points</button>
+            <button type="button" class="tn-tab" data-tntab="stats" onclick="setTnTab('stats')">Statistics</button>
+          </nav>
+
+          <!-- HOME -->
+          <div class="tn-panel show" id="tnPanel-home" style="padding:0">
+            <div class="tn-banner">
+              <svg class="tn-banner-art" viewBox="0 0 120 92" aria-hidden="true" focusable="false">
+                <circle cx="63" cy="13" r="7" fill="#123f6e"/>
+                <path d="M61 21 L49 43 L35 61" stroke="#e23b2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M61 21 L75 39 L86 48" stroke="#123f6e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M49 43 L67 57 L65 80" stroke="#123f6e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M49 43 L38 66 L28 82" stroke="#e23b2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="82" y="42" width="11" height="36" rx="4" transform="rotate(36 87 60)" fill="#123f6e"/>
+                <circle cx="18" cy="66" r="6" fill="#e23b2e"/>
+              </svg>
+              <div class="tn-banner-main">
+                <p class="tn-banner-kicker">Tournament</p>
+                <p class="tn-banner-title" id="tnBannerTitle">Tournament</p>
+                <p class="tn-banner-sub" id="tnBannerSub">Teams, matches, points &amp; statistics — all in one place</p>
+              </div>
+            </div>
+            <div class="tn-info">
+              <h3 id="tnTitle">Tournament</h3>
+              <p id="tnVenueLine"></p>
+              <p id="tnDatesLine"></p>
+              <p id="tnIdLine"></p>
+              <p id="tnMetaLine">—</p>
+            </div>
+            <div class="tn-podium" aria-label="Winner, runner and top player">
+              <div class="tn-podium-col">
+                <span class="tn-pill">Player</span>
+                <div class="tn-avatar" id="tnPotAvatar">—</div>
+                <div class="tn-podium-name" id="tnPotName">—</div>
+                <div class="note" id="tnPotTeam"></div>
+              </div>
+              <div class="tn-podium-col main">
+                <span class="tn-pill winner">Winner</span>
+                <div class="tn-avatar" id="tnWinnerAvatar">—</div>
+                <div class="tn-podium-name" id="tnWinnerName">Yet to decide</div>
+              </div>
+              <div class="tn-podium-col">
+                <span class="tn-pill">Runner</span>
+                <div class="tn-avatar" id="tnRunnerAvatar">—</div>
+                <div class="tn-podium-name" id="tnRunnerName">—</div>
+              </div>
+            </div>
+            <div class="tn-section">
+              <h4>Top Players</h4>
+              <div class="tn-topgrid">
+                <div>
+                  <div class="lbl">Most Runs</div>
+                  <div class="tn-bignum num" id="tnTopRunsNum">0</div>
+                  <div class="tn-topname" id="tnTopRunsName">—</div>
+                  <div class="tn-topteam" id="tnTopRunsTeam"></div>
+                </div>
+                <div>
+                  <div class="lbl">Most Wickets</div>
+                  <div class="tn-bignum num" id="tnTopWktsNum">0</div>
+                  <div class="tn-topname" id="tnTopWktsName">—</div>
+                  <div class="tn-topteam" id="tnTopWktsTeam"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tn-section">
+              <h4>Tournament Boundaries</h4>
+              <div class="tn-topgrid">
+                <div>
+                  <div class="lbl">Sixes</div>
+                  <div class="tn-bignum num" id="tnTotalSixes">0</div>
+                </div>
+                <div>
+                  <div class="lbl">Fours</div>
+                  <div class="tn-bignum num" id="tnTotalFours">0</div>
+                </div>
+              </div>
+              <div class="rowflex" style="margin-top:16px;justify-content:center">
+                <button class="btn sm" onclick="setTnTab('matches')">View Matches →</button>
+                <button class="btn ghost sm" onclick="setTnTab('points')">Points Table</button>
+                <button class="btn ghost sm" onclick="setTnTab('teams')">Teams &amp; Players</button>
+              </div>
+            </div>
+            <div style="padding:14px">
+              <div class="card fold" style="box-shadow:none;margin-bottom:0">
+                <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Tournament Details</button>
+                <div class="fold-body" hidden>
+                  <div><label for="tnName">Tournament name</label><input id="tnName" placeholder="Tournament name — e.g. BBEPL-3" oninput="onTournamentName()" /></div>
+                  <div class="grid2" style="margin-top:10px">
+                    <div><label for="tnVenue">Venue</label><input id="tnVenue" placeholder="e.g. Bangladesh Bank, Khulna." oninput="onTournamentName()" /></div>
+                    <div><label for="tnDates">Dates</label><input id="tnDates" placeholder="e.g. 03 Apr 2026 - 04 Apr 2026" oninput="onTournamentName()" /></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TEAMS -->
+          <div class="tn-panel" id="tnPanel-teams">
+            <div class="card">
+              <h2>Teams</h2>
+              <p class="sub">All teams at a glance — tap a team to see its players.</p>
+              <div id="tnTeamsGrid"></div>
+              <div id="tnTeamDetail"></div>
+            </div>
+            <div class="card tn-editor-card">
+              <h2>Team Entry &amp; Players</h2>
+              <p class="sub">Add teams, then add each team's players — one name per line, paste a whole list at once.</p>
+              <div id="tnTeamList"></div>
+              <div class="rowflex names-row" style="margin-top:10px">
+                <textarea id="tnNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line. Paste a whole list and tap Add Team."></textarea>
+                <button class="btn sm" onclick="addTournamentTeam()">Add Team</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- MATCHES -->
+          <div class="tn-panel" id="tnPanel-matches">
+            <div class="card"><h2>Fixtures</h2><div id="tnFixtures"></div></div>
+            <div class="card fold">
+              <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Add Fixture</button>
+              <div class="fold-body" hidden>
+              <div class="grid2">
+                <div><label for="fxTeamA">Team 1</label><input id="fxTeamA" list="dlTeams" placeholder="Team 1" /></div>
+                <div><label for="fxTeamB">Team 2</label><input id="fxTeamB" list="dlTeams" placeholder="Team 2" /></div>
+              </div>
+              <div style="margin-top:10px"><label for="fxLabel">Date / Venue (optional)</label><input id="fxLabel" placeholder="e.g. Sat 14 Nov • Sheikh Abu Naser Stadium" /></div>
+              <div class="rowflex" style="margin-top:12px"><button class="btn sm" onclick="addFixture()">Add Fixture</button></div>
+              </div>
+            </div>
+            <div class="card"><h2>Match Results</h2><div id="tnMatches"></div></div>
+            <div class="card fold">
+              <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Enter a Result Manually</button>
+              <div class="fold-body" hidden>
+              <div class="grid2">
+                <div>
+                  <label for="mrTeamA">Team 1 (batted first)</label><input id="mrTeamA" list="dlTeams" placeholder="Team 1" />
+                  <div class="grid3" style="margin-top:8px;grid-template-columns:1fr 1fr 1fr">
+                    <div><label for="mrRunsA">Runs</label><input id="mrRunsA" type="number" min="0" placeholder="150" /></div>
+                    <div><label for="mrWktsA">Wkts</label><input id="mrWktsA" type="number" min="0" max="10" placeholder="8" /></div>
+                    <div><label for="mrOversA">Overs</label><input id="mrOversA" placeholder="20 / 18.3" /></div>
+                  </div>
+                </div>
+                <div>
+                  <label for="mrTeamB">Team 2</label><input id="mrTeamB" list="dlTeams" placeholder="Team 2" />
+                  <div class="grid3" style="margin-top:8px;grid-template-columns:1fr 1fr 1fr">
+                    <div><label for="mrRunsB">Runs</label><input id="mrRunsB" type="number" min="0" placeholder="145" /></div>
+                    <div><label for="mrWktsB">Wkts</label><input id="mrWktsB" type="number" min="0" max="10" placeholder="10" /></div>
+                    <div><label for="mrOversB">Overs</label><input id="mrOversB" placeholder="20 / 19.2" /></div>
+                  </div>
+                </div>
+              </div>
+              <div class="rowflex" style="margin-top:12px"><button class="btn sm" onclick="addManualResult()">Save Result &amp; Update Table</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- POINTS -->
+          <div class="tn-panel" id="tnPanel-points">
+            <div class="card">
+              <h2>Points Table</h2>
+              <div id="tnPoints"></div>
+            </div>
+          </div>
+
+          <!-- STATISTICS -->
+          <div class="tn-panel" id="tnPanel-stats">
+            <div class="grid2">
+              <div class="card"><h2>Most Runs</h2><div id="tnStatBat"></div></div>
+              <div class="card"><h2>Most Wickets</h2><div id="tnStatBowl"></div></div>
+            </div>
+            <div class="card"><h2>More Statistics</h2><div id="tnStatExtra"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= OVERLAY ================= -->
+      <section class="view" id="view-overlay">
+        <div class="card" id="overlayHelp">
+          <h2>Broadcast Overlay</h2>
+          <div class="rowflex">
+            <button class="btn gold sm" id="btnClean" onclick="toggleClean()">Enable Overlay Only (Transparent) Mode</button>
+          </div>
+        </div>
+        <div class="overlay-stage" id="overlayStage"><div id="overlayMain" style="width:100%;display:flex;justify-content:center"></div></div>
+      </section>
+    </main>
+
+    <div class="modal-back" id="pickerModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+        <div class="modal-head">
+          <h2 id="pickerTitle">Choose a Player</h2>
+          <button class="sq-x big" onclick="closePicker(false)" aria-label="Close picker">×</button>
+        </div>
+        <p class="sub" id="pickerSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <p class="warn" id="pickerNote" style="display:none;margin:10px 0 0"></p>
+        <div class="pick-list" id="pickerList"></div>
+        <div class="divider"></div>
+        <label for="pickerCustom">Or type a name</label>
+        <div class="rowflex">
+          <input id="pickerCustom" class="grow" placeholder="Player name" onkeydown="if(event.key==='Enter'){event.preventDefault();pickCustom();}" />
+          <button class="btn sm" onclick="pickCustom()">Use This Name</button>
+        </div>
+        <button class="btn ghost sm" style="margin-top:12px" onclick="closePicker(false)">Decide Later</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script>
+      /* ============================================================
+         Live Cricket Score — 1 input, 2 outputs
+         State lives in memory; syncs via:
+         (a) BroadcastChannel — other tabs/windows of this browser
+         (b) Firebase Realtime Database — when the user connects it
+         ============================================================ */
+      var bc = null;
+      try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
+
+      function blankInnings(battingTeam, bowlingTeam){
+        return {
+          battingTeam: battingTeam, bowlingTeam: bowlingTeam,
+          runs: 0, wickets: 0, legalBalls: 0,
+          extras: { wide:0, noball:0, bye:0, legbye:0 },
+          batters: [], bowlers: [],
+          striker: null, nonStriker: null, bowler: null,
+          balls: [] /* {label, text, cls} newest last */
+        };
+      }
+      /* Built-in default tournament teams & squads — seeded automatically so
+         they never have to be typed in again. */
+      var DEFAULT_TOURNAMENT_TEAMS = ['BB YOUNG BLOODS','BB POWER STRIKERS','BB LIONS','THE BLUE BLOODS'];
+      var DEFAULT_TOURNAMENT_SQUADS = {
+        'BB YOUNG BLOODS': ['A. K. M. Faisal Ahammed','Avijit Roy','Bakul Hossain','Bhabotosh Bairagi','Md. Billal Hossain','Md. Masum Bellal','Md. Riaz Uddin Moral','Md. Rubel Hossain','Md. Shafikul Islam','Md. Shahadat Hossain','Md. Shohanur Rahman','Nipesh Mondal','Palash Kumar Saha','Rajib','Ripan Kumar Bachar','Shibaji Mandal','Shovan Saha','Sk. Abdullah Al Mamun','Subrata Kumar Biswas'],
+        'BB POWER STRIKERS': ['Alif Islam','Mohin Chakravarty','Manash Biswas','Md. Asaduzaaman','Md. Ashraful Alam','Md. Ashrafuzzaman','Md. Atiqur Rahman','Md. Masudur Rahman','Md. Muzibul Kamal','Md. Rabbi Islam Anik','Md. Saiful Islam','Md. Shariful Islam','Md. Touhidul Islam','Md. Yeasin Hossain','Mohan Kumar Das','Partho Dutta','Pradip Kumar Roy','Saleh Ahmed','Sudipto Kumar Dey'],
+        'BB LIONS': ['Ambarish Mondal','Balai Kumar Das','Chayan Kumar Bala','Dabashis Roy','Md. Abdur Rahman','Md. Ali Gias','Md. Ashraful Alam','Md. Bayezid Hossain','M.A. Mamun Khan','Md. Moniruzzaman Mintu','Md. Nafiul Karim','Md. Nuralam Hawladar','Partha Pratim Biswas','Prashit Kumar Mondal','Shacchidananda Bachar','Shaikh A. Karim','Soumitra Kumar Roy','Suman Kumar Sikder'],
+        'THE BLUE BLOODS': ['Al Amin','Amit Kumar Biswas','Ar Labib Siddiqui','Harun-Or-Rashid','Md. Faruk Hossain','Md. Khairul Islam','Md. Mahafujur Rahman','Md. Mahbubul Hasan (Miraz)','Md. Raju Ahmed','Md. Rasel Ahmed','Md. Rezowan','Md. Sazzadul Islam','Md. Tanzil Hossain','Md. Wahiduzzaman','Riasat Ali','S. M. Rayhanul Islam','Satyajit Roy','Shahjada Sabuj','Tonmoy Kumar Debnath']
+      };
+      function freshState(){
+        return {
+          teamA: 'BB YOUNG BLOODS', teamB: 'BB POWER STRIKERS',
+          oversLimit: 20, venue: '', tossInfo: '',
+          status: 'live', /* live | inningsBreak | finished */
+          inningsNo: 1,
+          current: blankInnings('BB YOUNG BLOODS','BB POWER STRIKERS'),
+          prevInnings: null,
+          squadA: DEFAULT_TOURNAMENT_SQUADS['BB YOUNG BLOODS'].slice(),
+          squadB: DEFAULT_TOURNAMENT_SQUADS['BB POWER STRIKERS'].slice(),
+          resultText: '',
+          matchId: Date.now(),
+          archivedMatchId: null,
+          tournament: { name: '', venue: '', dates: '', teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true },
+          updatedAt: Date.now()
+        };
+      }
+      var S = freshState();
+      var undoStack = [];
+      var pendingExtra = null; /* 'wide' | 'noball' | 'bye' | 'legbye' */
+      var fbApp = null, fbRef = null, fbPushing = false;
+
+      /* ---------- helpers ---------- */
+      function $(id){ return document.getElementById(id); }
+      function oversText(balls){ return Math.floor(balls/6) + '.' + (balls%6); }
+      function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2400); }
+      function deep(o){ return JSON.parse(JSON.stringify(o)); }
+      /* Split pasted/typed text into names: one name per line (Enter-separated).
+         Blank lines are dropped, extra spaces are tidied, and duplicates
+         inside the list itself are removed. */
+      function parseNameList(text){
+        var out = [], seen = {};
+        String(text == null ? '' : text).split(/\r\n|\r|\n/).forEach(function(part){
+          var n = part.trim().replace(/\s+/g, ' ');
+          if (n && !seen[n]){ seen[n] = true; out.push(n); }
+        });
+        return out;
+      }
+      function toggleFold(btn){
+        var wrap = btn.closest('.fold'); if (!wrap) return;
+        var body = wrap.querySelector('.fold-body'); if (!body) return;
+        var open = body.hidden;
+        body.hidden = !open;
+        wrap.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+
+      function getBatter(inn, name){
+        for (var i=0;i<inn.batters.length;i++) if (inn.batters[i].name===name) return inn.batters[i];
+        var b = { name:name, runs:0, balls:0, fours:0, sixes:0, out:false, howOut:'' };
+        inn.batters.push(b); return b;
+      }
+      function getBowler(inn, name){
+        for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name) return inn.bowlers[i];
+        var b = { name:name, balls:0, runs:0, wickets:0 };
+        inn.bowlers.push(b); return b;
+      }
+      function syncPlayersFromInputs(){
+        var inn = S.current;
+        inn.striker = $('strikerName').value.trim() || 'Batter 1';
+        inn.nonStriker = $('nonStrikerName').value.trim() || 'Batter 2';
+        inn.bowler = $('bowlerName').value.trim() || 'Bowler';
+        getBatter(inn, inn.striker); getBatter(inn, inn.nonStriker); getBowler(inn, inn.bowler);
+      }
+      function onPlayerNameChange(){ syncPlayersFromInputs(); renderAll(false); }
+
+      /* ---------- squads & player picker ---------- */
+      function normalizeSquads(){ if(!Array.isArray(S.squadA)) S.squadA=[]; if(!Array.isArray(S.squadB)) S.squadB=[]; }
+      function squadForTeam(name){
+        if (name===S.teamA) return S.squadA;
+        if (name===S.teamB) return S.squadB;
+        if (S.tournament && S.tournament.squads && Array.isArray(S.tournament.squads[name])) return S.tournament.squads[name];
+        return [];
+      }
+      function battingSquad(){ return squadForTeam(S.current.battingTeam); }
+      function bowlingSquad(){ return squadForTeam(S.current.bowlingTeam); }
+      function squadListHTML(arr, which){
+        if (!arr.length) return '<p class="note">No players yet — add the squad below.</p>';
+        return arr.map(function(n,i){
+          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span><button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
+        }).join('');
+      }
+      function renderSquads(){
+        normalizeSquads();
+        $('squadAList').innerHTML = squadListHTML(S.squadA,'A');
+        $('squadBList').innerHTML = squadListHTML(S.squadB,'B');
+        $('squadAName').textContent = S.teamA;
+        $('squadBName').textContent = S.teamB;
+        $('squadACount').textContent = S.squadA.length + (S.squadA.length===1 ? ' player' : ' players');
+        $('squadBCount').textContent = S.squadB.length + (S.squadB.length===1 ? ' player' : ' players');
+        $('dlBat').innerHTML = battingSquad().map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
+        $('dlBowl').innerHTML = bowlingSquad().map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
+      }
+      function addPlayer(which){
+        var inp = $('addPlayer'+which);
+        var names = parseNameList(inp ? inp.value : '');
+        if (!names.length){ toast('Type or paste player names first — one name per line'); return; }
+        var arr = which==='A' ? S.squadA : S.squadB;
+        var added = 0, skipped = 0;
+        names.forEach(function(name){
+          if (arr.indexOf(name) > -1) skipped++;
+          else { arr.push(name); added++; }
+        });
+        inp.value = '';
+        syncMatchSquadToTournament(which);
+        commit('Squad updated', true);
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to the squad');
+        else {
+          var msg = '✓ ' + added + (added === 1 ? ' player' : ' players') + ' added to the squad';
+          if (skipped) msg += ' — ' + skipped + ' already in the squad, skipped';
+          toast(msg);
+        }
+      }
+      function removePlayer(which, i){
+        var arr = which==='A' ? S.squadA : S.squadB;
+        var name = arr[i]; arr.splice(i,1);
+        syncMatchSquadToTournament(which);
+        commit('Squad updated', true); toast(name + ' removed from the squad');
+      }
+      function yetToBatNames(inn){
+        var squad = squadForTeam(inn.battingTeam);
+        if (!squad || !squad.length) return [];
+        var batted = {}; inn.batters.forEach(function(b){ batted[b.name]=true; });
+        return squad.filter(function(n){ return !batted[n]; });
+      }
+      function batterCandidates(){
+        var inn = S.current;
+        return battingSquad().filter(function(name){
+          if (name === inn.nonStriker) return false;
+          for (var i=0;i<inn.batters.length;i++) if (inn.batters[i].name===name && inn.batters[i].out) return false;
+          return true;
+        });
+      }
+      function bowlerDetail(inn, name){
+        for (var i=0;i<inn.bowlers.length;i++){ var b=inn.bowlers[i]; if (b.name===name) return b.balls>0 ? (oversText(b.balls)+' ov • '+b.runs+' runs • '+b.wickets+' wkt') : 'Yet to bowl'; }
+        return 'Yet to bowl';
+      }
+      function batterDetail(inn, name){
+        for (var i=0;i<inn.batters.length;i++){ var b=inn.batters[i]; if (b.name===name) return b.runs + ' (' + b.balls + ')'; }
+        return 'Yet to bat';
+      }
+      function pickerItem(name, det){
+        return '<button class="pick" data-name="' + esc(name) + '"><span class="pick-name">' + esc(name) + '</span><span class="pick-det">' + esc(det) + '</span></button>';
+      }
+      var pickerMode = null, pickerExclude = null, pickerAfter = null;
+      function openPicker(mode, opts){
+        opts = opts || {};
+        pickerMode = mode; pickerExclude = opts.exclude || null; pickerAfter = opts.after || null;
+        var inn = S.current;
+        $('pickerCustom').value = '';
+        var note = $('pickerNote');
+        if (mode === 'bowler'){
+          $('pickerTitle').textContent = opts.title || 'Over Complete — New Bowler';
+          $('pickerSub').textContent = opts.sub || ('Over ' + (inn.legalBalls/6) + ' is complete. Pick who bowls over ' + (inn.legalBalls/6 + 1) + ' for ' + inn.bowlingTeam + '.');
+          if (pickerExclude){
+            note.textContent = pickerExclude + ' bowled the previous over and cannot bowl two overs in a row — pick someone else.';
+            note.style.display = 'block';
+          } else { note.style.display = 'none'; }
+          var list = bowlingSquad().filter(function(n){ return n !== pickerExclude; });
+          $('pickerList').innerHTML = list.length
+            ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n)); }).join('')
+            : '<p class="note">No squad players to pick from — type a name below, or add the bowling team\'s squad first.</p>';
+        } else {
+          $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
+          $('pickerSub').textContent = 'Pick the next batter for ' + inn.battingTeam + '.';
+          note.style.display = 'none';
+          var cands = batterCandidates();
+          $('pickerList').innerHTML = cands.length
+            ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n)); }).join('')
+            : '<p class="note">No squad players left to pick — type a name below.</p>';
+        }
+        $('pickerModal').classList.add('show');
+      }
+      function closePicker(picked){
+        var mode = pickerMode, after = pickerAfter;
+        pickerMode = null; pickerAfter = null; pickerExclude = null;
+        $('pickerModal').classList.remove('show');
+        if (!picked && mode === 'batter'){ try { $('strikerName').focus(); } catch(e){} }
+        if (after) after();
+      }
+      function pickPlayer(name){
+        if (!name) return;
+        var mode = pickerMode;
+        closePicker(true);
+        if (mode === 'bowler'){
+          $('bowlerName').value = name; S.current.bowler = name; getBowler(S.current, name);
+          commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl the next over');
+        } else if (mode === 'batter'){
+          $('strikerName').value = name; $('strikerName').placeholder = 'Striker name';
+          S.current.striker = name; getBatter(S.current, name);
+          commit('New batter in', true); toast('🏏 ' + name + ' comes in to bat');
+        }
+      }
+      function pickCustom(){
+        var v = $('pickerCustom').value.trim();
+        if (!v){ toast('Type a player name first'); return; }
+        pickPlayer(v);
+      }
+      function changeBowler(){
+        openPicker('bowler', { title:'Change Bowler', sub:'Pick the current bowler for ' + S.current.bowlingTeam + '.' });
+      }
+      function maybeBowlerPrompt(){
+        var inn = S.current;
+        if (S.status !== 'live') return;
+        if (inn.legalBalls > 0 && inn.legalBalls % 6 === 0 && inn.legalBalls < S.oversLimit*6 && inn.wickets < 10){
+          openPicker('bowler', { exclude: inn.bowler });
+        }
+      }
+      document.addEventListener('click', function(e){
+        var t = e.target;
+        var b = (t && t.closest) ? t.closest('#pickerList [data-name]') : null;
+        if (b) pickPlayer(b.getAttribute('data-name'));
+      });
+
+      function swapStrike(inn){ var t=inn.striker; inn.striker=inn.nonStriker; inn.nonStriker=t;
+        $('strikerName').value = inn.striker; $('nonStrikerName').value = inn.nonStriker; }
+
+      function ballLabel(inn){ return oversText(inn.legalBalls); }
+      function pushBall(inn, text, cls){
+        inn.balls.push({ over: oversText(inn.legalBalls), text:text, cls:cls||'' });
+        if (inn.balls.length > 120) inn.balls.shift();
+      }
+      function afterLegalBall(inn){
+        if (inn.legalBalls % 6 === 0 && inn.legalBalls > 0) swapStrike(inn);
+        checkInningsEnd();
+      }
+      function checkInningsEnd(){
+        var inn = S.current;
+        var maxBalls = S.oversLimit * 6;
+        if (inn.wickets >= 10 || inn.legalBalls >= maxBalls){
+          if (S.inningsNo === 1){ endInnings(true); }
+          else { finishMatch(true); }
+        } else if (S.inningsNo === 2 && S.prevInnings && inn.runs > S.prevInnings.runs){
+          finishMatch(true);
+        }
+      }
+      function target(){ return S.prevInnings ? S.prevInnings.runs + 1 : null; }
+      function crr(){ var inn=S.current; return inn.legalBalls>0 ? (inn.runs/(inn.legalBalls/6)) : 0; }
+      function rrr(){ var t=target(); if(!t) return null; var inn=S.current; var ballsLeft=S.oversLimit*6-inn.legalBalls; if(ballsLeft<=0) return null; var need=t-inn.runs; return need>0 ? (need/(ballsLeft/6)) : 0; }
+
+      /* ---------- scoring ---------- */
+      function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
+
+      function scoreRuns(n){ if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
+
+      function applyBatRuns(n){
+        snapshot(); syncPlayersFromInputs();
+        var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
+        inn.runs+=n; bat.runs+=n; bat.balls++; bowl.runs+=n; bowl.balls++;
+        if (n===4) bat.fours++; if (n===6) bat.sixes++;
+        inn.legalBalls++;
+        pushBall(inn, String(n), n===4?'b4':(n===6?'b6':''));
+        if (n%2===1) swapStrike(inn);
+        afterLegalBall(inn); commit('Ball: ' + n + (n===1 ? ' run' : ' runs'));
+        maybeBowlerPrompt();
+      }
+      function setPending(type){
+        pendingExtra = (pendingExtra===type) ? null : type;
+        renderPending();
+        if (pendingExtra) toast(pendingExtra==='wide'
+          ? 'Wide selected — now tap the extra runs run on top of the 1 wide run (0 = just the wide)'
+          : pendingLabel() + ' selected — now tap the runs (0–6)');
+      }
+      function pendingLabel(){ return pendingExtra==='wide' ? 'Wide' : (pendingExtra==='noball' ? 'No-Ball' : (pendingExtra==='bye' ? 'Bye' : 'Leg-Bye')); }
+      function renderPending(){
+        var note=$('pendingNote');
+        ['btnWide','btnNB','btnBye','btnLB'].forEach(function(id){ $(id).classList.remove('pending'); });
+        if (pendingExtra){
+          note.textContent = pendingExtra==='wide'
+            ? '⏳ Wide (1 run) — now tap the extra runs the batters ran (0–6). Total added = 1 + those runs.'
+            : '⏳ ' + pendingLabel() + ' — now tap the runs for this ball (0–6).';
+          note.classList.add('show');
+          $(pendingExtra==='wide'?'btnWide':(pendingExtra==='noball'?'btnNB':(pendingExtra==='bye'?'btnBye':'btnLB'))).classList.add('pending');
+        } else { note.classList.remove('show'); note.textContent=''; }
+      }
+      function completeExtra(n){
+        var type=pendingExtra; pendingExtra=null; renderPending();
+        snapshot(); syncPlayersFromInputs();
+        var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
+        if (type==='noball'){
+          inn.runs += 1+n; inn.extras.noball+=1; bowl.runs += 1+n;
+          bat.runs+=n; if (n===4) bat.fours++; if (n===6) bat.sixes++;
+          pushBall(inn, 'Nb+'+n, 'bx');
+          if (n%2===1) swapStrike(inn);
+          checkInningsEnd(); commit('No-Ball + ' + n + (n===1 ? ' run' : ' runs'));
+        } else if (type==='wide'){
+          /* 1 run for the wide itself + n extra runs the batters ran.
+             The ball does not count as a legal delivery; extras are all
+             charged to the bowler as wides. */
+          var total = 1 + n;
+          inn.runs += total; inn.extras.wide += total; bowl.runs += total;
+          pushBall(inn, n>0 ? 'Wd+'+n : 'Wd', 'bx');
+          if (n%2===1) swapStrike(inn);
+          checkInningsEnd(); commit(n>0 ? ('Wide + ' + n + ' — ' + total + ' runs total') : 'Wide — 1 run');
+        } else {
+          var key = (type==='bye') ? 'bye':'legbye';
+          inn.runs += n; inn.extras[key]+=n; bowl.runs+=n; bowl.balls++;
+          bat.balls++; inn.legalBalls++;
+          pushBall(inn, (type==='bye'?'B':'Lb')+n, 'bx');
+          if (n%2===1) swapStrike(inn);
+          afterLegalBall(inn); commit(pendingLabelFor(key) + ' ' + n + (n===1 ? ' run' : ' runs'));
+          maybeBowlerPrompt();
+        }
+      }
+      function pendingLabelFor(k){ return k==='bye' ? 'Bye' : 'Leg-Bye'; }
+
+      function scoreWicket(){
+        if (pendingExtra){ toast('Finish the pending extra ball first'); return; }
+        snapshot(); syncPlayersFromInputs();
+        var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
+        inn.wickets++; bat.balls++; bat.out=true; bat.howOut='b ' + inn.bowler;
+        bowl.wickets++; bowl.balls++; inn.legalBalls++;
+        pushBall(inn,'W','bw');
+        var outName = bat.name;
+        var innNoBefore = S.inningsNo;
+        if (inn.wickets < 10){
+          inn.striker = 'New Batter';
+          $('strikerName').value=''; $('strikerName').placeholder='Enter new batter name';
+        }
+        afterLegalBall(inn); commit('Wicket! ' + outName + ' is out');
+        if (S.inningsNo===innNoBefore && S.status==='live' && inn.wickets < 10){
+          if (batterCandidates().length){
+            var overDone = (inn.legalBalls>0 && inn.legalBalls%6===0);
+            openPicker('batter', { after: overDone ? maybeBowlerPrompt : null });
+          } else { $('strikerName').focus(); maybeBowlerPrompt(); }
+        }
+      }
+      function undoBall(){
+        if (!undoStack.length){ toast('No ball to undo'); return; }
+        S = undoStack.pop(); pendingExtra=null; renderPending();
+        $('strikerName').value = S.current.striker||''; $('nonStrikerName').value = S.current.nonStriker||''; $('bowlerName').value = S.current.bowler||'';
+        commit('Last ball undone', true);
+      }
+
+      /* ---------- match flow ---------- */
+      function startMatch(){
+        var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
+        var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
+        var newA = $('teamA').value.trim() || 'Team 1';
+        var newB = $('teamB').value.trim() || 'Team 2';
+        /* Players entered for a team in the Tournament tab become that team's match squad */
+        var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
+        var fromTnA = Array.isArray(tnSquads[newA]) && tnSquads[newA].length ? deep(tnSquads[newA]) : null;
+        var fromTnB = Array.isArray(tnSquads[newB]) && tnSquads[newB].length ? deep(tnSquads[newB]) : null;
+        S = freshState();
+        S.tournament = keepTn;
+        S.matchId = Date.now(); S.archivedMatchId = null;
+        S.squadA = fromTnA || keepA; S.squadB = fromTnB || keepB;
+        S.teamA = newA;
+        S.teamB = newB;
+        S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
+        S.venue = $('venue').value.trim(); S.tossInfo = $('tossInfo').value.trim();
+        S.current = blankInnings(S.teamA, S.teamB);
+        ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
+        if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
+        if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
+        undoStack = [];
+        syncPlayersFromInputs();
+        $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + S.oversLimit + ' overs';
+        commit('Match started');
+      }
+      function resetMatch(){
+        var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
+        var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
+        S = freshState(); S.squadA = keepA; S.squadB = keepB; S.tournament = keepTn2; S.matchId = Date.now();
+        undoStack=[]; pendingExtra=null; renderPending();
+        S.teamA=$('teamA').value.trim()||S.teamA; S.teamB=$('teamB').value.trim()||S.teamB;
+        S.current=blankInnings(S.teamA,S.teamB); syncPlayersFromInputs();
+        $('matchStatusText').textContent='Ready for a new match.';
+        commit('New match reset', true);
+      }
+      function endInnings(auto){
+        if (S.inningsNo===2){ finishMatch(auto); return; }
+        var inn=S.current;
+        S.prevInnings = deep(inn);
+        S.inningsNo = 2; S.status='live';
+        S.current = blankInnings(inn.bowlingTeam, inn.battingTeam);
+        $('strikerName').value=''; $('nonStrikerName').value=''; $('bowlerName').value='';
+        $('strikerName').placeholder='Striker name'; 
+        undoStack=[];
+        commit(auto ? 'Innings ended — Target ' + (S.prevInnings.runs+1) : 'Innings ended — Target ' + (S.prevInnings.runs+1));
+        openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
+      }
+      function finishMatch(auto){
+        S.status='finished';
+        var inn=S.current, t=target(), txt='';
+        if (S.inningsNo===2 && t){
+          if (inn.runs >= t){ var wk=10-inn.wickets; txt = inn.battingTeam + ' won by ' + wk + ' wickets 🏆'; }
+          else if (inn.runs === t-1){ txt = 'Match drawn / tied'; }
+          else { txt = S.prevInnings.battingTeam + ' won by ' + ((t-1)-inn.runs) + ' runs 🏆'; }
+        } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
+        S.resultText = txt;
+        commit(auto ? 'Match finished: ' + txt : txt);
+      }
+
+      /* ---------- tournament ---------- */
+      function normalizeTournament(){
+        if (!S.tournament || typeof S.tournament !== 'object') S.tournament = { name:'', teams:[], matches:[], fixtures:[], squads:{} };
+        if (!Array.isArray(S.tournament.teams)) S.tournament.teams = [];
+        if (!Array.isArray(S.tournament.matches)) S.tournament.matches = [];
+        if (!Array.isArray(S.tournament.fixtures)) S.tournament.fixtures = [];
+        if (typeof S.tournament.name !== 'string') S.tournament.name = '';
+        if (typeof S.tournament.venue !== 'string') S.tournament.venue = '';
+        if (typeof S.tournament.dates !== 'string') S.tournament.dates = '';
+        if (!S.tournament.squads || typeof S.tournament.squads !== 'object' || Array.isArray(S.tournament.squads)) S.tournament.squads = {};
+        S.tournament.teams.forEach(function(n){
+          if (!Array.isArray(S.tournament.squads[n])) S.tournament.squads[n] = [];
+        });
+        /* Migrate players saved before tournament squads existed: the two
+           match squads become their teams' tournament squads. */
+        if (S.teamA && Array.isArray(S.squadA) && S.squadA.length && Array.isArray(S.tournament.squads[S.teamA]) && !S.tournament.squads[S.teamA].length) S.tournament.squads[S.teamA] = S.squadA.slice();
+        if (S.teamB && Array.isArray(S.squadB) && S.squadB.length && Array.isArray(S.tournament.squads[S.teamB]) && !S.tournament.squads[S.teamB].length) S.tournament.squads[S.teamB] = S.squadB.slice();
+        /* Seed the built-in default teams & squads once, so they are already
+           there on every device / saved state and never need re-adding.
+           A team the user later removes stays removed (flag is kept). */
+        if (!S.tournament.defaultsSeeded){
+          DEFAULT_TOURNAMENT_TEAMS.forEach(function(name){
+            if (S.tournament.teams.indexOf(name) === -1) S.tournament.teams.push(name);
+            if (!Array.isArray(S.tournament.squads[name]) || !S.tournament.squads[name].length) S.tournament.squads[name] = DEFAULT_TOURNAMENT_SQUADS[name].slice();
+          });
+          S.tournament.defaultsSeeded = true;
+        }
+      }
+      function tournamentSquad(name){
+        normalizeTournament();
+        if (!Array.isArray(S.tournament.squads[name])) S.tournament.squads[name] = [];
+        return S.tournament.squads[name];
+      }
+      function syncTournamentSquadToMatch(teamName){
+        var arr = tournamentSquad(teamName);
+        if (teamName === S.teamA) S.squadA = deep(arr);
+        if (teamName === S.teamB) S.squadB = deep(arr);
+      }
+      function syncMatchSquadToTournament(which){
+        normalizeTournament();
+        var teamName = which === 'A' ? S.teamA : S.teamB;
+        var arr = which === 'A' ? S.squadA : S.squadB;
+        if (teamName && S.tournament.teams.indexOf(teamName) > -1){
+          S.tournament.squads[teamName] = deep(arr || []);
+        }
+      }
+      function ensureTournamentTeam(name){
+        normalizeTournament();
+        if (!name) return;
+        if (S.tournament.teams.indexOf(name) === -1) S.tournament.teams.push(name);
+        if (!Array.isArray(S.tournament.squads[name])) S.tournament.squads[name] = [];
+      }
+      function onTournamentName(){
+        normalizeTournament();
+        S.tournament.name = $('tnName').value;
+        var vn = $('tnVenue'); if (vn) S.tournament.venue = vn.value;
+        var dt = $('tnDates'); if (dt) S.tournament.dates = dt.value;
+        try { renderTournamentHome(); } catch(e){}
+        /* save silently without a toast on every keystroke */
+        S.updatedAt = Date.now();
+        if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
+        if (fbRef && !fbPushing){ fbRef.set(S).catch(function(){}); }
+      }
+      function addTournamentTeam(){
+        var inp = $('tnNewTeam');
+        var names = parseNameList(inp ? inp.value : '');
+        if (!names.length){ toast('Type or paste team names first — one name per line'); return; }
+        normalizeTournament();
+        var added = 0, skipped = 0;
+        names.forEach(function(name){
+          if (S.tournament.teams.indexOf(name) > -1) skipped++;
+          else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; }
+        });
+        inp.value = '';
+        commit('Team entered', true);
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' entered — now add its players below');
+        else {
+          var msg = '✓ ' + added + (added === 1 ? ' team' : ' teams') + ' entered';
+          if (skipped) msg += ' — ' + skipped + ' already entered, skipped';
+          toast(msg);
+        }
+      }
+      function removeTournamentTeam(i){
+        normalizeTournament();
+        var name = S.tournament.teams[i]; S.tournament.teams.splice(i,1);
+        if (name && S.tournament.squads) delete S.tournament.squads[name];
+        commit('Team removed', true); toast(name + ' removed');
+      }
+      function addTournamentPlayer(teamIdx){
+        normalizeTournament();
+        var team = S.tournament.teams[teamIdx];
+        if (!team) return;
+        var inp = $('tnPlayer-' + teamIdx);
+        var names = parseNameList(inp ? inp.value : '');
+        if (!names.length){ toast('Type or paste player names first — one name per line'); return; }
+        var arr = tournamentSquad(team);
+        var added = 0, skipped = 0;
+        names.forEach(function(name){
+          if (arr.indexOf(name) > -1) skipped++;
+          else { arr.push(name); added++; }
+        });
+        if (inp) inp.value = '';
+        syncTournamentSquadToMatch(team);
+        commit('Player added', true);
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to ' + team);
+        else {
+          var pmsg = '✓ ' + added + (added === 1 ? ' player' : ' players') + ' added to ' + team;
+          if (skipped) pmsg += ' — ' + skipped + ' already in the squad, skipped';
+          toast(pmsg);
+        }
+        /* keep focus in the same team's player box for fast entry */
+        var again = $('tnPlayer-' + teamIdx); if (again) { try { again.focus(); } catch(e){} }
+      }
+      function removeTournamentPlayer(teamIdx, playerIdx){
+        normalizeTournament();
+        var team = S.tournament.teams[teamIdx];
+        if (!team) return;
+        var arr = tournamentSquad(team);
+        var name = arr[playerIdx];
+        arr.splice(playerIdx, 1);
+        syncTournamentSquadToMatch(team);
+        commit('Player removed', true); toast(name + ' removed from ' + team);
+      }
+      function parseOversToBalls(txt, fallbackBalls){
+        if (txt == null || String(txt).trim() === '') return fallbackBalls || 0;
+        var s = String(txt).trim();
+        if (s.indexOf('.') > -1){
+          var p = s.split('.'); var ov = parseInt(p[0],10)||0; var bl = parseInt(p[1],10)||0;
+          if (bl > 5) bl = 5;
+          return ov*6 + bl;
+        }
+        return (parseInt(s,10)||0)*6;
+      }
+      function matchWinner(match){
+        if (!match.innings || match.innings.length < 2) return null;
+        var a = match.innings[0], b = match.innings[1];
+        if (b.runs > a.runs) return b.battingTeam;
+        if (a.runs > b.runs) return a.battingTeam;
+        return 'Tie';
+      }
+      function matchResultText(match){
+        if (match.resultText) return match.resultText;
+        if (!match.innings || match.innings.length < 2) return '';
+        var a = match.innings[0], b = match.innings[1];
+        if (b.runs > a.runs) return b.battingTeam + ' won by ' + (10 - b.wickets) + ' wickets';
+        if (a.runs > b.runs) return a.battingTeam + ' won by ' + (a.runs - b.runs) + ' runs';
+        return 'Match tied';
+      }
+      function archiveCurrentMatch(){
+        normalizeTournament();
+        var mid = S.matchId || S.updatedAt || 1;
+        if (!S.matchId) S.matchId = mid;
+        if (S.archivedMatchId === mid){ toast('This match is already saved to the tournament'); return; }
+        var inningsArr = [];
+        if (S.prevInnings) inningsArr.push(deep(S.prevInnings));
+        if (S.current && (S.current.runs > 0 || S.current.legalBalls > 0 || S.current.wickets > 0)) inningsArr.push(deep(S.current));
+        if (!inningsArr.length){ toast('Score at least one ball before saving'); return; }
+        var match = {
+          id: mid, at: Date.now(), manual: false,
+          oversLimit: S.oversLimit, venue: S.venue || '',
+          innings: inningsArr, resultText: S.resultText || ''
+        };
+        if (!match.resultText && inningsArr.length >= 2) match.resultText = matchResultText(match);
+        if (!match.resultText) match.resultText = inningsArr[0].battingTeam + ' ' + inningsArr[0].runs + '/' + inningsArr[0].wickets;
+        match.winner = matchWinner(match);
+        inningsArr.forEach(function(inn){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); });
+        S.tournament.matches.push(match);
+        S.archivedMatchId = mid;
+        commit('Saved to tournament', true);
+        toast('🏆 Result saved — points table & statistics updated');
+        setView('tournament');
+      }
+      function addManualResult(){
+        normalizeTournament();
+        var tA = $('mrTeamA').value.trim(), tB = $('mrTeamB').value.trim();
+        if (!tA || !tB){ toast('Enter both team names'); return; }
+        if (tA === tB){ toast('Pick two different teams'); return; }
+        var rA = parseInt($('mrRunsA').value,10), rB = parseInt($('mrRunsB').value,10);
+        if (isNaN(rA) || isNaN(rB)){ toast('Enter the runs for both teams'); return; }
+        var wA = Math.min(10, Math.max(0, parseInt($('mrWktsA').value,10)||0));
+        var wB = Math.min(10, Math.max(0, parseInt($('mrWktsB').value,10)||0));
+        var lim = S.oversLimit || 20;
+        var bA = parseOversToBalls($('mrOversA').value, lim*6);
+        var bB = parseOversToBalls($('mrOversB').value, lim*6);
+        var innA = blankInnings(tA, tB); innA.runs = rA; innA.wickets = wA; innA.legalBalls = bA;
+        var innB = blankInnings(tB, tA); innB.runs = rB; innB.wickets = wB; innB.legalBalls = bB;
+        var match = { id: Date.now(), at: Date.now(), manual: true, oversLimit: lim, venue:'', innings:[innA, innB], resultText:'' };
+        match.resultText = matchResultText(match);
+        match.winner = matchWinner(match);
+        ensureTournamentTeam(tA); ensureTournamentTeam(tB);
+        S.tournament.matches.push(match);
+        ['mrRunsA','mrWktsA','mrOversA','mrRunsB','mrWktsB','mrOversB'].forEach(function(id){ $(id).value=''; });
+        commit('Result saved', true);
+        toast('🏆 Result saved — points table updated');
+      }
+      function removeArchivedMatch(id){
+        normalizeTournament();
+        S.tournament.matches = S.tournament.matches.filter(function(m){ return m.id !== id; });
+        if (S.archivedMatchId === id) S.archivedMatchId = null;
+        commit('Result removed', true); toast('Match result removed');
+      }
+      function addFixture(){
+        normalizeTournament();
+        var a = $('fxTeamA').value.trim(), b = $('fxTeamB').value.trim();
+        if (!a || !b){ toast('Enter both teams for the fixture'); return; }
+        if (a === b){ toast('Pick two different teams'); return; }
+        S.tournament.fixtures.push({ id: Date.now(), teamA:a, teamB:b, label: $('fxLabel').value.trim() });
+        ensureTournamentTeam(a); ensureTournamentTeam(b);
+        $('fxTeamA').value=''; $('fxTeamB').value=''; $('fxLabel').value='';
+        commit('Fixture added', true); toast('Fixture added');
+      }
+      function removeFixture(id){
+        normalizeTournament();
+        S.tournament.fixtures = S.tournament.fixtures.filter(function(f){ return f.id !== id; });
+        commit('Fixture removed', true);
+      }
+      function startFixture(id){
+        normalizeTournament();
+        var fx = null;
+        S.tournament.fixtures.forEach(function(f){ if (f.id === id) fx = f; });
+        if (!fx) return;
+        $('teamA').value = fx.teamA; $('teamB').value = fx.teamB;
+        if (fx.label) $('venue').value = fx.label;
+        setView('scorer');
+        var setupBody = document.querySelector('#setupCard .fold-body');
+        if (setupBody && setupBody.hidden){ var btn = document.querySelector('#setupCard .fold-sum'); if (btn) toggleFold(btn); }
+        toast(fx.teamA + ' vs ' + fx.teamB + ' — tap Start Match when ready');
+      }
+      function computePoints(){
+        normalizeTournament();
+        var rows = {};
+        function rowFor(name){
+          if (!rows[name]) rows[name] = { team:name, p:0, w:0, l:0, t:0, pts:0, rf:0, of:0, ra:0, oa:0 };
+          return rows[name];
+        }
+        S.tournament.teams.forEach(function(n){ rowFor(n); });
+        S.tournament.matches.forEach(function(m){
+          if (!m.innings || m.innings.length < 2) return;
+          var a = m.innings[0], b = m.innings[1];
+          var ra = rowFor(a.battingTeam), rb = rowFor(b.battingTeam);
+          ra.p++; rb.p++;
+          var win = matchWinner(m);
+          if (win === 'Tie'){ ra.t++; rb.t++; ra.pts += 1; rb.pts += 1; }
+          else if (win === a.battingTeam){ ra.w++; rb.l++; ra.pts += 2; }
+          else if (win === b.battingTeam){ rb.w++; ra.l++; rb.pts += 2; }
+          var limBalls = (m.oversLimit || 20) * 6;
+          m.innings.forEach(function(inn){
+            var bat = rowFor(inn.battingTeam), bowl = rowFor(inn.bowlingTeam);
+            var adj = inn.wickets >= 10 ? limBalls : inn.legalBalls;
+            bat.rf += inn.runs; bat.of += adj;
+            bowl.ra += inn.runs; bowl.oa += adj;
+          });
+        });
+        var arr = Object.keys(rows).map(function(k){ var r = rows[k];
+          r.nrr = (r.of > 0 && r.oa > 0) ? (r.rf/(r.of/6) - r.ra/(r.oa/6)) : 0;
+          return r;
+        });
+        arr.sort(function(x,y){ return (y.pts - x.pts) || (y.nrr - x.nrr) || (y.w - x.w) || x.team.localeCompare(y.team); });
+        return arr;
+      }
+      function pointsTableHTML(){
+        var arr = computePoints();
+        if (!arr.length) return '<p class="note">No teams entered yet — add teams in Team Entry above.</p>';
+        var body = arr.map(function(r,i){
+          return '<tr class="' + (i < 2 ? 'toprow' : '') + '"><td class="teamcell">' + (i < 2 ? '<span class="qdot"></span>' : '') + esc(r.team) + '</td>'
+            + '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + r.t + '</td>'
+            + '<td>' + (r.nrr >= 0 ? '+' : '') + r.nrr.toFixed(3) + '</td><td><b>' + r.pts + '</b></td></tr>';
+        }).join('');
+        return '<table class="ptable"><thead><tr><th>Team</th><th>P</th><th>W</th><th>L</th><th>T</th><th>NRR</th><th>Pts</th></tr></thead><tbody>' + body + '</tbody></table>';
+      }
+      function computePlayerStats(){
+        normalizeTournament();
+        var bat = {}, bowl = {};
+        S.tournament.matches.forEach(function(m){
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){
+              if (!bat[b.name]) bat[b.name] = { name:b.name, team:inn.battingTeam, runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, notouts:0, best:0 };
+              var s = bat[b.name];
+              s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; s.inns++;
+              if (b.out) s.outs++; else s.notouts++;
+              if (b.runs > s.best) s.best = b.runs;
+            });
+            (inn.bowlers || []).forEach(function(b){
+              if (!bowl[b.name]) bowl[b.name] = { name:b.name, team:inn.bowlingTeam, balls:0, runs:0, wickets:0, inns:0, bestW:0 };
+              var s = bowl[b.name];
+              s.balls += b.balls; s.runs += b.runs; s.wickets += b.wickets; s.inns++;
+              if (b.wickets > s.bestW) s.bestW = b.wickets;
+            });
+          });
+        });
+        var batArr = Object.keys(bat).map(function(k){ return bat[k]; }).sort(function(x,y){ return (y.runs - x.runs) || (y.balls - x.balls); });
+        var bowlArr = Object.keys(bowl).map(function(k){ return bowl[k]; }).sort(function(x,y){ return (y.wickets - x.wickets) || (x.runs - y.runs); });
+        return { batting: batArr, bowling: bowlArr };
+      }
+      function battingStatsHTML(){
+        var st = computePlayerStats().batting;
+        if (!st.length) return '<p class="note">No batting statistics yet — statistics build up from matches saved to the tournament.</p>';
+        var rows = st.slice(0,10).map(function(s,i){
+          var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
+          var ave = s.outs > 0 ? (s.runs/s.outs).toFixed(1) : '—';
+          return '<tr><td><b>' + esc(s.name) + '</b>' + (i===0 ? '<span class="stat-cap">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + ' • HS ' + s.best + '</span></td><td class="r">' + s.inns + '</td><td class="r"><b>' + s.runs + '</b></td><td class="r">' + ave + '</td><td class="r">' + sr + '</td><td class="r">' + s.fours + '/' + s.sixes + '</td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>Player</th><th class="r">Inn</th><th class="r">Runs</th><th class="r">Ave</th><th class="r">SR</th><th class="r">4s/6s</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      function bowlingStatsHTML(){
+        var st = computePlayerStats().bowling;
+        if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up from matches saved to the tournament.</p>';
+        var rows = st.slice(0,10).map(function(s,i){
+          var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
+          return '<tr><td><b>' + esc(s.name) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.team) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>Player</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wkts</th><th class="r">Econ</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      function extraStatsHTML(){
+        var st = computePlayerStats();
+        if (!st.batting.length && !st.bowling.length) return '<p class="note">No statistics yet.</p>';
+        var bySix = st.batting.slice().sort(function(a,b){ return b.sixes - a.sixes; })[0];
+        var byFour = st.batting.slice().sort(function(a,b){ return b.fours - a.fours; })[0];
+        var bySR = st.batting.filter(function(s){ return s.balls >= 30; }).sort(function(a,b){ return (b.runs/Math.max(1,b.balls)) - (a.runs/Math.max(1,a.balls)); })[0];
+        var byEcon = st.bowling.filter(function(s){ return s.balls >= 12; }).sort(function(a,b){ return (a.runs/(a.balls/6)) - (b.runs/(b.balls/6)); })[0];
+        var totalRuns = 0, totalWkts = 0;
+        S.tournament.matches.forEach(function(m){ (m.innings||[]).forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; }); });
+        var items = [];
+        items.push('<div class="hist-item"><span>Matches completed</span><b>' + S.tournament.matches.length + '</b></div>');
+        items.push('<div class="hist-item"><span>Total runs in tournament</span><b>' + totalRuns + '</b></div>');
+        items.push('<div class="hist-item"><span>Total wickets</span><b>' + totalWkts + '</b></div>');
+        if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + esc(bySix.name) + ' — ' + bySix.sixes + '</b></div>');
+        if (byFour && byFour.fours > 0) items.push('<div class="hist-item"><span>Most fours</span><b>' + esc(byFour.name) + ' — ' + byFour.fours + '</b></div>');
+        if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + esc(bySR.name) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
+        if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + esc(byEcon.name) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
+        return items.join('');
+      }
+      var currentTnTab = 'home';
+      function setTnTab(tab){
+        currentTnTab = tab;
+        ['home','teams','matches','points','stats'].forEach(function(t){
+          var p = $('tnPanel-' + t); if (p) p.classList.toggle('show', t === tab);
+        });
+        document.querySelectorAll('.tn-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tntab') === tab); });
+        if (tab === 'teams'){ try { renderTnTeamsGallery(); } catch(e){} }
+        window.scrollTo({ top:0, behavior:'smooth' });
+      }
+      /* ---------- tournament TEAMS gallery: all teams at a glance ---------- */
+      var tnSelectedTeam = null;
+      function selectTnTeam(teamName){
+        tnSelectedTeam = teamName;
+        renderTnTeamsGallery();
+        var det = $('tnTeamDetail');
+        if (det){ try { det.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+      }
+      function renderTnTeamsGallery(){
+        var grid = $('tnTeamsGrid');
+        if (!grid) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        if (tnSelectedTeam && tn.teams.indexOf(tnSelectedTeam) === -1) tnSelectedTeam = null;
+        if (!tnSelectedTeam && tn.teams.length) tnSelectedTeam = tn.teams[0];
+        grid.innerHTML = tn.teams.length
+          ? '<div class="sb-teams-grid">' + tn.teams.map(function(n, i){
+              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
+              return '<button type="button" class="sb-team-tile' + (n === tnSelectedTeam ? ' active' : '') + '" data-tn-team-idx="' + i + '" aria-label="Show players of ' + esc(n) + '">'
+                + '<span class="sb-team-logo c' + (i % 4) + '">' + esc(tnInitials(n)) + '</span>'
+                + '<span class="sb-team-name">' + esc(n) + '</span>'
+                + '<span class="sb-team-count" style="display:block">' + players.length + (players.length===1 ? ' player' : ' players') + '</span>'
+                + '</button>';
+            }).join('') + '</div>'
+          : '<p class="note">No teams in this tournament yet.</p>';
+        renderTnTeamDetail();
+      }
+      function renderTnTeamDetail(){
+        var wrap = $('tnTeamDetail');
+        if (!wrap) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        if (!tnSelectedTeam){
+          wrap.innerHTML = tn.teams.length ? '<p class="note" style="text-align:center;padding-top:10px">Tap a team above to see its players.</p>' : '';
+          return;
+        }
+        var team = tnSelectedTeam;
+        var teamIdx = tn.teams.indexOf(team);
+        var players = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
+        var body = players.length
+          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('')
+          : '<p class="note">No players entered for this team yet.</p>';
+        wrap.innerHTML = '<div class="tn-team-players">'
+          + '<div class="tn-team-players-head"><span class="sb-team-logo c' + (teamIdx >= 0 ? (teamIdx % 4) : 0) + '">' + esc(tnInitials(team)) + '</span><div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</div></div></div>'
+          + body
+          + '</div>';
+      }
+      document.addEventListener('click', function(e){
+        var t = e.target;
+        var tile = (t && t.closest) ? t.closest('[data-tn-team-idx]') : null;
+        if (tile){
+          var idx = parseInt(tile.getAttribute('data-tn-team-idx'), 10);
+          var name = S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null;
+          if (name) selectTnTeam(name);
+        }
+      });
+      function tnInitials(name){
+        if (!name) return '—';
+        var parts = String(name).trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '—';
+        if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length-1].charAt(0)).toUpperCase();
+      }
+      function bannerTitleHTML(name){
+        var m = String(name).match(/^(.*?)(\d+)\s*$/);
+        if (m && m[1].trim()) return esc(m[1].replace(/[\s\-–—]+$/, '')) + ' <em>' + esc(m[2]) + '</em>';
+        return esc(name);
+      }
+      function tourIdFor(name){
+        var s = String(name || '');
+        var base = s.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) || 'tour';
+        var h = 0;
+        for (var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) % 9973; }
+        return base + (1000 + (h % 9000));
+      }
+      function renderTournamentHome(){
+        var tn = S.tournament;
+        var displayName = (tn.name && tn.name.trim()) ? tn.name.trim() : 'Tournament';
+        var banner = $('tnBannerTitle'); if (banner) banner.innerHTML = bannerTitleHTML(displayName);
+        var title = $('tnTitle'); if (title) title.textContent = displayName;
+        var venueLine = $('tnVenueLine'); if (venueLine) venueLine.textContent = (tn.venue && tn.venue.trim()) ? tn.venue.trim() : '';
+        var datesLine = $('tnDatesLine'); if (datesLine) datesLine.textContent = (tn.dates && tn.dates.trim()) ? tn.dates.trim() : '';
+        var meta = $('tnMetaLine');
+        if (meta) meta.textContent = tn.teams.length + (tn.teams.length===1 ? ' Team' : ' Teams') + '  •  ' + tn.matches.length + (tn.matches.length===1 ? ' Match' : ' Matches') + ' completed  •  ' + tn.fixtures.length + (tn.fixtures.length===1 ? ' Fixture' : ' Fixtures') + ' upcoming';
+        var idLine = $('tnIdLine');
+        if (idLine) idLine.textContent = 'Tour ID : ' + tourIdFor(displayName);
+        var sub = $('tnBannerSub');
+        if (sub) sub.textContent = tn.teams.length ? (tn.teams.join('  •  ')) : 'Teams, matches, points & statistics — all in one place';
+        var pts = computePoints();
+        var played = pts.filter(function(r){ return r.p > 0; });
+        var winner = played.length ? played[0] : null;
+        var runner = played.length > 1 ? played[1] : null;
+        var wName = $('tnWinnerName'), wAv = $('tnWinnerAvatar'), rName = $('tnRunnerName'), rAv = $('tnRunnerAvatar');
+        if (wName) wName.textContent = winner ? winner.team : 'Yet to decide';
+        if (wAv) wAv.textContent = winner ? tnInitials(winner.team) : '—';
+        if (rName) rName.textContent = runner ? runner.team : '—';
+        if (rAv) rAv.textContent = runner ? tnInitials(runner.team) : '—';
+        var st = computePlayerStats();
+        var topBat = st.batting.length ? st.batting[0] : null;
+        var topBowl = st.bowling.length ? st.bowling[0] : null;
+        var pot = topBat || null;
+        var potName = $('tnPotName'), potTeam = $('tnPotTeam'), potAv = $('tnPotAvatar');
+        if (potName) potName.textContent = pot ? pot.name.toUpperCase() : '—';
+        if (potTeam) potTeam.textContent = pot ? pot.team : '';
+        if (potAv) potAv.textContent = pot ? tnInitials(pot.name) : '—';
+        var trN = $('tnTopRunsNum'), trName = $('tnTopRunsName'), trTeam = $('tnTopRunsTeam');
+        if (trN) trN.textContent = topBat ? topBat.runs : 0;
+        if (trName) trName.textContent = topBat ? topBat.name : '—';
+        if (trTeam) trTeam.textContent = topBat ? topBat.team : '';
+        var twN = $('tnTopWktsNum'), twName = $('tnTopWktsName'), twTeam = $('tnTopWktsTeam');
+        if (twN) twN.textContent = topBowl ? topBowl.wickets : 0;
+        if (twName) twName.textContent = topBowl ? topBowl.name : '—';
+        if (twTeam) twTeam.textContent = topBowl ? topBowl.team : '';
+        var tot4 = 0, tot6 = 0;
+        st.batting.forEach(function(s){ tot4 += s.fours || 0; tot6 += s.sixes || 0; });
+        var e6 = $('tnTotalSixes'); if (e6) e6.textContent = tot6;
+        var e4 = $('tnTotalFours'); if (e4) e4.textContent = tot4;
+      }
+      /* ---------- public scoreboard: View Tournament (in-page viewer) ---------- */
+      function openTournamentViewerInPage(){
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        var vSub = document.querySelector('#tnPanel-teams .card .sub');
+        if (vSub) vSub.textContent = 'All teams at a glance — tap a team to see its players.';
+        var vH = document.querySelector('#tnPanel-teams .card h2');
+        if (vH) vH.textContent = 'Teams';
+        try { renderTournament(); } catch(e){}
+        try { renderTournamentHome(); } catch(e){}
+        setView('tournament');
+        setTnTab('home');
+        toast('Tournament opened');
+      }
+      function closeTournamentViewerInPage(){
+        document.body.classList.remove('viewer-inpage');
+        var q = '';
+        try { q = location.search || ''; } catch(e){}
+        if (q.indexOf('viewer') === -1) document.body.classList.remove('viewer-mode');
+        setView('scoreboard');
+      }
+      /* ---------- public scoreboard: tournament explorer (viewer) ---------- */
+      var sbTournamentOpen = false;
+      var sbSelectedTeam = null;
+      var sbTeamDetailTab = 'players'; /* players | matches | stats */
+      function toggleSbTournament(){
+        sbTournamentOpen = !sbTournamentOpen;
+        var panel = $('sbTournamentPanel');
+        if (panel) panel.hidden = !sbTournamentOpen;
+        var btn = $('btnViewTournament');
+        if (btn) btn.textContent = sbTournamentOpen ? 'Hide Tournament ↑' : 'View Tournament →';
+        if (sbTournamentOpen && panel){
+          try { panel.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+        }
+      }
+      function selectSbTeam(teamName){
+        sbSelectedTeam = teamName;
+        sbTeamDetailTab = 'players';
+        if (!sbTournamentOpen) toggleSbTournament();
+        renderSbTeams();
+        var det = $('sbTeamDetail');
+        if (det){ try { det.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+      }
+      function setSbTeamTab(tab){
+        sbTeamDetailTab = tab;
+        renderSbTeamDetail();
+      }
+      function sbTeamMatches(teamName){
+        normalizeTournament();
+        var played = S.tournament.matches.filter(function(m){
+          return (m.innings || []).some(function(inn){ return inn.battingTeam === teamName || inn.bowlingTeam === teamName; });
+        });
+        var upcoming = S.tournament.fixtures.filter(function(f){ return f.teamA === teamName || f.teamB === teamName; });
+        return { played: played, upcoming: upcoming };
+      }
+      function renderSbTeams(){
+        var grid = $('sbTeamsGrid');
+        normalizeTournament();
+        var tn = S.tournament;
+        var cta = $('sbTourCtaSub');
+        if (cta){
+          var tnName = tn.name && tn.name.trim() ? tn.name.trim() : 'Tournament';
+          cta.textContent = tnName + ' — ' + tn.teams.length + (tn.teams.length===1 ? ' team' : ' teams') + ' • ' + tn.matches.length + (tn.matches.length===1 ? ' match' : ' matches') + ' completed • ' + tn.fixtures.length + ' upcoming. Tap View Tournament to open the full tournament.';
+        }
+        var ctaCard = $('sbTourCtaCard');
+        if (ctaCard) ctaCard.style.display = tn.teams.length ? '' : 'none';
+        if (!grid) return;
+        if (sbSelectedTeam && tn.teams.indexOf(sbSelectedTeam) === -1) sbSelectedTeam = null;
+        grid.innerHTML = tn.teams.length
+          ? '<div class="sb-teams-grid">' + tn.teams.map(function(n, i){
+              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
+              return '<button type="button" class="sb-team-tile' + (n === sbSelectedTeam ? ' active' : '') + '" data-sb-team-idx="' + i + '" aria-label="Open ' + esc(n) + '">'
+                + '<span class="sb-team-logo c' + (i % 4) + '">' + esc(tnInitials(n)) + '</span>'
+                + '<span class="sb-team-name">' + esc(n) + '</span>'
+                + '<span class="sb-team-count" style="display:block">' + players.length + (players.length===1 ? ' player' : ' players') + '</span>'
+                + '</button>';
+            }).join('') + '</div>'
+          : '<p class="note">No teams in this tournament yet.</p>';
+        renderSbTeamDetail();
+      }
+      function renderSbTeamDetail(){
+        var wrap = $('sbTeamDetail');
+        if (!wrap) return;
+        if (!sbSelectedTeam){
+          wrap.innerHTML = '<p class="note" style="text-align:center;padding-top:10px">Tap a team above to see its Players, Matches and Statistics.</p>';
+          return;
+        }
+        var team = sbSelectedTeam;
+        var tn = S.tournament;
+        var teamIdx = tn.teams.indexOf(team);
+        var players = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
+        var ptsRow = null;
+        computePoints().forEach(function(r){ if (r.team === team) ptsRow = r; });
+        var record = ptsRow ? (ptsRow.p + ' played • ' + ptsRow.w + ' won • ' + ptsRow.l + ' lost • ' + ptsRow.pts + ' pts') : 'No matches played yet';
+        var tabs = [['players','Players'],['matches','Matches'],['stats','Statistics']].map(function(t){
+          return '<button type="button" class="sb-detail-tab' + (sbTeamDetailTab === t[0] ? ' active' : '') + '" onclick="setSbTeamTab(\'' + t[0] + '\')">' + t[1] + '</button>';
+        }).join('');
+        var body = '';
+        if (sbTeamDetailTab === 'players'){
+          body = players.length
+            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span></div>'; }).join('')
+            : '<p class="note">No players entered for this team yet.</p>';
+        } else if (sbTeamDetailTab === 'matches'){
+          var tm = sbTeamMatches(team);
+          var parts = [];
+          if (tm.played.length){
+            parts.push(tm.played.slice().reverse().map(function(m){
+              var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
+            }).join(''));
+          }
+          if (tm.upcoming.length){
+            parts.push('<p class="note" style="margin:10px 0 6px"><b>Upcoming</b></p>' + tm.upcoming.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join(''));
+          }
+          body = parts.length ? parts.join('') : '<p class="note">No matches for this team yet — no fixtures or results involve ' + esc(team) + '.</p>';
+        } else {
+          var st = computePlayerStats();
+          var teamBat = st.batting.filter(function(s){ return s.team === team; });
+          var teamBowl = st.bowling.filter(function(s){ return s.team === team; });
+          var sParts = [];
+          sParts.push('<div class="hist-item"><span>Matches played</span><b>' + (ptsRow ? ptsRow.p : 0) + '</b></div>');
+          sParts.push('<div class="hist-item"><span>Won / Lost / Tied</span><b>' + (ptsRow ? (ptsRow.w + ' / ' + ptsRow.l + ' / ' + ptsRow.t) : '0 / 0 / 0') + '</b></div>');
+          sParts.push('<div class="hist-item"><span>Points</span><b>' + (ptsRow ? ptsRow.pts : 0) + '</b></div>');
+          if (ptsRow) sParts.push('<div class="hist-item"><span>Net run rate</span><b>' + (ptsRow.nrr >= 0 ? '+' : '') + ptsRow.nrr.toFixed(3) + '</b></div>');
+          if (teamBat.length){
+            sParts.push('<p class="note" style="margin:12px 0 4px"><b>Batting</b></p>' + teamBat.map(function(s){
+              var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
+              return '<div class="hist-item"><span>' + esc(s.name) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
+            }).join(''));
+          }
+          if (teamBowl.length){
+            sParts.push('<p class="note" style="margin:12px 0 4px"><b>Bowling</b></p>' + teamBowl.map(function(s){
+              var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
+              return '<div class="hist-item"><span>' + esc(s.name) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
+            }).join(''));
+          }
+          if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet — statistics build up from matches saved to the tournament.</p>');
+          body = sParts.join('');
+        }
+        wrap.innerHTML = '<div class="sb-team-detail">'
+          + '<div class="sb-detail-head"><span class="sb-team-logo c' + (teamIdx >= 0 ? (teamIdx % 4) : 0) + '">' + esc(tnInitials(team)) + '</span><div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + ' • ' + esc(record) + '</div></div></div>'
+          + '<div class="sb-detail-tabs" role="tablist" aria-label="' + esc(team) + ' details">' + tabs + '</div>'
+          + body
+          + '</div>';
+      }
+      document.addEventListener('click', function(e){
+        var t = e.target;
+        var tile = (t && t.closest) ? t.closest('[data-sb-team-idx]') : null;
+        if (tile){
+          var idx = parseInt(tile.getAttribute('data-sb-team-idx'), 10);
+          var name = S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null;
+          if (name) selectSbTeam(name);
+        }
+      });
+
+      function renderTournament(){
+        normalizeTournament();
+        var tn = S.tournament;
+        if (document.activeElement !== $('tnName') && $('tnName').value !== tn.name) $('tnName').value = tn.name;
+        var tnV = $('tnVenue'); if (tnV && document.activeElement !== tnV && tnV.value !== (tn.venue || '')) tnV.value = tn.venue || '';
+        var tnD = $('tnDates'); if (tnD && document.activeElement !== tnD && tnD.value !== (tn.dates || '')) tnD.value = tn.dates || '';
+        $('tnTitle').textContent = tn.name.trim() || 'Tournament';
+        /* Keep text already typed/pasted into the per-team player boxes —
+           this section is rebuilt on every render. */
+        var keptPlayerText = {};
+        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el) keptPlayerText[i] = el.value; });
+        $('tnTeamList').innerHTML = tn.teams.length
+          ? tn.teams.map(function(n,i){
+              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
+              var playerRows = players.length
+                ? players.map(function(p,pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + esc(p) + '</span><button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                : '<div class="tn-empty">No players yet for this team — add players below.</div>';
+              return '<div class="squad-box tn-team-box">'
+                + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
+                + playerRows
+                + '<div class="rowflex names-row" style="margin-top:10px"><textarea id="tnPlayer-' + i + '" class="grow namebox" rows="1" placeholder="Player names for ' + esc(n) + ' — one per line. Paste a whole list and tap Add Players."></textarea><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
+                + '</div>';
+            }).join('')
+          : '<p class="note">No teams entered yet — add a team below, then add its players here.</p>';
+        tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el && keptPlayerText[i]) el.value = keptPlayerText[i]; });
+        if ($('sbSquads')) $('sbSquads').innerHTML = tn.teams.length
+          ? '<div class="sb-squad-grid">' + tn.teams.map(function(n){
+              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
+              var names = players.length ? players.map(function(p,pi){ return (pi+1) + '. ' + esc(p); }).join('<br>') : '<span class="note">No players entered yet.</span>';
+              return '<div class="squad-box"><div class="squad-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span></div><div class="sb-squad-names">' + names + '</div></div>';
+            }).join('') + '</div>'
+          : '<p class="note">No teams entered yet.</p>';
+        $('dlTeams').innerHTML = tn.teams.map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
+        var pts = pointsTableHTML();
+        $('tnPoints').innerHTML = pts;
+        var sbPts = $('sbPoints'); if (sbPts) sbPts.innerHTML = pts;
+        var sbTn = $('sbTournamentName');
+        if (sbTn) sbTn.textContent = tn.name.trim() ? ('🏆 ' + tn.name.trim() + ' — Points Table') : '🏆 Points Table';
+        var batStats = battingStatsHTML();
+        var bowlStats = bowlingStatsHTML();
+        var extraStats = extraStatsHTML();
+        $('tnStatBat').innerHTML = batStats;
+        if ($('sbStatBat')) $('sbStatBat').innerHTML = batStats;
+        $('tnStatBowl').innerHTML = bowlStats;
+        if ($('sbStatBowl')) $('sbStatBowl').innerHTML = bowlStats;
+        $('tnStatExtra').innerHTML = extraStats;
+        if ($('sbStatExtra')) $('sbStatExtra').innerHTML = extraStats;
+        $('tnFixtures').innerHTML = tn.fixtures.length
+          ? tn.fixtures.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + f.id + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + f.id + ')">Remove</button></div></div>'; }).join('')
+          : '<p class="note">No fixtures yet.</p>';
+        if ($('sbFixtures')) $('sbFixtures').innerHTML = tn.fixtures.length
+          ? tn.fixtures.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join('')
+          : '<p class="note">No fixtures yet.</p>';
+        $('tnMatches').innerHTML = tn.matches.length
+          ? tn.matches.slice().reverse().map(function(m){
+              var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div><div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button></div></div>';
+            }).join('')
+          : '<p class="note">No results yet — finish a live match and tap “Save Result to Tournament”, or enter a result manually.</p>';
+        if ($('sbMatches')) $('sbMatches').innerHTML = tn.matches.length
+          ? tn.matches.slice().reverse().map(function(m){
+              var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
+            }).join('')
+          : '<p class="note">No results yet.</p>';
+        try { renderSbTeams(); } catch(e){}
+        try { renderTnTeamsGallery(); } catch(e){}
+        try { renderTournamentHome(); } catch(e){}
+        var saveBtn = $('btnSaveTournament');
+        if (saveBtn){
+          var already = S.archivedMatchId && S.archivedMatchId === S.matchId;
+          saveBtn.textContent = already ? '✓ Saved to Tournament' : '🏆 Save Result to Tournament';
+        }
+      }
+
+      /* ---------- sync ---------- */
+      function commit(msg, silent){
+        S.updatedAt = Date.now();
+        renderAll(true);
+        if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
+        if (fbRef && !fbPushing){ fbRef.set(S).catch(function(){}); }
+        if (msg && !silent) toast(msg + ' — updated in both outputs ✓');
+      }
+      if (bc){
+        bc.onmessage = function(ev){
+          if (ev.data && ev.data.type==='state' && ev.data.state && ev.data.state.updatedAt !== S.updatedAt){
+            S = ev.data.state; renderAll(false);
+          }
+        };
+      }
+
+      /* ---------- Firebase ---------- */
+      function connectFirebase(){
+        var raw = $('fbConfig').value.trim();
+        if (!raw){ toast('Paste the Firebase config first'); return; }
+        var cfg;
+        try {
+          /* (1) Valid JSON first — parse it untouched, so colons and slashes
+                 inside quoted values (databaseURL, appId) are never altered. */
+          cfg = JSON.parse(raw);
+        } catch(e1) {
+          try {
+            /* (2) Fallback for the pasted firebaseConfig object literal:
+                   quote only keys that directly follow { or , — never a
+                   colon inside a quoted string value. */
+            var txt = raw;
+            var m = txt.match(/\{[\s\S]*\}/); if (m) txt = m[0];
+            txt = txt.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":')
+                     .replace(/'/g,'"')
+                     .replace(/,\s*([}\]])/g,'$1');
+            cfg = JSON.parse(txt);
+          } catch(e2){ $('fbStatus').textContent='Could not read the config — paste valid JSON.'; return; }
+        }
+        if (!cfg.databaseURL){ $('fbStatus').textContent='The config has no databaseURL — enable Realtime Database and copy it again.'; return; }
+        try {
+          if (fbApp) { try{ fbApp.delete(); }catch(e){} }
+          fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
+          fbRef = fbApp.database().ref('liveMatch');
+          fbRef.on('value', function(snap){
+            var v = snap.val();
+            if (v && v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
+              fbPushing = true; S = v; renderAll(false); fbPushing = false;
+            }
+          });
+          fbRef.set(S);
+          $('fbStatus').textContent = '✅ Firebase connected — everyone online can now watch live.';
+          $('connPill').textContent = '● Firebase Live — Everyone online is watching';
+          $('connPill').classList.add('on');
+          toast('Firebase connected — Live Mode on');
+        } catch(e){
+          $('fbStatus').textContent = 'Connection failed: ' + e.message;
+        }
+      }
+      function disconnectFirebase(){
+        if (fbRef){ try{ fbRef.off(); }catch(e){} }
+        fbRef=null; fbApp=null;
+        $('fbStatus').textContent='Firebase disconnected — running in Local Mode.';
+        $('connPill').textContent='● Local Mode — Live across tabs in this browser';
+        $('connPill').classList.remove('on');
+      }
+
+      /* ---------- rendering ---------- */
+      function scoreStripHTML(compact){
+        var inn=S.current, t=target();
+        var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
+        var chips='';
+        chips += '<span class="ss-chip">Overs <b>' + oversText(inn.legalBalls) + ' / ' + S.oversLimit + '</b></span>';
+        chips += '<span class="ss-chip">CRR <b>' + crr().toFixed(2) + '</b></span>';
+        if (t){ var r=rrr(); chips += '<span class="ss-chip">Target <b>' + t + '</b></span>';
+          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs off ' + (S.oversLimit*6-inn.legalBalls) + ' balls</b></span>';
+          if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
+        chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
+        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(S.resultText) + '</b></span>';
+        var recent = inn.balls.slice(-12);
+        var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
+        return '<div class="scorestrip">'
+          + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam) + (S.venue ? ' • ' + esc(S.venue) : '') + '</div>'
+          + '<div class="ss-score num">' + inn.runs + '/' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ' ov)</span></div></div>'
+          + '<div class="ss-team" style="text-align:right">vs<br><b style="color:#fff;font-size:16px">' + esc(inn.bowlingTeam) + '</b><br>Innings ' + S.inningsNo + '</div></div>'
+          + '<div class="ss-bats"><div><span class="onstrike">' + esc(inn.striker||'—') + ' *</span> — ' + bat1.runs + ' (' + bat1.balls + ')</div>'
+          + '<div>' + esc(inn.nonStriker||'—') + ' — ' + bat2.runs + ' (' + bat2.balls + ')</div>'
+          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: ' + esc(inn.bowler||'—') + ' • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
+          + '<div class="ss-meta">' + chips + '</div>'
+          + (ballsHtml ? '<div class="balls-row"><span class="over-label">Recent balls:</span>' + ballsHtml + '</div>' : '')
+          + '</div>';
+      }
+      function getBatterPeek(inn, name){
+        for (var i=0;i<inn.batters.length;i++) if (inn.batters[i].name===name) return inn.batters[i];
+        return { runs:0, balls:0 };
+      }
+      function bowlerFig(inn, name){
+        for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name){ var b=inn.bowlers[i]; return oversText(b.balls) + ' overs, ' + b.runs + ' runs, ' + b.wickets + ' wickets'; }
+        return '—';
+      }
+      function battingTableHTML(inn){
+        if (!inn.batters.length) return '<p class="note">No one has batted yet.</p>';
+        var rows = inn.batters.map(function(b){
+          var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
+          var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
+          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + esc(b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
+            + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : ''))
+            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
+        }).join('');
+        var ex = inn.extras;
+        var ytb = yetToBatNames(inn);
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(esc).join(', ') + '</span></td></tr>' : '';
+        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
+          + '<tr><td>Extras (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</td><td class="r"><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b></td><td colspan="4"></td></tr>'
+          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
+          + '</tbody></table>';
+      }
+      function bowlingTableHTML(inn){
+        if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
+        var rows = inn.bowlers.map(function(b){
+          var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
+          return '<tr><td>' + esc(b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      function overlayHTML(){
+        var inn=S.current, t=target();
+        var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
+        var short = inn.battingTeam.length>16 ? inn.battingTeam.slice(0,16) : inn.battingTeam;
+        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs off ' + (S.oversLimit*6-inn.legalBalls) + ' balls') : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam) + ' batting vs ' + esc(inn.bowlingTeam));
+        if (S.status==='finished' && S.resultText) subLeft = '🏆 ' + esc(S.resultText);
+        return '<div class="lowerthird"><div class="lt-main">'
+          + '<div class="lt-team">' + esc(short) + '</div>'
+          + '<div class="lt-score"><div class="big num">' + inn.runs + '/' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></div></div>'
+          + '<div class="lt-mid"><div class="bat"><b>' + esc(inn.striker||'—') + ' *</b> ' + bat1.runs + ' (' + bat1.balls + ')</div>'
+          + '<div class="bat">' + esc(inn.nonStriker||'—') + ' ' + bat2.runs + ' (' + bat2.balls + ')</div></div>'
+          + '<div class="lt-right"><div>Bowler <b>' + esc(inn.bowler||'—') + '</b></div><div>' + bowlerFig(inn, inn.bowler) + '</div><div>CRR <b>' + crr().toFixed(2) + '</b></div></div>'
+          + '</div><div class="lt-sub"><span>' + subLeft + '</span><span>' + esc(inn.bowlingTeam) + ' bowling</span></div></div>';
+      }
+      function historyHTML(inn){
+        if (!inn.balls.length) return '<p class="note">No balls bowled yet.</p>';
+        var items = inn.balls.slice().reverse().slice(0,30).map(function(b){
+          return '<div class="hist-item"><span>Over ' + esc(b.over) + '</span><b>' + esc(b.text) + '</b></div>';
+        }).join('');
+        return items;
+      }
+
+      function renderAll(){
+        normalizeSquads();
+        syncPlayersFromInputsSilent();
+        var strip = scoreStripHTML();
+        $('scorerLive').innerHTML = strip;
+        $('sbLive').innerHTML = strip;
+        var ov = overlayHTML();
+        $('overlayMain').innerHTML = ov;
+        $('sbBatting').innerHTML = battingTableHTML(S.current);
+        $('sbBowling').innerHTML = bowlingTableHTML(S.current);
+        if (S.prevInnings){
+          $('sbPrevWrap').style.display='block';
+          $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+        } else { $('sbPrevWrap').style.display='none'; }
+        $('sbHistory').innerHTML = historyHTML(S.current);
+        $('historyList').innerHTML = historyHTML(S.current);
+        renderSquads();
+        renderTournament();
+      }
+      function syncPlayersFromInputsSilent(){
+        var inn=S.current;
+        var s=$('strikerName').value.trim(), ns=$('nonStrikerName').value.trim(), bw=$('bowlerName').value.trim();
+        if (s) inn.striker=s; if (ns) inn.nonStriker=ns; if (bw) inn.bowler=bw;
+        if (!inn.striker) inn.striker='Batter 1'; if (!inn.nonStriker) inn.nonStriker='Batter 2'; if (!inn.bowler) inn.bowler='Bowler';
+      }
+
+      /* ---------- views ---------- */
+      var cleanMode=false;
+      var currentSegment=null; /* 'single' | 'tournament' | null (home) */
+      function setSegment(seg){
+        if (seg==='tournament'){ setView('tournament'); }
+        else if (seg==='single'){ setView('scorer'); }
+        else { setView('home'); }
+      }
+      function setView(v){
+        var isSingle = (v==='scorer' || v==='scoreboard' || v==='overlay');
+        var isTournament = (v==='tournament');
+        currentSegment = isSingle ? 'single' : (isTournament ? 'tournament' : null);
+        document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('show'); });
+        var target = $('view-'+v);
+        if (target) target.classList.add('show');
+        document.querySelectorAll('.vtab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
+        var segBar = $('segmentBar'); if (segBar) segBar.hidden = !currentSegment;
+        var tabs = $('singleTabs'); if (tabs) tabs.hidden = !isSingle;
+        var bs = $('segBtnSingle'); if (bs) bs.classList.toggle('active', currentSegment==='single');
+        var bt = $('segBtnTournament'); if (bt) bt.classList.toggle('active', currentSegment==='tournament');
+        try { history.replaceState(null,'', v==='home' ? (location.pathname + location.search) : '#'+v); } catch(e){}
+        window.scrollTo({ top:0, behavior:'smooth' });
+      }
+      function toggleClean(){
+        cleanMode=!cleanMode;
+        $('overlayStage').classList.toggle('clean', cleanMode);
+        $('overlayHelp').style.display = cleanMode ? 'none':'block';
+        document.querySelector('.topbar').style.display = cleanMode ? 'none':'block';
+        $('btnClean').textContent = cleanMode ? 'Back to Normal View' : 'Enable Overlay Only (Transparent) Mode';
+        if (cleanMode) toast('Transparent mode — only the score bar is visible. Reload the page to go back, or just use this link in OBS.');
+      }
+
+      /* ---------- init from URL ---------- */
+      (function init(){
+        syncPlayersFromInputs();
+        renderAll(false);
+        var q = '';
+        try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
+        if (q.indexOf('viewer')>-1){
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('viewer-inpage');
+          var vSub = document.querySelector('#tnPanel-teams .card .sub');
+          if (vSub) vSub.textContent = 'All teams at a glance — tap a team to see its players.';
+          var vH = document.querySelector('#tnPanel-teams .card h2');
+          if (vH) vH.textContent = 'Teams';
+        }
+        if (q.indexOf('overlay')>-1) setView('overlay');
+        else if (q.indexOf('tournament')>-1) setView('tournament');
+        else if (q.indexOf('scoreboard')>-1) setView('scoreboard');
+        else if (q.indexOf('scorer')>-1) setView('scorer');
+        else if (q.indexOf('single')>-1) setView('scorer');
+        else setView('home');
+      })();
+    </script>
+  </body>
+</html>
