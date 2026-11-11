@@ -529,6 +529,13 @@
          a scorer arriving from the console must always have a way back,
          not only viewers in the in-page viewer flow. */
       #view-history .viewer-backbar{display:flex}
+      /* The same rule for Resume Scoring and the Tournaments list:
+         both are reached from the Scorer Console, and on those two
+         screens the top tab bar is hidden too, so without their back
+         bar the scorer had no visible way back at all. Viewers never
+         open these two screens, so nothing changes for them. */
+      #view-resume .viewer-backbar{display:flex}
+      #view-tournaments .viewer-backbar{display:flex}
       .sb-view-tour-card h2{border:none;text-align:center}
       .sb-view-tour-card .sub{max-width:520px;margin-left:auto;margin-right:auto}
       .sb-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px;padding:6px 2px 2px}
@@ -1289,7 +1296,7 @@
         <div class="tn-lock-banner" id="tnLockBanner" role="status"></div>
         <div class="tn-shell">
           <div class="tn-top">
-            <button type="button" class="tn-back" onclick="setView('home')" aria-label="Back to all modes">←</button>
+            <button type="button" class="tn-back" onclick="setView('tournaments')" aria-label="Back to tournaments list">←</button>
             <h2>Tournament</h2>
             <span class="tn-top-spacer" aria-hidden="true"></span>
           </div>
@@ -1672,6 +1679,23 @@
          while Firebase was unreachable (kept safe in the on-device
          backup below). */
       var fbReady = false, fbConnecting = false, fbLocalDirty = false, fbErrorShown = false, fbGateTimer = null;
+      /* Confirmed-only display: fbConfirmedState holds the last live
+         state Firebase is KNOWN to hold — a snapshot that arrived
+         from the database, or a push the database accepted. Viewer
+         surfaces (Live Matches, the Public Scoreboard and every
+         scoreboard section) render ONLY this state, never this
+         device's unconfirmed backup copy: a match that has not
+         reached the server is shown nowhere until it syncs. */
+      var fbConfirmedState = null;
+      function liveDisplayState(){ return fbConfirmedState || freshState(); }
+      /* Run fn with S swapped to the confirmed display state, then
+         restore the real state — the mechanism behind the rule
+         above. The scorer's own console, pad and editor always use
+         the real state; only viewer surfaces go through here. */
+      function renderWithDisplayState(fn){
+        var realS = S; S = liveDisplayState();
+        try { fn(); } finally { S = realS; }
+      }
       /* True while a New Match reset still owes Firebase its write: a
          fresh 0/0 state looks "empty" to the normal sync rules, so the
          reset publishes through publishReset() instead and this flag
@@ -1749,7 +1773,14 @@
       function pushToFirebase(){
         if (!fbRef || fbPushing || !fbReady) return;
         var ref = fbRef;
-        ref.set(S).then(function(){ fbErrorShown = false; }).catch(function(err){ showFirebaseError(err, 'update'); });
+        var pushed = deep(S);
+        ref.set(S).then(function(){
+          fbErrorShown = false;
+          /* Firebase accepted this exact state: it is now the
+             confirmed state viewer surfaces may show. */
+          fbConfirmedState = pushed;
+          try { renderAll(false); } catch(e){}
+        }).catch(function(err){ showFirebaseError(err, 'update'); });
       }
       /* Publish a New Match reset to Firebase — with real feedback. The
          guarded pushToFirebase() above can silently skip this write: a
@@ -1769,10 +1800,13 @@
           showResetRetry();
           return;
         }
+        var pushedReset = deep(S);
         fbRef.set(S).then(function(){
           fbPendingFreshPublish = false; fbLocalDirty = false; fbErrorShown = false;
+          fbConfirmedState = pushedReset;
           hideResetRetry();
           toast('✓ New match is live — viewers now see the fresh match.');
+          try { renderAll(false); } catch(e){}
         }).catch(function(err){
           showFirebaseError(err, 'reset');
           showResetRetry();
@@ -4606,7 +4640,14 @@
         return '<div class="ml-row">' + mlLabel([slice.venue, tnName], false) + lines
           + '<div class="ml-status muted">' + esc(status) + '</div></div>';
       }
+      /* Live Matches is a viewer surface: it renders ONLY the
+         Firebase-confirmed state (see fbConfirmedState), so a match
+         stranded in this device's backup appears here only once
+         the server holds it. */
       function renderLiveHome(){
+        renderWithDisplayState(renderLiveHomeDisplay);
+      }
+      function renderLiveHomeDisplay(){
         var listEl = $('liveList'); if (!listEl) return;
         normalizeTournament();
         var tn = S.tournament;
@@ -4673,16 +4714,19 @@
       }
       /* Opened through the control link (?view=scorer / ?view=control):
          straight into the Scorer Console, no viewer landing in between. */
-      function enterControlMode(){
-        /* The control link is the scorer's own door: any viewer flag
-           remembered on this device is cleared, so the scorer is
-           never locked out of Delete / tournament editing. */
+      /* The control link is the scorer's own door: any viewer flag
+         remembered on this device is cleared, so the scorer is
+         never locked out of Delete / tournament editing. */
+      function enterControlChrome(){
         setDeviceViewerFlag(false);
         document.body.classList.remove('viewer-mode');
         document.body.classList.remove('viewer-inpage');
         document.body.classList.remove('viewer-flow');
         document.body.classList.remove('link-viewer');
         document.body.classList.add('link-control');
+      }
+      function enterControlMode(){
+        enterControlChrome();
         /* The control link opens the simple console home — three
            options (Start Single Match / Resume Scoring / Tournament),
            not the full scoring pad. */
@@ -4752,7 +4796,12 @@
         var upcoming = S.tournament.fixtures.filter(function(f){ return f.teamA === teamName || f.teamB === teamName; });
         return { played: played, upcoming: upcoming };
       }
+      /* The scoreboard's tournament explorer is a viewer surface:
+         it too renders only the Firebase-confirmed state. */
       function renderSbTeams(){
+        renderWithDisplayState(renderSbTeamsDisplay);
+      }
+      function renderSbTeamsDisplay(){
         var grid = $('sbTeamsGrid');
         normalizeTournament();
         var tn = S.tournament;
@@ -4787,6 +4836,9 @@
         renderSbTeamDetail();
       }
       function renderSbTeamDetail(){
+        renderWithDisplayState(renderSbTeamDetailDisplay);
+      }
+      function renderSbTeamDetailDisplay(){
         var wrap = $('sbTeamDetail');
         if (!wrap) return;
         if (!sbSelectedTeam){
@@ -4856,7 +4908,8 @@
         var tile = (t && t.closest) ? t.closest('[data-sb-team-idx]') : null;
         if (tile){
           var idx = parseInt(tile.getAttribute('data-sb-team-idx'), 10);
-          var name = S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null;
+          var dtnClick = liveDisplayState().tournament;
+          var name = dtnClick && dtnClick.teams ? dtnClick.teams[idx] : null;
           if (name) selectSbTeam(name);
         }
       });
@@ -4887,46 +4940,63 @@
             }).join('')
           : '<p class="note">No teams entered yet — add a team below, then add its players here.</p>';
         tn.teams.forEach(function(_, i){ var el = $('tnPlayer-' + i); if (el && keptPlayerText[i]) el.value = keptPlayerText[i]; var ne = $('tnNick-' + i); if (ne && keptNickText[i]) ne.value = keptNickText[i]; });
-        if ($('sbSquads')) $('sbSquads').innerHTML = tn.teams.length
-          ? '<div class="sb-squad-grid">' + tn.teams.map(function(n){
-              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
-              var names = players.length ? players.map(function(p,pi){ return (pi+1) + '. ' + esc(p); }).join('<br>') : '<span class="note">No players entered yet.</span>';
-              return '<div class="squad-box"><div class="squad-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span></div><div class="sb-squad-names">' + names + '</div></div>';
-            }).join('') + '</div>'
-          : '<p class="note">No teams entered yet.</p>';
+        /* The Public Scoreboard's tournament sections (sb*) follow
+           the confirmed-only rule: they are built here from the last
+           state Firebase confirmed, never from this device's
+           unconfirmed copy. The editor's own sections (tn*) below
+           use the real state as always. */
+        var sbSquadsHtml = '', sbPtsHtml = '', sbTnLabel = '', sbBatHtml = '', sbBowlHtml = '', sbExtraHtml = '', sbFixHtml = '', sbMatchHtml = '';
+        renderWithDisplayState(function(){
+          var dtn = S.tournament;
+          sbSquadsHtml = dtn.teams.length
+            ? '<div class="sb-squad-grid">' + dtn.teams.map(function(n){
+                var players = Array.isArray(dtn.squads[n]) ? dtn.squads[n] : [];
+                var names = players.length ? players.map(function(p,pi){ return (pi+1) + '. ' + esc(p); }).join('<br>') : '<span class="note">No players entered yet.</span>';
+                return '<div class="squad-box"><div class="squad-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span></div><div class="sb-squad-names">' + names + '</div></div>';
+              }).join('') + '</div>'
+            : '<p class="note">No teams entered yet.</p>';
+          sbPtsHtml = pointsTableHTML();
+          sbTnLabel = dtn.name.trim() ? ('🏆 ' + dtn.name.trim() + ' — Points Table') : '🏆 Points Table';
+          sbBatHtml = battingStatsHTML();
+          sbBowlHtml = bowlingStatsHTML();
+          sbExtraHtml = extraStatsHTML();
+          sbFixHtml = dtn.fixtures.length
+            ? dtn.fixtures.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join('')
+            : '<p class="note">No fixtures yet.</p>';
+          sbMatchHtml = dtn.matches.length
+            ? dtn.matches.slice().reverse().map(function(m){
+                var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+                return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
+              }).join('')
+            : '<p class="note">No results yet.</p>';
+        });
+        if ($('sbSquads')) $('sbSquads').innerHTML = sbSquadsHtml;
         $('dlTeams').innerHTML = tn.teams.map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
         var pts = pointsTableHTML();
         $('tnPoints').innerHTML = pts;
-        var sbPts = $('sbPoints'); if (sbPts) sbPts.innerHTML = pts;
+        var sbPts = $('sbPoints'); if (sbPts) sbPts.innerHTML = sbPtsHtml;
         var sbTn = $('sbTournamentName');
-        if (sbTn) sbTn.textContent = tn.name.trim() ? ('🏆 ' + tn.name.trim() + ' — Points Table') : '🏆 Points Table';
+        if (sbTn) sbTn.textContent = sbTnLabel;
         var batStats = battingStatsHTML();
         var bowlStats = bowlingStatsHTML();
         var extraStats = extraStatsHTML();
         $('tnStatBat').innerHTML = batStats;
-        if ($('sbStatBat')) $('sbStatBat').innerHTML = batStats;
+        if ($('sbStatBat')) $('sbStatBat').innerHTML = sbBatHtml;
         $('tnStatBowl').innerHTML = bowlStats;
-        if ($('sbStatBowl')) $('sbStatBowl').innerHTML = bowlStats;
+        if ($('sbStatBowl')) $('sbStatBowl').innerHTML = sbBowlHtml;
         $('tnStatExtra').innerHTML = extraStats;
-        if ($('sbStatExtra')) $('sbStatExtra').innerHTML = extraStats;
+        if ($('sbStatExtra')) $('sbStatExtra').innerHTML = sbExtraHtml;
         $('tnFixtures').innerHTML = tn.fixtures.length
           ? tn.fixtures.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + f.id + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + f.id + ')">Remove</button></div></div>'; }).join('')
           : '<p class="note">No fixtures yet.</p>';
-        if ($('sbFixtures')) $('sbFixtures').innerHTML = tn.fixtures.length
-          ? tn.fixtures.map(function(f){ return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join('')
-          : '<p class="note">No fixtures yet.</p>';
+        if ($('sbFixtures')) $('sbFixtures').innerHTML = sbFixHtml;
         $('tnMatches').innerHTML = tn.matches.length
           ? tn.matches.slice().reverse().map(function(m){
               var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
               return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div><div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button></div></div>';
             }).join('')
           : '<p class="note">No results yet — finish a live match and tap “Save Result to Tournament”, or enter a result manually.</p>';
-        if ($('sbMatches')) $('sbMatches').innerHTML = tn.matches.length
-          ? tn.matches.slice().reverse().map(function(m){
-              var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
-              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
-            }).join('')
-          : '<p class="note">No results yet.</p>';
+        if ($('sbMatches')) $('sbMatches').innerHTML = sbMatchHtml;
         try { renderSbTeams(); } catch(e){}
         try { renderTnTeamsGallery(); } catch(e){}
         try { renderTournamentHome(); } catch(e){}
@@ -5001,7 +5071,7 @@
          is backed up on this device, and is rendered (render brings the
          form inputs in line with it — names included). */
       function adoptRemoteState(v){
-        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
+        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbConfirmedState = deep(S); fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
         /* A remote match with no owner yet is claimed by the account
            already signed in on this control side (see ownership). */
         try { maybeClaimOwnership(); } catch(e){}
@@ -5036,6 +5106,7 @@
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbIsDefault = !!isDefault;
         fbReady = false; fbConnecting = true; fbErrorShown = false;
+        fbConfirmedState = null;
         setPadLocked(true);
         setConnStatus('connecting', '⏳ Connecting to Firebase — loading the live match from the database before scoring unlocks…');
         fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
@@ -5078,6 +5149,10 @@
         myRef.on('value', function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
+          /* Whatever the database holds right now is the confirmed
+             state — viewer surfaces show exactly this, even when
+             this device's own copy is ahead of it or stranded. */
+          fbConfirmedState = v ? deep(v) : null;
           if (shouldAdoptRemote(v)) adoptRemoteState(v);
         }, function(err){
           if (fbRef !== myRef) return;
@@ -5095,6 +5170,7 @@
         myRef.once('value').then(function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
+          fbConfirmedState = v ? deep(v) : null;
           if (v){
             if (shouldAdoptRemote(v)) adoptRemoteState(v);
             markFirebaseReady(isDefault);
@@ -5102,7 +5178,8 @@
                unreachable (restored backup) — publish it now instead of
                letting the older database state stand. */
             if (fbLocalDirty && (hasMeaningfulState(S) || fbPendingFreshPublish) && v.updatedAt && v.updatedAt < S.updatedAt){
-              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; }).catch(function(err){ showFirebaseError(err, 'sync'); });
+              var pushedSync = deep(S);
+              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSync; try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'sync'); });
             }
           } else {
             markFirebaseReady(isDefault);
@@ -5110,7 +5187,8 @@
                demo state it is a real match the scorer explicitly started,
                so an empty database must not leave viewers with nothing. */
             if (hasMeaningfulState(S) || fbPendingFreshPublish){
-              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; saveLocalBackup(); }).catch(function(err){ showFirebaseError(err, 'seed'); });
+              var pushedSeed = deep(S);
+              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSeed; saveLocalBackup(); try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'seed'); });
             }
           }
         }).catch(function(err){
@@ -5192,6 +5270,7 @@
         histSyncedOnce = false;
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbRef=null; fbApp=null; fbIsDefault=false; fbReady=false; fbConnecting=false;
+        fbConfirmedState = null;
         fbAuth=null; authUser=null; renderAuthBar();
         setPadLocked(false);
         setConnStatus('local', 'Firebase disconnected — running in Local Mode. Scoring continues and is backed up on this device.');
@@ -5232,7 +5311,13 @@
           fbAuth.onAuthStateChanged(function(user){
             authUser = user || null;
             renderAuthBar();
-            if (authUser){ try { maybeClaimOwnership(); } catch(e){} }
+            if (authUser){
+              try { maybeClaimOwnership(); } catch(e){}
+              /* Signing in can un-block history sync on this device:
+                 entries this account owns (and unowned ones) that
+                 were stranded in the on-device backup publish now. */
+              try { flushHistoryPending(); flushHistoryDeletes(); scheduleHistoryRetry(); } catch(e){}
+            }
             try { applyOwnerLocks(); } catch(e){}
             try { renderHistory(); } catch(e){}
           }, function(err){ renderAuthBar(); });
@@ -5499,6 +5584,26 @@
            or the plain link that still offers the scorer entry). */
         return !isViewerSession();
       }
+      /* History SYNC follows ownership, not viewer mode. A finished
+         match is written to Firebase whenever the account signed in
+         on this device owns it (or it has no owner yet) — even on a
+         device also remembered as a viewer, which used to block the
+         write forever while the status claimed "Syncing…". Guests
+         never write, and neither does a signed-in account for
+         another account's match; the History status says so plainly
+         instead of pretending a sync is running. */
+      function histEntrySyncable(e){
+        if (!e) return false;
+        var uid = currentUid();
+        if (!uid) return false;
+        var o = e.ownerUid || '';
+        return !o || o === uid;
+      }
+      function histSyncWorkAvailable(){
+        if (!currentUid()) return false;
+        if (histPendingDeleteIds().length) return true;
+        return histPendingIds().some(function(id){ return histEntrySyncable(HIST[id]); });
+      }
       function isHistGone(id){ return !!(histDeleted[String(id)] || histGone[String(id)]); }
       function saveHistLocal(){
         try {
@@ -5588,7 +5693,7 @@
       }
       function ensureCurrentArchived(){ archiveFinishedMatch(); }
       function pushHistoryEntry(entry){
-        if (!histCanManage()) return;  /* viewers never write history */
+        if (!histEntrySyncable(entry)) return;  /* only the owner's signed-in session writes history */
         if (!fbHistRef){ scheduleHistoryRetry(); return; }  /* flushed when Firebase connects */
         var id = entry.id;
         fbHistRef.child(id).set(entry).then(function(){
@@ -5605,7 +5710,8 @@
         });
       }
       function flushHistoryPending(){
-        if (!histCanManage()) return;
+        /* Per-entry gate inside pushHistoryEntry: entries this
+           session may not write are simply skipped. */
         Object.keys(HIST).forEach(function(id){
           if (!histConfirmed[id] && !histDeleted[id]) pushHistoryEntry(HIST[id]);
         });
@@ -5627,8 +5733,7 @@
       }
       function scheduleHistoryRetry(){
         if (histRetryTimer) return;
-        if (!histCanManage()) return;
-        if (!histPendingIds().length && !histPendingDeleteIds().length) return;
+        if (!histSyncWorkAvailable()) return;
         histRetryTimer = setTimeout(function(){
           histRetryTimer = null;
           histRetryDelayMs = Math.min(60000, histRetryDelayMs * 2);
@@ -5638,7 +5743,7 @@
         }, histRetryDelayMs);
       }
       function flushHistoryDeletes(){
-        if (!histCanManage()) return;
+        if (!currentUid()) return;  /* tombstone and delete writes need a signed-in account */
         histPendingDeleteIds().forEach(function(id){
           /* The tombstone write rides along with every delete flush,
              so a delete whose first tombstone write failed still
@@ -5868,6 +5973,10 @@
       /* ---------- the record book: archived matches + the live one ---------- */
       function liveHistoryEntry(){
         if (!S || !S.current) return null;
+        /* The not-yet-filed live match joins the record book only
+           while it IS the Firebase-confirmed state; a copy stranded
+           in this device's backup is not displayed anywhere. */
+        if (!fbConfirmedState || S.updatedAt !== fbConfirmedState.updatedAt) return null;
         var hasFigs = (S.current.batters || []).length || (S.current.bowlers || []).length
           || (S.prevInnings && ((S.prevInnings.batters || []).length || (S.prevInnings.bowlers || []).length));
         if (!hasFigs) return null;
@@ -5880,7 +5989,12 @@
         return e;
       }
       function histSorted(){
-        return Object.keys(HIST).map(function(k){ return HIST[k]; }).sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
+        /* Confirmed-only display: the record book shows ONLY matches
+           Firebase has confirmed. A match still sitting in this
+           device's backup (never confirmed) appears nowhere — not in
+           History, not in the leaderboards, not in player profiles —
+           until its sync lands. */
+        return Object.keys(HIST).filter(function(k){ return histConfirmed[k]; }).map(function(k){ return HIST[k]; }).sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
       }
       function allRecordMatches(){
         var arr = histSorted();
@@ -6165,13 +6279,19 @@
         var total = ids.length;
         var pending = histPendingIds().length;
         var pendingDel = histPendingDeleteIds().length;
+        var pendingSyncable = histPendingIds().filter(function(id){ return histEntrySyncable(HIST[id]); }).length;
+        var pendingHeld = pending - pendingSyncable;
+        var shownCount = Object.keys(HIST).filter(function(id){ return histConfirmed[id]; }).length;
         var retryBtn = ' <button type="button" class="btn sm" style="margin-top:8px" onclick="retryHistorySync()">Retry Sync Now</button>';
         var html;
-        /* Honest status, always one of three states: SYNCED (Firebase
+        /* Honest status, always one of four states: SYNCED (Firebase
            has confirmed everything this page shows), SYNCING (writes
            or deletes are still unconfirmed — automatic retry is
-           running), or FAILED (Firebase answered with a real error,
-           shown verbatim). */
+           running), FAILED (Firebase answered with a real error,
+           shown verbatim), or HELD (matches are stranded in this
+           device's backup because this session may not write them —
+           no sync is running for them, and the status says exactly
+           what un-blocks them instead of claiming "Syncing…"). */
         if (histFbError){
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
@@ -6179,7 +6299,15 @@
             + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in owner: sign in with Google (the account that owns the match), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
-          html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + total + (total === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
+          html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
+        } else if (fbHistRef && histSyncedOnce && pendingHeld > 0 && pendingSyncable === 0){
+          html = '<div class="hist-status">⏸ <b>On this device only.</b> '
+            + pendingHeld + (pendingHeld === 1 ? ' match' : ' matches') + ' finished on this device '
+            + (pendingHeld === 1 ? 'has' : 'have') + ' not reached Firebase, so '
+            + (pendingHeld === 1 ? 'it is' : 'they are') + ' not shown in History, the leaderboards or anywhere else yet. '
+            + (pendingDel > 0 ? pendingDel + (pendingDel === 1 ? ' delete is' : ' deletes are') + ' also waiting for the owner to sign in. ' : '')
+            + 'The record is safe in this device\u2019s backup. To publish it, open the control link on THIS device and sign in with Google as the match owner \u2014 it then syncs, appears everywhere, and can be deleted like any other match.'
+            + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce){
           html = '<div class="hist-status">⏳ <b>Syncing…</b> '
             + (pending > 0 ? pending + (pending === 1 ? ' match is' : ' matches are') + ' still syncing to Firebase. ' : '')
@@ -6895,26 +7023,27 @@
            viewer link then sat on the home chooser in "Local Mode". */
         function step(fn){ try { fn(); } catch(e){} }
         step(function(){ normalizeSquads(); normalizeStateShape(); syncPlayersFromInputsSilent(); });
+        /* Public Scoreboard sections render from the CONFIRMED
+           state only (see fbConfirmedState): this device's
+           unconfirmed backup copy is never shown to viewers. The
+           scorer's own ball-by-ball list further down uses the
+           real state, as do the console and the overlay. */
         step(function(){
-          var strip = scoreStripHTML();
-          $('sbLive').innerHTML = strip;
+          renderWithDisplayState(function(){
+            $('sbLive').innerHTML = scoreStripHTML();
+            $('sbBatting').innerHTML = battingTableHTML(S.current);
+            $('sbBowling').innerHTML = bowlingTableHTML(S.current);
+            if (S.prevInnings){
+              $('sbPrevWrap').style.display='block';
+              $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+            } else { $('sbPrevWrap').style.display='none'; }
+            $('sbHistory').innerHTML = historyHTML(S.current);
+          });
         });
         try { renderScorerCentre(); } catch(e){}
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
-        step(function(){
-          $('sbBatting').innerHTML = battingTableHTML(S.current);
-          $('sbBowling').innerHTML = bowlingTableHTML(S.current);
-          if (S.prevInnings){
-            $('sbPrevWrap').style.display='block';
-            $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
-          } else { $('sbPrevWrap').style.display='none'; }
-        });
-        step(function(){
-          var h = historyHTML(S.current);
-          $('sbHistory').innerHTML = h;
-          $('historyList').innerHTML = h;
-        });
-        try { renderScoreboardCB(); } catch(e){}
+        step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
+        step(function(){ renderWithDisplayState(function(){ renderScoreboardCB(); }); });
         step(renderSquads);
         step(renderTournament);
         try { renderLiveHome(); } catch(e){}
@@ -7349,19 +7478,26 @@
         else if (hashView === 'history'){
           /* A plain #history link carries no ?view= of its own: on a
              device remembered as a viewer it must STILL open
-             read-only (no Delete) — the viewer flag decides. */
+             read-only (no Delete) — the viewer flag decides. But the
+             CONTROL link (?view=scorer#history) is the scorer's own
+             door even with the hash on it: the control chrome is
+             applied (viewer flag cleared), so the owner's History
+             shows Delete and syncs like any other control page —
+             before this, that exact link opened in viewer mode and
+             the owner could neither see nor delete the record. */
           if (isViewerLink || (deviceViewerFlag() && !isControlLink)) enterViewerHistory();
-          else setView('history');
+          else { if (isControlLink) enterControlChrome(); setView('history'); }
         }
         else if (hashView === 'tournament'){
           /* Same rule for #tournament: a viewer device gets the
-             read-only in-page tournament viewer, never the editor. */
+             read-only in-page tournament viewer, never the editor.
+             The control link keeps the editor, flag cleared. */
           if (isViewerLink || (deviceViewerFlag() && !isControlLink)){
             setDeviceViewerFlag(true);
             document.body.classList.add('link-viewer');
             openTournamentViewerInPage();
           }
-          else setView('tournament');
+          else { if (isControlLink) enterControlChrome(); setView('tournament'); }
         }
         else if (hashView === 'home') setView('home');
         else if (q.indexOf('overlay')>-1){
@@ -7382,7 +7518,7 @@
         }
         else if (q.indexOf('history')>-1){
           if (isViewerLink || (deviceViewerFlag() && !isControlLink)) enterViewerHistory();
-          else setView('history');
+          else { if (isControlLink) enterControlChrome(); setView('history'); }
         }
         else if (q.indexOf('tournament')>-1){
           if (isViewerLink || (deviceViewerFlag() && !isControlLink)){
@@ -7390,7 +7526,7 @@
             document.body.classList.add('link-viewer');
             openTournamentViewerInPage();
           }
-          else setView('tournament');
+          else { if (isControlLink) enterControlChrome(); setView('tournament'); }
         }
         else if (q.indexOf('single')>-1) enterControlMode();
         /* Default landing (no link ending): the Live Matches list, with the
