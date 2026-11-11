@@ -406,6 +406,38 @@
       .tn-team-players-head .sb-team-logo{width:64px;height:64px;font-size:19px;margin:0;flex:none}
       .tn-team-players-head h3{margin:0;font-size:20px;line-height:1.2;text-transform:uppercase}
       .tn-team-players-head .note{margin-top:2px}
+
+      /* ---------- viewer landing: live matches list ---------- */
+      body.viewer-mode .viewtabs{display:none !important}
+      .live-badge{display:inline-flex;align-items:center;gap:6px;background:#c22;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;text-transform:uppercase;flex:none}
+      .live-badge i{width:8px;height:8px;border-radius:50%;background:#fff;flex:none;animation:blinkdot 1.6s infinite}
+      .live-badge.result{background:var(--green)}
+      @keyframes blinkdot{0%,100%{opacity:1}50%{opacity:.3}}
+      @media (prefers-reduced-motion: reduce){.live-badge i{animation:none}}
+      .live-match-card{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);cursor:pointer;margin:14px 0 12px}
+      .live-match-card:active{transform:scale(.99)}
+      .live-match-card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+      .live-card-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+      .live-card-title{font-weight:700;color:var(--muted);font-size:13.5px}
+      .live-vs{font-family:"Barlow Condensed",sans-serif;font-size:27px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.15;margin-bottom:10px;word-break:break-word}
+      .live-vs-sep{color:var(--gold);font-size:20px;vertical-align:2px}
+      .live-strip .scorestrip{margin-bottom:0}
+      .live-wait{font-size:14px;color:var(--muted);margin:0 0 4px}
+      .live-result-text{font-weight:800;color:var(--green);font-size:16px;margin-top:12px}
+      .live-cta{margin-top:12px;font-weight:800;color:var(--green);font-size:15.5px}
+      .scorer-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;padding:12px 2px;color:var(--muted);font-size:14px;font-weight:600}
+
+      /* ---------- separate links: control vs viewer ---------- */
+      /* Pure viewer link (?view=live / ?view=viewer / ?view=scoreboard):
+         no way into the controls is shown anywhere on the page. */
+      body.link-viewer .scorer-entry{display:none !important}
+      body.link-viewer .segmentbar{display:none !important}
+      .link-row{margin-top:10px}
+      .link-row .link-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14.5px;font-weight:700;margin-bottom:2px}
+      .link-tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 9px;background:var(--green);color:#fff}
+      .link-tag.viewer{background:var(--gold);color:#241a02}
+      .link-tag.overlay{background:var(--blue);color:#fff}
+      @media (prefers-color-scheme: dark){.link-tag.overlay{background:#2c4a68}}
     </style>
   </head>
   <body>
@@ -430,6 +462,27 @@
     </header>
 
     <main>
+      <!-- ================= VIEWER: LIVE MATCHES LIST ================= -->
+      <section class="view" id="view-live">
+        <div class="mode-intro">
+          <h2>Live Matches</h2>
+          <p>Matches being scored right now. Tap a match to watch its live score — it updates ball by ball, automatically.</p>
+        </div>
+        <div id="liveNow"></div>
+        <div class="card" id="liveFixturesCard" hidden>
+          <h2>Upcoming Fixtures</h2>
+          <div id="liveFixtures"></div>
+        </div>
+        <div class="card" id="liveResultsCard" hidden>
+          <h2>Recent Results</h2>
+          <div id="liveResults"></div>
+        </div>
+        <div class="scorer-entry">
+          <span>Scoring a match yourself?</span>
+          <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
+        </div>
+      </section>
+
       <!-- ================= HOME: CHOOSE MODE ================= -->
       <section class="view show" id="view-home">
         <div class="mode-intro">
@@ -464,6 +517,24 @@
 
       <!-- ================= SCORER ================= -->
       <section class="view" id="view-scorer">
+
+        <div class="card">
+          <h2>🔗 Your Two Links</h2>
+          <p class="sub">You score from the <b>control link</b> — keep it to yourself. Give everyone else only the <b>viewer link</b>: it opens the Live Matches list and the read-only scoreboard, with no scoring controls anywhere on the page.</p>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag">Control — only for you</span> Scorer Console</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=scorer</span></div>
+          </div>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag viewer">Viewer — share with everyone</span> Live Matches &amp; Scoreboard (watch only)</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=live</span></div>
+          </div>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag overlay">Broadcast</span> OBS Overlay</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div>
+          </div>
+          <p class="note" style="margin-top:10px">All three links read the same live Firebase data — score once on the control link and the viewer page and the overlay update instantly.</p>
+        </div>
 
         <div class="card fold" id="setupCard">
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
@@ -565,7 +636,7 @@
             <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). In the database <b>Rules</b>, make sure the <span class="mono">liveMatch</span> path is publicly readable and writable — this page reads and writes all score data at that exact path:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": true } } }</span></p></div></div>
             <div class="step"><div class="step-n">2</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
             <div class="step"><div class="step-n">3</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
-            <div class="step"><div class="step-n">4</div><div><h3>Host this page on GitHub Pages (for a public link)</h3><p>Put this page file in a GitHub repo and turn on Settings → Pages to get a free public link. Give viewers the <span class="mono">…/?view=scoreboard</span> link, put the <span class="mono">…/?view=overlay</span> link in OBS, and score on the <span class="mono">…/?view=scorer</span> page — all three read the same Firebase data.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
           </div>
           <div class="divider"></div>
           <label for="fbConfig">Firebase config (paste JSON or the firebaseConfig object)</label>
@@ -573,7 +644,7 @@
           <div class="rowflex" style="margin-top:10px">
             <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
             <button class="btn ghost" onclick="disconnectFirebase()">Disconnect</button>
-            <span class="note" id="fbStatus">Firebase is not connected yet — running in Local Mode.</span>
+            <span class="note" id="fbStatus">Firebase auto-connects with the built-in default config — no pasting needed. Paste a different config only to use another project.</span>
           </div>
           </div>
         </div>
@@ -582,7 +653,7 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">📺 Adding the Overlay in OBS</button>
           <div class="fold-body" hidden>
           <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://your-name.github.io/live-cricket-score/?view=overlay</span></div></div></div>
+            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div></div></div>
             <div class="step"><div class="step-n">2</div><div><h3>Set the size</h3><p>Set Width <b>1920</b> and Height <b>1080</b>. The overlay page background is transparent, so the score bar floats directly over the video — preview it below in “transparent background” mode.</p></div></div>
             <div class="step"><div class="step-n">3</div><div><h3>Score once, update in two places</h3><p>Now score a ball on the Scorer page from your phone or laptop and both the Public Scoreboard and the OBS score bar change instantly. No refresh needed.</p></div></div>
           </div>
@@ -592,6 +663,10 @@
 
       <!-- ================= SCOREBOARD ================= -->
       <section class="view" id="view-scoreboard">
+        <div class="viewer-backbar" id="sbViewerBackBar">
+          <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← All Live Matches</button>
+          <span class="note">Live score — read-only. Updates automatically as the scorer scores.</span>
+        </div>
         <div id="sbLive"></div>
         <div class="grid2">
           <div class="card"><h2>Batting Card</h2><div id="sbBatting"></div></div>
@@ -879,7 +954,21 @@
       var S = freshState();
       var undoStack = [];
       var pendingExtra = null; /* 'wide' | 'noball' | 'bye' | 'legbye' */
-      var fbApp = null, fbRef = null, fbPushing = false;
+      var fbApp = null, fbRef = null, fbPushing = false, fbIsDefault = false;
+      /* Built-in default Firebase config — baked in so the site auto-connects
+         for everyone (scorer, viewers and the GitHub Pages copy) with no
+         pasting. A config pasted manually in Firebase Setup takes precedence
+         over this default for that session. This is Firebase's public web
+         config (not a password); the Realtime Database Rules protect the data. */
+      var DEFAULT_FB_CONFIG = {
+        apiKey: "AIzaSyCYKXHetRVGq7hSNzvZRHrXUO3haKSRFRE",
+        authDomain: "live-cricket-score-1cdf8.firebaseapp.com",
+        databaseURL: "https://live-cricket-score-1cdf8-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "live-cricket-score-1cdf8",
+        storageBucket: "live-cricket-score-1cdf8.firebasestorage.app",
+        messagingSenderId: "264859542758",
+        appId: "1:264859542758:web:935f6d45423083424e8727"
+      };
 
       /* ---------- helpers ---------- */
       function $(id){ return document.getElementById(id); }
@@ -1730,11 +1819,102 @@
         toast('Tournament opened');
       }
       function closeTournamentViewerInPage(){
-        document.body.classList.remove('viewer-inpage');
+        var inFlow = document.body.classList.contains('viewer-flow');
+        var pureViewer = document.body.classList.contains('link-viewer');
+        if (!inFlow) document.body.classList.remove('viewer-inpage');
         var q = '';
         try { q = location.search || ''; } catch(e){}
-        if (q.indexOf('viewer') === -1) document.body.classList.remove('viewer-mode');
+        if (q.indexOf('viewer') === -1 && !inFlow && !pureViewer) document.body.classList.remove('viewer-mode');
         setView('scoreboard');
+      }
+      /* ---------- viewer landing: live matches list ----------
+         What viewers see when they open the public link: the match(es)
+         being scored right now, as tappable cards. A tap opens the Public
+         Scoreboard for that match, read-only. Viewers never get the
+         scorer controls — the scorer enters them from this page. */
+      function liveCardHTML(){
+        var inn = S.current;
+        var tn = S.tournament || {};
+        var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
+        var finished = S.status === 'finished';
+        var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
+        var badge = finished
+          ? '<span class="live-badge result">✓ Result</span>'
+          : '<span class="live-badge"><i></i>Live</span>';
+        var titleLine = tnName || 'Live Match';
+        var meta = S.venue ? ' • ' + esc(S.venue) : '';
+        var vs = esc(S.teamA) + ' <span class="live-vs-sep">vs</span> ' + esc(S.teamB);
+        return '<div class="live-match-card" role="button" tabindex="0" aria-label="Watch ' + esc(S.teamA) + ' vs ' + esc(S.teamB) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
+          + '<div class="live-card-top">' + badge + '<span class="live-card-title">' + esc(titleLine) + meta + '</span></div>'
+          + '<div class="live-vs">' + vs + '</div>'
+          + (!finished && !started ? '<p class="live-wait">The match is set up and about to start — the score will appear here ball by ball.</p>' : '')
+          + '<div class="live-strip">' + scoreStripHTML() + '</div>'
+          + (finished && S.resultText ? '<div class="live-result-text">🏆 ' + esc(S.resultText) + '</div>' : '')
+          + '<div class="live-cta">' + (finished ? 'See the full scorecard →' : 'Watch live score →') + '</div>'
+          + '</div>';
+      }
+      function renderLiveHome(){
+        var nowEl = $('liveNow'); if (!nowEl) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        nowEl.innerHTML = liveCardHTML();
+        var fxCard = $('liveFixturesCard'), fxEl = $('liveFixtures');
+        if (fxCard && fxEl){
+          if (tn.fixtures.length){
+            fxCard.hidden = false;
+            fxEl.innerHTML = tn.fixtures.map(function(f){
+              return '<div class="match-row"><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>';
+            }).join('');
+          } else { fxCard.hidden = true; }
+        }
+        var rsCard = $('liveResultsCard'), rsEl = $('liveResults');
+        if (rsCard && rsEl){
+          if (tn.matches.length){
+            rsCard.hidden = false;
+            rsEl.innerHTML = tn.matches.slice().reverse().slice(0,4).map(function(m){
+              var lines = (m.innings || []).map(function(i2){ return '<div>' + esc(i2.battingTeam) + ' <span class="mr-score num">' + i2.runs + '/' + i2.wickets + '</span> <span class="note">(' + oversText(i2.legalBalls) + ' ov)</span></div>'; }).join('');
+              return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
+            }).join('');
+          } else { rsCard.hidden = true; }
+        }
+      }
+      function enterViewerHome(pure){
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        document.body.classList.add('viewer-flow');
+        /* Opened through the shared viewer link itself: pure viewer mode —
+           the "Open Scorer Controls" entry is hidden (CSS: body.link-viewer),
+           so viewers can watch but never reach the controls from that link. */
+        if (pure) document.body.classList.add('link-viewer');
+        try { renderLiveHome(); } catch(e){}
+        setView('live');
+      }
+      /* Opened through the control link (?view=scorer / ?view=control):
+         straight into the Scorer Console, no viewer landing in between. */
+      function enterControlMode(){
+        document.body.classList.remove('viewer-mode');
+        document.body.classList.remove('viewer-inpage');
+        document.body.classList.remove('viewer-flow');
+        document.body.classList.remove('link-viewer');
+        document.body.classList.add('link-control');
+        setView('scorer');
+      }
+      function openLiveMatch(){
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+      }
+      function backToLiveMatches(){
+        try { renderLiveHome(); } catch(e){}
+        setView('live');
+      }
+      function exitViewerMode(){
+        document.body.classList.remove('viewer-mode');
+        document.body.classList.remove('viewer-inpage');
+        document.body.classList.remove('viewer-flow');
+        document.body.classList.remove('link-viewer');
+        document.body.classList.add('link-control');
+        setView('home');
       }
       /* ---------- public scoreboard: tournament explorer (viewer) ---------- */
       var sbTournamentOpen = false;
@@ -1962,9 +2142,49 @@
       }
 
       /* ---------- Firebase ---------- */
-      var DEFAULT_FIREBASE_CONFIG = {"apiKey": "AIzaSyCYKXHetRVGq7hSNzvZRHrXUO3haKSRFRE", "authDomain": "live-cricket-score-1cdf8.firebaseapp.com", "databaseURL": "https://live-cricket-score-1cdf8-default-rtdb.asia-southeast1.firebasedatabase.app", "projectId": "live-cricket-score-1cdf8", "storageBucket": "live-cricket-score-1cdf8.firebasestorage.app", "messagingSenderId": "264859542758", "appId": "1:264859542758:web:935f6d45423083424e8727"};
-      function connectFirebase(readOnly){
-        if (readOnly){ var t=$('fbConfig'); if (t && !t.value.trim()) t.value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2); }
+      /* Shared connect path for both the built-in default (auto-connect on
+         load) and a manually pasted config. Safety rule: connecting NEVER
+         pushes the local state over data already in the database. It first
+         reads liveMatch once — if a match is already there it is adopted,
+         and only when the database is completely empty is the current local
+         state seeded. After connecting, the scorer's normal scoring still
+         pushes through commit() (fbRef.set in commit). */
+      function initFirebaseWithConfig(cfg, isDefault){
+        if (typeof firebase === 'undefined'){ throw new Error('Firebase library did not load'); }
+        if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
+        if (fbApp) { try{ fbApp.delete(); }catch(e){} fbApp = null; }
+        fbIsDefault = !!isDefault;
+        fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
+        fbRef = fbApp.database().ref('liveMatch');
+        var myRef = fbRef;
+        myRef.on('value', function(snap){
+          var v = snap.val();
+          if (v && v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
+            fbPushing = true; S = v; renderAll(false); fbPushing = false;
+          }
+        });
+        /* One-time read before any write: adopt remote if it exists,
+           seed only if it does not. No unconditional set() here. */
+        myRef.once('value').then(function(snap){
+          if (fbRef !== myRef) return;
+          var v = snap.val();
+          if (!v){
+            /* Database is empty — seed it with the current local state so
+               viewers are not left looking at a blank database. */
+            fbPushing = false;
+            myRef.set(S).catch(function(){});
+          } else if (v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
+            fbPushing = true; S = v; renderAll(false); fbPushing = false;
+          }
+          /* If v exists and is current, do nothing — never overwrite it. */
+        }).catch(function(){});
+        $('fbStatus').textContent = isDefault
+          ? '✅ Firebase auto-connected with the built-in default config — everyone online can now watch live.'
+          : '✅ Firebase connected — everyone online can now watch live.';
+        $('connPill').textContent = '● Firebase Live — Everyone online is watching';
+        $('connPill').classList.add('on');
+      }
+      function connectFirebase(){
         var raw = $('fbConfig').value.trim();
         if (!raw){ toast('Paste the Firebase config first'); return; }
         var cfg;
@@ -1987,27 +2207,40 @@
         }
         if (!cfg.databaseURL){ $('fbStatus').textContent='The config has no databaseURL — enable Realtime Database and copy it again.'; return; }
         try {
-          if (fbApp) { try{ fbApp.delete(); }catch(e){} }
-          fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
-          fbRef = fbApp.database().ref('liveMatch');
-          fbRef.on('value', function(snap){
-            var v = snap.val();
-            if (v && v.updatedAt && Math.abs(v.updatedAt - S.updatedAt) > 400){
-              fbPushing = true; S = v; renderAll(false); fbPushing = false;
-            }
-          });
-          if (!readOnly){ fbRef.set(S); }
-          $('fbStatus').textContent = '✅ Firebase connected — everyone online can now watch live.';
-          $('connPill').textContent = '● Firebase Live — Everyone online is watching';
-          $('connPill').classList.add('on');
+          initFirebaseWithConfig(cfg, false);
           toast('Firebase connected — Live Mode on');
         } catch(e){
           $('fbStatus').textContent = 'Connection failed: ' + e.message;
         }
       }
+      function autoConnectFirebase(){
+        if (fbRef) return;
+        /* A config already typed/pasted into the box wins over the default. */
+        var box = $('fbConfig');
+        var existing = box ? box.value.trim() : '';
+        if (existing){
+          try {
+            var parsed = null;
+            try { parsed = JSON.parse(existing); } catch(e0){ parsed = null; }
+            if (parsed && parsed.databaseURL && parsed.databaseURL !== DEFAULT_FB_CONFIG.databaseURL){
+              initFirebaseWithConfig(parsed, false);
+              return;
+            }
+          } catch(e1){ /* fall through to the built-in default */ }
+        }
+        try {
+          if (box && !existing) box.value = JSON.stringify(DEFAULT_FB_CONFIG, null, 2);
+          initFirebaseWithConfig(deep(DEFAULT_FB_CONFIG), true);
+        } catch(e){
+          var st = $('fbStatus');
+          if (st) st.textContent = 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode. You can paste a config and tap Connect.';
+          $('connPill').textContent = '● Local Mode — Live across tabs in this browser';
+          $('connPill').classList.remove('on');
+        }
+      }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
-        fbRef=null; fbApp=null;
+        fbRef=null; fbApp=null; fbIsDefault=false;
         $('fbStatus').textContent='Firebase disconnected — running in Local Mode.';
         $('connPill').textContent='● Local Mode — Live across tabs in this browser';
         $('connPill').classList.remove('on');
@@ -2111,6 +2344,7 @@
         $('historyList').innerHTML = historyHTML(S.current);
         renderSquads();
         renderTournament();
+        try { renderLiveHome(); } catch(e){}
       }
       function syncPlayersFromInputsSilent(){
         var inn=S.current;
@@ -2155,7 +2389,6 @@
       (function init(){
         syncPlayersFromInputs();
         renderAll(false);
-        try { var t=$('fbConfig'); if (t && !t.value.trim()) t.value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2); if (typeof firebase !== 'undefined') connectFirebase(true); } catch(e){}
         var q = '';
         try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
         if (q.indexOf('viewer')>-1){
@@ -2166,12 +2399,39 @@
           var vH = document.querySelector('#tnPanel-teams .card h2');
           if (vH) vH.textContent = 'Teams';
         }
-        if (q.indexOf('overlay')>-1) setView('overlay');
+        /* Two separate links, two separate doors into this page:
+           CONTROL link (?view=scorer or ?view=control) — opens the Scorer
+           Console directly, for the scorer only.
+           VIEWER link (?view=live, ?view=viewer or ?view=scoreboard) —
+           opens the Live Matches list / read-only scoreboard, and the
+           page shows no way into the controls at all (link-viewer). */
+        var isControlLink = q.indexOf('view=control')>-1 || q.indexOf('view=scorer')>-1 || q.indexOf('#control')>-1 || q.indexOf('#scorer')>-1 || q.indexOf('control=1')>-1;
+        var isViewerLink = q.indexOf('view=live')>-1 || q.indexOf('view=viewer')>-1 || q.indexOf('#live')>-1 || q.indexOf('#viewer')>-1 || q.indexOf('viewer=1')>-1;
+        if (q.indexOf('overlay')>-1){
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('link-viewer');
+          setView('overlay');
+        }
+        else if (isControlLink) enterControlMode();
+        else if (isViewerLink) enterViewerHome(true);
+        else if (q.indexOf('scoreboard')>-1){
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('viewer-inpage');
+          document.body.classList.add('viewer-flow');
+          document.body.classList.add('link-viewer');
+          setView('scoreboard');
+        }
         else if (q.indexOf('tournament')>-1) setView('tournament');
-        else if (q.indexOf('scoreboard')>-1) setView('scoreboard');
-        else if (q.indexOf('scorer')>-1) setView('scorer');
-        else if (q.indexOf('single')>-1) setView('scorer');
-        else setView('home');
+        else if (q.indexOf('single')>-1) enterControlMode();
+        /* Default landing (no link ending): the Live Matches list, with the
+           scorer entry still visible so the scorer can get in from here.
+           Only the shared viewer link itself hides that entry. */
+        else enterViewerHome(false);
+        /* Auto-connect to Firebase with the built-in default config so the
+           scorer, scoreboard, overlay and every viewer are live with no
+           manual step. This adopts any match already in the database and
+           never overwrites it (see initFirebaseWithConfig). */
+        try { autoConnectFirebase(); } catch(e){}
       })();
     </script>
   </body>
