@@ -199,6 +199,8 @@
       .sq-num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif}
       .sq-name{flex:1;font-weight:600;font-size:14.5px;min-width:0}
       .sq-x{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--red);font-size:16px;line-height:1;padding:0;cursor:pointer}
+      .sq-mv{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:14px;line-height:1;padding:0;cursor:pointer}
+      .sq-mv:disabled{opacity:.3;cursor:default}
       .sq-x.big{width:34px;height:34px;font-size:20px}
       .rowflex input.grow{width:auto;min-width:110px}
 
@@ -720,6 +722,21 @@
             <button class="ext" id="btnBye" onclick="setPending('bye')">Bye</button>
             <button class="ext" id="btnLB" onclick="setPending('legbye')">Leg-Bye</button>
           </div>
+          <div id="wicketPanel" hidden style="margin-top:12px;border:1.5px solid #e5a49c;background:var(--red-bg);border-radius:12px;padding:12px">
+            <div style="font-weight:800;font-size:15.5px">Wicket — how was the batter out?</div>
+            <p class="note" id="wktContext" style="margin:4px 0 10px"></p>
+            <div class="grid3">
+              <div><label for="wktType">Dismissal type *</label><select id="wktType"><option value="bowled">Bowled</option><option value="caught">Caught</option><option value="candbowled">Caught &amp; Bowled</option><option value="lbw">LBW</option><option value="runout">Run Out</option><option value="stumped">Stumped</option><option value="hitwicket">Hit Wicket</option><option value="retired">Retired Out</option></select></div>
+              <div><label for="wktOutWho">Batter out</label><select id="wktOutWho"><option value="striker">Striker</option><option value="nonStriker">Non-Striker (run out)</option></select></div>
+              <div><label for="wktRuns">Runs on this ball</label><select id="wktRuns"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+            </div>
+            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><input id="wktFielder" placeholder="e.g. the fielder who took the catch or made the run out" /></div>
+            <div class="rowflex" style="margin-top:12px">
+              <button class="btn red sm" onclick="confirmWicket()">Confirm Wicket</button>
+              <button class="btn ghost sm" onclick="cancelWicket()">Cancel</button>
+              <span class="note grow">The bowler is credited with the wicket only for bowled, caught, LBW, stumped and hit wicket — never for a run out.</span>
+            </div>
+          </div>
           <div class="rowflex" style="margin-top:8px">
             <button class="btn ghost sm" onclick="undoBall()">↩️ Undo Last Ball</button>
             <button class="btn gold sm" onclick="endInnings()">End Innings</button>
@@ -732,9 +749,9 @@
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Batters &amp; Bowler</button>
           <div class="fold-body" hidden>
           <div class="players-grid">
-            <div><label for="strikerName">Striker Batter *</label><select id="strikerName" onchange="onPlayerNameSettled()"><option value="">Select striker batter</option></select></div>
-            <div><label for="nonStrikerName">Non-Striker *</label><select id="nonStrikerName" onchange="onPlayerNameSettled()"><option value="">Select non-striker batter</option></select></div>
-            <div><label for="bowlerName">Current Bowler *</label><select id="bowlerName" onchange="onPlayerNameSettled()"><option value="">Select bowler</option></select></div>
+            <div><label for="strikerName">Striker Batter *</label><select id="strikerName" onchange="onPlayerNameSettled(this)"><option value="">Select striker batter</option></select></div>
+            <div><label for="nonStrikerName">Non-Striker *</label><select id="nonStrikerName" onchange="onPlayerNameSettled(this)"><option value="">Select non-striker batter</option></select></div>
+            <div><label for="bowlerName">Current Bowler *</label><select id="bowlerName" onchange="onPlayerNameSettled(this)"><option value="">Select bowler</option></select></div>
           </div>
           <p class="note" style="margin:10px 0 0">No batter or bowler is selected by default — pick the striker, non-striker and bowler from the dropdowns. Scoring starts once all three are picked.</p>
           <datalist id="dlBat"></datalist>
@@ -1074,6 +1091,17 @@
       </div>
     </div>
 
+    <div class="modal-back" id="verifyModal">
+      <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="verifyTitle">
+        <div class="modal-head"><h2 id="verifyTitle">Please confirm</h2></div>
+        <p id="verifyText" style="font-size:15px;line-height:1.5;margin:10px 0 0"></p>
+        <div class="rowflex" style="margin-top:16px">
+          <button class="btn red" id="verifyYes" onclick="closeVerify(true)">Yes, continue</button>
+          <button class="btn ghost" onclick="closeVerify(false)">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="toast" id="toast" role="status"></div>
 
     <script>
@@ -1096,7 +1124,8 @@
           extras: { wide:0, noball:0, bye:0, legbye:0 },
           batters: [], bowlers: [],
           striker: null, nonStriker: null, bowler: null,
-          balls: [] /* {label, text, cls} newest last */
+          awaitingBowler: false, /* true between an over ending and the next bowler being picked — scoring is blocked meanwhile */
+          balls: [] /* {over, overNo, text, cls, bowler, batter} newest last */
         };
       }
       /* Built-in default tournament teams & squads — seeded automatically so
@@ -1193,7 +1222,14 @@
         var note = $('syncGateNote'); if (note) note.classList.toggle('show', !!locked);
         var padCard = note ? note.closest('.card') : null;
         if (padCard){
-          padCard.querySelectorAll('button').forEach(function(b){ b.disabled = !!locked; });
+          padCard.querySelectorAll('button').forEach(function(b){
+            /* The Save Result button's enabled state belongs to
+               renderTournament (finished two-innings matches only) —
+               unlocking the pad must not re-enable it mid-match. The
+               archiveCurrentMatch() guard still refuses regardless. */
+            if (b.id === 'btnSaveTournament' && !locked){ b.disabled = !(S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings); return; }
+            b.disabled = !!locked;
+          });
         }
         var startBtns = document.querySelectorAll('#setupCard .fold-body .btn');
         startBtns.forEach(function(b){ b.disabled = !!locked; });
@@ -1353,11 +1389,77 @@
       }
       function playersSelected(){
         var inn = S.current;
+        if (inn.awaitingBowler){
+          toast('Pick the bowler for the next over first — the bowler who bowled the last over cannot bowl again straight away');
+          try { maybeBowlerAsk(); } catch(e){}
+          return false;
+        }
         if (!inn.striker || !inn.nonStriker || !inn.bowler){
           toast('Select the striker, non-striker and bowler from the dropdowns first');
           return false;
         }
+        if (inn.striker === inn.nonStriker){
+          toast('The same player cannot be both striker and non-striker — pick two different batters');
+          return false;
+        }
+        var sb = null, nb = null;
+        for (var i = 0; i < inn.batters.length; i++){
+          if (inn.batters[i].name === inn.striker) sb = inn.batters[i];
+          if (inn.batters[i].name === inn.nonStriker) nb = inn.batters[i];
+        }
+        if ((sb && sb.out) || (nb && nb.out)){
+          toast(((sb && sb.out) ? inn.striker : inn.nonStriker) + ' is already out in this innings — pick another batter');
+          return false;
+        }
         return true;
+      }
+      /* ---------- no consecutive overs for a bowler, enforced in state ----------
+         Derived from the ball record itself, so it holds no matter how
+         the bowler gets picked — the over-end picker, the Change
+         Bowler button, the bowler dropdown or a typed name. A bowler
+         who bowled any part of the previous over may not bowl in the
+         over now being bowled / about to start. */
+      function overBowlerNames(inn, overIdx){
+        var names = [], legalBefore = 0;
+        (inn.balls || []).forEach(function(b){
+          if (b.evt) return;
+          if (Math.floor(legalBefore / 6) === overIdx && b.bowler && names.indexOf(b.bowler) === -1) names.push(b.bowler);
+          if (isLegalDelivery(b.text)) legalBefore++;
+        });
+        return names;
+      }
+      function prevOverBowlers(inn){
+        if (!inn || !inn.legalBalls) return [];
+        var prevIdx = Math.floor(inn.legalBalls / 6) - 1;
+        if (inn.legalBalls % 6 !== 0) prevIdx = Math.floor(inn.legalBalls / 6) - 1;
+        if (prevIdx < 0) return [];
+        return overBowlerNames(inn, prevIdx);
+      }
+      function bowlerPickError(inn, name){
+        if (!name) return null;
+        if (prevOverBowlers(inn).indexOf(name) > -1) return name + ' bowled the previous over and cannot bowl two overs in a row';
+        return null;
+      }
+      function batterIsOut(inn, name){
+        for (var i = 0; i < inn.batters.length; i++) if (inn.batters[i].name === name && inn.batters[i].out) return true;
+        return false;
+      }
+      function matchFinishedGuard(){
+        if (S.status === 'finished'){ toast('This match is finished — scoring is closed. Start a new match to score again.'); return true; }
+        return false;
+      }
+      /* ---------- in-page confirmation dialog (the browser's own dialog does not work in the app) ---------- */
+      var verifyCb = null;
+      function askVerify(title, text, cb){
+        $('verifyTitle').textContent = title;
+        $('verifyText').textContent = text;
+        verifyCb = cb;
+        $('verifyModal').classList.add('show');
+      }
+      function closeVerify(ok){
+        $('verifyModal').classList.remove('show');
+        var cb = verifyCb; verifyCb = null;
+        if (ok && cb) cb();
       }
       /* Fires when a name is picked from one of the three dropdowns.
          The name fields used to be free-text inputs wired per keystroke,
@@ -1365,8 +1467,32 @@
          row; they are dropdowns now, so a name reaches the state only
          whole, exactly as picked. A name settled here can announce the
          player in the public commentary feed. */
-      function onPlayerNameSettled(){
+      function onPlayerNameSettled(el){
+        var inn = S.current; if (!inn) return;
+        var id = el ? el.id : '';
+        var val = el ? el.value.trim() : '';
+        /* Validate the pick that was just made BEFORE it reaches the
+           state: no bowler may bowl consecutive overs, the same
+           player cannot be both batters, and a batter who is already
+           out cannot be picked again. A rejected pick is reverted and
+           never scored from. */
+        if (id === 'bowlerName' && val){
+          var bErr = bowlerPickError(inn, val);
+          if (bErr){ toast('⚠️ ' + bErr + ' — pick someone else'); el.value = inn.bowler || ''; return; }
+        }
+        if ((id === 'strikerName' || id === 'nonStrikerName') && val){
+          var otherVal = $(id === 'strikerName' ? 'nonStrikerName' : 'strikerName').value.trim();
+          if (otherVal && val === otherVal){
+            toast('⚠️ ' + val + ' is already at the other end — the same player cannot be striker and non-striker');
+            el.value = ''; syncPlayersFromInputs(); commit(null, true); return;
+          }
+          if (batterIsOut(inn, val)){
+            toast('⚠️ ' + val + ' is already out in this innings — pick another batter');
+            el.value = ''; syncPlayersFromInputs(); commit(null, true); return;
+          }
+        }
         syncPlayersFromInputs();
+        if (inn.bowler) inn.awaitingBowler = false;
         announceCurrentPlayers();
         commit(null, true);
       }
@@ -1452,21 +1578,39 @@
            column stays blank for them, in the commentary feed and in
            the history alike. atBalls records where in the innings the
            line belongs so it groups with the right over. */
-        var e = { over: '', text: line, cls: 'evt', evt: kind, who: name, bowler: '', batter: '', atBalls: inn.legalBalls };
+        var e = { over: '', overNo: Math.floor(inn.legalBalls / 6) + 1, text: line, cls: 'evt', evt: kind, who: name, bowler: '', batter: '', atBalls: inn.legalBalls };
         if (extra) for (var k in extra) e[k] = extra[k];
         inn.balls.push(e);
-        if (inn.balls.length > 120) inn.balls.shift();
+        /* No length cap: a 20-over innings with extras holds far more
+           than 120 records (deliveries + announcement lines), and
+           trimming silently deleted the earliest balls and broke the
+           per-over summaries built from this record. */
+      }
+      /* The combined innings-start line — "A & B come to the crease.
+         C will open the attack." — IS the crease announcement for
+         both openers and the attack announcement for the opening
+         bowler. Without this check, an opener who had not faced a
+         ball in over 1 (his partner took every delivery) was
+         announced AGAIN with his own "comes to the crease" line the
+         moment he took strike in over 2 or a new bowler was picked. */
+      function inStartLine(inn, name, fields){
+        return (inn.balls || []).some(function(b){
+          if (b.evt !== 'start') return false;
+          return fields.some(function(f){ return b[f] === name; });
+        });
       }
       function announceAttack(inn, name){
         if (!name || name === 'Bowler') return;
         for (var i = 0; i < inn.bowlers.length; i++) if (inn.bowlers[i].name === name && inn.bowlers[i].balls > 0) return;
         if (alreadyAnnounced(inn, 'attack', name)) return;
+        if (inStartLine(inn, name, ['bw'])) return;
         pushFeedEvent(inn, 'attack', name, name + ' comes into the attack.');
       }
       function announceCrease(inn, name){
         if (!name || name === 'Batter 1' || name === 'Batter 2' || name === 'New Batter') return;
         for (var i = 0; i < inn.batters.length; i++){ var b = inn.batters[i]; if (b.name === name && (b.balls > 0 || b.out)) return; }
         if (alreadyAnnounced(inn, 'crease', name)) return;
+        if (inStartLine(inn, name, ['who', 'ns'])) return;
         pushFeedEvent(inn, 'crease', name, name + ' comes to the crease.');
       }
       function inningsNotStarted(inn){
@@ -1536,7 +1680,13 @@
       function squadListHTML(arr, which){
         if (!arr.length) return '<p class="note">No players yet — add the squad below.</p>';
         return arr.map(function(n,i){
-          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span><button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
+          /* ↑ / ↓ set the player's position (batting order) before the
+             squad is confirmed; the first row cannot move up and the
+             last cannot move down. */
+          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + esc(n) + '</span>'
+            + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',-1)" aria-label="Move ' + esc(n) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+            + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',1)" aria-label="Move ' + esc(n) + ' down"' + (i === arr.length - 1 ? ' disabled' : '') + '>↓</button>'
+            + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
         }).join('');
       }
       function renderSquads(){
@@ -1593,16 +1743,31 @@
         syncMatchSquadToTournament(which);
         commit('Squad updated', true); toast(name + ' removed from the squad');
       }
+      /* Move a player one position up / down in the squad order while
+         the squad is being prepared for confirmation. Like adding or
+         removing a player, reordering un-confirms the squad — the new
+         order becomes final only when Confirm Squad is tapped again —
+         and the order is kept in the team's tournament squad too. */
+      function movePlayer(which, i, dir){
+        var arr = which==='A' ? S.squadA : S.squadB;
+        var j = i + dir;
+        if (j < 0 || j >= arr.length) return;
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        S.squadConfirmed = false;
+        syncMatchSquadToTournament(which);
+        commit('Squad updated', true);
+      }
       function yetToBatNames(inn){
         var squad = squadForTeam(inn.battingTeam);
         if (!squad || !squad.length) return [];
         var batted = {}; inn.batters.forEach(function(b){ batted[b.name]=true; });
         return squad.filter(function(n){ return !batted[n]; });
       }
-      function batterCandidates(){
+      function batterCandidates(excludeName){
         var inn = S.current;
+        var excl = (excludeName != null) ? excludeName : inn.nonStriker;
         return battingSquad().filter(function(name){
-          if (name === inn.nonStriker) return false;
+          if (name === excl) return false;
           for (var i=0;i<inn.batters.length;i++) if (inn.batters[i].name===name && inn.batters[i].out) return false;
           return true;
         });
@@ -1618,21 +1783,23 @@
       function pickerItem(name, det){
         return '<button class="pick" data-name="' + esc(name) + '"><span class="pick-name">' + esc(name) + '</span><span class="pick-det">' + esc(det) + '</span></button>';
       }
-      var pickerMode = null, pickerExclude = null, pickerAfter = null;
+      var pickerMode = null, pickerExclude = null, pickerAfter = null, pickerTargetSlot = 'striker';
       function openPicker(mode, opts){
         opts = opts || {};
-        pickerMode = mode; pickerExclude = opts.exclude || null; pickerAfter = opts.after || null;
+        pickerMode = mode; pickerAfter = opts.after || null;
+        pickerExclude = !opts.exclude ? [] : (Array.isArray(opts.exclude) ? opts.exclude.slice() : [opts.exclude]);
+        pickerTargetSlot = opts.slot || 'striker';
         var inn = S.current;
         $('pickerCustom').value = '';
         var note = $('pickerNote');
         if (mode === 'bowler'){
           $('pickerTitle').textContent = opts.title || 'Over Complete — New Bowler';
           $('pickerSub').textContent = opts.sub || ('Over ' + (inn.legalBalls/6) + ' is complete. Pick who bowls over ' + (inn.legalBalls/6 + 1) + ' for ' + inn.bowlingTeam + '.');
-          if (pickerExclude){
-            note.textContent = pickerExclude + ' bowled the previous over and cannot bowl two overs in a row — pick someone else.';
+          if (pickerExclude.length){
+            note.textContent = pickerExclude.join(' and ') + ' bowled the previous over and cannot bowl two overs in a row — pick someone else.';
             note.style.display = 'block';
           } else { note.style.display = 'none'; }
-          var list = bowlingSquad().filter(function(n){ return n !== pickerExclude; });
+          var list = bowlingSquad().filter(function(n){ return pickerExclude.indexOf(n) === -1; });
           $('pickerList').innerHTML = list.length
             ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n)); }).join('')
             : '<p class="note">No squad players to pick from — type a name below, or add the bowling team\'s squad first.</p>';
@@ -1640,7 +1807,8 @@
           $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
           $('pickerSub').textContent = 'Pick the next batter for ' + inn.battingTeam + '.';
           note.style.display = 'none';
-          var cands = batterCandidates();
+          var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
+          var cands = batterCandidates(otherEnd);
           $('pickerList').innerHTML = cands.length
             ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n)); }).join('')
             : '<p class="note">No squad players left to pick — type a name below.</p>';
@@ -1657,16 +1825,30 @@
       function pickPlayer(name){
         if (!name) return;
         var mode = pickerMode;
+        var inn = S.current;
+        /* The same state rules apply inside the picker: an invalid
+           pick is rejected and the picker stays open. */
+        if (mode === 'bowler'){
+          var bErr = bowlerPickError(inn, name);
+          if (bErr){ toast('⚠️ ' + bErr + ' — pick someone else'); return; }
+          if (inn.bowler && name === inn.bowler){ toast(name + ' is already bowling — pick a different bowler to change'); return; }
+        } else if (mode === 'batter'){
+          var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
+          if (otherEnd && name === otherEnd){ toast('⚠️ ' + name + ' is already batting at the other end — pick someone else'); return; }
+          if (batterIsOut(inn, name)){ toast('⚠️ ' + name + ' is already out in this innings — pick another batter'); return; }
+        }
+        var slot = pickerTargetSlot;
         closePicker(true);
         if (mode === 'bowler'){
           ensureSelectOption($('bowlerName'), name);
-          $('bowlerName').value = name; S.current.bowler = name; getBowler(S.current, name);
+          $('bowlerName').value = name; S.current.bowler = name; S.current.awaitingBowler = false; getBowler(S.current, name);
           announceCurrentPlayers();
-          commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl the next over');
+          commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl');
         } else if (mode === 'batter'){
-          ensureSelectOption($('strikerName'), name);
-          $('strikerName').value = name;
-          S.current.striker = name; getBatter(S.current, name);
+          var selId = slot === 'nonStriker' ? 'nonStrikerName' : 'strikerName';
+          ensureSelectOption($(selId), name);
+          $(selId).value = name;
+          S.current[slot] = name; getBatter(S.current, name);
           announceCurrentPlayers();
           commit('New batter in', true); toast('🏏 ' + name + ' comes in to bat');
         }
@@ -1677,13 +1859,31 @@
         pickPlayer(v);
       }
       function changeBowler(){
-        openPicker('bowler', { title:'Change Bowler', sub:'Pick the current bowler for ' + S.current.bowlingTeam + '.' });
+        if (matchFinishedGuard()) return;
+        /* Mid-over change: the bowler who bowled the previous over is
+           barred here too (bowling part of this over would still be
+           consecutive overs), and so is the bowler already bowling. */
+        var excl = prevOverBowlers(S.current);
+        if (S.current.bowler && excl.indexOf(S.current.bowler) === -1) excl.push(S.current.bowler);
+        openPicker('bowler', { title:'Change Bowler', sub:'Pick the current bowler for ' + S.current.bowlingTeam + '.', exclude: excl });
       }
-      function maybeBowlerPrompt(){
+      function maybeBowlerAsk(){
         var inn = S.current;
         if (S.status !== 'live') return;
         if (inn.legalBalls > 0 && inn.legalBalls % 6 === 0 && inn.legalBalls < S.oversLimit*6 && inn.wickets < 10){
-          openPicker('bowler', { exclude: inn.bowler });
+          var excl = prevOverBowlers(inn);
+          if (!inn.awaitingBowler){
+            /* The over is over and its bowler is DONE: the slot is
+               cleared in state, not just in the picker. Scoring stays
+               blocked (playersSelected) until a new bowler is picked —
+               closing this picker with "Decide Later" can no longer
+               leave the previous bowler bowling on by default. */
+            inn.awaitingBowler = true;
+            inn.bowler = null;
+            var bs = $('bowlerName'); if (bs) bs.value = '';
+            commit(null, true);
+          }
+          openPicker('bowler', { exclude: excl });
         }
       }
       document.addEventListener('click', function(e){
@@ -1693,16 +1893,22 @@
       });
 
       function swapStrike(inn){ var t=inn.striker; inn.striker=inn.nonStriker; inn.nonStriker=t;
-        $('strikerName').value = inn.striker; $('nonStrikerName').value = inn.nonStriker; }
+        $('strikerName').value = inn.striker || ''; $('nonStrikerName').value = inn.nonStriker || ''; }
 
       function ballLabel(inn){ return oversText(inn.legalBalls); }
-      function pushBall(inn, text, cls){
+      function pushBall(inn, text, cls, overNo, extraFields){
         /* Record who bowled and who faced this ball, so the ball-by-ball
            commentary can read "Bowler to Batter" like a real feed. Called
            before any strike swap / new-batter change, so the names are
-           the pair that actually played the delivery. */
-        inn.balls.push({ over: oversText(inn.legalBalls), text:text, cls:cls||'', bowler: inn.bowler || '', batter: inn.striker || '' });
-        if (inn.balls.length > 120) inn.balls.shift();
+           the pair that actually played the delivery. overNo is the
+           over number captured by the caller at record time (before
+           the legal-ball count moved), so grouping never has to guess
+           it back from the score. No length cap: trimming at 120 balls
+           silently deleted the start of any 20-over innings with
+           extras, and corrupted the over summaries built from it. */
+        var rec = { over: oversText(inn.legalBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
+        if (extraFields) for (var k in extraFields) rec[k] = extraFields[k];
+        inn.balls.push(rec);
       }
       function afterLegalBall(inn){
         if (inn.legalBalls % 6 === 0 && inn.legalBalls > 0) swapStrike(inn);
@@ -1725,21 +1931,24 @@
       /* ---------- scoring ---------- */
       function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
 
-      function scoreRuns(n){ if (scoringLocked()) return; syncPlayersFromInputs(); if (!playersSelected()) return; if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
+      function scoreRuns(n){ if (scoringLocked()) return; if (matchFinishedGuard()) return; syncPlayersFromInputs(); if (!playersSelected()) return; if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
 
       function applyBatRuns(n){
         snapshot(); syncPlayersFromInputs();
+        if (S.status === 'inningsBreak') S.status = 'live'; /* first ball of innings 2 ends the break */
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
+        var overNo = Math.floor(inn.legalBalls / 6) + 1;
         inn.runs+=n; bat.runs+=n; bat.balls++; bowl.runs+=n; bowl.balls++;
         if (n===4) bat.fours++; if (n===6) bat.sixes++;
         inn.legalBalls++;
-        pushBall(inn, String(n), n===4?'b4':(n===6?'b6':''));
+        pushBall(inn, String(n), n===4?'b4':(n===6?'b6':''), overNo);
         if (n%2===1) swapStrike(inn);
         afterLegalBall(inn); commit('Ball: ' + n + (n===1 ? ' run' : ' runs'));
-        maybeBowlerPrompt();
+        maybeBowlerAsk();
       }
       function setPending(type){
         if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
         syncPlayersFromInputs(); if (!playersSelected()) return;
         pendingExtra = (pendingExtra===type) ? null : type;
         renderPending();
@@ -1762,11 +1971,13 @@
       function completeExtra(n){
         var type=pendingExtra; pendingExtra=null; renderPending();
         snapshot(); syncPlayersFromInputs();
+        if (S.status === 'inningsBreak') S.status = 'live';
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
+        var overNo = Math.floor(inn.legalBalls / 6) + 1;
         if (type==='noball'){
           inn.runs += 1+n; inn.extras.noball+=1; bowl.runs += 1+n;
           bat.runs+=n; if (n===4) bat.fours++; if (n===6) bat.sixes++;
-          pushBall(inn, 'Nb+'+n, 'bx');
+          pushBall(inn, 'Nb+'+n, 'bx', overNo);
           if (n%2===1) swapStrike(inn);
           checkInningsEnd(); commit('No-Ball + ' + n + (n===1 ? ' run' : ' runs'));
         } else if (type==='wide'){
@@ -1775,50 +1986,164 @@
              charged to the bowler as wides. */
           var total = 1 + n;
           inn.runs += total; inn.extras.wide += total; bowl.runs += total;
-          pushBall(inn, n>0 ? 'Wd+'+n : 'Wd', 'bx');
+          pushBall(inn, n>0 ? 'Wd+'+n : 'Wd', 'bx', overNo);
           if (n%2===1) swapStrike(inn);
           checkInningsEnd(); commit(n>0 ? ('Wide + ' + n + ' — ' + total + ' runs total') : 'Wide — 1 run');
         } else {
           var key = (type==='bye') ? 'bye':'legbye';
           inn.runs += n; inn.extras[key]+=n; bowl.runs+=n; bowl.balls++;
           bat.balls++; inn.legalBalls++;
-          pushBall(inn, (type==='bye'?'B':'Lb')+n, 'bx');
+          pushBall(inn, (type==='bye'?'B':'Lb')+n, 'bx', overNo);
           if (n%2===1) swapStrike(inn);
           afterLegalBall(inn); commit(pendingLabelFor(key) + ' ' + n + (n===1 ? ' run' : ' runs'));
-          maybeBowlerPrompt();
+          maybeBowlerAsk();
         }
       }
       function pendingLabelFor(k){ return k==='bye' ? 'Bye' : 'Leg-Bye'; }
 
+      /* ---------- wickets: dismissal type, runs, extras, bowler credit ----------
+         Tapping Wicket opens the dismissal panel instead of recording
+         a plain "bowled": the scorer picks HOW the batter was out,
+         who was out (a run out can dismiss either batter), the fielder
+         and the runs completed on the ball. A wicket can also fall on
+         a pending Wide / No-Ball / Bye / Leg-Bye ball — the panel is
+         filled in for that same delivery. The bowler is credited only
+         for bowler dismissals (bowled, caught, caught & bowled, LBW,
+         stumped, hit wicket) — never for a run out or retired out. */
+      function bowlerCredited(dismissal){
+        return ['bowled','caught','candbowled','lbw','stumped','hitwicket'].indexOf(dismissal) > -1;
+      }
+      function dismissalHowOut(type, fielder, bowler){
+        switch(type){
+          case 'bowled': return 'b ' + bowler;
+          case 'caught': return fielder ? ('c ' + fielder + ' b ' + bowler) : ('c (fielder not recorded) b ' + bowler);
+          case 'candbowled': return 'c & b ' + bowler;
+          case 'lbw': return 'lbw b ' + bowler;
+          case 'runout': return fielder ? ('run out (' + fielder + ')') : 'run out';
+          case 'stumped': return fielder ? ('st ' + fielder + ' b ' + bowler) : ('st (keeper not recorded) b ' + bowler);
+          case 'hitwicket': return 'hit wicket b ' + bowler;
+          case 'retired': return 'retired out';
+          default: return 'out';
+        }
+      }
       function scoreWicket(){
         if (scoringLocked()) return;
-        if (pendingExtra){ toast('Finish the pending extra ball first'); return; }
+        if (matchFinishedGuard()) return;
+        syncPlayersFromInputs(); if (!playersSelected()) return;
+        /* A pending extra no longer blocks a wicket: a batter can be
+           stumped off a wide, run out off a no-ball, and so on — the
+           panel records the wicket on that pending delivery. */
+        var ctx = $('wktContext');
+        if (ctx) ctx.textContent = pendingExtra
+          ? ('This wicket falls on the pending ' + pendingLabel() + ' ball. “Runs on this ball” = the extra runs run on top of the ' + pendingLabel() + ' itself.')
+          : 'Pick how the batter was out. “Runs on this ball” = runs completed before the dismissal (e.g. run out going for a second run).';
+        var outSel = $('wktOutWho'); if (outSel) outSel.value = 'striker';
+        var runsSel = $('wktRuns'); if (runsSel) runsSel.value = '0';
+        var panel = $('wicketPanel'); if (panel){ panel.hidden = false; try { panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+      }
+      function cancelWicket(){
+        var panel = $('wicketPanel'); if (panel) panel.hidden = true;
+      }
+      function confirmWicket(){
+        var type = $('wktType').value;
+        var outWhich = $('wktOutWho').value === 'nonStriker' ? 'nonStriker' : 'striker';
+        var fielder = $('wktFielder').value.trim();
+        var runs = Math.max(0, Math.min(6, parseInt($('wktRuns').value, 10) || 0));
+        var extra = pendingExtra;
+        cancelWicket();
+        applyWicket(type, outWhich, fielder, runs, extra);
+      }
+      function applyWicket(type, outWhich, fielder, runs, extra){
+        if (scoringLocked()) return;
+        if (matchFinishedGuard()) return;
         syncPlayersFromInputs(); if (!playersSelected()) return;
         snapshot(); syncPlayersFromInputs();
-        var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
-        inn.wickets++; bat.balls++; bat.out=true; bat.howOut='b ' + inn.bowler;
-        bowl.wickets++; bowl.balls++; inn.legalBalls++;
-        pushBall(inn,'W','bw');
-        var outName = bat.name;
-        var innNoBefore = S.inningsNo;
-        if (inn.wickets < 10){
-          /* The striker slot goes back to unselected — the controller
-             picks the new batter from the dropdown / picker. */
-          inn.striker = null;
-          $('strikerName').value='';
+        if (S.status === 'inningsBreak') S.status = 'live';
+        pendingExtra = null; renderPending();
+        var inn = S.current;
+        var overNo = Math.floor(inn.legalBalls / 6) + 1;
+        var strikerBat = getBatter(inn, inn.striker);
+        var outName = outWhich === 'nonStriker' ? inn.nonStriker : inn.striker;
+        var outBat = getBatter(inn, outName);
+        var notOutName = outWhich === 'nonStriker' ? inn.striker : inn.nonStriker;
+        var bowl = getBowler(inn, inn.bowler);
+        var credited = bowlerCredited(type);
+        var howOut = dismissalHowOut(type, fielder, inn.bowler);
+        var legal = false, token = '', teamRuns = 0, batRuns = 0;
+        if (extra === 'wide'){
+          token = runs > 0 ? ('WdW+' + runs) : 'WdW';
+          teamRuns = 1 + runs; inn.extras.wide += teamRuns; bowl.runs += teamRuns;
+        } else if (extra === 'noball'){
+          token = runs > 0 ? ('NbW+' + runs) : 'NbW';
+          teamRuns = 1 + runs; inn.extras.noball += 1; bowl.runs += teamRuns;
+          batRuns = runs; strikerBat.runs += runs;
+          if (runs === 4) strikerBat.fours++; if (runs === 6) strikerBat.sixes++;
+        } else if (extra === 'bye' || extra === 'legbye'){
+          var key = extra === 'bye' ? 'bye' : 'legbye';
+          token = (extra === 'bye' ? 'ByeW' : 'LbW') + (runs > 0 ? ('+' + runs) : '');
+          teamRuns = runs; inn.extras[key] += runs; bowl.runs += runs;
+          legal = true;
+        } else {
+          token = runs > 0 ? ('W+' + runs) : 'W';
+          teamRuns = runs; batRuns = runs; bowl.runs += runs;
+          strikerBat.runs += runs;
+          if (runs === 4) strikerBat.fours++; if (runs === 6) strikerBat.sixes++;
+          legal = true;
         }
-        afterLegalBall(inn); commit('Wicket! ' + outName + ' is out');
-        if (S.inningsNo===innNoBefore && S.status==='live' && inn.wickets < 10){
-          if (batterCandidates().length){
-            var overDone = (inn.legalBalls>0 && inn.legalBalls%6===0);
-            openPicker('batter', { after: overDone ? maybeBowlerPrompt : null });
-          } else { $('strikerName').focus(); maybeBowlerPrompt(); }
+        if (legal){
+          /* The striker faces a legal delivery (a bye / leg-bye counts
+             as a ball faced; a wide / no-ball does not). */
+          strikerBat.balls++; bowl.balls++; inn.legalBalls++;
+        }
+        inn.runs += teamRuns;
+        inn.wickets++;
+        outBat.out = true; outBat.howOut = howOut;
+        if (credited) bowl.wickets++;
+        pushBall(inn, token, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: type, howOut: howOut, outName: outName });
+        /* Place the pair correctly — including on the LAST ball of an
+           over. The not-out batter changes ends for every odd run run
+           and again at the change of ends; the vacant slot is the end
+           opposite wherever the not-out batter finishes. (The old code
+           blanked the striker and THEN swapped ends for the over, so
+           the not-out batter was left in no slot at all and the new
+           batter picker overwrote him.) */
+        var innNoBefore = S.inningsNo;
+        var overCompleted = legal && inn.legalBalls > 0 && inn.legalBalls % 6 === 0;
+        var vacantSlot = null;
+        if (inn.wickets < 10){
+          var flips = (runs % 2 === 1 ? 1 : 0) + (overCompleted ? 1 : 0);
+          var notOutSlot = outWhich === 'striker' ? 'nonStriker' : 'striker';
+          if (flips % 2 === 1) notOutSlot = notOutSlot === 'striker' ? 'nonStriker' : 'striker';
+          vacantSlot = notOutSlot === 'striker' ? 'nonStriker' : 'striker';
+          inn.striker = notOutSlot === 'striker' ? notOutName : null;
+          inn.nonStriker = notOutSlot === 'nonStriker' ? notOutName : null;
+        } else {
+          inn.striker = outWhich === 'striker' ? null : inn.striker;
+          inn.nonStriker = outWhich === 'nonStriker' ? null : inn.nonStriker;
+        }
+        $('strikerName').value = inn.striker || '';
+        $('nonStrikerName').value = inn.nonStriker || '';
+        checkInningsEnd();
+        commit('Wicket! ' + outName + ' — ' + howOut);
+        if (S.inningsNo === innNoBefore && S.status === 'live' && inn.wickets < 10 && vacantSlot){
+          if (batterCandidates(vacantSlot === 'striker' ? inn.nonStriker : inn.striker).length){
+            openPicker('batter', { slot: vacantSlot, after: overCompleted ? maybeBowlerAsk : null });
+          } else {
+            try { $(vacantSlot === 'striker' ? 'strikerName' : 'nonStrikerName').focus(); } catch(e){}
+            if (overCompleted) maybeBowlerAsk();
+          }
         }
       }
       function undoBall(){
         if (scoringLocked()) return;
         if (!undoStack.length){ toast('No ball to undo'); return; }
         S = undoStack.pop(); pendingExtra=null; renderPending();
+        /* Dismiss any open picker without running its callbacks — it
+           was opened for the state that has just been undone (e.g. the
+           innings-break opening-bowler picker shown after the last
+           ball of an innings). */
+        var pm = $('pickerModal'); if (pm) pm.classList.remove('show');
+        pickerMode = null; pickerAfter = null; pickerExclude = null;
         $('strikerName').value = S.current.striker||''; $('nonStrikerName').value = S.current.nonStriker||''; $('bowlerName').value = S.current.bowler||'';
         commit('Last ball undone', true);
       }
@@ -1828,6 +2153,15 @@
         if (scoringLocked()) return;
         var newA = $('teamA').value.trim() || 'Team 1';
         var newB = $('teamB').value.trim() || 'Team 2';
+        /* The same team on both sides is not a match. */
+        if (newA.toLowerCase() === newB.toLowerCase()){
+          openSetupFold();
+          $('teamB').classList.add('req-missing');
+          toast('⚠️ Team 1 and Team 2 are the same team — pick two different teams to start the match');
+          try { $('teamB').focus(); } catch(e){}
+          return;
+        }
+        $('teamB').classList.remove('req-missing');
         /* Toss is mandatory: the winner and the decision must both be
            picked — they decide who bats first and are shown on the
            public scoreboard. Without them the match does not start. */
@@ -1842,6 +2176,11 @@
           try { (!tw ? twEl : tdEl).focus(); } catch(e){}
           return;
         }
+        /* Starting replaces the live score for every viewer, so it is
+           confirmed first with an in-page dialog. */
+        askVerify('Start this match?', 'Start ' + newA + ' vs ' + newB + '? The current live score will be replaced for everyone watching.', function(){ doStartMatch(newA, newB, tw, td); });
+      }
+      function doStartMatch(newA, newB, tw, td){
         var prevTeamA = S.teamA, prevTeamB = S.teamB;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
@@ -1866,6 +2205,9 @@
         if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
         if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
         undoStack = [];
+        /* No half-scored extra ball may leak into the new match. */
+        pendingExtra = null; renderPending();
+        cancelWicket();
         /* A new match starts with NO batter or bowler selected — the
            controller picks the openers and the opening bowler from the
            dropdowns, and only then does the innings-start line appear. */
@@ -1876,6 +2218,11 @@
       }
       function resetMatch(){
         if (scoringLocked()) return;
+        /* Clearing everything wipes the live score for every viewer,
+           so it is confirmed first. */
+        askVerify('Start a new match?', 'New Match clears the current live match — score, batters, bowlers and the innings — for you and for everyone watching. Squads and tournament data are kept. Continue?', doResetMatch);
+      }
+      function doResetMatch(){
         var prevTeamA = S.teamA, prevTeamB = S.teamB;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
         var keepTn2 = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
@@ -1890,6 +2237,7 @@
         S.squadA = squadForMatch(S.teamA, tnSquads2, prevTeamA, keepA);
         S.squadB = squadForMatch(S.teamB, tnSquads2, prevTeamB, keepB);
         undoStack=[]; pendingExtra=null; renderPending();
+        cancelWicket();
         S.current=blankInnings(S.teamA,S.teamB);
         /* The toss starts blank as well — it must be picked fresh for
            the new match before Start Match will run. */
@@ -1907,18 +2255,36 @@
       }
       function endInnings(auto){
         if (!auto && scoringLocked()) return;
+        if (S.status === 'finished'){ if (!auto) toast('This match is already finished'); return; }
+        var inn0 = S.current;
+        var deliveries = (inn0.balls || []).filter(function(b){ return !b.evt; }).length;
+        if (!deliveries){ if (!auto) toast('⚠️ Cannot end the innings — no ball has been bowled yet'); return; }
+        /* A half-scored Wide / No-Ball / Bye / Leg-Bye belongs to the
+           innings that is ending — it must not leak into the next one. */
+        pendingExtra = null; renderPending();
+        cancelWicket();
         if (S.inningsNo===2){ finishMatch(auto); return; }
         var inn=S.current;
         S.prevInnings = deep(inn);
-        S.inningsNo = 2; S.status='live';
+        /* The break is a real status: the scoreboard shows the
+           innings-break line (and BREAK pill) until the first ball of
+           innings 2 is scored, which flips it back to live. */
+        S.inningsNo = 2; S.status='inningsBreak';
         S.current = blankInnings(inn.bowlingTeam, inn.battingTeam);
         $('strikerName').value=''; $('nonStrikerName').value=''; $('bowlerName').value='';
-        undoStack=[];
+        /* The undo stack deliberately SURVIVES the innings change:
+           the snapshot taken before the innings-ending ball restores
+           the whole pre-ball state (innings 1, that ball not bowled),
+           so the scorer can still undo a wicket that fell on the very
+           last ball of the innings. Clearing the stack here used to
+           make that ball impossible to undo. */
         commit(auto ? 'Innings ended — Target ' + (S.prevInnings.runs+1) : 'Innings ended — Target ' + (S.prevInnings.runs+1));
         openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
       }
       function finishMatch(auto){
         if (!auto && scoringLocked()) return;
+        pendingExtra = null; renderPending();
+        cancelWicket();
         S.status='finished';
         var inn=S.current, t=target(), txt='';
         if (S.inningsNo===2 && t){
@@ -2082,26 +2448,35 @@
       }
       function archiveCurrentMatch(){
         normalizeTournament();
+        /* A result can be saved only for a FINISHED match with both
+           innings complete — saving mid-match used to store a
+           half-finished "result" in the points table and statistics. */
+        if (S.status !== 'finished' || S.inningsNo !== 2 || !S.prevInnings){
+          toast('⚠️ Save Result works only after the match is finished — both innings complete and the result decided');
+          return;
+        }
         var mid = S.matchId || S.updatedAt || 1;
         if (!S.matchId) S.matchId = mid;
-        if (S.archivedMatchId === mid){ toast('This match is already saved to the tournament'); return; }
-        var inningsArr = [];
-        if (S.prevInnings) inningsArr.push(deep(S.prevInnings));
-        if (S.current && (S.current.runs > 0 || S.current.legalBalls > 0 || S.current.wickets > 0)) inningsArr.push(deep(S.current));
-        if (!inningsArr.length){ toast('Score at least one ball before saving'); return; }
+        var inningsArr = [deep(S.prevInnings), deep(S.current)];
         var match = {
           id: mid, at: Date.now(), manual: false,
           oversLimit: S.oversLimit, venue: S.venue || '',
           innings: inningsArr, resultText: S.resultText || ''
         };
-        if (!match.resultText && inningsArr.length >= 2) match.resultText = matchResultText(match);
-        if (!match.resultText) match.resultText = inningsArr[0].battingTeam + ' ' + inningsArr[0].runs + '/' + inningsArr[0].wickets;
+        if (!match.resultText) match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
         inningsArr.forEach(function(inn){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); });
-        S.tournament.matches.push(match);
+        /* Saving again REPLACES the stored result for this match
+           (same match id) instead of refusing or duplicating it — so
+           a corrected score can be re-saved. */
+        var existingIdx = -1;
+        S.tournament.matches.forEach(function(m, i){ if (m.id === mid) existingIdx = i; });
+        var replaced = existingIdx > -1;
+        if (replaced) S.tournament.matches[existingIdx] = match;
+        else S.tournament.matches.push(match);
         S.archivedMatchId = mid;
         commit('Saved to tournament', true);
-        toast('🏆 Result saved — points table & statistics updated');
+        toast(replaced ? '🏆 Result updated — points table & statistics refreshed' : '🏆 Result saved — points table & statistics updated');
         setView('tournament');
       }
       function addManualResult(){
@@ -2207,16 +2582,26 @@
         var bat = {}, bowl = {};
         S.tournament.matches.forEach(function(m){
           (m.innings || []).forEach(function(inn){
+            /* Players are keyed by name AND team: the same name in two
+               squads (e.g. Md. Ashraful Alam plays for two of the
+               default teams) is two different players, and keying by
+               name alone merged their figures into one row. Manual
+               results carry team scores only — no player figures were
+               entered for them — so they count in the points table and
+               the tournament totals exactly like scored matches, and
+               simply add no player rows here. */
             (inn.batters || []).forEach(function(b){
-              if (!bat[b.name]) bat[b.name] = { name:b.name, team:inn.battingTeam, runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, notouts:0, best:0 };
-              var s = bat[b.name];
+              var bk = b.name + '' + inn.battingTeam;
+              if (!bat[bk]) bat[bk] = { name:b.name, team:inn.battingTeam, runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, notouts:0, best:0 };
+              var s = bat[bk];
               s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; s.inns++;
               if (b.out) s.outs++; else s.notouts++;
               if (b.runs > s.best) s.best = b.runs;
             });
             (inn.bowlers || []).forEach(function(b){
-              if (!bowl[b.name]) bowl[b.name] = { name:b.name, team:inn.bowlingTeam, balls:0, runs:0, wickets:0, inns:0, bestW:0 };
-              var s = bowl[b.name];
+              var wk = b.name + '' + inn.bowlingTeam;
+              if (!bowl[wk]) bowl[wk] = { name:b.name, team:inn.bowlingTeam, balls:0, runs:0, wickets:0, inns:0, bestW:0 };
+              var s = bowl[wk];
               s.balls += b.balls; s.runs += b.runs; s.wickets += b.wickets; s.inns++;
               if (b.wickets > s.bestW) s.bestW = b.wickets;
             });
@@ -2252,10 +2637,17 @@
         var byFour = st.batting.slice().sort(function(a,b){ return b.fours - a.fours; })[0];
         var bySR = st.batting.filter(function(s){ return s.balls >= 30; }).sort(function(a,b){ return (b.runs/Math.max(1,b.balls)) - (a.runs/Math.max(1,a.balls)); })[0];
         var byEcon = st.bowling.filter(function(s){ return s.balls >= 12; }).sort(function(a,b){ return (a.runs/(a.balls/6)) - (b.runs/(b.balls/6)); })[0];
-        var totalRuns = 0, totalWkts = 0;
-        S.tournament.matches.forEach(function(m){ (m.innings||[]).forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; }); });
+        var totalRuns = 0, totalWkts = 0, completedMatches = 0;
+        /* Totals count the same matches the points table counts —
+           finished two-innings matches, scored or entered manually —
+           so "Matches completed" here always agrees with the table. */
+        S.tournament.matches.forEach(function(m){
+          if (!m.innings || m.innings.length < 2) return;
+          completedMatches++;
+          m.innings.forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; });
+        });
         var items = [];
-        items.push('<div class="hist-item"><span>Matches completed</span><b>' + S.tournament.matches.length + '</b></div>');
+        items.push('<div class="hist-item"><span>Matches completed</span><b>' + completedMatches + '</b></div>');
         items.push('<div class="hist-item"><span>Total runs in tournament</span><b>' + totalRuns + '</b></div>');
         items.push('<div class="hist-item"><span>Total wickets</span><b>' + totalWkts + '</b></div>');
         if (bySix && bySix.sixes > 0) items.push('<div class="hist-item"><span>Most sixes</span><b>' + esc(bySix.name) + ' — ' + bySix.sixes + '</b></div>');
@@ -2709,7 +3101,10 @@
         var saveBtn = $('btnSaveTournament');
         if (saveBtn){
           var already = S.archivedMatchId && S.archivedMatchId === S.matchId;
-          saveBtn.textContent = already ? '✓ Saved to Tournament' : '🏆 Save Result to Tournament';
+          var canSave = S.status === 'finished' && S.inningsNo === 2 && !!S.prevInnings;
+          saveBtn.textContent = already ? '↻ Update Saved Result' : '🏆 Save Result to Tournament';
+          saveBtn.disabled = !canSave;
+          saveBtn.title = canSave ? '' : 'Available once the match is finished (both innings complete)';
         }
       }
 
@@ -3009,38 +3404,60 @@
         var rate = inn.runs / (inn.legalBalls / 6);
         return Math.round(inn.runs + rate * ((totalBalls - inn.legalBalls) / 6));
       }
+      function isWicketBall(b){
+        if (!b) return false;
+        if (b.wkt) return true;
+        var t = String(b.text || '');
+        return t === 'W' || /^W\+\d+$/.test(t) || /^(?:WdW|NbW|ByeW|LbW)(?:\+\d+)?$/.test(t);
+      }
       function parseBallRuns(text){
         var t = String(text || '');
         if (/^\d+$/.test(t)) return parseInt(t, 10);
         if (t === 'W') return 0;
-        var m = t.match(/^Wd\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
+        var m = t.match(/^W\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^WdW\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
+        if (t === 'WdW') return 1;
+        m = t.match(/^NbW\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
+        if (t === 'NbW') return 1;
+        m = t.match(/^(?:ByeW|LbW)\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        if (t === 'ByeW' || t === 'LbW') return 0;
+        m = t.match(/^Wd\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
         if (t === 'Wd') return 1;
         m = t.match(/^Nb\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
         m = t.match(/^(?:B|Lb)(\d+)$/); if (m) return parseInt(m[1], 10);
         return 0;
       }
       function groupOvers(inn){
-        var groups = [], cur = null;
+        /* Deliveries are grouped by COUNTING legal balls, never by the
+           stored over label. A ball's label is the legal-ball count
+           AFTER the delivery, so the sixth ball of an over is labelled
+           "1.0" — and a wide or no-ball bowled as the first ball of
+           the NEXT over carries that same "1.0" label, because the
+           legal count has not moved yet. Trusting the label therefore
+           split one over into two groups (the over's real balls, then
+           the new over's opening wide on its own), and each group got
+           its own summary card — the duplicate "Over 1" box after a
+           wide / no-ball. Counting legal deliveries instead puts every
+           wide and no-ball in the over actually being bowled. */
+        var groups = [], cur = null, legalBefore = 0;
+        function groupFor(no){
+          if (!cur || cur.no !== no){ cur = { no: no, balls: [] }; groups.push(cur); }
+          return cur;
+        }
         (inn.balls || []).forEach(function(b){
           if (b.evt){
             /* Announcement lines are not deliveries and carry no over
                number. One recorded exactly at an over boundary (a new
-               bowler for the next over, the innings-start line of the
-               next over) belongs to the over it introduces; any other
-               line stays with the over in progress. */
-            var ab = (typeof b.atBalls === 'number') ? b.atBalls : null;
-            if (ab !== null && ab > 0 && ab % 6 === 0){
-              var gnoE = ab / 6 + 1;
-              if (!cur || cur.no !== gnoE){ cur = { no: gnoE, balls: [] }; groups.push(cur); }
-            } else if (!cur){ cur = { no: 1, balls: [] }; groups.push(cur); }
-            cur.balls.push(b);
+               bowler for the next over) belongs to the over it
+               introduces; any other line stays with the over in
+               progress. atBalls is the legal-ball count at the time,
+               so floor(atBalls / 6) + 1 covers both cases. */
+            var ab = (typeof b.atBalls === 'number') ? b.atBalls : legalBefore;
+            groupFor(Math.floor(ab / 6) + 1).balls.push(b);
             return;
           }
-          var ov = parseFloat(b.over) || 0;
-          var frac = Math.round((ov - Math.floor(ov)) * 10);
-          var gno = (ov === 0) ? 1 : (frac === 0 ? Math.floor(ov) : Math.floor(ov) + 1);
-          if (!cur || cur.no !== gno){ cur = { no: gno, balls: [] }; groups.push(cur); }
-          cur.balls.push(b);
+          groupFor(Math.floor(legalBefore / 6) + 1).balls.push(b);
+          if (isLegalDelivery(b.text)) legalBefore++;
         });
         groups.forEach(function(g){ g.runs = g.balls.reduce(function(s, b){ return s + parseBallRuns(b.text); }, 0); });
         return groups;
@@ -3050,6 +3467,11 @@
         if (t === '4') return '<span class="c4">FOUR</span> — boundary, 4 runs';
         if (t === '6') return '<span class="c6">SIX</span> — maximum, 6 runs';
         if (t === 'W') return '<span class="cw">WICKET</span> — batter is out';
+        var wm = t.match(/^W\+(\d+)$/); if (wm) return '<span class="cw">WICKET</span> — batter is out, ' + wm[1] + (wm[1] === '1' ? ' run' : ' runs') + ' completed';
+        wm = t.match(/^WdW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>Wide</b> — ' + (1 + (wm[1] ? parseInt(wm[1], 10) : 0)) + ' runs in extras';
+        wm = t.match(/^NbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b>' + (wm[1] ? ' — ' + wm[1] + ' runs off the bat' : '');
+        wm = t.match(/^ByeW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Bye</b>' + (wm[1] ? ', ' + wm[1] + ' byes completed' : '');
+        wm = t.match(/^LbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Leg bye</b>' + (wm[1] ? ', ' + wm[1] + ' leg byes completed' : '');
         if (t === '0') return '<b>no run</b> — dot ball';
         if (t === '1') return '<b>1 run</b>';
         if (/^\d+$/.test(t)) return '<b>' + esc(t) + ' runs</b>';
@@ -3076,32 +3498,49 @@
          not count as a ball faced. */
       function isLegalDelivery(text){
         var t = String(text || '');
-        return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t));
+        return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t) || t === 'NbW' || /^NbW\+\d+$/.test(t));
       }
       function batterRunsOnBall(text){
         var t = String(text || '');
         if (/^\d+$/.test(t)) return parseInt(t, 10);
         var m = t.match(/^Nb\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^W\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^NbW\+(\d+)$/); if (m) return parseInt(m[1], 10);
         return 0;
       }
       function extraRunsOnBall(text){
         var t = String(text || '');
-        if (t === 'Wd' || /^Wd\+\d+$/.test(t)) return parseBallRuns(t);
-        if (/^Nb\+\d+$/.test(t)) return 1;
-        if (/^(?:B|Lb)\d+$/.test(t)) return parseBallRuns(t);
+        if (t === 'Wd' || /^Wd\+\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t)) return parseBallRuns(t);
+        if (/^Nb\+\d+$/.test(t) || /^NbW(?:\+\d+)?$/.test(t)) return 1;
+        if (/^(?:B|Lb)\d+$/.test(t) || /^(?:ByeW|LbW)(?:\+\d+)?$/.test(t)) return parseBallRuns(t);
         return 0;
+      }
+      /* Partnership = runs and balls SINCE THE LAST WICKET, rebuilt
+         from the ball record — not the current pair's whole-innings
+         totals, which used to keep counting the previous partnership's
+         runs after a wicket fell. Balls = legal deliveries since the
+         last wicket (wides / no-balls add runs but no ball). */
+      function partnershipFigures(inn){
+        var runs = 0, balls = 0;
+        var list = (inn.balls || []).filter(function(b){ return !b.evt; });
+        for (var i = list.length - 1; i >= 0; i--){
+          if (isWicketBall(list[i])) break; /* the wicket ball ended the previous partnership */
+          runs += parseBallRuns(list[i].text);
+          if (isLegalDelivery(list[i].text)) balls++;
+        }
+        return { runs: runs, balls: balls };
       }
       function overSnapshots(inn){
         var groups = groupOvers(inn);
         var cumRuns = 0, cumWkts = 0, cumLegal = 0;
         var batMap = {}, bowlMap = {};
         var snaps = groups.map(function(g){
-          var overBatters = [], overBowlers = [], extrasOver = 0;
+          var overBatters = [], overBowlers = [], extrasOver = 0, ownLegal = 0;
           g.balls.forEach(function(b){
             if (b.evt) return; /* announcement lines are not deliveries */
             cumRuns += parseBallRuns(b.text);
-            if (b.text === 'W') cumWkts++;
-            if (isLegalDelivery(b.text)) cumLegal++;
+            if (isWicketBall(b)) cumWkts++;
+            if (isLegalDelivery(b.text)){ cumLegal++; ownLegal++; }
             extrasOver += extraRunsOnBall(b.text);
             var batName = b.batter || '';
             if (batName){
@@ -3114,14 +3553,17 @@
             if (bowlName){
               if (!bowlMap[bowlName]) bowlMap[bowlName] = { name: bowlName, runs: 0, wickets: 0, balls: 0 };
               bowlMap[bowlName].runs += parseBallRuns(b.text);
-              if (b.text === 'W') bowlMap[bowlName].wickets++;
+              /* A run out is a team wicket but NOT the bowler's: the
+                 ball record carries bowlerWicket from record time.
+                 Legacy 'W' balls (no flag) were all bowler wickets. */
+              if (isWicketBall(b) && b.bowlerWicket !== false) bowlMap[bowlName].wickets++;
               if (isLegalDelivery(b.text)) bowlMap[bowlName].balls++;
               if (overBowlers.indexOf(bowlName) < 0) overBowlers.push(bowlName);
             }
           });
           return {
             no: g.no, balls: g.balls, runs: g.runs,
-            cumRuns: cumRuns, cumWkts: cumWkts, cumLegal: cumLegal,
+            cumRuns: cumRuns, cumWkts: cumWkts, cumLegal: cumLegal, legal: ownLegal,
             extrasOver: extrasOver,
             batters: overBatters.map(function(n){ var s = batMap[n]; return { name: s.name, runs: s.runs, balls: s.balls }; }),
             bowlers: overBowlers.map(function(n){ var s = bowlMap[n]; return { name: s.name, runs: s.runs, wickets: s.wickets, balls: s.balls }; }),
@@ -3129,19 +3571,24 @@
           };
         });
         snaps.forEach(function(s, i){
-          /* An over is complete once the next over has started, or when
-             it is the latest over and its sixth legal ball has been bowled.
-             A group holding only announcement lines (the next over has
-             been announced but not bowled yet) is never a completed over
-             and never gets a summary card. */
+          /* An over is complete when THIS over itself holds six legal
+             deliveries — judged on the over's own legal count, not the
+             innings' cumulative one. The cumulative count also reads 6
+             (12, 18…) when a brand-new over has only an opening wide
+             or no-ball in it, which used to stamp that unfinished over
+             "complete" and give it a summary card of its own. A group
+             holding only announcement lines (the next over has been
+             announced but not bowled yet) is never a completed over
+             and never gets a summary card. Exactly one summary card
+             per completed over. */
           var hasDeliveries = s.balls.some(function(b){ return !b.evt; });
-          s.completed = hasDeliveries && ((i < snaps.length - 1) || (s.cumLegal > 0 && s.cumLegal % 6 === 0));
+          s.completed = hasDeliveries && s.legal >= 6;
         });
         return snaps;
       }
       function overSummaryCardHTML(snap, showFoot){
         var seq = snap.balls.filter(function(b){ return !b.evt; }).map(function(b){
-          var cls = b.text === '4' ? ' class="ob4"' : (b.text === 'W' ? ' class="obw"' : '');
+          var cls = b.text === '4' ? ' class="ob4"' : (isWicketBall(b) ? ' class="obw"' : '');
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
         var rightCells = snap.bowlers.map(function(bw){
@@ -3177,7 +3624,7 @@
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + (S.prevInnings.runs + 1);
         else if (S.inningsNo === 2 && S.prevInnings){
           var need = t - inn.runs, ballsLeft = S.oversLimit * 6 - inn.legalBalls;
-          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls');
+          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') + '.';
           else status = inn.battingTeam + ' have reached the target of ' + t;
         }
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
@@ -3198,9 +3645,10 @@
           + '<div class="cb-teamline"><span class="cb-teamshort">' + esc(teamShort(inn.battingTeam)) + '</span><span class="cb-innlab">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' inn</span></div>'
           + '<div class="cb-bignum">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></div></div>'
           + '<div class="cb-rates">' + rates + '</div></div>' + prevLine;
-        /* partnership + projected score line */
+        /* partnership (since the last wicket) + projected score line */
         var bat1 = cbBatterFull(inn, inn.striker), bat2 = cbBatterFull(inn, inn.nonStriker);
-        var pRuns = bat1.runs + bat2.runs, pBalls = bat1.balls + bat2.balls;
+        var pship = partnershipFigures(inn);
+        var pRuns = pship.runs, pBalls = pship.balls;
         var proj = projectedScore();
         var pshipEl = $('cbPship');
         var projHtml = (S.inningsNo === 2 && t)
@@ -3233,46 +3681,63 @@
            so each card is printed directly ABOVE the balls of its own
            over — reading the feed top-down it still sits between the
            next over and its own over, and it stays there permanently. */
-        var snaps = overSnapshots(inn);
-        var lastCompletedIdx = -1;
-        snaps.forEach(function(s, i){ if (s.completed) lastCompletedIdx = i; });
+        /* Builds one innings' commentary feed (newest ball first, one
+           summary card per completed over). Used for the current
+           innings and — once innings 2 begins — for the previous one
+           too, so its balls stay visible below the live feed. */
+        function feedHTMLFor(innX){
+          if (!innX || !innX.balls || !innX.balls.length) return '';
+          var snapsX = overSnapshots(innX);
+          var lastCompletedIdxX = -1;
+          snapsX.forEach(function(s, i){ if (s.completed) lastCompletedIdxX = i; });
+          var feed = '';
+          for (var gi = snapsX.length - 1; gi >= 0; gi--){
+            var snap = snapsX[gi];
+            if (snap.completed){
+              var cardSnap = snap;
+              /* Balls scored before bowler/batter names were recorded
+                 carry no names: for the most recent completed over only,
+                 fall back to the current pair and bowler, as before. */
+              if (!cardSnap.batters.length && gi === lastCompletedIdxX){
+                cardSnap = Object.assign({}, snap, {
+                  batters: [innX.striker, innX.nonStriker].filter(Boolean).map(function(n){ var bb = cbBatterFull(innX, n); return { name: n, runs: bb.runs, balls: bb.balls }; }),
+                  bowlers: innX.bowler ? [cbBowlerFull(innX, innX.bowler)] : []
+                });
+              }
+              feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdxX);
+            }
+            feed += snap.balls.slice().reverse().map(function(b){
+              if (b.evt){
+                /* Announcement lines show with NO over / ball number
+                   in front of them — the over column stays empty. */
+                if (b.evt === 'start'){
+                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(b.who || '') + '</b> &amp; <b>' + esc(b.ns || '') + '</b> come to the crease. <b>' + esc(b.bw || '') + '</b> will open the attack.</span></div>';
+                }
+                var whoName = b.who || '';
+                var rest = String(b.text || '').slice(whoName.length);
+                return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(whoName) + '</b>' + esc(rest) + '</span></div>';
+              }
+              var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
+              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + esc(b.outName ? (b.outName + ', ') : '') + esc(b.howOut) : '';
+              return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + dism + '</span></div>';
+            }).join('');
+          }
+          return feed;
+        }
         var commEl = $('cbCommentary');
         if (commEl){
-          if (!inn.balls.length){
+          var feedCur = feedHTMLFor(inn);
+          /* When innings 2 begins, innings 1 moves out of S.current —
+             its balls used to vanish from this LIVE feed entirely, so
+             a wicket on the LAST ball of innings 1 (the ball that
+             ended the innings) never appeared on the public
+             scoreboard at all. The previous innings' feed now stays
+             below the current one, exactly as it was shown live. */
+          var feedPrev = (S.inningsNo === 2 && S.prevInnings) ? feedHTMLFor(S.prevInnings) : '';
+          if (!feedCur && !feedPrev){
             commEl.innerHTML = '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
           } else {
-            var feed = '';
-            for (var gi = snaps.length - 1; gi >= 0; gi--){
-              var snap = snaps[gi];
-              if (snap.completed){
-                var cardSnap = snap;
-                /* Balls scored before bowler/batter names were recorded
-                   carry no names: for the most recent completed over only,
-                   fall back to the current pair and bowler, as before. */
-                if (!cardSnap.batters.length && gi === lastCompletedIdx){
-                  cardSnap = Object.assign({}, snap, {
-                    batters: [inn.striker, inn.nonStriker].filter(Boolean).map(function(n){ var bb = cbBatterFull(inn, n); return { name: n, runs: bb.runs, balls: bb.balls }; }),
-                    bowlers: inn.bowler ? [cbBowlerFull(inn, inn.bowler)] : []
-                  });
-                }
-                feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdx);
-              }
-              feed += snap.balls.slice().reverse().map(function(b){
-                if (b.evt){
-                  /* Announcement lines show with NO over / ball number
-                     in front of them — the over column stays empty. */
-                  if (b.evt === 'start'){
-                    return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(b.who || '') + '</b> &amp; <b>' + esc(b.ns || '') + '</b> come to the crease. <b>' + esc(b.bw || '') + '</b> will open the attack.</span></div>';
-                  }
-                  var whoName = b.who || '';
-                  var rest = String(b.text || '').slice(whoName.length);
-                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(whoName) + '</b>' + esc(rest) + '</span></div>';
-                }
-                var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
-                return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + '</span></div>';
-              }).join('');
-            }
-            commEl.innerHTML = feed;
+            commEl.innerHTML = feedCur + feedPrev;
           }
         }
         /* the per-over cards now live inside the commentary feed above */
