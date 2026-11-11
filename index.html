@@ -1962,7 +1962,9 @@
       }
 
       /* ---------- Firebase ---------- */
-      function connectFirebase(){
+      var DEFAULT_FIREBASE_CONFIG = {"apiKey": "AIzaSyCYKXHetRVGq7hSNzvZRHrXUO3haKSRFRE", "authDomain": "live-cricket-score-1cdf8.firebaseapp.com", "databaseURL": "https://live-cricket-score-1cdf8-default-rtdb.asia-southeast1.firebasedatabase.app", "projectId": "live-cricket-score-1cdf8", "storageBucket": "live-cricket-score-1cdf8.firebasestorage.app", "messagingSenderId": "264859542758", "appId": "1:264859542758:web:935f6d45423083424e8727"};
+      function connectFirebase(readOnly){
+        if (readOnly){ var t=$('fbConfig'); if (t && !t.value.trim()) t.value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2); }
         var raw = $('fbConfig').value.trim();
         if (!raw){ toast('Paste the Firebase config first'); return; }
         var cfg;
@@ -1994,7 +1996,7 @@
               fbPushing = true; S = v; renderAll(false); fbPushing = false;
             }
           });
-          fbRef.set(S);
+          if (!readOnly){ fbRef.set(S); }
           $('fbStatus').textContent = '✅ Firebase connected — everyone online can now watch live.';
           $('connPill').textContent = '● Firebase Live — Everyone online is watching';
           $('connPill').classList.add('on');
@@ -2153,6 +2155,7 @@
       (function init(){
         syncPlayersFromInputs();
         renderAll(false);
+        try { var t=$('fbConfig'); if (t && !t.value.trim()) t.value = JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2); if (typeof firebase !== 'undefined') connectFirebase(true); } catch(e){}
         var q = '';
         try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
         if (q.indexOf('viewer')>-1){
