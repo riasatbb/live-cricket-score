@@ -478,7 +478,7 @@
       .cb-pship{display:flex;align-items:center;gap:10px;background:#262626;border-top:1px solid #3a3a3a;border-bottom:1px solid #3a3a3a;padding:11px 14px;font-size:14.5px;flex-wrap:wrap}
       .cb-pship .ps-lab{font-weight:600;color:#e9e9e9;white-space:nowrap}
       .cb-pship .ps-div{width:1px;height:22px;background:#454545;flex:none}
-      .cb-pship .ps-proj{white-space:nowrap;color:#d8d8d8;font-size:13.5px;letter-spacing:.05em;text-transform:uppercase}
+      .cb-pship .ps-proj{white-space:nowrap;color:#d8d8d8;font-size:13.5px;letter-spacing:.05em;text-transform:uppercase;margin-left:auto;text-align:right}
       .cb-pship .ps-proj b{color:#fff;font-size:18px;margin-left:6px;font-variant-numeric:tabular-nums;letter-spacing:0}
       .cb-table{padding:2px 0 6px;background:#2b2b2b}
       .cb-table table{font-size:15px}
@@ -2704,6 +2704,93 @@
         for (var i = 0; i < inn.bowlers.length; i++) if (inn.bowlers[i].name === name) return inn.bowlers[i];
         return { name: name, balls: 0, runs: 0, wickets: 0 };
       }
+      /* ---------- per-over snapshots, rebuilt from the ball record ----------
+         Each ball stores its bowler / batter and outcome, so the state of
+         the innings at the end of any over can be rebuilt exactly: the
+         score then, each batter's runs (balls) then, and the bowler's
+         figures then. Wides and no-balls are not legal deliveries and do
+         not count as a ball faced. */
+      function isLegalDelivery(text){
+        var t = String(text || '');
+        return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t));
+      }
+      function batterRunsOnBall(text){
+        var t = String(text || '');
+        if (/^\d+$/.test(t)) return parseInt(t, 10);
+        var m = t.match(/^Nb\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        return 0;
+      }
+      function extraRunsOnBall(text){
+        var t = String(text || '');
+        if (t === 'Wd' || /^Wd\+\d+$/.test(t)) return parseBallRuns(t);
+        if (/^Nb\+\d+$/.test(t)) return 1;
+        if (/^(?:B|Lb)\d+$/.test(t)) return parseBallRuns(t);
+        return 0;
+      }
+      function overSnapshots(inn){
+        var groups = groupOvers(inn);
+        var cumRuns = 0, cumWkts = 0, cumLegal = 0;
+        var batMap = {}, bowlMap = {};
+        var snaps = groups.map(function(g){
+          var overBatters = [], overBowlers = [], extrasOver = 0;
+          g.balls.forEach(function(b){
+            cumRuns += parseBallRuns(b.text);
+            if (b.text === 'W') cumWkts++;
+            if (isLegalDelivery(b.text)) cumLegal++;
+            extrasOver += extraRunsOnBall(b.text);
+            var batName = b.batter || '';
+            if (batName){
+              if (!batMap[batName]) batMap[batName] = { name: batName, runs: 0, balls: 0 };
+              batMap[batName].runs += batterRunsOnBall(b.text);
+              if (isLegalDelivery(b.text)) batMap[batName].balls++;
+              if (overBatters.indexOf(batName) < 0) overBatters.push(batName);
+            }
+            var bowlName = b.bowler || '';
+            if (bowlName){
+              if (!bowlMap[bowlName]) bowlMap[bowlName] = { name: bowlName, runs: 0, wickets: 0, balls: 0 };
+              bowlMap[bowlName].runs += parseBallRuns(b.text);
+              if (b.text === 'W') bowlMap[bowlName].wickets++;
+              if (isLegalDelivery(b.text)) bowlMap[bowlName].balls++;
+              if (overBowlers.indexOf(bowlName) < 0) overBowlers.push(bowlName);
+            }
+          });
+          return {
+            no: g.no, balls: g.balls, runs: g.runs,
+            cumRuns: cumRuns, cumWkts: cumWkts, cumLegal: cumLegal,
+            extrasOver: extrasOver,
+            batters: overBatters.map(function(n){ var s = batMap[n]; return { name: s.name, runs: s.runs, balls: s.balls }; }),
+            bowlers: overBowlers.map(function(n){ var s = bowlMap[n]; return { name: s.name, runs: s.runs, wickets: s.wickets, balls: s.balls }; }),
+            completed: false
+          };
+        });
+        snaps.forEach(function(s, i){
+          /* An over is complete once the next over has started, or when
+             it is the latest over and its sixth legal ball has been bowled. */
+          s.completed = (i < snaps.length - 1) || (s.cumLegal > 0 && s.cumLegal % 6 === 0);
+        });
+        return snaps;
+      }
+      function overSummaryCardHTML(snap, showFoot){
+        var seq = snap.balls.map(function(b){
+          var cls = b.text === '4' ? ' class="ob4"' : (b.text === 'W' ? ' class="obw"' : '');
+          return '<span' + cls + '>' + esc(b.text) + '</span>';
+        }).join(' ');
+        var rightCells = snap.bowlers.map(function(bw){
+          return '<div class="og-row"><span>' + esc(bw.name) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
+        });
+        rightCells.push('<div class="og-row"><span>Extras this over</span><b>' + snap.extrasOver + '</b></div>');
+        var grid = '';
+        var rows = Math.max(snap.batters.length, rightCells.length);
+        for (var i = 0; i < rows; i++){
+          if (snap.batters[i]) grid += '<div class="og-row"><span>' + esc(snap.batters[i].name) + '</span><b>' + snap.batters[i].runs + ' (' + snap.batters[i].balls + ')</b></div>';
+          else grid += '<div class="og-row"><span></span><b></b></div>';
+          grid += rightCells[i] || '<div class="og-row"><span></span><b></b></div>';
+        }
+        return '<div class="cb-overcard"><div class="cb-overcard-top"><span class="cb-overcard-title">Over ' + snap.no + ' <span>|</span> ' + snap.cumRuns + '-' + snap.cumWkts + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + snap.runs + (snap.runs === 1 ? ' run' : ' runs') + ')</span></div>'
+          + (grid ? '<div class="cb-overgrid">' + grid + '</div>' : '')
+          + (showFoot ? '<div class="cb-overcard-foot"><button type="button" onclick="setCbTab(\'scorecard\')">Full Scorecard ›</button><button type="button" onclick="setCbTab(\'overs\')">View all overs ›</button></div>' : '')
+          + '</div>';
+      }
       function renderScoreboardCB(){
         var inn = S.current;
         var titleEl = $('cbMatchTitle');
@@ -2768,36 +2855,45 @@
             bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + esc(inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
           } else bwEl.innerHTML = '';
         }
-        /* commentary — newest ball first */
+        /* commentary — newest ball first, with an over-summary card kept
+           after EVERY completed over (not just the latest one). The feed
+           runs newest-first, so each over's card sits directly below that
+           over's balls and stays there for the rest of the innings. */
+        var snaps = overSnapshots(inn);
+        var lastCompletedIdx = -1;
+        snaps.forEach(function(s, i){ if (s.completed) lastCompletedIdx = i; });
         var commEl = $('cbCommentary');
         if (commEl){
-          commEl.innerHTML = inn.balls.length
-            ? inn.balls.slice().reverse().slice(0, 14).map(function(b){
+          if (!inn.balls.length){
+            commEl.innerHTML = '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
+          } else {
+            var feed = '';
+            for (var gi = snaps.length - 1; gi >= 0; gi--){
+              var snap = snaps[gi];
+              feed += snap.balls.slice().reverse().map(function(b){
                 var who = (b.bowler && b.batter) ? '<b>' + esc(b.bowler) + '</b> to <b>' + esc(b.batter) + '</b>, ' : '';
                 return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + '</span></div>';
-              }).join('')
-            : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
+              }).join('');
+              if (snap.completed){
+                var cardSnap = snap;
+                /* Balls scored before bowler/batter names were recorded
+                   carry no names: for the most recent completed over only,
+                   fall back to the current pair and bowler, as before. */
+                if (!cardSnap.batters.length && gi === lastCompletedIdx){
+                  cardSnap = Object.assign({}, snap, {
+                    batters: [inn.striker, inn.nonStriker].filter(Boolean).map(function(n){ var bb = cbBatterFull(inn, n); return { name: n, runs: bb.runs, balls: bb.balls }; }),
+                    bowlers: inn.bowler ? [cbBowlerFull(inn, inn.bowler)] : []
+                  });
+                }
+                feed += overSummaryCardHTML(cardSnap, gi === lastCompletedIdx);
+              }
+            }
+            commEl.innerHTML = feed;
+          }
         }
-        /* over summary card — latest over, like the reference footer card */
+        /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
-        if (sumEl){
-          var groups = groupOvers(inn);
-          if (groups.length){
-            var g = groups[groups.length - 1];
-            var seq = g.balls.map(function(b){
-              var cls = b.text === '4' ? ' class="ob4"' : (b.text === 'W' ? ' class="obw"' : '');
-              return '<span' + cls + '>' + esc(b.text) + '</span>';
-            }).join(' ');
-            var bw2 = cbBowlerFull(inn, inn.bowler);
-            sumEl.innerHTML = '<div class="cb-overcard"><div class="cb-overcard-top"><span class="cb-overcard-title">Over ' + g.no + ' <span>|</span> ' + inn.runs + '-' + inn.wickets + '</span><span class="cb-overballs">' + seq + ' &nbsp;(' + g.runs + (g.runs === 1 ? ' run' : ' runs') + ')</span></div>'
-              + '<div class="cb-overgrid">'
-              + '<div class="og-row"><span>' + esc(inn.striker || '—') + ' *</span><b>' + bat1.runs + ' (' + bat1.balls + ')</b></div>'
-              + '<div class="og-row"><span>' + esc(inn.bowler || '—') + '</span><b>' + bw2.wickets + '-' + bw2.runs + ' (' + oversText(bw2.balls) + ')</b></div>'
-              + '<div class="og-row"><span>' + esc(inn.nonStriker || '—') + '</span><b>' + bat2.runs + ' (' + bat2.balls + ')</b></div>'
-              + '<div class="og-row"><span>Extras this innings</span><b>' + (inn.extras.wide + inn.extras.noball + inn.extras.bye + inn.extras.legbye) + '</b></div>'
-              + '</div><div class="cb-overcard-foot"><button type="button" onclick="setCbTab(\'scorecard\')">Full Scorecard ›</button><button type="button" onclick="setCbTab(\'overs\')">View all overs ›</button></div></div>';
-          } else sumEl.innerHTML = '';
-        }
+        if (sumEl) sumEl.innerHTML = '';
         /* overs panel — every over grouped */
         var ovEl = $('cbOversList');
         if (ovEl){
@@ -2959,7 +3055,30 @@
            page shows no way into the controls at all (link-viewer). */
         var isControlLink = q.indexOf('view=control')>-1 || q.indexOf('view=scorer')>-1 || q.indexOf('#control')>-1 || q.indexOf('#scorer')>-1 || q.indexOf('control=1')>-1;
         var isViewerLink = q.indexOf('view=live')>-1 || q.indexOf('view=viewer')>-1 || q.indexOf('#live')>-1 || q.indexOf('#viewer')>-1 || q.indexOf('viewer=1')>-1;
-        if (q.indexOf('overlay')>-1){
+        /* The hash names the exact page the user is on (setView writes it
+           on every navigation), so on a refresh it wins over the ?view=
+           link the user originally arrived through. Without this, opening
+           ?view=live and tapping into the scoreboard (#scoreboard) bounced
+           back to the Live Matches list (#live) on every refresh. */
+        var hashView = '';
+        try { hashView = (location.hash || '').replace(/^#/, ''); } catch(e){}
+        if (hashView === 'scoreboard'){
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('viewer-inpage');
+          document.body.classList.add('viewer-flow');
+          document.body.classList.add('link-viewer');
+          setView('scoreboard');
+        }
+        else if (hashView === 'live' || hashView === 'viewer') enterViewerHome(true);
+        else if (hashView === 'scorer' || hashView === 'control') enterControlMode();
+        else if (hashView === 'overlay'){
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('link-viewer');
+          setView('overlay');
+        }
+        else if (hashView === 'tournament') setView('tournament');
+        else if (hashView === 'home') setView('home');
+        else if (q.indexOf('overlay')>-1){
           document.body.classList.add('viewer-mode');
           document.body.classList.add('link-viewer');
           setView('overlay');
