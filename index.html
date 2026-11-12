@@ -59,7 +59,11 @@
             });
           });
         }
-        tryMirror(0);
+        /* Exposed so the connection panel's Retry button can run the
+           whole mirror chain again when every mirror failed (or the
+           network was down at first load) without a page reload. */
+        window.__fbLoadLib = function(){ window.__fbLibFailed = false; tryMirror(0); };
+        window.__fbLoadLib();
       })();
     </script>
     <style>
@@ -181,6 +185,15 @@
       body.tn-locked #view-tournament input, body.tn-locked #view-tournament textarea, body.tn-locked #view-tournament select{opacity:.55}
       .own-chip{font-size:11px;background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-weight:700;color:var(--muted);margin-left:6px;vertical-align:middle;white-space:nowrap}
       .conn.err{background:var(--red-bg);border-color:#e5a49c;color:var(--red)}
+      .connbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:11px 14px;margin-bottom:12px}
+      .connbar .cb-main{flex:1;min-width:200px}
+      .connbar .cb-title{font-weight:800;font-size:15px;line-height:1.25}
+      .connbar .cb-sub{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+      .connbar .cb-ico{font-size:17px;flex:none;line-height:1}
+      .connbar.ok{border-color:#9ed3ae;background:#eefaf1}
+      .connbar.busy{border-color:var(--gold)}
+      .connbar.bad{border-color:#e5a49c;background:var(--red-bg)}
+      @media (prefers-color-scheme: dark){.connbar.ok{background:#12291c;border-color:#2c5c40}}
       .players-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
       @media (max-width:820px){.players-grid{grid-template-columns:1fr}}
       .striker-tag{font-size:11px;background:var(--gold);color:#241a02;border-radius:5px;padding:1px 6px;font-weight:700;margin-left:5px;vertical-align:middle}
@@ -876,6 +889,7 @@
       <!-- ================= SCORER CONSOLE HOME ================= -->
       <section class="view" id="view-console">
         <div class="authbar-slot"></div>
+        <div class="connbar-slot"></div>
         <div class="mode-intro">
           <h2>Scorer Console</h2>
         </div>
@@ -896,6 +910,7 @@
       <!-- ================= TOURNAMENTS: PICK OR CREATE ================= -->
       <section class="view" id="view-tournaments">
         <div class="authbar-slot"></div>
+        <div class="connbar-slot"></div>
         <div class="viewer-backbar">
           <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
         </div>
@@ -921,6 +936,7 @@
       <section class="view" id="view-scorer">
 
         <div class="authbar-slot"></div>
+        <div class="connbar-slot"></div>
         <div class="card">
           <h2>🔗 Your Two Links</h2>
           <div class="link-row">
@@ -1637,6 +1653,13 @@
          while Firebase was unreachable (kept safe in the on-device
          backup below). */
       var fbReady = false, fbConnecting = false, fbLocalDirty = false, fbErrorShown = false, fbGateTimer = null;
+      /* Connection panel state: the exact stage the Firebase connection
+         is in, the last full status detail (also mirrored into the
+         always-visible panel, not only the collapsed Firebase Setup
+         card), the config in use (so a retry reconnects with the same
+         one), the .info/connected listener, and the auto-retry chain. */
+      var fbStage = 'idle', fbStageAt = Date.now(), fbStatusDetail = '', fbActiveCfg = null, fbConnRef = null;
+      var fbRetryCount = 0, fbRetryTimer = null, fbRetryAt = 0, fbRetryStopped = false;
       /* Confirmed-only display: fbConfirmedState holds the last live
          state Firebase is KNOWN to hold — a snapshot that arrived
          from the database, or a push the database accepted. Viewer
@@ -1702,14 +1725,113 @@
         else if (mode === 'error'){ pill.textContent = '● Firebase problem — viewers may not be updating'; pill.classList.add('err'); }
         else { pill.textContent = '● Local Mode — Live across tabs in this browser'; }
         if (detail){
+          fbStatusDetail = detail;
           var st = $('fbStatus'); if (st) st.textContent = detail;
         }
+        try { renderConnPanel(); } catch(e){}
       }
       function showFirebaseError(err, where){
         var msg = (err && err.message) ? err.message : String(err || 'unknown error');
         setConnStatus('error', '⚠️ Firebase ' + where + ' failed: ' + msg + ' — your score is backed up on this device and scoring can continue, but viewers will not update until Firebase works again. Check the connection and the database rules, then reconnect.');
         if (!fbErrorShown){ fbErrorShown = true; toast('⚠️ Firebase problem — viewers may not be updating. Score is backed up on this device.'); }
       }
+      /* ---------- always-visible connection panel + auto-retry ----------
+         The detailed status text used to live only in #fbStatus, inside
+         the Firebase Setup card that is collapsed by default — so when
+         the first Firebase connection stalled (the library or the
+         database handshake never completing), the page appeared to
+         "show Connecting briefly, then do nothing". This panel sits on
+         the Scorer Console home and the scoring screen, always visible:
+         it names the exact stage the connection is stuck at, gives the
+         reason when it fails, retries on its own with backoff, and
+         offers a Retry button that reconnects immediately. */
+      function setFbStage(stage){
+        fbStage = stage; fbStageAt = Date.now();
+        try { renderConnPanel(); } catch(e){}
+      }
+      function fbStageLabel(){
+        switch (fbStage){
+          case 'lib-loading': return 'Loading the Firebase library from a CDN mirror';
+          case 'lib-failed': return 'The Firebase library could not be loaded from any CDN mirror';
+          case 'db-connecting': return 'Opening the connection to the database';
+          case 'db-waiting': return 'Database connection is open — waiting for the first data (the live match)';
+          case 'timeout': return 'Firebase did not answer within 8 seconds';
+          case 'error': return 'The database connection failed';
+          default: return 'Connecting to the database';
+        }
+      }
+      function renderConnPanel(){
+        var slots = document.querySelectorAll('.connbar-slot');
+        if (!slots.length) return;
+        var mode, html;
+        var retryBtn = '<button type="button" class="btn sm" onclick="retryFirebaseConnection()">↻ Retry connection</button>';
+        var countdown = fbRetryTimer ? '<div class="cb-sub">Retrying automatically in <span class="conn-countdown">…</span> — or tap “Retry connection” to try right now.</div>' : '';
+        if (fbReady){
+          mode = 'live';
+          html = '<div class="connbar ok"><span class="cb-ico" aria-hidden="true">🟢</span><div class="cb-main"><div class="cb-title">Firebase Live</div><div class="cb-sub">Connected — the live match is syncing and everyone online is watching.</div></div></div>';
+        } else if (fbStage === 'lib-failed' || (typeof firebase === 'undefined' && window.__fbLibFailed)){
+          mode = 'libfailed';
+          html = '<div class="connbar bad"><span class="cb-ico" aria-hidden="true">⚠️</span><div class="cb-main"><div class="cb-title">Firebase library could not be loaded</div><div class="cb-sub">None of the CDN mirrors answered, so live sync cannot start. Scoring continues in Local Mode, backed up on this device. Check the internet connection, then retry.</div>' + countdown + '</div>' + retryBtn + '</div>';
+        } else if (fbConnecting || fbStage === 'lib-loading'){
+          mode = 'busy';
+          html = '<div class="connbar busy"><span class="cb-ico" aria-hidden="true">⏳</span><div class="cb-main"><div class="cb-title">Connecting to Firebase…</div><div class="cb-sub">Stage: ' + esc(fbStageLabel()) + ' · <span class="conn-elapsed">0s</span> so far. If this stays stuck, the internet connection is the likely problem — it keeps retrying on its own, or tap Retry now.</div></div><button type="button" class="btn sm" onclick="retryFirebaseConnection()">↻ Retry now</button></div>';
+        } else {
+          mode = 'down';
+          html = '<div class="connbar bad"><span class="cb-ico" aria-hidden="true">⚠️</span><div class="cb-main"><div class="cb-title">Not connected to Firebase — Local Mode</div><div class="cb-sub">' + esc(fbStatusDetail || 'Firebase has not connected yet.') + '</div>' + countdown + '</div>' + retryBtn + '</div>';
+        }
+        var sig = mode + '|' + fbStage + '|' + fbRetryCount + '|' + (fbRetryTimer ? 1 : 0) + '|' + fbStatusDetail;
+        slots.forEach(function(s){ if (s.getAttribute('data-csig') !== sig){ s.setAttribute('data-csig', sig); s.innerHTML = html; } });
+      }
+      /* One attempt, whichever layer is missing: reload the library
+         through the mirror chain if it never arrived, otherwise
+         reconnect with the config already in use (or the built-in
+         default via autoConnectFirebase). */
+      function fbRetryAttempt(){
+        if (fbReady || fbRetryStopped) return;
+        if (typeof firebase === 'undefined'){
+          if (window.__fbLoadLib){
+            window.__onFbLibReady = function(){ try { autoConnectFirebase(); } catch(e){} };
+            window.__onFbLibFailed = function(){ setFbStage('lib-failed'); scheduleFbRetry(); };
+            setFbStage('lib-loading');
+            try { window.__fbLoadLib(); } catch(e){ scheduleFbRetry(); }
+          }
+          return;
+        }
+        if (fbActiveCfg){
+          try { initFirebaseWithConfig(deep(fbActiveCfg.cfg), fbActiveCfg.isDefault); }
+          catch(e){ scheduleFbRetry(); }
+          return;
+        }
+        try { autoConnectFirebase(); } catch(e){ scheduleFbRetry(); }
+      }
+      var FB_RETRY_DELAYS = [5000, 10000, 20000, 30000, 60000, 60000];
+      function scheduleFbRetry(){
+        if (fbRetryStopped || fbReady || fbRetryTimer || fbRetryCount >= FB_RETRY_DELAYS.length){ try { renderConnPanel(); } catch(e){} return; }
+        var delay = FB_RETRY_DELAYS[fbRetryCount];
+        fbRetryAt = Date.now() + delay;
+        fbRetryTimer = setTimeout(function(){
+          fbRetryTimer = null; fbRetryAt = 0;
+          fbRetryCount++;
+          fbRetryAttempt();
+          try { renderConnPanel(); } catch(e){}
+        }, delay);
+        try { renderConnPanel(); } catch(e){}
+      }
+      function retryFirebaseConnection(){
+        if (fbRetryTimer){ clearTimeout(fbRetryTimer); fbRetryTimer = null; }
+        fbRetryAt = 0; fbRetryCount = 0; fbRetryStopped = false;
+        toast('↻ Reconnecting to Firebase…');
+        fbRetryAttempt();
+        try { renderConnPanel(); } catch(e){}
+      }
+      /* Tick the elapsed / countdown readouts once a second without
+         rebuilding the panel (so the Retry button is never disturbed). */
+      setInterval(function(){
+        var now = Date.now();
+        document.querySelectorAll('.conn-elapsed').forEach(function(el){ el.textContent = Math.max(0, Math.round((now - fbStageAt) / 1000)) + 's'; });
+        if (fbRetryAt) document.querySelectorAll('.conn-countdown').forEach(function(el){ el.textContent = Math.max(0, Math.ceil((fbRetryAt - now) / 1000)) + 's'; });
+      }, 1000);
+
       /* ---------- scoring gate (locked until first Firebase read) ---------- */
       function setPadLocked(locked){
         var note = $('syncGateNote'); if (note) note.classList.toggle('show', !!locked);
@@ -5098,7 +5220,10 @@
       }
       function markFirebaseReady(isDefault){
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+        if (fbRetryTimer){ clearTimeout(fbRetryTimer); fbRetryTimer = null; }
+        fbRetryAt = 0; fbRetryCount = 0;
         fbConnecting = false; fbReady = true; fbErrorShown = false;
+        setFbStage('live');
         setPadLocked(false);
         /* Firebase has answered, so the state on screen is the real
            one: an unowned match / tournament can now be claimed by
@@ -5118,9 +5243,13 @@
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
+        if (fbConnRef){ try{ fbConnRef.off(); }catch(e){} fbConnRef = null; }
         if (fbApp) { try{ fbApp.delete(); }catch(e){} fbApp = null; }
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
         fbIsDefault = !!isDefault;
+        fbActiveCfg = { cfg: deep(cfg), isDefault: !!isDefault };
+        fbRetryStopped = false;
+        setFbStage('db-connecting');
         fbReady = false; fbConnecting = true; fbErrorShown = false;
         fbConfirmedState = null;
         setPadLocked(true);
@@ -5129,6 +5258,20 @@
         initAuthForApp();
         fbRef = fbApp.database().ref('liveMatch');
         var myRef = fbRef;
+        /* Socket-level stage signal for the connection panel: once
+           .info/connected turns true the database connection itself is
+           open, and only the first live-match data is still missing —
+           so a stall can be told apart ("connecting to the database"
+           vs "waiting for the first data") instead of one vague
+           "Connecting…" that appears to lead nowhere. */
+        try {
+          fbConnRef = fbApp.database().ref('.info/connected');
+          var myConnRef = fbConnRef;
+          myConnRef.on('value', function(snap){
+            if (fbConnRef !== myConnRef) return;
+            if (snap && snap.val() === true && fbConnecting && !fbReady) setFbStage('db-waiting');
+          });
+        } catch(e){ fbConnRef = null; }
         /* Permanent history lives at its own path, matchHistory —
            separate from the live match, so a New Match reset of
            liveMatch can never touch it. Everyone reads it (viewers
@@ -5176,8 +5319,10 @@
              pill claiming "Live": surface it and fall back to local. */
           if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
           fbConnecting = false; fbReady = false;
+          setFbStage('error');
           setPadLocked(false);
           showFirebaseError(err, 'read');
+          scheduleFbRetry();
         });
         /* One-time read before any write: adopt remote if it exists. The
            database is seeded ONLY with a state that carries a real match
@@ -5211,8 +5356,10 @@
           if (fbRef !== myRef) return;
           if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
           fbConnecting = false; fbReady = false;
+          setFbStage('error');
           setPadLocked(false);
           showFirebaseError(err, 'read');
+          scheduleFbRetry();
         });
         /* If Firebase never answers at all, do not sit on "Connecting"
            forever: unlock the pad in local mode and say so honestly.
@@ -5222,9 +5369,11 @@
           fbGateTimer = null;
           if (fbRef !== myRef || fbReady || !fbConnecting) return;
           fbConnecting = false;
+          setFbStage('timeout');
           setPadLocked(false);
-          setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. Check the connection, then reconnect from Firebase Setup.');
+          setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. The connection panel above keeps retrying on its own; check the internet connection, or tap Retry connection there.');
           toast('⚠️ Firebase is not responding — Local Mode. Score is backed up on this device.');
+          scheduleFbRetry();
         }, 8000);
       }
       function connectFirebase(){
@@ -5253,7 +5402,9 @@
           initFirebaseWithConfig(cfg, false);
         } catch(e){
           fbConnecting = false; fbReady = false; setPadLocked(false);
+          setFbStage('error');
           setConnStatus('error', 'Connection failed: ' + e.message + ' — running in Local Mode; scoring is backed up on this device only.');
+          scheduleFbRetry();
         }
       }
       function autoConnectFirebase(){
@@ -5276,15 +5427,23 @@
           initFirebaseWithConfig(deep(DEFAULT_FB_CONFIG), true);
         } catch(e){
           fbConnecting = false; fbReady = false; setPadLocked(false);
-          setConnStatus('local', 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode; scoring is backed up on this device only. You can paste a config and tap Connect.');
+          setFbStage('error');
+          setConnStatus('local', 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode; scoring is backed up on this device only. The connection panel above retries on its own, or you can paste a config in Firebase Setup and tap Connect.');
+          scheduleFbRetry();
         }
       }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
+        if (fbConnRef){ try{ fbConnRef.off(); }catch(e){} fbConnRef = null; }
         histSyncedOnce = false;
         if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
+        /* A deliberate disconnect stops the auto-retry chain; the
+           panel's Retry button (or Connect) starts it again. */
+        if (fbRetryTimer){ clearTimeout(fbRetryTimer); fbRetryTimer = null; }
+        fbRetryAt = 0; fbRetryStopped = true;
+        setFbStage('idle');
         fbRef=null; fbApp=null; fbIsDefault=false; fbReady=false; fbConnecting=false;
         fbConfirmedState = null;
         fbAuth=null; authUser=null; renderAuthBar();
@@ -5389,10 +5548,43 @@
       function isNativePluginCrash(msg){
         return /null object reference/i.test(msg || '') || /capawesome|firebaseauthentication/i.test(msg || '');
       }
+      /* Open the control page in the phone's real browser. Inside the
+         app, the only reliable way out of the WebView is the Capacitor
+         Browser plugin (Browser.open): window.open(url, '_system') is
+         a Cordova-era target that a Capacitor WebView silently ignores
+         — which is why this button used to do nothing at all while
+         still claiming "Opening…". Order: the Browser plugin; then a
+         plain new-window open; and if the WebView swallows that too,
+         the link itself, shown so it can be copied into Chrome by
+         hand. The success toast appears only after an open call has
+         actually gone through — never before, never on failure. */
       function openControlInBrowser(){
         var url = location.origin + location.pathname + '?view=scorer';
-        try { window.open(url, '_system'); } catch(e){}
-        toast('Opening the control page in your browser — sign in with Google there to score.');
+        var Browser = null;
+        try {
+          var C = window.Capacitor;
+          if (C && C.Plugins && C.Plugins.Browser && typeof C.Plugins.Browser.open === 'function') Browser = C.Plugins.Browser;
+        } catch(e){}
+        if (Browser){
+          Browser.open({ url: url }).then(function(){
+            toast('Opening the control page in your browser — sign in with Google there to score.');
+          }).catch(function(){ showBrowserLinkHelp(url); });
+          return;
+        }
+        var w = null;
+        try { w = window.open(url, '_blank'); } catch(e){}
+        if (w){ toast('Opening the control page in your browser — sign in with Google there to score.'); return; }
+        showBrowserLinkHelp(url);
+      }
+      function showBrowserLinkHelp(url){
+        var slots = document.querySelectorAll('.authbar-slot');
+        slots.forEach(function(s){
+          s.innerHTML = '<div class="authbar"><div class="ab-main"><span class="ab-avatar" aria-hidden="true">🌐</span>'
+            + '<div><div class="ab-name">Open the control link in Chrome</div>'
+            + '<div class="ab-sub">This app build cannot open the browser by itself yet. Long-press the link below to copy it, paste it into Chrome, and sign in with Google there — same account, same matches.<br><span class="mono" style="user-select:all;-webkit-user-select:all;word-break:break-all">' + esc(url) + '</span></div></div></div>'
+            + '<button type="button" class="btn ghost sm" onclick="renderAuthBar()">Back</button></div>';
+        });
+        toast('⚠️ This app build cannot open the browser by itself — long-press the control link shown above to copy it, then open it in Chrome.');
       }
       function showNativeSignInFallback(){
         var slots = document.querySelectorAll('.authbar-slot');
@@ -7654,14 +7846,19 @@
           try { autoConnectFirebase(); } catch(e){}
         } else if (window.__fbLibFailed){
           fbConnecting = false; fbReady = false; setPadLocked(false);
-          setConnStatus('local', '⚠️ The Firebase library could not be loaded from any mirror — running in Local Mode; scoring is backed up on this device only. Check the connection and reload the page.');
+          setFbStage('lib-failed');
+          setConnStatus('local', '⚠️ The Firebase library could not be loaded from any mirror — running in Local Mode; scoring is backed up on this device only. The connection panel above retries on its own; check the internet connection, or tap Retry connection there.');
+          scheduleFbRetry();
         } else {
+          setFbStage('lib-loading');
           setConnStatus('connecting', '⏳ Loading the Firebase library…');
           window.__onFbLibReady = function(){ try { autoConnectFirebase(); } catch(e){} };
           window.__onFbLibFailed = function(){
             fbConnecting = false; fbReady = false; setPadLocked(false);
-            setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. Check the connection and reload the page.');
+            setFbStage('lib-failed');
+            setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. The connection panel above retries on its own; check the internet connection, or tap Retry connection there.');
             toast('⚠️ Firebase library failed to load — Local Mode');
+            scheduleFbRetry();
           };
         }
       })();
