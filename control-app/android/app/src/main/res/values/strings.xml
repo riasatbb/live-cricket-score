@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Live Cricket Score Control</string>
-    <string name="title_activity_main">Live Cricket Score Control</string>
+    <string name="app_name">CricCast (Admin)</string>
+    <string name="title_activity_main">CricCast (Admin)</string>
     <string name="package_name">com.riasatbb.livecricketscore.control</string>
     <string name="custom_url_scheme">com.riasatbb.livecricketscore.control</string>
 </resources>

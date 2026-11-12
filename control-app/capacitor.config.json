@@ -1,6 +1,6 @@
 {
   "appId": "com.riasatbb.livecricketscore.control",
-  "appName": "Live Cricket Score Control",
+  "appName": "CricCast (Admin)",
   "webDir": "www",
   "server": {
     "url": "https://riasatbb.github.io/live-cricket-score/?view=scorer",
@@ -11,7 +11,9 @@
   },
   "plugins": {
     "FirebaseAuthentication": {
-      "providers": ["google.com"]
+      "providers": [
+        "google.com"
+      ]
     }
   }
 }
