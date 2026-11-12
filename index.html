@@ -257,6 +257,11 @@
       .note{font-size:13.5px;color:var(--muted)}
       .warn{background:#fdf0d5;border:1px solid #eec27a;color:#7a4d05;border-radius:10px;padding:10px 13px;font-size:14px;margin-bottom:14px}
       @media (prefers-color-scheme: dark){.warn{background:#3a2c10;color:#f5c877;border-color:#6b5518}}
+      /* Download permission popup: shown only when saving a file
+         needs Files and media access that has not been granted yet. */
+      .dlperm-ico{width:52px;height:52px;border-radius:14px;background:#fdf0d5;border:1px solid #eec27a;display:flex;align-items:center;justify-content:center;font-size:26px;margin-top:12px}
+      @media (prefers-color-scheme: dark){.dlperm-ico{background:#3a2c10;border-color:#6b5518}}
+      .dlperm-file{font-weight:700;word-break:break-all}
       .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#132018;color:#fff;padding:11px 18px;border-radius:999px;font-size:14.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:99;box-shadow:var(--shadow);max-width:92vw;text-align:center}
       .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
       /* Update notice: a small fixed pill shown when a newer build
@@ -406,6 +411,10 @@
       /* Player of the Match picker — appears in the Scorer Centre once
          the match is finished, and stays there so the choice can be
          made or changed later, not only at the final ball. */
+      /* Finish Match bar — the one prominent action once play is
+         over: full-width gold button under the pad. */
+      .mc-finish{border-top:1px solid var(--line);margin-top:12px;padding:14px;background:var(--surface2)}
+      .mc-finish-btn{width:100%;font-size:17.5px;font-weight:800;padding:14px 16px}
       .mc-potm{border-top:1px solid var(--line);margin-top:12px;padding:13px 14px 15px;background:var(--surface2)}
       .mc-potm label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:7px}
       .mc-potm .note{margin:8px 0 0}
@@ -1712,8 +1721,11 @@
             <div class="mc-so-banner" id="mcSoBanner" hidden></div>
             <div class="pending-note" id="pendingNote"></div>
           </div>
+          <div class="mc-finish" id="mcFinishBar" hidden>
+            <button type="button" class="btn gold mc-finish-btn" onclick="finishMatch()">✓ Finish Match</button>
+          </div>
           <div class="mc-potm" id="mcPotm" hidden>
-            <label for="potmSelect">🏆 Player of the Match</label>
+            <label for="potmSelect">🏆 Player of the Match (optional)</label>
             <div class="rowflex" style="flex-wrap:nowrap">
               <select id="potmSelect" aria-label="Choose the Player of the Match"></select>
               <button type="button" class="btn gold sm" style="flex:none" onclick="applyPotm()">Set</button>
@@ -1756,12 +1768,6 @@
               <button type="button" onclick="openFormat()">Overs/Format/Wickets</button>
               <button type="button" id="btnEndInnings" onclick="endInnings()">End Innings</button>
               <button type="button" onclick="finishMatch()">Finish Match</button>
-              <button type="button" id="btnSaveTournament" onclick="archiveCurrentMatch()">🏆 Save Result to Tournament</button>
-              <button type="button" onclick="shareMatchCardCurrent()">🖼 Share Match Card</button>
-              <button type="button" onclick="downloadScorecardPdfCurrent()">📄 Scorecard PDF</button>
-              <button type="button" onclick="changeBowler()">Change Bowler</button>
-              <button type="button" onclick="openFoldById('playersCard')">Batters &amp; Bowler</button>
-              <button type="button" onclick="openFoldById('setupCard')">Match Setup</button>
               <button type="button" onclick="openFoldById('squadCard')">Team Squads</button>
               <button type="button" onclick="resetMatch()">🗑 Delete Match</button>
             </div>
@@ -1852,7 +1858,6 @@
             <div class="cb-table" id="cbBowlerTable"></div>
             <div class="cb-comm" id="cbCommentary"></div>
             <div id="cbOverSummary"></div>
-            <div class="cb-sharebar"><button type="button" class="cb-sharebtn" onclick="shareMatchCardCurrent()">🖼 Share Match Card</button><button type="button" class="cb-pdfbtn" onclick="downloadScorecardPdfCurrent()">📄 Scorecard PDF</button></div>
           </div>
 
           <!-- SUMMARY (completed matches only — the tab itself is
@@ -2326,6 +2331,19 @@
       </div>
     </div>
 
+    <div class="modal-back" id="dlPermModal">
+      <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="dlPermTitle" aria-describedby="dlPermText">
+        <div class="modal-head"><h2 id="dlPermTitle">Allow Files Access?</h2></div>
+        <div class="dlperm-ico" aria-hidden="true">📁</div>
+        <p id="dlPermText" style="font-size:15px;line-height:1.5;margin:12px 0 0"></p>
+        <div class="rowflex" style="margin-top:16px">
+          <button type="button" class="btn" id="dlPermAllow" onclick="dlPermAllow()">Allow &amp; Download</button>
+          <button type="button" class="btn ghost" id="dlPermShare" onclick="dlPermShareInstead()" hidden>Share Instead</button>
+          <button type="button" class="btn ghost" onclick="dlPermCancel()">Not Now</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-back" id="moreModal">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
         <div class="modal-head">
@@ -2525,7 +2543,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v106';
+      var APP_VERSION = 'v112';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -2577,6 +2595,14 @@
              general match history and the players' own profiles. */
           matchKind: 'single',
           status: 'live', /* live | inningsBreak | finished */
+          /* Play over but not yet completed: when the last ball ends
+             the match, status becomes 'finished' (the result stands
+             and scoring locks) but awaitingFinish stays true — the
+             match still counts as RUNNING (it stays in Resume
+             Scoring and can be parked) and is NOT filed into Past
+             Matches until the scorer taps the Finish Match button,
+             which clears this flag and completes the match. */
+          awaitingFinish: false,
           inningsNo: 1,
           current: blankInnings('',''),
           prevInnings: null,
@@ -3820,6 +3846,7 @@
         if (S.dlTarget === undefined) S.dlTarget = null;
         if (S.dlOvers === undefined) S.dlOvers = null;
         if (typeof S.abandoned !== 'boolean') S.abandoned = false;
+        if (typeof S.awaitingFinish !== 'boolean') S.awaitingFinish = false;
         if (S.pendingPenalty === undefined) S.pendingPenalty = null;
         /* Nicknames: an array of {t, n, k} entries. Firebase hands
            arrays back as objects with numeric keys when it feels like
@@ -3999,7 +4026,7 @@
         return false;
       }
       function matchFinishedGuard(){
-        if (S.status === 'finished'){ toast('This match is finished — scoring is closed. Start a new match to score again.'); return true; }
+        if (S.status === 'finished'){ toast(S.awaitingFinish ? 'Play is over — tap Finish Match to complete this match, or Undo to take back the last ball.' : 'This match is finished — scoring is closed. Start a new match to score again.'); return true; }
         return false;
       }
       /* ---------- in-page confirmation dialog (the browser's own dialog does not work in the app) ---------- */
@@ -4872,7 +4899,11 @@
         /* Persistent hint: exactly which slot is still missing, so a
            blocked pad never fails silently behind a fading toast. */
         var hint = $('slotHint'), msg = '', showOpen = false;
-        if (S.status === 'finished') msg = 'This match is finished — scoring is closed. To start again, delete this match (More → Delete Match) and set up a new one from the beginning.';
+        /* A finished match shows no "scoring is closed" banner: while
+           it awaits completion the prominent Finish Match bar below
+           the pad carries the one action left, and after completion
+           the result line above says everything. */
+        if (S.status === 'finished') msg = '';
         else if (inn.awaitingBowler) msg = 'Pick the bowler for the next over to continue scoring.';
         else {
           var miss = [];
@@ -4907,6 +4938,12 @@
         } else { hint.classList.remove('show'); hint.classList.remove('clickable'); hint.removeAttribute('role'); hint.removeAttribute('tabindex'); hint.onclick = null; hint.onkeydown = null; hint.innerHTML = ''; }
         var ei = $('btnEndInnings');
         if (ei) ei.disabled = (S.status === 'inningsBreak' || S.status === 'finished');
+        /* Finish Match bar — shown only while play is over but the
+           match has not been completed yet. Tapping it files the
+           match into Past Matches and takes it out of Resume
+           Scoring; until then the match stays running. */
+        var fbEl = $('mcFinishBar');
+        if (fbEl) fbEl.hidden = !(S.status === 'finished' && S.awaitingFinish);
         /* Player of the Match picker — finished matches only. */
         try { renderPotmPicker(); } catch(e){}
         /* Super Over banner (while one is live) and card (offer /
@@ -5179,6 +5216,7 @@
          captured here — their results already live in the tournament. */
       function captureLastFinishedSingle(){
         if (!S || S.status !== 'finished' || S.matchKind === 'tournament' || !S.current) return;
+        if (S.awaitingFinish) return; /* not completed yet — it is still the running match, not a finished one */
         var started = S.current.legalBalls > 0 || S.current.runs > 0 || S.current.wickets > 0 || !!S.prevInnings;
         if (!started && !S.abandoned) return;
         var inns = [];
@@ -5298,6 +5336,18 @@
             if (pfs.kind === 'tournament') S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return x.id !== pfs.id; });
             else S.singleFixtures = S.singleFixtures.filter(function(x){ return x.id !== pfs.id; });
           }
+        }
+        /* The format chosen for THIS tournament match is stamped
+           onto every remaining tournament fixture that does not
+           carry one yet — so the next fixture started from the list
+           opens the Open Match screen with its overs / format
+           already filled instead of blank. */
+        if (S.matchKind === 'tournament' && S.tournament && Array.isArray(S.tournament.fixtures)){
+          S.tournament.fixtures.forEach(function(f){
+            if (f && !f.overs){
+              f.overs = S.oversLimit; f.format = S.matchFormat || ''; f.wickets = S.wicketsLimit; f.ballType = S.ballType || '';
+            }
+          });
         }
         /* A match started from the knockout bracket carries the
            bracket match's ID on the live state — with the same
@@ -5429,11 +5479,38 @@
           else { txt = S.prevInnings.battingTeam + ' won by ' + ((t-1)-inn.runs) + ' runs 🏆'; }
         } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
         S.resultText = txt;
-        commit(auto ? 'Match finished: ' + txt : txt);
-        /* The match is filed into permanent history the moment it
-           finishes — no manual save step, and New Match can never
-           delete it afterwards. */
-        try { archiveFinishedMatch(); } catch(e){}
+        if (auto){
+          /* The last ball ended the play — but the match is NOT
+             complete yet. It stays RUNNING (in Resume Scoring, never
+             in Past Matches) until the scorer taps the prominent
+             Finish Match button; archiveFinishedMatch stays gated
+             while awaitingFinish is set, so no render files it
+             early. The Player of the Match pick stays optional —
+             it can be set now, or later from Past Matches. */
+          S.awaitingFinish = true;
+          commit('Match over: ' + txt);
+        } else {
+          /* The explicit Finish Match tap: NOW the match completes —
+             it is filed into Past Matches and leaves Resume Scoring
+             for good (any parked copy of it is dropped). */
+          S.awaitingFinish = false;
+          try {
+            S.pausedMatches = pausedMatches().filter(function(p){ return String(p.matchId) !== String(S.matchId); });
+          } catch(e){}
+          commit(txt);
+          try { archiveFinishedMatch(); } catch(e){}
+          /* A match started from a tournament fixture belongs to
+             the tournament: completing it files its result there
+             (points table + statistics) automatically — no separate
+             "Save Result to Tournament" step. A Single Match is
+             never added to a tournament (the core returns null). */
+          var tnSaved = null;
+          try { tnSaved = saveResultToTournamentCore(); } catch(e){}
+          if (tnSaved) commit('Result added to the tournament', true);
+          toast(tnSaved
+            ? '✓ Match completed — result added to the tournament, and the match is in Past Matches'
+            : '✓ Match completed — it is now in Past Matches');
+        }
       }
 
       /* ---------- Super Over — one over a side to settle a tie ----------
@@ -5552,11 +5629,19 @@
         so.mainPrev = null; so.mainCurr = null;
         S.inningsNo = 2;
         S.status = 'finished';
+        /* A Super Over is played only after the scorer chose to
+           settle the tie, so its finish completes the match outright
+           (no separate Finish Match tap is owed). */
+        S.awaitingFinish = false;
         S.resultText = winner
           ? ('Match tied — ' + so.resultText + ' 🏆')
           : 'Match tied — the Super Over was tied too';
         commit(auto ? 'Super Over finished: ' + so.resultText : so.resultText);
         try { archiveFinishedMatch(); } catch(e){}
+        /* Settling the tie completes a tournament match too: its
+           result (Super Over included) joins the tournament
+           automatically, like any Finish Match completion. */
+        try { if (saveResultToTournamentCore()) commit('Result added to the tournament', true); } catch(e){}
         toast('⚡ ' + so.resultText);
       }
       function cancelSuperOver(){
@@ -5663,6 +5748,26 @@
         out.sort(function(a, b){ return a.name.localeCompare(b.name); });
         return out;
       }
+      /* Copies a Player of the Match choice onto every tournament
+         result stored for the same match — the current tournament's
+         results and any archived tournament's — so the award agreed
+         in one place is the award shown everywhere. Returns true
+         when a stored copy was actually updated. */
+      function syncPotmToTournamentCopy(matchId, name, team, pid){
+        if (matchId === null || matchId === undefined || matchId === '') return false;
+        var touched = false;
+        function scan(list){
+          (list || []).forEach(function(m){
+            if (m && String(m.id) === String(matchId)){
+              m.potmName = name || ''; m.potmTeam = team || ''; m.potmPid = pid || '';
+              touched = true;
+            }
+          });
+        }
+        if (S.tournament && Array.isArray(S.tournament.matches)) scan(S.tournament.matches);
+        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn) scan(tn.matches); });
+        return touched;
+      }
       function renderPotmPicker(){
         var wrap = $('mcPotm'); if (!wrap) return;
         if (S.status !== 'finished'){ wrap.hidden = true; return; }
@@ -5693,6 +5798,7 @@
         var v = sel.value;
         if (v === '' || v == null){
           S.potmName = ''; S.potmTeam = ''; S.potmPid = '';
+          syncPotmToTournamentCopy(S.matchId, '', '', '');
           commit('Player of the Match cleared', true);
           try { archiveFinishedMatch(); } catch(e){}
           toast('Player of the Match cleared — the scoreboard shows “Not Decided Yet”');
@@ -5701,6 +5807,10 @@
         var c = potmCandidateList[parseInt(v, 10)];
         if (!c) return;
         S.potmName = c.name; S.potmTeam = c.team; S.potmPid = c.pid || playerIdFor(c.team, c.name);
+        /* A result already saved to the tournament follows the
+           award in the same commit — not only the live match and
+           the History entry. */
+        syncPotmToTournamentCopy(S.matchId, S.potmName, S.potmTeam, S.potmPid);
         commit('Player of the Match: ' + c.name, true);
         /* The award can be picked (or changed) long after the finish —
            the archived copy in permanent history follows it. */
@@ -6390,6 +6500,63 @@
         if (a.runs > b.runs) return a.battingTeam + ' won by ' + (a.runs - b.runs) + ' runs';
         return 'Match tied';
       }
+      /* The silent core of saving this match's result into the
+         tournament: builds the result record from the live state and
+         stores it (replacing any earlier copy for the same match).
+         No guards, no toast, no commit, no view change — the caller
+         decides all of that. Returns 'saved', 'updated', or null
+         when there is nothing to save: a Single Match (never added
+         to a tournament), an unfinished match, or an abandoned one.
+         Used by the manual Save Result button AND automatically by
+         Finish Match, because a match started from a tournament
+         fixture belongs to the tournament — completing it files its
+         result there with no separate save step. */
+      function saveResultToTournamentCore(){
+        normalizeTournament();
+        if (S.matchKind !== 'tournament') return null;
+        if (S.status !== 'finished' || S.inningsNo !== 2 || !S.prevInnings) return null;
+        if (S.abandoned) return null;
+        var mid = S.matchId || S.updatedAt || 1;
+        if (!S.matchId) S.matchId = mid;
+        var inningsArr = [deep(S.prevInnings), deep(S.current)];
+        var match = {
+          id: mid, at: Date.now(), manual: false,
+          oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
+          innings: inningsArr, resultText: S.resultText || '',
+          /* Set when this match was started from the knockout
+             bracket: the bracket match's own stable ID, so the
+             bracket can claim this result as its own even if the
+             same two teams also met in the league stage. */
+          bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
+          /* The Super Over that settled this match (if any) rides
+             with the tournament result, so the bracket and podium
+             read its winner through matchWinner. */
+          superOver: superOverRecord(),
+          /* The Player of the Match rides with the tournament result
+             too — a result copy without the award was why a POTM
+             picked (or corrected) later never showed anywhere but
+             the live match. Kept in step afterwards by
+             syncPotmToTournamentCopy. */
+          potmName: S.potmName || '', potmTeam: S.potmTeam || '', potmPid: S.potmPid || '',
+          players: playersSnapshot(), playerIds: deep(S.playerIds || [])
+        };
+        if (!match.resultText) match.resultText = matchResultText(match);
+        match.winner = matchWinner(match);
+        inningsArr.forEach(function(inn){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); });
+        /* Saving again REPLACES the stored result for this match
+           (same match id) instead of refusing or duplicating it — so
+           a corrected score can be re-saved. */
+        var existingIdx = -1;
+        S.tournament.matches.forEach(function(m, i){ if (m.id === mid) existingIdx = i; });
+        var replaced = existingIdx > -1;
+        /* A re-save keeps the record's Final designation, so
+           correcting the Final's score never opens the podium. */
+        if (replaced && S.tournament.matches[existingIdx].stage) match.stage = S.tournament.matches[existingIdx].stage;
+        if (replaced) S.tournament.matches[existingIdx] = match;
+        else S.tournament.matches.push(match);
+        S.archivedMatchId = mid;
+        return replaced ? 'updated' : 'saved';
+      }
       function archiveCurrentMatch(){
         if (!requireLiveOwner('save this result')) return;
         if (!requireTnOwner('save results into this tournament')) return;
@@ -6413,38 +6580,8 @@
           return;
         }
         var mid = S.matchId || S.updatedAt || 1;
-        if (!S.matchId) S.matchId = mid;
-        var inningsArr = [deep(S.prevInnings), deep(S.current)];
-        var match = {
-          id: mid, at: Date.now(), manual: false,
-          oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
-          innings: inningsArr, resultText: S.resultText || '',
-          /* Set when this match was started from the knockout
-             bracket: the bracket match's own stable ID, so the
-             bracket can claim this result as its own even if the
-             same two teams also met in the league stage. */
-          bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
-          /* The Super Over that settled this match (if any) rides
-             with the tournament result, so the bracket and podium
-             read its winner through matchWinner. */
-          superOver: superOverRecord(),
-          players: playersSnapshot(), playerIds: deep(S.playerIds || [])
-        };
-        if (!match.resultText) match.resultText = matchResultText(match);
-        match.winner = matchWinner(match);
-        inningsArr.forEach(function(inn){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); });
-        /* Saving again REPLACES the stored result for this match
-           (same match id) instead of refusing or duplicating it — so
-           a corrected score can be re-saved. */
-        var existingIdx = -1;
-        S.tournament.matches.forEach(function(m, i){ if (m.id === mid) existingIdx = i; });
-        var replaced = existingIdx > -1;
-        /* A re-save keeps the record's Final designation, so
-           correcting the Final's score never opens the podium. */
-        if (replaced && S.tournament.matches[existingIdx].stage) match.stage = S.tournament.matches[existingIdx].stage;
-        if (replaced) S.tournament.matches[existingIdx] = match;
-        else S.tournament.matches.push(match);
-        S.archivedMatchId = mid;
+        var replaced = saveResultToTournamentCore() === 'updated';
+        if (!replaced && !S.archivedMatchId) return;
         commit('Saved to tournament', true);
         /* If this save decided the tournament's Final, the podium
            (Winner / Runner / Player of the Tournament) has just
@@ -6513,13 +6650,32 @@
             commit('Result removed', true); toast('Match result removed');
           });
       }
+      /* The format a NEW tournament fixture is born with: the
+         tournament's most recent result's overs / wickets when one
+         exists, else the format of the tournament match currently
+         live. A fixture that carries its format can prefill the Open
+         Match screen when it is scored; fixtures created before any
+         format is known carry none, and the first fixture match
+         that IS started stamps its chosen format onto the rest
+         (see doStartMatch). */
+      function fixtureFormatSeed(){
+        var ms = (S.tournament && Array.isArray(S.tournament.matches)) ? S.tournament.matches : [];
+        for (var i = ms.length - 1; i >= 0; i--){
+          if (ms[i] && ms[i].oversLimit) return { overs: ms[i].oversLimit, format: '', wickets: ms[i].wicketsLimit || 10, ballType: '' };
+        }
+        if (S.matchKind === 'tournament' && S.oversLimit) return { overs: S.oversLimit, format: S.matchFormat || '', wickets: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), ballType: S.ballType || '' };
+        return null;
+      }
       function addFixture(){
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
         var a = $('fxTeamA').value.trim(), b = $('fxTeamB').value.trim();
         if (!a || !b){ toast('Enter both teams for the fixture'); return; }
         if (a === b){ toast('Pick two different teams'); return; }
-        S.tournament.fixtures.push({ id: Date.now(), teamA:a, teamB:b, label: $('fxLabel').value.trim() });
+        var fxNew = { id: Date.now(), teamA:a, teamB:b, label: $('fxLabel').value.trim() };
+        var seed = fixtureFormatSeed();
+        if (seed){ fxNew.overs = seed.overs; fxNew.format = seed.format; fxNew.wickets = seed.wickets; fxNew.ballType = seed.ballType; }
+        S.tournament.fixtures.push(fxNew);
         ensureTournamentTeam(a); ensureTournamentTeam(b);
         $('fxTeamA').value=''; $('fxTeamB').value=''; $('fxLabel').value='';
         commit('Fixture added', true); toast('Fixture added');
@@ -6548,11 +6704,25 @@
         if (!fx) return;
         pendingFixtureStart = { kind: 'tournament', id: id }; /* doStartMatch removes this fixture as the match starts */
         pendingMatchKind = 'tournament'; /* a fixture's match belongs to the tournament */
-        $('teamA').value = fx.teamA; $('teamB').value = fx.teamB;
-        if (fx.label) $('venue').value = fx.label;
-        setView('scorer');
-        openFoldById('setupCard');
-        toast(fx.teamA + ' vs ' + fx.teamB + ' — tap Start Match when ready');
+        /* A tournament fixture starts on the OPEN MATCH screen —
+           the same screen a single match starts from — prefilled
+           with the fixture's teams, venue, date and (where the
+           fixture carries it) its overs / format / wickets / ball
+           type, exactly like a saved single fixture. The old route
+           (the legacy Match Setup popup over whatever match was on
+           the table, with Total Overs and Toss blank because the
+           fixture stored no format) is gone. START MATCH on that
+           screen opens the toss, and doStartMatch parks any match
+           still in progress and removes this fixture in the same
+           commit. Where the fixture carries no format yet, the
+           screen asks for it once (Overs / Match Format). */
+        om.teamA = fx.teamA; om.teamB = fx.teamB;
+        om.overs = fx.overs || null; om.format = fx.format || ''; om.wickets = fx.wickets || 10; om.ballType = fx.ballType || '';
+        om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        openMatchScreenPrefilled();
+        if ($('omVenue')) $('omVenue').value = fx.venue || '';
+        if ($('omDate') && fx.date) $('omDate').value = fx.date;
+        toast(fx.teamA + ' vs ' + fx.teamB + ' — check the details, then tap START MATCH for the toss');
       }
       /* ---------- auto fixture generator: round-robin league ----------
          Pick teams, one tap builds the whole league — every team
@@ -6672,7 +6842,10 @@
             var parts = ['Round ' + (r + 1)];
             if (dateIso) parts.push(fmtDateShort(dateIso));
             if (venue) parts.push(venue);
-            S.tournament.fixtures.push({ id: newFixtureId(), teamA: a, teamB: b, label: parts.join(' • '), round: r + 1, date: dateIso, venue: venue, generated: true });
+            var fxGen = { id: newFixtureId(), teamA: a, teamB: b, label: parts.join(' • '), round: r + 1, date: dateIso, venue: venue, generated: true };
+            var fxSeed = fixtureFormatSeed();
+            if (fxSeed){ fxGen.overs = fxSeed.overs; fxGen.format = fxSeed.format; fxGen.wickets = fxSeed.wickets; fxGen.ballType = fxSeed.ballType; }
+            S.tournament.fixtures.push(fxGen);
             added++;
           }
           arr.splice(1, 0, arr.pop()); /* rotate the circle, first team fixed */
@@ -6993,6 +7166,87 @@
           + '</div>';
         return html;
       }
+      /* ---------- live tournament match → live statistics ----------
+         A tournament match belongs to the tournament from its first
+         ball, not only once its result is saved: while it is being
+         scored, its ball-by-ball figures feed the tournament
+         STATISTICS (the batting & bowling tables, the tournament
+         totals, the records, and the Home tab's Top Players and
+         Tournament Boundaries) immediately — the same way the live
+         match already feeds the player profiles. The record is
+         rebuilt from the live state on every render, so every ball
+         moves the numbers on the scorer's screen at once and,
+         through the same Firebase sync that drives the scoreboard,
+         on every viewer's screen too.
+         What the live record never touches early: the POINTS TABLE
+         counts it only once its result is actually decided (see
+         computePoints), and the podium, the bracket and the Match
+         Results list keep following saved results exactly as
+         before. When Finish Match files the real result it carries
+         the same match ID, and the live record steps aside, so the
+         match is never counted twice. A match that is abandoned,
+         deleted or replaced drops out of the statistics with it.
+         During a Super Over the main innings are parked inside
+         S.superOver; the record is built from those, so the Super
+         Over's own over never enters the tournament figures —
+         exactly like a saved result, which carries the main
+         innings only. */
+      function liveTournamentRecord(){
+        if (!S || !S.current) return null;
+        if (S.matchKind !== 'tournament') return null;
+        if (S.abandoned) return null;
+        var prev = S.prevInnings, cur = S.current, decided = (S.status === 'finished');
+        if (superOverActive() && S.superOver){
+          prev = S.superOver.mainPrev || null;
+          cur = S.superOver.mainCurr || null;
+          if (!cur) return null;
+          decided = true; /* the main match ended (tied) before the Super Over began */
+        }
+        var started = cur.legalBalls > 0 || cur.runs > 0 || cur.wickets > 0
+          || (cur.batters || []).length > 0 || (cur.bowlers || []).length > 0 || !!prev;
+        if (!started) return null;
+        var mid = S.matchId || S.updatedAt || 1;
+        /* The finished match's saved result (same ID) replaces this
+           live record — never count the match twice. */
+        var saved = false;
+        (S.tournament.matches || []).forEach(function(m){ if (m && String(m.id) === String(mid)) saved = true; });
+        if (saved) return null;
+        var inns = [];
+        if (prev) inns.push(deep(prev));
+        inns.push(deep(cur));
+        return {
+          id: mid, at: Date.now(), manual: false, live: true, decided: decided,
+          oversLimit: S.oversLimit, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10),
+          venue: S.venue || '', innings: inns, resultText: '',
+          bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
+          players: playersSnapshot(), playerIds: deep(S.playerIds || [])
+        };
+      }
+      /* Has a live record's result been decided on the field? The
+         chase is complete when the target is passed, the side is
+         all out, or the overs run out — level scores before that
+         are not a tie yet. A match whose play has ended (status
+         finished) is decided by definition. Saved results are
+         always decided. */
+      function liveRecordDecided(m){
+        if (!m.live) return true;
+        if (m.decided) return true;
+        if (!m.innings || m.innings.length < 2) return false;
+        var la = m.innings[0], lb = m.innings[1];
+        var wl = (typeof m.wicketsLimit === 'number' ? m.wicketsLimit : 10);
+        var ol = (m.oversLimit || 20) * 6;
+        return lb.runs > la.runs || lb.wickets >= wl || lb.legalBalls >= ol;
+      }
+      /* Every match the tournament STATISTICS are worked out from:
+         the saved results plus the live match still being scored. */
+      function tournamentStatMatches(){
+        normalizeTournament();
+        var arr = S.tournament.matches.slice();
+        var lv = null;
+        try { lv = liveTournamentRecord(); } catch(e){}
+        if (lv) arr.push(lv);
+        return arr;
+      }
       function computePoints(){
         normalizeTournament();
         var rows = {};
@@ -7001,8 +7255,13 @@
           return rows[name];
         }
         S.tournament.teams.forEach(function(n){ rowFor(n); });
-        S.tournament.matches.forEach(function(m){
+        tournamentStatMatches().forEach(function(m){
           if (!m.innings || m.innings.length < 2) return;
+          /* A live match joins the points table only once its
+             result is actually decided (liveRecordDecided). Until
+             then its figures drive the player statistics, never
+             the table. */
+          if (m.live && !liveRecordDecided(m)) return;
           var a = m.innings[0], b = m.innings[1];
           var ra = rowFor(a.battingTeam), rb = rowFor(b.battingTeam);
           ra.p++; rb.p++;
@@ -7039,7 +7298,11 @@
       function computePlayerStats(){
         normalizeTournament();
         var bat = {}, bowl = {};
-        S.tournament.matches.forEach(function(m){
+        /* Saved results plus the live tournament match still being
+           scored (tournamentStatMatches), so every ball bowled
+           updates these tables at once — the same figures the
+           player profiles already show live. */
+        tournamentStatMatches().forEach(function(m){
           (m.innings || []).forEach(function(inn){
             /* Players are keyed by Player ID, never by name alone:
                two different players who share a name hold different
@@ -7077,7 +7340,7 @@
       }
       function battingStatsHTML(){
         var st = computePlayerStats().batting;
-        if (!st.length) return '<p class="note">No batting statistics yet — statistics build up from matches saved to the tournament.</p>';
+        if (!st.length) return '<p class="note">No batting statistics yet — statistics build up ball by ball as tournament matches are scored.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
           var ave = s.outs > 0 ? (s.runs/s.outs).toFixed(1) : '—';
@@ -7087,7 +7350,7 @@
       }
       function bowlingStatsHTML(){
         var st = computePlayerStats().bowling;
-        if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up from matches saved to the tournament.</p>';
+        if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up ball by ball as tournament matches are scored.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
           return '<tr><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.teams.join(' / ')) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
@@ -7102,13 +7365,18 @@
         var bySR = st.batting.filter(function(s){ return s.balls >= 30; }).sort(function(a,b){ return (b.runs/Math.max(1,b.balls)) - (a.runs/Math.max(1,a.balls)); })[0];
         var byEcon = st.bowling.filter(function(s){ return s.balls >= 12; }).sort(function(a,b){ return (a.runs/(a.balls/6)) - (b.runs/(b.balls/6)); })[0];
         var totalRuns = 0, totalWkts = 0, completedMatches = 0;
-        /* Totals count the same matches the points table counts —
-           finished two-innings matches, scored or entered manually —
-           so "Matches completed" here always agrees with the table. */
-        S.tournament.matches.forEach(function(m){
+        /* "Matches completed" counts the same matches the points
+           table counts — finished two-innings matches, scored or
+           entered manually, plus a live match whose result is
+           already decided — so the two always agree. The run and
+           wicket totals also include the live match's figures so
+           far (even a first innings still in progress), so they
+           move ball by ball while it is being scored. */
+        tournamentStatMatches().forEach(function(m){
+          (m.innings || []).forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; });
           if (!m.innings || m.innings.length < 2) return;
+          if (m.live && !liveRecordDecided(m)) return;
           completedMatches++;
-          m.innings.forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; });
         });
         var items = [];
         items.push('<div class="hist-item"><span>Matches completed</span><b>' + completedMatches + '</b></div>');
@@ -7134,7 +7402,9 @@
       function tournamentRecordsHTML(){
         normalizeTournament();
         var hs = null, teamTotal = null, bbf = null;
-        S.tournament.matches.forEach(function(m){
+        /* Saved results plus the live match (tournamentStatMatches):
+           a record being set right now shows here ball by ball. */
+        tournamentStatMatches().forEach(function(m){
           (m.innings || []).forEach(function(inn){
             if (!teamTotal || inn.runs > teamTotal.runs || (inn.runs === teamTotal.runs && inn.wickets < teamTotal.wickets)){
               teamTotal = { team: inn.battingTeam, vs: inn.bowlingTeam, runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls || 0 };
@@ -7158,7 +7428,7 @@
         var mostRuns = st.batting.length ? st.batting[0] : null;
         var mostWkts = st.bowling.length ? st.bowling[0] : null;
         var mostSixes = st.batting.slice().sort(function(a,b){ return (b.sixes - a.sixes) || (b.runs - a.runs); })[0] || null;
-        if (!hs && !teamTotal && !bbf && !mostRuns && !mostWkts) return '<p class="note">No records yet — records appear here once match results are saved to the tournament.</p>';
+        if (!hs && !teamTotal && !bbf && !mostRuns && !mostWkts) return '<p class="note">No records yet — records appear here as tournament matches are scored.</p>';
         function ctx(main, extra){ return '<span class="rec-ctx">' + esc(main) + (extra ? ' · ' + esc(extra) : '') + '</span>'; }
         var items = [];
         if (hs) items.push('<div class="hist-item"><span>Highest score in a match' + ctx(hs.team + ' vs ' + hs.vs, hs.balls + (hs.balls === 1 ? ' ball' : ' balls') + ' · ' + hs.fours + '×4 · ' + hs.sixes + '×6') + '</span><b>' + plLink(hs.team, hs.name, null, hs.pid) + ' — ' + hs.runs + (hs.out ? '' : '*') + '</b></div>');
@@ -7167,7 +7437,7 @@
         if (mostRuns && mostRuns.runs > 0) items.push('<div class="hist-item"><span>Most runs' + ctx(mostRuns.teams.join(' / '), mostRuns.inns + (mostRuns.inns === 1 ? ' innings' : ' innings')) + '</span><b>' + plLink(mostRuns.team, mostRuns.name, null, mostRuns.pid) + ' — ' + mostRuns.runs + '</b></div>');
         if (mostWkts && mostWkts.wickets > 0) items.push('<div class="hist-item"><span>Most wickets' + ctx(mostWkts.teams.join(' / '), mostWkts.inns + (mostWkts.inns === 1 ? ' innings' : ' innings')) + '</span><b>' + plLink(mostWkts.team, mostWkts.name, null, mostWkts.pid) + ' — ' + mostWkts.wickets + '</b></div>');
         if (mostSixes && mostSixes.sixes > 0) items.push('<div class="hist-item"><span>Most sixes' + ctx(mostSixes.teams.join(' / ')) + '</span><b>' + plLink(mostSixes.team, mostSixes.name, null, mostSixes.pid) + ' — ' + mostSixes.sixes + '</b></div>');
-        return items.length ? items.join('') : '<p class="note">No records yet — records appear here once match results are saved to the tournament.</p>';
+        return items.length ? items.join('') : '<p class="note">No records yet — records appear here as tournament matches are scored.</p>';
       }
       var currentTnTab = 'home';
       function setTnTab(tab){
@@ -8615,7 +8885,7 @@
                 : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
               return '<div class="match-row">' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === finMatchId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div><div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>';
             }).join('')
-          : '<p class="note">No results yet — finish a live match and tap “Save Result to Tournament”, or enter a result manually.</p>';
+          : '<p class="note">No results yet — finish a tournament match and its result is added here automatically, or enter a result manually.</p>';
         if ($('sbMatches')) $('sbMatches').innerHTML = sbMatchHtml;
         try { renderSbTeams(); } catch(e){}
         try { renderTnTeamsGallery(); } catch(e){}
@@ -9605,6 +9875,12 @@
       }
       function archiveFinishedMatch(){
         if (!S || S.status !== 'finished' || !S.current) return;
+        /* Play over is not match complete: while awaitingFinish is
+           set the match is still running (Resume Scoring) and must
+           NOT be filed into Past Matches — only the scorer's Finish
+           Match tap (or an explicit finish like a Super Over or an
+           abandonment) clears the flag and lets this run. */
+        if (S.awaitingFinish) return;
         var started = S.current.legalBalls > 0 || S.current.runs > 0 || S.current.wickets > 0 || !!S.prevInnings;
         if (!started && !S.abandoned) return; /* nothing was ever scored — nothing to keep */
         var entry = buildHistoryEntry();
@@ -10926,6 +11202,210 @@
         pdf += 'trailer\n<< /Size ' + (total + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
         return pdf;
       }
+      /* ---------- file delivery — how every download reaches the device ----------
+         A blob-URL anchor click is silently dropped by the Android
+         WebView the app runs in: the click "works", nothing is saved,
+         and the old code toasted "downloaded" anyway — the file was
+         nowhere to be found. deliverFile therefore tries, in order:
+         1. The native app's Filesystem plugin (Capacitor): the file
+            is written onto the device for real (Documents, falling
+            back to the app cache) and offered through the native
+            Share sheet when that plugin exists too. The success
+            message is shown only after the write resolves — a failed
+            write says so instead of claiming a download.
+         2. The Web Share API with a real File (Android browsers):
+            the share sheet is how the file leaves the browser; the
+            message says to save it from there, and a cancelled share
+            shows nothing at all.
+         3. A plain browser download (desktop browsers handle the
+            anchor + download attribute properly).
+         Files and media permission: saving into the device's shared
+         storage can need the Files and media access permission. When
+         that permission has not been granted yet, deliverFile does
+         NOT fail silently and never claims a download it did not
+         make — it shows the #dlPermModal popup first, explaining
+         that the permission is needed. "Allow & Download" then
+         triggers the phone's own system permission popup (through
+         the Filesystem plugin's requestPermissions) and the file is
+         saved only if access is granted. If it is refused, the
+         popup stays honest about that and offers the share sheet
+         instead, which needs no storage permission. When access is
+         already granted — or the save path needs none (app cache,
+         browser, desktop) — no popup appears at all. */
+      function blobToBase64(blob, cb){
+        var r = new FileReader();
+        r.onload = function(){ var s = String(r.result || ''); var i = s.indexOf(','); cb(i > -1 ? s.slice(i + 1) : s); };
+        r.onerror = function(){ cb(null); };
+        try { r.readAsDataURL(blob); } catch(e){ cb(null); }
+      }
+      function anchorDownload(blob, filename, okMsg){
+        try {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
+          toast('✓ ' + okMsg);
+        } catch(e){ toast('⚠️ Download failed in this browser'); }
+      }
+      /* ---------- Files and media permission popup ----------
+         The pending download waiting on a permission decision.
+         Only one download can wait at a time; a new download
+         replaces the pending one (its popup is re-pointed). */
+      var dlPermPending = null; /* { blob, filename, okMsg, FS, denied } */
+      function dlPermStateOf(res){
+        try {
+          if (!res) return 'unknown';
+          var v = res.publicStorage || res.files || res.media || res.storage || res.state || '';
+          if (typeof v === 'string' && v) return v;
+          for (var k in res){ if (typeof res[k] === 'string' && res[k]) return res[k]; }
+        } catch(e){}
+        return 'unknown';
+      }
+      function showDlPermPopup(denied){
+        var p = dlPermPending; if (!p) return;
+        p.denied = !!denied;
+        var title = $('dlPermTitle'), text = $('dlPermText'), allow = $('dlPermAllow'), share = $('dlPermShare');
+        if (title) title.textContent = denied ? 'Files Access Not Allowed' : 'Allow Files Access?';
+        if (text){
+          text.innerHTML = denied
+            ? 'Files and media access was not allowed, so <span class="dlperm-file">' + esc(p.filename) + '</span> could not be saved on this device. Tap <b>Allow &amp; Download</b> to try again — your phone will show its own permission popup. If it no longer asks, open <b>Settings → Apps → Live Cricket Score → Permissions</b> and allow <b>Files and media</b>. Or use <b>Share Instead</b> — sharing needs no storage permission.'
+            : 'To save <span class="dlperm-file">' + esc(p.filename) + '</span> on this device, the app needs <b>Files and media</b> access. Tap <b>Allow &amp; Download</b> and then tap <b>Allow</b> in your phone\'s permission popup — the file is saved only after that.';
+        }
+        if (allow) allow.textContent = denied ? 'Try Again' : 'Allow & Download';
+        if (share) share.hidden = !denied;
+        var m = $('dlPermModal'); if (m) m.classList.add('show');
+      }
+      function closeDlPermPopup(){ var m = $('dlPermModal'); if (m) m.classList.remove('show'); }
+      function dlPermCancel(){
+        closeDlPermPopup();
+        dlPermPending = null;
+        toast('Download cancelled — the file was not saved');
+      }
+      function dlPermShareInstead(){
+        var p = dlPermPending; dlPermPending = null;
+        closeDlPermPopup();
+        if (p) deliverViaShareOrAnchor(p.blob, p.filename, p.okMsg);
+      }
+      function dlPermAllow(){
+        var p = dlPermPending; if (!p) { closeDlPermPopup(); return; }
+        closeDlPermPopup();
+        var FS = p.FS;
+        var proceed = function(){ if (dlPermPending === p){ dlPermPending = null; writeFileNative(p.blob, p.filename, p.okMsg, FS, true); } };
+        var refused = function(){ if (dlPermPending === p) showDlPermPopup(true); };
+        /* Trigger the phone's own system permission popup. */
+        try {
+          if (FS && typeof FS.requestPermissions === 'function'){
+            Promise.resolve(FS.requestPermissions()).then(function(res){
+              var st = dlPermStateOf(res);
+              if (st === 'granted' || st === 'limited') proceed();
+              else if (st === 'denied') refused();
+              else proceed(); /* no clear answer (older plugin / scoped storage): try the save — a permission failure there re-opens this popup */
+            }).catch(function(){ proceed(); });
+            return;
+          }
+        } catch(e){}
+        proceed();
+      }
+      /* Native save: Documents first (the folder downloads are
+         expected in — the one that can need the permission), then
+         the app cache, which needs no permission at all. */
+      function writeFileNative(blob, filename, okMsg, FS, permRetried){
+        var Cap = window.Capacitor;
+        blobToBase64(blob, function(b64){
+          if (!b64){ toast('⚠️ Could not prepare the file on this device'); return; }
+          var dirs = ['DOCUMENTS', 'CACHE'];
+          (function nextDir(i){
+            if (i >= dirs.length){ toast('⚠️ The file could not be saved on this device'); return; }
+            var p;
+            try { p = FS.writeFile({ path: filename, data: b64, directory: dirs[i] }); }
+            catch(e){ nextDir(i + 1); return; }
+            Promise.resolve(p).then(function(res){
+              var Share = Cap && Cap.Plugins && Cap.Plugins.Share;
+              if (Share && typeof Share.share === 'function' && res && res.uri){
+                try { Promise.resolve(Share.share({ title: filename, url: res.uri })).catch(function(){}); } catch(e){}
+              }
+              toast('✓ ' + okMsg + ' — saved on this device as ' + filename);
+            }).catch(function(err){
+              /* A permission refusal on the shared-storage write is
+                 exactly the case the popup exists for: ask first,
+                 then (via Allow) trigger the system popup and retry.
+                 Only one popup round per download. */
+              var msg = '';
+              try { msg = String((err && (err.message || err.code)) || err || ''); } catch(e){}
+              if (i === 0 && !permRetried && /permission|denied|not allowed|EACCES|EPERM/i.test(msg)){
+                dlPermPending = { blob: blob, filename: filename, okMsg: okMsg, FS: FS, denied: false };
+                showDlPermPopup(false);
+                return;
+              }
+              nextDir(i + 1);
+            });
+          })(0);
+        });
+      }
+      /* Fallback delivery that needs no storage permission: the
+         Web Share sheet with a real file, else a plain browser
+         download (desktop browsers handle the anchor properly). */
+      function deliverViaShareOrAnchor(blob, filename, okMsg){
+        try {
+          if (navigator.share && navigator.canShare && typeof File !== 'undefined'){
+            var file = null;
+            try { file = new File([blob], filename, { type: blob.type || 'application/octet-stream' }); } catch(e){}
+            if (file && navigator.canShare({ files: [file] })){
+              navigator.share({ files: [file], title: filename }).then(function(){
+                toast('✓ ' + okMsg + ' — pick where to save it from the share sheet');
+              }).catch(function(err){
+                if (err && err.name === 'AbortError') return; /* the user closed the sheet — nothing to report */
+                anchorDownload(blob, filename, okMsg);
+              });
+              return;
+            }
+          }
+        } catch(e){}
+        anchorDownload(blob, filename, okMsg);
+      }
+      function deliverFile(blob, filename, okMsg){
+        /* 1) native app: write the file onto the device — but check
+           the Files and media permission first: if the plugin can
+           report it and it is not granted, show the permission
+           popup instead of attempting a save that cannot land. */
+        try {
+          var Cap = window.Capacitor;
+          var FS = Cap && Cap.Plugins && Cap.Plugins.Filesystem;
+          if (FS && typeof FS.writeFile === 'function'){
+            if (typeof FS.checkPermissions === 'function'){
+              var granted = function(){ writeFileNative(blob, filename, okMsg, FS, false); };
+              Promise.resolve(FS.checkPermissions()).then(function(res){
+                var st = dlPermStateOf(res);
+                if (st === 'denied' || st === 'prompt' || st === 'prompt-with-rationale'){
+                  dlPermPending = { blob: blob, filename: filename, okMsg: okMsg, FS: FS, denied: false };
+                  showDlPermPopup(false);
+                } else granted(); /* granted / limited / unknown: save straight away, no popup needed */
+              }).catch(granted);
+              return;
+            }
+            writeFileNative(blob, filename, okMsg, FS, false);
+            return;
+          }
+        } catch(e){}
+        /* 2) Web Share / 3) plain browser download — neither needs
+           storage permission, so no popup on this path. */
+        deliverViaShareOrAnchor(blob, filename, okMsg);
+      }
+      function dataUrlToBlob(dataUrl){
+        var parts = String(dataUrl || '').split(',');
+        if (parts.length < 2) return null;
+        var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'application/octet-stream';
+        try {
+          var bin = atob(parts[1]);
+          var u8 = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+          return new Blob([u8], { type: mime });
+        } catch(e){ return null; }
+      }
       function downloadReport(){
         var outEl = $('repOutput');
         if (!outEl || !outEl.value){ toast('Generate a report first, then download it'); return; }
@@ -10933,15 +11413,7 @@
         var type = typeEl ? (typeEl.value || 'report') : 'report';
         try {
           var blob = new Blob([buildReportPdf(outEl.value)], { type:'application/pdf' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = 'cricket-report-' + type + '.pdf';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-          toast('✓ Report downloaded as PDF');
+          deliverFile(blob, 'cricket-report-' + type + '.pdf', 'Report downloaded as PDF');
         } catch(e){ toast('PDF download failed in this browser — use Copy instead'); }
       }
       /* ---------- Full History backup: one JSON file ----------
@@ -10981,16 +11453,8 @@
         };
         try {
           var blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
           var pad = function(n){ return (n < 10 ? '0' : '') + n; };
-          a.download = 'cricket-history-backup-' + now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '.json';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-          toast('✓ History backup downloaded — ' + entries.length + (entries.length === 1 ? ' match' : ' matches') + ' in one JSON file');
+          deliverFile(blob, 'cricket-history-backup-' + now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '.json', 'History backup downloaded — ' + entries.length + (entries.length === 1 ? ' match' : ' matches') + ' in one JSON file');
         } catch(e){ toast('Backup download failed in this browser'); }
       }
       /* ---------- Per-match Scorecard PDF ----------
@@ -11087,15 +11551,7 @@
         if (!S.teamA && !S.teamB){ toast('No match to download yet — start a match first'); return; }
         try {
           var blob = new Blob([buildReportPdf(scorecardTextFromState())], { type:'application/pdf' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = scorecardPdfFileName();
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-          toast('✓ Scorecard downloaded as PDF');
+          deliverFile(blob, scorecardPdfFileName(), 'Scorecard downloaded as PDF');
         } catch(e){ toast('PDF download failed in this browser'); }
       }
       function downloadScorecardPdfCurrent(){
@@ -11519,22 +11975,15 @@
         try { cv = drawSummaryImage(); } catch(e){ cv = null; }
         if (!cv){ toast('Could not create the summary image in this browser'); return; }
         var fname = matchPdfFileName('summary').replace(/\.pdf$/, '.jpg');
-        function done(){ toast('✓ Match Summary downloaded as JPG'); }
         if (cv.toBlob){
           cv.toBlob(function(blob){
             if (!blob){ toast('Download failed in this browser'); return; }
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url; a.download = fname;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-            done();
+            deliverFile(blob, fname, 'Match Summary downloaded as JPG');
           }, 'image/jpeg', 0.92);
         } else {
-          var a2 = document.createElement('a');
-          a2.href = cv.toDataURL('image/jpeg', 0.92); a2.download = fname;
-          document.body.appendChild(a2); a2.click(); document.body.removeChild(a2);
-          done();
+          var blob2 = dataUrlToBlob(cv.toDataURL('image/jpeg', 0.92));
+          if (blob2) deliverFile(blob2, fname, 'Match Summary downloaded as JPG');
+          else toast('Download failed in this browser');
         }
       }
       function downloadMatchSummaryJpgCurrent(){
@@ -11611,15 +12060,7 @@
         if (!S.teamA && !S.teamB){ toast('No match to download yet — start a match first'); return; }
         try {
           var blob = new Blob([buildMatchPdf(matchReportTextFromState())], { type: 'application/pdf' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = matchPdfFileName('report');
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-          toast('✓ Match Report downloaded as PDF');
+          deliverFile(blob, matchPdfFileName('report'), 'Match Report downloaded as PDF');
         } catch(e){ toast('PDF download failed in this browser'); }
       }
       function downloadMatchReportPdfCurrent(){
@@ -11999,18 +12440,12 @@
           if (shareCardCanvas.toBlob){
             shareCardCanvas.toBlob(function(blob){
               if (!blob){ toast('Download failed in this browser'); return; }
-              var url = URL.createObjectURL(blob);
-              var a = document.createElement('a');
-              a.href = url; a.download = shareCardFileName();
-              document.body.appendChild(a); a.click(); document.body.removeChild(a);
-              setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
-              toast('✓ Match card downloaded — share it on WhatsApp or Facebook');
+              deliverFile(blob, shareCardFileName(), 'Match card downloaded — share it on WhatsApp or Facebook');
             }, 'image/png');
           } else {
-            var a2 = document.createElement('a');
-            a2.href = shareCardCanvas.toDataURL('image/png'); a2.download = shareCardFileName();
-            document.body.appendChild(a2); a2.click(); document.body.removeChild(a2);
-            toast('✓ Match card downloaded — share it on WhatsApp or Facebook');
+            var blob3 = dataUrlToBlob(shareCardCanvas.toDataURL('image/png'));
+            if (blob3) deliverFile(blob3, shareCardFileName(), 'Match card downloaded — share it on WhatsApp or Facebook');
+            else toast('Download failed in this browser');
           }
         } catch(e){ toast('Download failed in this browser'); }
       }
@@ -12120,6 +12555,20 @@
         var savedId = histEditId;
         saveHistLocal();
         pushHistoryEntry(e);
+        /* The edit must land EVERYWHERE this match lives, not only
+           in this History entry — that was the "POTM edited in Past
+           Matches never updates" bug: the live match (when this is
+           the match on show) and the tournament's saved result copy
+           each carry their own POTM fields, and neither was touched.
+           Both are updated here; the commit below publishes the live
+           state and the tournament copies together. */
+        var propagated = false;
+        if (S.matchId && String(S.matchId) === String(savedId) && S.status === 'finished'){
+          S.potmName = e.potmName || ''; S.potmTeam = e.potmTeam || ''; S.potmPid = e.potmPid || '';
+          propagated = true;
+        }
+        if (syncPotmToTournamentCopy(savedId, e.potmName, e.potmTeam, e.potmPid)) propagated = true;
+        if (propagated) commit('Match details updated', true);
         closeHistoryEdit();
         try { renderHistory(); } catch(err){}
         /* If this match is the one open in the scoreboard (archive
@@ -12129,7 +12578,18 @@
           var ne = HIST[savedId];
           if (ne){ archiveView.entry = ne; archiveView.state = archiveDisplayState(ne); try { renderArchiveScoreboard(); } catch(err){} }
         }
-        toast('✓ Match details updated');
+        /* Say what actually happened to the Firebase write: an entry
+           this account may not publish is HELD by pushHistoryEntry,
+           and the old code toasted success anyway — the edit then
+           silently never reached any other device (or the tournament
+           copy's viewers). */
+        if (!histEntrySyncable(e)){
+          toast('⚠️ Saved on this device only — this match belongs to another account, so the edit cannot be published. Sign in as the match owner to sync it everywhere.');
+        } else if (!fbHistRef){
+          toast('⚠️ Saved on this device — it will sync to Firebase as soon as the connection is ready');
+        } else {
+          toast('✓ Match details updated — everywhere');
+        }
       }
       /* ---------- History & Reports view ---------- */
       function renderHistory(){
@@ -13172,7 +13632,12 @@
          into S.tournamentsArchive — nothing is ever deleted.
          ============================================================ */
       function liveMatchInProgress(){
-        if (!S || S.status === 'finished' || !S.current) return false;
+        if (!S || !S.current) return false;
+        /* A match whose play has ended but which the scorer has not
+           completed yet (Finish Match not tapped) still counts as
+           RUNNING: it stays in Resume Scoring and can be parked like
+           any live match. Only a completed match leaves this list. */
+        if (S.status === 'finished') return !!S.awaitingFinish;
         if (!S.teamA || !S.teamB) return false;
         var c = S.current;
         return c.legalBalls > 0 || c.runs > 0 || c.wickets > 0 || !!S.prevInnings
@@ -13185,7 +13650,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
@@ -13257,7 +13722,7 @@
         if (slice.prevInnings) inns.push(slice.prevInnings);
         if (slice.current) inns.push(slice.current);
         var lines = inns.map(function(x){ return esc(x.battingTeam) + ' ' + x.runs + '/' + x.wickets + ' (' + oversText(x.legalBalls) + ' ov)'; }).join(' • ');
-        var when = slice.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (slice.inningsNo || 1));
+        var when = (slice.status === 'finished' && slice.awaitingFinish) ? 'Play over — awaiting Finish Match' : (slice.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (slice.inningsNo || 1)));
         var kind = slice.matchKind === 'tournament' ? 'Tournament match' : 'Single match';
         var own = slice.ownerName ? ' • Owner: ' + slice.ownerName : '';
         return '<button type="button" class="tn-pick" onclick="resumeMatch(\'' + esc(String(slice.matchId)) + '\')">'
@@ -13413,6 +13878,20 @@
         var sEl = $('omScorer'); if (sEl) sEl.value = '';
         omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
         setView('openmatch');
+      }
+      /* The Open Match screen WITHOUT the reset: used when a fixture
+         (tournament or saved single) has already filled the om form
+         state — teams, format, venue, date — and the screen must
+         simply show it for the toss. Date / time default to now only
+         when the caller left them empty. */
+      function openMatchScreenPrefilled(){
+        var now = new Date();
+        var dEl = $('omDate'); if (dEl && !dEl.value) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+        var tEl = $('omTime'); if (tEl && !tEl.value) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+        var sEl = $('omScorer'); if (sEl) sEl.value = '';
+        omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
+        setView('openmatch');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       function omRenderTeams(){
         [['A', om.teamA], ['B', om.teamB]].forEach(function(pair, idx){
