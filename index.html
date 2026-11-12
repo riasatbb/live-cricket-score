@@ -840,10 +840,9 @@
       <section class="view" id="view-live">
         <div class="mode-intro">
           <h2>Live Matches</h2>
-          <p>Tap the live match to watch its score — it updates ball by ball, automatically.</p>
         </div>
         <div id="liveList"></div>
-        <button type="button" class="btn ghost hist-entry-btn" onclick="setView('history')">📜 Match History &amp; Reports — every match, every player</button>
+        <button type="button" class="btn ghost hist-entry-btn" onclick="setView('history')">📜 Match History &amp; Reports</button>
         <div class="scorer-entry">
           <span>Scoring a match yourself?</span>
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
@@ -854,40 +853,21 @@
       <section class="view show" id="view-home">
         <div class="mode-intro">
           <h2>What are you covering?</h2>
-          <p>Choose a mode to get started — each one opens only its own tools, neatly in one place.</p>
         </div>
         <div class="mode-grid">
           <button type="button" class="mode-card" onclick="setSegment('single')">
             <span class="mode-icon" aria-hidden="true">🏏</span>
             <h3>Single Match</h3>
-            <p class="mode-desc">Score one match ball by ball and share it live.</p>
-            <ul class="mode-list">
-              <li>Scorer Console — scoring pad, squads &amp; bowlers</li>
-              <li>Public Scoreboard — what viewers see</li>
-              <li>Broadcast Overlay — for OBS</li>
-            </ul>
             <span class="mode-cta">Open Single Match →</span>
           </button>
           <button type="button" class="mode-card tournament" onclick="setSegment('tournament')">
             <span class="mode-icon" aria-hidden="true">🏆</span>
             <h3>Tournament</h3>
-            <p class="mode-desc">Run a full tournament across many matches and teams.</p>
-            <ul class="mode-list">
-              <li>Team Entry &amp; Players</li>
-              <li>Points Table, Fixtures &amp; Match Results</li>
-              <li>Statistics — most runs, wickets, 4s &amp; 6s</li>
-            </ul>
             <span class="mode-cta">Open Tournament →</span>
           </button>
           <button type="button" class="mode-card" onclick="setView('history')">
             <span class="mode-icon" aria-hidden="true">📜</span>
             <h3>History &amp; Reports</h3>
-            <p class="mode-desc">Every finished match, kept forever — pull a report any time.</p>
-            <ul class="mode-list">
-              <li>Full scorecards of all past matches</li>
-              <li>Player profiles — tap any player name</li>
-              <li>Career leaderboards &amp; filters</li>
-            </ul>
             <span class="mode-cta">Open History &amp; Reports →</span>
           </button>
         </div>
@@ -898,12 +878,10 @@
         <div class="authbar-slot"></div>
         <div class="mode-intro">
           <h2>Scorer Console</h2>
-          <p>What would you like to do?</p>
         </div>
         <div class="console-home">
           <button type="button" class="console-opt" onclick="consoleStartSingle()">
             <span class="co-title">🏏 Start Single Match</span>
-            <span class="co-sub">Set up a new match — pick the teams, overs and toss, then score it ball by ball. A single match never goes into any tournament; it is kept in Match History and the players' own records.</span>
           </button>
           <button type="button" class="console-opt resume" id="consoleResume" onclick="setView('resume')" hidden>
             <span class="co-title">▶ Resume Scoring</span>
@@ -911,7 +889,6 @@
           </button>
           <button type="button" class="console-opt" onclick="setView('tournaments')">
             <span class="co-title">🏆 Tournament</span>
-            <span class="co-sub">Create a tournament, or open one you have already created.</span>
           </button>
         </div>
       </section>
@@ -921,11 +898,9 @@
         <div class="authbar-slot"></div>
         <div class="viewer-backbar">
           <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
-          <span class="note">Tap a tournament to open its Tournament Page — Home, Teams, Matches, Points and Statistics.</span>
         </div>
         <div class="card">
           <h2>🏆 Tournaments</h2>
-          <p class="sub">Create a new tournament, or open one from the list. Switching never deletes anything — the tournament you leave stays in this list.</p>
           <button type="button" class="btn" onclick="createTournament()">➕ Create Tournament</button>
           <div id="tnList" style="margin-top:16px"></div>
         </div>
@@ -935,11 +910,9 @@
       <section class="view" id="view-resume">
         <div class="viewer-backbar">
           <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
-          <span class="note">Every match still in progress. Tap one to open its scoring screen and continue where you left off.</span>
         </div>
         <div class="card">
           <h2>▶ Matches in Progress</h2>
-          <p class="sub">Starting a new match never throws a live one away — it is parked here, and you can swap back to it any time.</p>
           <div id="resumeList"></div>
         </div>
       </section>
@@ -950,7 +923,6 @@
         <div class="authbar-slot"></div>
         <div class="card">
           <h2>🔗 Your Two Links</h2>
-          <p class="sub">You score from the <b>control link</b> — keep it to yourself. Give everyone else only the <b>viewer link</b>: it opens the Live Matches list and the read-only scoreboard, with no scoring controls anywhere on the page.</p>
           <div class="link-row">
             <div class="link-label"><span class="link-tag">Control — only for you</span> Scorer Console</div>
             <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=scorer</span></div>
@@ -963,7 +935,6 @@
             <div class="link-label"><span class="link-tag overlay">Broadcast</span> OBS Overlay</div>
             <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div>
           </div>
-          <p class="note" style="margin-top:10px">All three links read the same live Firebase data — score once on the control link and the viewer page and the overlay update instantly.</p>
         </div>
 
         <div class="card fold" id="setupCard">
@@ -980,13 +951,12 @@
           </div>
           <div class="grid2" style="margin-top:12px">
             <div><label for="tossDecision">Toss Decision * (required)</label><select id="tossDecision" onchange="clearReqMark(this)"><option value="">Select the decision</option><option value="bat">Bat first</option><option value="bowl">Bowl first</option></select></div>
-            <div><label aria-hidden="true">&nbsp;</label><p class="note" style="margin:0">Start Match needs both toss fields: the winner and the decision set who bats first, and the toss line is shown on the public scoreboard.</p></div>
           </div>
           <div class="rowflex" style="margin-top:14px">
             <button class="btn" onclick="startMatch()">🏏 Start Match</button>
             <button class="btn red" onclick="resetMatch()">🗑 Delete Match</button>
             <button class="btn gold" id="btnRetryPublish" onclick="publishReset()" hidden>Retry Delete Match</button>
-            <span class="note grow" id="matchStatusText">No match started yet — pick Team 1, Team 2 and Total Overs above, then tap Start Match.</span>
+            <span class="note grow" id="matchStatusText"></span>
           </div>
           </div>
         </div>
@@ -999,28 +969,27 @@
               <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
               <div id="squadAList"></div>
               <div class="rowflex names-row" style="margin-top:10px">
-                <div class="ac-wrap grow"><textarea id="addPlayerA" data-ac="pick" data-ac-ctx="A" class="namebox" rows="1" placeholder="Player names — one per line. Start typing for suggestions from known players — tap one to reuse that player, or type a new name to create a new player."></textarea></div>
+                <div class="ac-wrap grow"><textarea id="addPlayerA" data-ac="pick" data-ac-ctx="A" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div>
                 <button class="btn sm" onclick="addPlayer('A')">Add</button>
               </div>
               <div class="rowflex" style="margin-top:8px">
-                <input id="addNickA" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" />
+                <input id="addNickA" class="grow nick-inp" placeholder="Nickname (optional)" />
               </div>
             </div>
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadBName">Team 2</h3><span class="note" id="squadBCount"></span></div>
               <div id="squadBList"></div>
               <div class="rowflex names-row" style="margin-top:10px">
-                <div class="ac-wrap grow"><textarea id="addPlayerB" data-ac="pick" data-ac-ctx="B" class="namebox" rows="1" placeholder="Player names — one per line. Start typing for suggestions from known players — tap one to reuse that player, or type a new name to create a new player."></textarea></div>
+                <div class="ac-wrap grow"><textarea id="addPlayerB" data-ac="pick" data-ac-ctx="B" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div>
                 <button class="btn sm" onclick="addPlayer('B')">Add</button>
               </div>
               <div class="rowflex" style="margin-top:8px">
-                <input id="addNickB" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" />
+                <input id="addNickB" class="grow nick-inp" placeholder="Nickname (optional)" />
               </div>
             </div>
           </div>
           <div class="rowflex" style="margin-top:12px">
             <button class="btn gold" id="btnConfirmSquad" onclick="confirmSquad()">Confirm Squad</button>
-            <span class="note grow" id="squadConfirmStatus">Players are loaded — tap Confirm Squad to lock the final squad for this match.</span>
           </div>
           <div id="finalSquadDisplay" style="margin-top:12px"></div>
           </div>
@@ -1113,7 +1082,6 @@
             <div class="rowflex" style="margin-top:12px">
               <button class="btn red sm" onclick="confirmWicket()">Confirm Wicket</button>
               <button class="btn ghost sm" onclick="cancelWicket()">Cancel</button>
-              <span class="note grow">The bowler is credited with the wicket only for bowled, caught, LBW, stumped and hit wicket — never for a run out.</span>
             </div>
           </div>
         </div>
@@ -1126,7 +1094,6 @@
             <div><label for="nonStrikerName">Non-Striker *</label><select id="nonStrikerName" onchange="onPlayerNameSettled(this)"><option value="">Select non-striker batter</option></select></div>
             <div><label for="bowlerName">Current Bowler *</label><select id="bowlerName" onchange="onPlayerNameSettled(this)"><option value="">Select bowler</option></select></div>
           </div>
-          <p class="note" style="margin:10px 0 0">No batter or bowler is selected by default — pick the striker, non-striker and bowler from the dropdowns. Scoring starts once all three are picked.</p>
           <datalist id="dlBat"></datalist>
           <datalist id="dlBowl"></datalist>
           <datalist id="dlTeams"></datalist>
@@ -1159,7 +1126,7 @@
           <div class="rowflex" style="margin-top:10px">
             <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
             <button class="btn ghost" onclick="disconnectFirebase()">Disconnect</button>
-            <span class="note" id="fbStatus">Firebase auto-connects with the built-in default config — no pasting needed. Paste a different config only to use another project.</span>
+            <span class="note" id="fbStatus"></span>
           </div>
           </div>
         </div>
@@ -1180,7 +1147,6 @@
       <section class="view" id="view-scoreboard">
         <div class="viewer-backbar" id="sbViewerBackBar">
           <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← All Live Matches</button>
-          <span class="note">Live score — read-only. Updates automatically as the scorer scores.</span>
         </div>
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
@@ -1228,12 +1194,10 @@
                  before the first render runs. -->
             <div class="card sb-view-tour-card" id="sbTourCtaCard" hidden style="display:none">
               <h2>🏆 Tournament</h2>
-              <p class="sub" id="sbTourCtaSub">Tournament — tap View Tournament to open the full tournament.</p>
               <button type="button" class="btn" id="btnViewTournamentInfo" onclick="openTournamentViewerInPage()">View Tournament</button>
             </div>
             <div class="card sb-view-tour-card">
               <h2>📜 History &amp; Reports</h2>
-              <p class="sub">Every finished match is kept forever — full scorecards, ball by ball, and a career profile for every player. Tap any player name to see their record.</p>
               <button type="button" class="btn" onclick="setView('history')">Open History &amp; Reports</button>
             </div>
           </div>
@@ -1264,16 +1228,14 @@
           <button type="button" class="btn ghost sm" id="histBackBtn" onclick="historyBack()">← Back</button>
           <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
           <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
-          <span class="note">Permanent record — a finished match is archived the moment it ends, and Delete Match (which removes the live match) never deletes it from here.</span>
         </div>
         <div class="card">
           <h2>📜 Match History &amp; Reports</h2>
-          <p class="sub">Finished matches are saved automatically — no save button to remember. Every player carries a unique Player ID and all history, statistics and profiles follow that ID — never the name alone — so two players with the same name keep separate records. Tap any player name, here or anywhere in the app, to open that player's career profile.</p>
           <div id="histSyncStatus"></div>
           <div class="grid3" style="margin-top:14px">
             <div><label for="repTnFilter">Tournament</label><select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select></div>
             <div><label for="repTeamFilter">Team</label><select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select></div>
-            <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat — suggestions appear as you type" oninput="repFilterChanged()" /></div></div>
+            <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat" oninput="repFilterChanged()" /></div></div>
           </div>
         </div>
         <div class="card">
@@ -1282,7 +1244,6 @@
         </div>
         <div class="card">
           <h2>Past Matches</h2>
-          <p class="sub">Newest first. Open a match for its full scorecard — both innings, ball by ball, and the Player of the Match.</p>
           <div id="histList"></div>
         </div>
       </section>
@@ -1291,7 +1252,6 @@
       <section class="view" id="view-tournament">
         <div class="viewer-backbar" id="viewerBackBar">
           <button type="button" class="btn ghost sm" onclick="closeTournamentViewerInPage()">← Back to Scoreboard</button>
-          <span class="note">Tournament — read-only viewer view.</span>
         </div>
         <div class="tn-lock-banner" id="tnLockBanner" role="status"></div>
         <div class="tn-shell">
@@ -1404,16 +1364,14 @@
           <div class="tn-panel" id="tnPanel-teams">
             <div class="card">
               <h2>Teams</h2>
-              <p class="sub">All teams at a glance — tap a team to see its players.</p>
               <div id="tnTeamsGrid"></div>
               <div id="tnTeamDetail"></div>
             </div>
             <div class="card tn-editor-card">
               <h2>Team Entry &amp; Players</h2>
-              <p class="sub">Add teams, then add each team's players — one name per line, paste a whole list at once.</p>
               <div id="tnTeamList"></div>
               <div class="rowflex names-row" style="margin-top:10px">
-                <textarea id="tnNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line. Paste a whole list and tap Add Team."></textarea>
+                <textarea id="tnNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line"></textarea>
                 <button class="btn sm" onclick="addTournamentTeam()">Add Team</button>
               </div>
             </div>
@@ -1501,9 +1459,9 @@
         <p class="warn" id="pickerNote" style="display:none;margin:10px 0 0"></p>
         <div class="pick-list" id="pickerList"></div>
         <div class="divider"></div>
-        <label for="pickerCustom">Or type a name — as you type, matching players from the history appear below: tap one to reuse that player and their Player ID, or type a different name to create a new player</label>
+        <label for="pickerCustom">Or type a name</label>
         <div class="rowflex">
-          <div class="ac-wrap grow"><input id="pickerCustom" data-ac="pick" data-ac-ctx="picker" placeholder="Type a player name — suggestions appear as you type" /></div>
+          <div class="ac-wrap grow"><input id="pickerCustom" data-ac="pick" data-ac-ctx="picker" placeholder="Type a player name" /></div>
           <button class="btn sm" onclick="pickCustom()">Use This Name</button>
         </div>
         <button class="btn ghost sm" style="margin-top:12px" onclick="closePicker(false)">Decide Later</button>
@@ -1852,7 +1810,7 @@
         refreshTossOptions();
         clearPlayerInputs();
         syncPlayersFromInputs();
-        $('matchStatusText').textContent = 'Match deleted — to start a new match, pick Team 1, Team 2 and Total Overs in Match Setup and tap Start Match.';
+        $('matchStatusText').textContent = 'Match deleted.';
         fbLocalDirty = false; fbErrorShown = false;
         saveLocalBackup();
         renderAll(false);
@@ -3128,7 +3086,15 @@
            it back from the score. No length cap: trimming at 120 balls
            silently deleted the start of any 20-over innings with
            extras, and corrupted the over summaries built from it. */
-        var rec = { over: oversText(inn.legalBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
+        /* A wide / no-ball bowled as the first ball of a new over sits
+           exactly on an over boundary (six legal balls already bowled)
+           and belongs to the NEXT over: labelling it with the old count
+           ("1.0") made it look like the last ball of the over that
+           just ended, in the feed's over column and the scorer's
+           history. Legal deliveries keep the count-after-the-ball
+           label; only an extra at a boundary moves to the next over. */
+        var labelBalls = (!isLegalDelivery(text) && inn.legalBalls > 0 && inn.legalBalls % 6 === 0) ? inn.legalBalls + 6 : inn.legalBalls;
+        var rec = { over: oversText(labelBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
         if (extraFields) for (var k in extraFields) rec[k] = extraFields[k];
         if (!Array.isArray(inn.balls)) inn.balls = []; /* heal a record Firebase dropped while it was empty */
         inn.balls.push(rec);
@@ -4490,7 +4456,7 @@
         normalizeTournament();
         var tn = S.tournament;
         if (!tnSelectedTeam){
-          wrap.innerHTML = tn.teams.length ? '<p class="note" style="text-align:center;padding-top:10px">Tap a team above to see its players.</p>' : '';
+          wrap.innerHTML = '';
           return;
         }
         var team = tnSelectedTeam;
@@ -4641,7 +4607,7 @@
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
           status = need > 0
-            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
+            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.'
             : inn.battingTeam + ' have reached the target of ' + t;
         }
         else if (S.tossInfo) status = S.tossInfo;
@@ -4896,7 +4862,7 @@
         var wrap = $('sbTeamDetail');
         if (!wrap) return;
         if (!sbSelectedTeam){
-          wrap.innerHTML = '<p class="note" style="text-align:center;padding-top:10px">Tap a team above to see its Players, Matches and Statistics.</p>';
+          wrap.innerHTML = '';
           return;
         }
         var team = sbSelectedTeam;
@@ -4988,8 +4954,8 @@
               return '<div class="squad-box tn-team-box">'
                 + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
                 + playerRows
-                + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="tnPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names for ' + esc(n) + ' — one per line. Start typing for suggestions from known players."></textarea></div><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
-                + '<div class="rowflex" style="margin-top:8px"><input id="tnNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional) — for one player above; shown on the scoreboard" /></div>'
+                + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="tnPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
+                + '<div class="rowflex" style="margin-top:8px"><input id="tnNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
                 + '</div>';
             }).join('')
           : '<p class="note">No teams entered yet — add a team below, then add its players here.</p>';
@@ -5426,12 +5392,12 @@
             : '<span class="ab-avatar" aria-hidden="true">' + initial + '</span>';
           html = '<div class="authbar"><div class="ab-main">' + photo
             + '<div><div class="ab-name">' + esc(nm) + '<span class="ab-badge">Signed in</span></div>'
-            + '<div class="ab-sub">' + esc(authUser.email || '') + ' — matches and tournaments you create are yours: only this account can score, edit or delete them.</div></div></div>'
+            + '<div class="ab-sub">' + esc(authUser.email || '') + '</div></div></div>'
             + '<button type="button" class="btn ghost sm" onclick="signOutUser()">Sign out</button></div>';
         } else {
           html = '<div class="authbar"><div class="ab-main"><span class="ab-avatar" aria-hidden="true">👤</span>'
             + '<div><div class="ab-name">Guest mode<span class="ab-badge" style="background:var(--chip);color:var(--muted);border:1px solid var(--line)">View only</span></div>'
-            + '<div class="ab-sub">You can watch live scores, history, reports and player profiles. Sign in with Google to score — whoever creates a match or tournament becomes its owner/admin.</div></div></div>'
+            + '</div></div>'
             + '<button type="button" class="btn google" onclick="signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button></div>';
         }
         slots.forEach(function(s){ s.innerHTML = html; });
@@ -6405,14 +6371,14 @@
         var matches = allRecordMatches().filter(matchInFilter);
         var players = aggregatePlayers(matches);
         if (!players.length){
-          wrap.innerHTML = '<p class="sub" style="margin:0">No recorded matches match the filters yet — the boards build up automatically as matches finish.</p>';
+          wrap.innerHTML = '<p class="sub" style="margin:0">No recorded matches match the filters yet.</p>';
           return;
         }
         function nm(r){ return '<td><b>' + plLink(r.team, r.name, null, r.pid) + '</b><span class="howout">' + esc(r.teams.join(' / ')) + ' • ' + esc(pidShort(r.pid)) + '</span></td>'; }
         function sr(r){ return r.balls > 0 ? (r.runs / r.balls * 100).toFixed(1) : '0.0'; }
         function ave(r){ return r.outs > 0 ? (r.runs / r.outs).toFixed(1) : '—'; }
         function econ(r){ return r.bowlBalls > 0 ? (r.bowlRuns / (r.bowlBalls / 6)).toFixed(2) : '0.00'; }
-        var html = '<p class="sub" style="margin:0">Across ' + matches.length + (matches.length === 1 ? ' recorded match' : ' recorded matches') + ' (filters above applied). Tap a name for the full profile.</p>';
+        var html = '';
         var byRuns = players.slice().sort(function(a, b){ return (b.runs - a.runs) || (b.balls - a.balls); }).slice(0, 10);
         html += boardTable('Most Runs', byRuns.map(function(r){
           return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r">' + r.batInns + '</td><td class="r"><b>' + r.runs + '</b></td><td class="r">' + ave(r) + '</td><td class="r">' + sr(r) + '</td></tr>';
@@ -6939,7 +6905,8 @@
         /* Builds one innings' commentary feed (newest ball first, one
            summary card per completed over). Used for the current
            innings only — the LIVE feed never shows a finished
-           innings underneath the live one. */
+           innings underneath the live one, except for the single
+           innings-ending ball appended below (see prevEnd). */
         function feedHTMLFor(innX){
           if (!innX || !innX.balls || !innX.balls.length) return '';
           var snapsX = overSnapshots(innX);
@@ -6994,13 +6961,35 @@
              its batting / bowling cards in the Scorecard tab and
              every one of its overs, including the last-ball wicket,
              in the Overs tab — but it never bleeds into this feed. */
+          /* The LIVE feed belongs to the innings being played NOW —
+             only the current innings' balls, announcements and over
+             summary cards render here — but its very last ball DOES
+             belong here too: when the 1st innings ended on a wicket,
+             viewers watching the 2nd innings never saw that wicket —
+             it lived only in the Scorecard and Overs tabs. So ONE row
+             is appended at the bottom of the feed (the oldest end):
+             the final delivery of the previous innings, plus an
+             "End of 1st innings" line with the score and target.
+             The rest of the finished innings stays in the Overs and
+             Scorecard tabs and never bleeds into this feed. */
           var feedCur = feedHTMLFor(inn);
+          var prevEnd = (function(){
+            if (S.inningsNo !== 2 || !S.prevInnings) return '';
+            var prev = S.prevInnings, last = null;
+            (prev.balls || []).forEach(function(b){ if (!b.evt) last = b; });
+            if (!last) return '';
+            var who = (last.bowler && last.batter) ? '<b>' + plLink(prev.bowlingTeam, last.bowler) + '</b> to <b>' + plLink(prev.battingTeam, last.batter) + '</b>, ' : '';
+            var dism = (isWicketBall(last) && last.howOut) ? ' — ' + (last.outName ? (plLink(prev.battingTeam, last.outName) + ', ') : '') + esc(last.howOut) : '';
+            var t2 = target();
+            return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(last.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(last.text) + dism + '</span></div>'
+              + '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text">End of 1st innings — ' + esc(prev.battingTeam) + ' ' + prev.runs + '/' + prev.wickets + ' (' + oversText(prev.legalBalls) + ')' + (t2 ? ' • Target ' + t2 : '') + '.</span></div>';
+          })();
           if (!feedCur){
             commEl.innerHTML = (S.inningsNo === 2 && S.prevInnings)
-              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings is in the Overs and Scorecard tabs.</p>'
+              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings\' final ball is below; the full 1st innings is in the Overs and Scorecard tabs.</p>' + prevEnd
               : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
           } else {
-            commEl.innerHTML = feedCur;
+            commEl.innerHTML = feedCur + prevEnd;
           }
         }
         /* the per-over cards now live inside the commentary feed above */
