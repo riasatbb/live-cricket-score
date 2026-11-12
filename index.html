@@ -288,7 +288,7 @@
 
       /* ---------- design refresh ---------- */
       .topbar{box-shadow:0 4px 18px rgba(10,40,25,.08)}
-      .brand h1{font-family:"Barlow Condensed",sans-serif;font-size:24px;letter-spacing:.03em;text-transform:uppercase}
+      .brand h1{font-family:"Barlow Condensed",sans-serif;font-size:24px;letter-spacing:.03em}
       .brand small{text-transform:none;letter-spacing:0}
       .vtab{border-radius:14px;transition:transform .12s ease,background .12s ease}
       .vtab:active{transform:scale(.98)}
@@ -851,6 +851,33 @@
       .ml-line.dim .ml-abbr{font-weight:600}
       .ml-status{color:var(--blue);font-size:14.5px;line-height:1.4;margin-top:6px}
       .ml-status.muted{color:var(--muted)}
+      /* Per-match status pill at the TOP of every row on the Recent
+         Matches list: red In Progress for a match being played,
+         Completed for a finished one, Upcoming for a fixture. */
+      .ml-pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 11px;border-radius:99px;margin-bottom:8px}
+      .ml-pill i{width:7px;height:7px;border-radius:50%;background:#fff;flex:none;animation:blinkdot 1.6s infinite}
+      .ml-pill.live{background:#d43a2f;color:#fff}
+      .ml-pill.done{background:rgba(14,107,79,.15);color:#0e6b4f}
+      .ml-pill.up{background:rgba(225,154,38,.2);color:#8a6d1a}
+      @media (prefers-color-scheme: dark){.ml-pill.done{background:rgba(127,214,168,.16);color:#7fd6a8}.ml-pill.up{background:rgba(225,154,38,.18);color:#f2cd6b}}
+      @media (prefers-reduced-motion: reduce){.ml-pill i{animation:none}}
+      /* Brand block on the viewer matches page: the app header is
+         hidden in viewer mode, so the page carries the CricCast
+         logo + name itself, at the top. Shown exactly when the
+         header is hidden (viewer mode), so it never doubles up. */
+      .live-brand{display:none}
+      body.viewer-mode .live-brand{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0 2px}
+      .live-brand img{width:47px;height:auto;flex:none}
+      .live-brand .lb-text{text-align:left;min-width:0}
+      .live-brand .lb-name{font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;letter-spacing:.03em;line-height:1}
+      .live-brand .lb-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+      /* Upcoming-match page: the not-started block that stands where
+         the live score would be, until the first ball is bowled. */
+      .cb-notstarted{padding:30px 18px 34px;text-align:center}
+      .cb-notstarted .ns-teams{font-size:21px;font-weight:700;color:#fff}
+      .cb-notstarted .ns-teams span{color:#a8a8a8;font-weight:500;margin:0 4px}
+      .cb-notstarted .ns-msg{margin-top:12px;font-size:17px;font-weight:700;color:#f2cd6b}
+      .cb-notstarted .ns-meta{margin-top:8px;font-size:14px;color:#a8a8a8}
       .scorer-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;padding:12px 2px;color:var(--muted);font-size:14px;font-weight:600}
 
       /* ---------- separate links: control vs viewer ---------- */
@@ -1470,10 +1497,17 @@
     </header>
 
     <main>
-      <!-- ================= VIEWER: LIVE MATCHES LIST ================= -->
+      <!-- ================= VIEWER: RECENT MATCHES LIST ================= -->
       <section class="view" id="view-live">
+        <div class="live-brand">
+          <img src="data:image/webp;base64,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" alt="CricCast logo — red cricket ball with broadcast waves" width="512" height="460" />
+          <div class="lb-text">
+            <div class="lb-name">CricCast</div>
+            <div class="lb-sub">by Riasat Ali · Live Cricket Score</div>
+          </div>
+        </div>
         <div class="mode-intro">
-          <h2>Live Matches</h2>
+          <h2>Recent Matches</h2>
         </div>
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
@@ -1828,7 +1862,7 @@
       <!-- ================= SCOREBOARD (Cricbuzz-style, per reference) ================= -->
       <section class="view" id="view-scoreboard">
         <div class="viewer-backbar" id="sbViewerBackBar">
-          <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← All Live Matches</button>
+          <button type="button" class="btn ghost sm" onclick="backToLiveMatches()">← Recent Matches</button>
         </div>
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
@@ -1838,7 +1872,7 @@
           </div>
           <div class="cb-archivebar" id="cbArchiveBar" hidden></div>
           <div class="cb-top">
-            <button type="button" class="cb-back" onclick="backToLiveMatches()" aria-label="Back to all live matches">←</button>
+            <button type="button" class="cb-back" onclick="backToLiveMatches()" aria-label="Back to recent matches">←</button>
             <div class="cb-title" id="cbMatchTitle">Match</div>
             <span class="cb-livepill" id="cbLivePill"><i></i> LIVE</span>
             <button type="button" class="cb-iconbtn" onclick="toast('🔔 Live updates are on — this page refreshes itself ball by ball')" aria-label="Live notifications on">
@@ -1878,21 +1912,21 @@
               <h2>Match Info</h2>
               <div id="cbInfoBody"></div>
             </div>
-            <!-- Tournament segment: shown ONLY when this match is a
-                 tournament match (S.matchKind === 'tournament'). For a
-                 Single Match it is not rendered at all in the Info tab —
-                 no card, no View Tournament button. Visibility is driven
-                 by renderScoreboardCB / renderSbTeams on every render,
-                 so it follows the live match as Firebase updates arrive.
+            <!-- Under Match Info there is exactly ONE possible extra
+                 card, and only for a TOURNAMENT match: the Follow
+                 Tournament card, whose button opens the whole
+                 tournament read-only — the viewer sees everything
+                 (teams, matches, points, statistics) and can change
+                 nothing. For a Single Match there is NOTHING under
+                 Match Info — no card at all. Visibility is driven by
+                 renderScoreboardCB / renderSbTeams on every render,
+                 so it follows the match as Firebase updates arrive.
                  Hidden by default so a Single Match never flashes it
                  before the first render runs. -->
             <div class="card sb-view-tour-card" id="sbTourCtaCard" hidden style="display:none">
               <h2>🏆 Tournament</h2>
-              <button type="button" class="btn" id="btnViewTournamentInfo" onclick="openTournamentViewerInPage()">View Tournament</button>
-            </div>
-            <div class="card sb-view-tour-card">
-              <h2 id="sbHistCardTitle">📜 History &amp; Reports</h2>
-              <button type="button" class="btn" id="sbHistCardBtn" onclick="openHistoryEntry()">Open History &amp; Reports</button>
+              <p class="note" id="sbTourCtaSub" style="margin:0 2px 10px"></p>
+              <button type="button" class="btn" id="btnViewTournamentInfo" onclick="openTournamentViewerInPage()">Follow Tournament</button>
             </div>
           </div>
 
@@ -2549,7 +2583,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v114';
+      var APP_VERSION = 'v117';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8154,17 +8188,27 @@
         if (q.indexOf('viewer') === -1 && !inFlow && !pureViewer) document.body.classList.remove('viewer-mode');
         setView('scoreboard');
       }
-      /* ---------- viewer landing: compact match list ----------
-         What viewers see when they open the public link: a compact
-         list of matches, Cricbuzz-style. Each match is one small row:
-         a label line (match name / tournament name), one score line
-         per innings (team abbreviation + score + overs), and a blue
-         result or status line underneath. The match being scored now
-         sits at the TOP of the list; the most recent finished matches
-         follow below it, newest first, then the upcoming fixtures.
-         Tapping the live row opens that match's Public Scoreboard,
-         read-only. Viewers never get the scorer controls — the scorer
-         enters them from this page. */
+      /* ---------- viewer landing: Recent Matches list ----------
+         What viewers see when they open the public link: one list of
+         matches, Cricbuzz-style — matches in progress, the most
+         recent completed matches and the upcoming fixtures together,
+         so the page is headed "Recent Matches", not "Live Matches".
+         Every row carries its status as a pill at the top (red
+         In Progress / Completed / Upcoming), a label line (match
+         name / tournament name), one score line per innings (team
+         abbreviation + score + overs), and a result or status line
+         underneath. The match being scored now sits at the TOP;
+         other matches in progress follow (several matches can be in
+         progress at once — each is simply In Progress, never
+         "parked"), then the recent results, newest first, then the
+         fixtures. EVERY row is tappable and opens that match:
+         in-progress matches open their read-only scoreboard,
+         completed matches open their full record, and a fixture
+         opens its match page — the details that exist (teams,
+         venue, schedule, squads) shown, and "Match is not started
+         yet." wherever the match has no data yet. Viewers never get
+         the scorer controls — the scorer enters them from this
+         page. */
       function mlOvers(balls){ return (balls % 6 === 0) ? String(balls / 6) : oversText(balls); }
       function mlInnLine(inn, dim){
         return '<div class="ml-line' + (dim ? ' dim' : '') + '"><span class="ml-abbr">' + esc(teamShort(inn.battingTeam)) + '</span><span class="ml-score num">' + inn.runs + '-' + inn.wickets + ' <span class="ml-ov">(' + mlOvers(inn.legalBalls) + ')</span></span></div>';
@@ -8181,6 +8225,19 @@
         });
         return '<div class="ml-label"><span class="ml-lab-text">' + esc(txt.join(' • ') || 'Match') + '</span>'
           + (live ? '<span class="ml-live"><i></i>Live</span>' : '') + '</div>';
+      }
+      /* The status pill at the top of a match row: red In Progress
+         for a match being played, Completed for a finished match,
+         Upcoming for a fixture. */
+      function mlPill(kind){
+        if (kind === 'live') return '<span class="ml-pill live"><i></i>In Progress</span>';
+        if (kind === 'done') return '<span class="ml-pill done">Completed</span>';
+        return '<span class="ml-pill up">Upcoming</span>';
+      }
+      /* Shared tap wiring for a list row that opens a match: the
+         same handler for click and for Enter / Space. */
+      function mlTapAttrs(fnCall, aria){
+        return ' role="button" tabindex="0" aria-label="' + esc(aria) + '" onclick="' + fnCall + '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}"';
       }
       /* True when this match was deleted from History: its permanent
          tombstone (histGone / histDeleted, mirrored in Firebase at
@@ -8255,21 +8312,38 @@
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
         }
-        /* A finished or abandoned match is not a live match: its
-           final figures may show as a plain, inert row (no Live
-           pill, not tappable), but it never opens the live
-           scoreboard from here — the match is over, and its full
-           record lives in History & Reports → Past Matches. */
+        /* A finished or abandoned match is not a live match, so it
+           never opens the LIVE scoreboard — but it is still a match
+           on this list, so its row opens the completed match's own
+           record (the same read-only scoreboard Past Matches opens),
+           under a Completed pill. Play that has ended but not yet
+           been completed by the scorer (Finish Match still pending)
+           is still the running match — and like every match on this
+           list its row opens it too (openCurrentMatch shows the
+           match exactly as it stands); it becomes a Completed row
+           once the scorer finishes it. */
         if (finished || S.abandoned){
-          return '<div class="ml-row">'
+          if (S.awaitingFinish){
+            var awAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
+            return '<div class="ml-row tap"' + mlTapAttrs('openCurrentMatch()', awAria) + '>'
+              + mlPill(S.abandoned ? 'done' : 'live')
+              + mlLabel([S.venue, tnName], false)
+              + lines
+              + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
+              + '</div>';
+          }
+          var finAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' — completed match';
+          return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(S.matchId)) + ')', finAria) + '>'
+            + mlPill('done')
             + mlLabel([S.venue, tnName], false)
             + lines
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
         }
         var aria = 'Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
-        return '<div class="ml-row tap" role="button" tabindex="0" aria-label="' + esc(aria) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
-          + mlLabel([S.venue, tnName], started)
+        return '<div class="ml-row tap"' + mlTapAttrs('openLiveMatch()', aria) + '>'
+          + mlPill('live')
+          + mlLabel([S.venue, tnName], false)
           + lines
           + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
@@ -8278,29 +8352,41 @@
         var inns = m.innings || [];
         var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
         var res = matchResultText(m);
-        return '<div class="ml-row">' + mlLabel([m.venue, tnName], false) + lines
+        var aria = 'View ' + (m.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (m.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + ' — completed match';
+        return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', aria) + '>'
+          + mlPill('done') + mlLabel([m.venue, tnName], false) + lines
           + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
       }
       function fixtureRowHTML(f, tnName){
-        return '<div class="ml-row">' + mlLabel([f.label, tnName], false)
+        var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
+        return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', aria) + '>'
+          + mlPill('up') + mlLabel([f.label, tnName], false)
           + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
           + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
-          + '<div class="ml-status muted">Upcoming</div></div>';
+          + '</div>';
       }
-      /* A parked match (in progress, set aside while the scorer scores
-         another one) as a viewer row: same compact shape, not tappable
-         — the scoreboard can only show the one match being scored. */
-      function parkedRowHTML(slice){
+      /* Another match in progress alongside the one on the scoring
+         pad — several matches can be on at the same time, scored by
+         the same account or by different accounts. As a viewer row
+         it is a match like any other: red In Progress pill on top,
+         and tappable — it opens this match's own read-only
+         scoreboard (see openMatchSlice), which keeps following the
+         match as its score updates. */
+      function inProgressRowHTML(slice){
         var inns = [];
         if (slice.prevInnings) inns.push(slice.prevInnings);
         if (slice.current) inns.push(slice.current);
         var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
         if (!lines && (slice.teamA || slice.teamB)) lines = mlTeamLine(slice.teamA || '') + (slice.teamB ? mlTeamLine(slice.teamB) : '');
-        var status = slice.status === 'inningsBreak'
-          ? 'Innings break — in progress, parked while another match is being scored'
-          : 'In progress — parked while another match is being scored';
+        var status = '';
+        if (slice.status === 'finished' && slice.awaitingFinish) status = 'Play over — the scorer is completing this match';
+        else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress';
+        else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting';
+        else status = 'Match not started yet';
         var tnName = slice.matchKind === 'tournament' ? ((S.tournament && S.tournament.name) || '') : '';
-        return '<div class="ml-row">' + mlLabel([slice.venue, tnName], false) + lines
+        var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
+        return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
+          + mlPill('live') + mlLabel([slice.venue, tnName], false) + lines
           + '<div class="ml-status muted">' + esc(status) + '</div></div>';
       }
       /* Live Matches is a viewer surface: it renders ONLY the
@@ -8319,19 +8405,20 @@
            waiting row is shown; the first server snapshot replaces
            it with the real list. */
         if (!fbServerSeen){
-          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server — live matches will appear here as soon as it answers…</div></div></div>';
+          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server — matches will appear here as soon as it answers…</div></div></div>';
           return;
         }
         normalizeTournament();
         var tn = S.tournament;
         var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
         var html = '<div class="ml-list">' + liveRowHTML();
-        /* Parked live matches (in progress, set aside for Resume
-           Scoring) are listed too, so viewers can see every match
-           that is on — not only the one being scored right now. */
+        /* Every OTHER match in progress is listed too, right under
+           the one on the pad — several matches can be on at once,
+           and each is simply In Progress (its own red pill, its own
+           tappable row), never a second-class "parked" entry. */
         var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p); });
         if (parked.length){
-          html += '<div class="ml-group">Also In Progress</div>' + parked.map(function(p){ return parkedRowHTML(p); }).join('');
+          html += parked.map(function(p){ return inProgressRowHTML(p); }).join('');
         }
         /* Most recent first. When the match on top is finished and has
            already been saved to the tournament, its saved copy is the
@@ -8356,7 +8443,7 @@
              with it — it is a Single Match, even though a tournament
              exists in the same state. A row that carries its own
              kind / tournament name is honoured as stored. */
-          html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){
+          html += results.map(function(m){
             var rowTnName = tnName;
             if (lastFin && String(m.id) === String(lastFin.id)) rowTnName = '';
             if (m && m.matchKind === 'single') rowTnName = '';
@@ -8382,7 +8469,7 @@
         var fixRows = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
         fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return singleFixtureRowHTML(f); }).join('');
         if (fixRows){
-          html += '<div class="ml-group">Upcoming Fixtures</div>' + fixRows;
+          html += fixRows;
         }
         html += '</div>';
         listEl.innerHTML = html;
@@ -8491,6 +8578,7 @@
           try { renderLiveHome(); } catch(e){}
           return;
         }
+        matchView = null;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         setView('scoreboard');
@@ -8508,6 +8596,10 @@
          not the live scoreboard and is left alone. */
       function guardViewerScoreboard(){
         if (typeof archiveView !== 'undefined' && archiveView) return;
+        /* A match view (another in-progress match, or a fixture)
+           is not the live scoreboard either — refreshMatchView
+           keeps it following its own match. */
+        if (typeof matchView !== 'undefined' && matchView) return;
         if (typeof currentViewName === 'undefined' || currentViewName !== 'scoreboard') return;
         var viewer = document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer');
         if (!viewer) return;
@@ -8529,7 +8621,7 @@
         /* A scorer who opened this scoreboard from the scoring pad
            (Info / Live / Scorecard / Squads / Overs tabs) goes back
            to the pad, not to the Live Matches list. */
-        if (typeof scorerSbReturn !== 'undefined' && scorerSbReturn && !archiveView && !document.body.classList.contains('viewer-mode')){
+        if (typeof scorerSbReturn !== 'undefined' && scorerSbReturn && !archiveView && !matchView && !document.body.classList.contains('viewer-mode')){
           backToScoringPad();
           return;
         }
@@ -8543,6 +8635,16 @@
           archiveView = null; cbOversInnSel = -1;
           setView(rv);
           if (rv === 'history' && rht){ try { setHistTab(rht); } catch(e){} }
+          try { renderAll(); } catch(e){}
+          return;
+        }
+        /* From a match view (another in-progress match, or a
+           fixture), Back returns to the Recent Matches list, which
+           re-renders from the confirmed state. */
+        if (matchView){
+          matchView = null; cbOversInnSel = -1;
+          try { renderLiveHome(); } catch(e){}
+          setView('live');
           try { renderAll(); } catch(e){}
           return;
         }
@@ -8701,7 +8803,7 @@
         var cta = $('sbTourCtaSub');
         if (cta){
           var tnName = tn.name && tn.name.trim() ? tn.name.trim() : 'Tournament';
-          cta.textContent = tnName + ' — ' + tn.teams.length + (tn.teams.length===1 ? ' team' : ' teams') + ' • ' + tn.matches.length + (tn.matches.length===1 ? ' match' : ' matches') + ' completed • ' + tn.fixtures.length + ' upcoming. Tap View Tournament to open the full tournament.';
+          cta.textContent = tnName + ' — ' + tn.teams.length + (tn.teams.length===1 ? ' team' : ' teams') + ' • ' + tn.matches.length + (tn.matches.length===1 ? ' match' : ' matches') + ' completed • ' + tn.fixtures.length + ' upcoming. Tap Follow Tournament to open the full tournament — everything to see, nothing to change.';
         }
         var ctaCard = $('sbTourCtaCard');
         if (ctaCard){
@@ -10925,8 +11027,288 @@
         S = realS;
         try { renderArchiveBar(); } catch(e){}
       }
+      /* ---------- read-only match view: any other match on the
+         Recent Matches list ----------
+         Every match on the viewer list opens. The match on the
+         scoring pad opens through openLiveMatch; a COMPLETED match
+         opens through openResultMatch (its permanent History record
+         when one exists, the list's own record otherwise); and the
+         two kinds below open here, in a MATCH VIEW — a display state
+         swapped in for rendering only, exactly like an archived
+         match, so the live state S is never touched and nothing is
+         written anywhere:
+           • 'slice' — another match IN PROGRESS right now (several
+             matches can be on at once, scored by the same account
+             or by different accounts). Its state is the match's own
+             slice from the confirmed state, rebuilt on every render
+             (refreshMatchView), so the page follows the match ball
+             by ball as its scorer scores it.
+           • 'fixture' — an UPCOMING match. The page shows what the
+             fixture already knows (teams, venue, schedule, format,
+             squads — the Info and Squads tabs), and wherever the
+             match has no data yet (the live score, the scorecard,
+             the overs, the commentary) it says "Match is not
+             started yet." */
+      var matchView = null;   /* { kind:'slice'|'fixture', id, fxKind, state } */
+      function sliceDisplayState(slice, ds){
+        var base = freshState();
+        MATCH_SLICE_KEYS.forEach(function(k){ if (slice[k] !== undefined) base[k] = deep(slice[k]); });
+        /* Shared context rides from the confirmed state, so player
+           profiles, nicknames, tournament name and squads resolve
+           exactly as they do for the match on the pad. */
+        base.tournament = deep(ds.tournament || base.tournament);
+        base.myTeams = deep(ds.myTeams || base.myTeams);
+        base.players = deep(ds.players || []);
+        base.playerIds = deep(ds.playerIds || []);
+        base.nicknames = deep(ds.nicknames || []);
+        base.singleFixtures = []; base.pausedMatches = []; base.tournamentsArchive = []; base.lastFinishedSingle = null;
+        try { normalizeInningsShape(base.current); } catch(e){}
+        try { if (base.prevInnings) normalizeInningsShape(base.prevInnings); } catch(e){}
+        return base;
+      }
+      /* The match fields of a whole state, as a slice — used to
+         show the pad match itself through a match view while its
+         play is over but the scorer has not completed it yet. */
+      function mainMatchSlice(st){
+        var o = {};
+        MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (st[k] === undefined) ? null : deep(st[k]); });
+        return o;
+      }
+      function openCurrentMatch(){
+        if (!fbServerSeen){ toast('⏳ Still connecting to the server — matches will appear here as soon as it answers'); return; }
+        var ds = liveDisplayState();
+        if (!ds || !ds.teamA || !ds.teamB || liveMatchTombstoned(ds)){ toast('That match is no longer available'); try { renderLiveHome(); } catch(e){} return; }
+        archiveView = null;
+        matchView = { kind: 'slice', main: true, id: String(ds.matchId), state: sliceDisplayState(mainMatchSlice(ds), ds) };
+        cbOversInnSel = -1;
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+        setCbTab('live');
+        try { renderMatchViewScoreboard(); } catch(e){}
+      }
+      function fixtureDisplayState(f, kind, ds){
+        var base = freshState();
+        base.teamA = f.teamA || ''; base.teamB = f.teamB || '';
+        base.current = blankInnings('', '');
+        base.status = 'upcoming';
+        base.matchKind = kind;
+        /* A tournament fixture's label IS its match descriptor
+           (round • date • venue, as typed); a saved Single Match
+           fixture carries a real venue field instead. */
+        base.venue = (kind === 'single') ? (f.venue || '') : (f.label || '');
+        base.matchDate = f.date || ''; base.matchTime = f.time || '';
+        base.matchFormat = f.format || ''; base.ballType = f.ballType || '';
+        base.oversLimit = (typeof f.overs === 'number') ? f.overs : null;
+        base.wicketsLimit = (typeof f.wickets === 'number') ? f.wickets : 10;
+        base.matchId = f.id;
+        base.tournament = deep(ds.tournament || base.tournament);
+        base.myTeams = deep(ds.myTeams || base.myTeams);
+        base.players = deep(ds.players || []);
+        base.playerIds = deep(ds.playerIds || []);
+        base.nicknames = deep(ds.nicknames || []);
+        base.singleFixtures = []; base.pausedMatches = []; base.tournamentsArchive = []; base.lastFinishedSingle = null;
+        return base;
+      }
+      function openMatchSlice(id){
+        id = String(id);
+        if (!fbServerSeen){ toast('⏳ Still connecting to the server — matches will appear here as soon as it answers'); return; }
+        var ds = liveDisplayState();
+        var slice = null;
+        (ds.pausedMatches || []).forEach(function(p){ if (p && String(p.matchId) === id) slice = p; });
+        if (!slice || liveMatchTombstoned(slice)){ toast('That match is no longer in progress'); try { renderLiveHome(); } catch(e){} return; }
+        archiveView = null;
+        matchView = { kind: 'slice', id: id, state: sliceDisplayState(slice, ds) };
+        cbOversInnSel = -1;
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+        setCbTab('live');
+        try { renderMatchViewScoreboard(); } catch(e){}
+      }
+      function openFixtureMatch(kind, id, ev){
+        /* The row contains the fixture's copy-ID chip (a button):
+           a tap on the chip copies the ID and must not also open
+           the match page. */
+        if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+        id = String(id);
+        if (!fbServerSeen){ toast('⏳ Still connecting to the server — matches will appear here as soon as it answers'); return; }
+        var ds = liveDisplayState();
+        var list = (kind === 'tournament') ? ((ds.tournament && ds.tournament.fixtures) || []) : (ds.singleFixtures || []);
+        var f = null;
+        list.forEach(function(x){ if (x && String(x.id) === id) f = x; });
+        if (!f){ toast('That fixture is no longer available'); try { renderLiveHome(); } catch(e){} return; }
+        archiveView = null;
+        matchView = { kind: 'fixture', fxKind: kind, id: id, state: fixtureDisplayState(f, kind, ds) };
+        cbOversInnSel = -1;
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+        setCbTab('info');
+        try { renderMatchViewScoreboard(); } catch(e){}
+      }
+      /* A completed match tapped on the Recent Matches list: the
+         permanent History record when the match was filed there
+         (the richest view — squads, POTM, the works); otherwise the
+         record the list itself is showing (a tournament result or
+         the last finished Single Match) opens through the same
+         archived-match scoreboard, built from that record. */
+      function openResultMatch(id){
+        id = String(id);
+        matchView = null;
+        if (typeof HIST !== 'undefined' && HIST && HIST[id]){ openHistoryMatch(id); return; }
+        var ds = liveDisplayState();
+        var rec = null, tnName = '';
+        var tn = ds.tournament || {};
+        (tn.matches || []).forEach(function(m){ if (m && String(m.id) === id) rec = m; });
+        if (rec) tnName = (tn.name || '').trim();
+        if (!rec && ds.lastFinishedSingle && String(ds.lastFinishedSingle.id) === id) rec = ds.lastFinishedSingle;
+        if (!rec){ toast('That match record is not available'); return; }
+        var e = deep(rec);
+        if (!e.teamA && e.innings && e.innings[0]) e.teamA = e.innings[0].battingTeam || '';
+        if (!e.teamB && e.innings && e.innings[0]) e.teamB = e.innings[0].bowlingTeam || '';
+        if (e.matchKind === 'single') tnName = '';
+        if (typeof e.tournamentName === 'string' && e.tournamentName) tnName = e.tournamentName;
+        e.tournamentName = tnName;
+        closePlayerProfile();
+        closeHistoryMatch();
+        archiveView = { id: id, entry: e, returnView: 'live', returnHistTab: null, state: archiveDisplayState(e) };
+        cbOversInnSel = -1;
+        document.body.classList.add('viewer-mode');
+        document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+        setCbTab('summary');
+        try { renderArchiveScoreboard(); } catch(e){}
+      }
+      function renderMatchViewScoreboard(){
+        if (!matchView) return;
+        var realS = S; S = matchView.state;
+        try {
+          var sl = $('sbLive'); if (sl) sl.innerHTML = scoreStripHTML();
+          var sb = $('sbBatting'), sw = $('sbBowling');
+          var pw = $('sbPrevWrap'), pv = $('sbPrev');
+          if (matchView.kind === 'fixture'){
+            if (sb) sb.innerHTML = '<p class="cb-empty" style="padding-left:2px">Match is not started yet.</p>';
+            if (sw) sw.innerHTML = '';
+            if (pw) pw.style.display = 'none';
+            var soW = $('sbSuperOverWrap'); if (soW) soW.style.display = 'none';
+          } else {
+            if (sb) sb.innerHTML = battingTableHTML(S.current);
+            if (sw) sw.innerHTML = bowlingTableHTML(S.current);
+            if (pw && pv){
+              if (S.prevInnings){
+                pw.style.display = 'block';
+                pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+              } else pw.style.display = 'none';
+            }
+            renderSuperOverSection();
+          }
+          renderScoreboardCB();
+          if (matchView.kind === 'fixture') applyFixtureNotStarted();
+        } catch(e){}
+        S = realS;
+        try { renderMatchViewBar(); } catch(e){}
+      }
+      /* An upcoming match has no score yet: wherever the live page
+         would show the match's play — the big score, the current
+         pair, the commentary, the overs — it says so instead. The
+         Info and Squads tabs keep the real data the fixture has. */
+      function applyFixtureNotStarted(){
+        var pill = $('cbLivePill'); if (pill) pill.innerHTML = 'UPCOMING';
+        var st = $('cbStatusLine'); if (st) st.textContent = 'Match is not started yet.';
+        var main = $('cbMainScore');
+        if (main){
+          var meta = [];
+          if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) meta.push(S.tournament.name);
+          if (S.venue && S.matchKind === 'single') meta.push(S.venue);
+          var when = [S.matchDate ? fmtDateShort(S.matchDate) : '', S.matchTime || ''].filter(Boolean).join(' • ');
+          if (when) meta.push(when);
+          if (S.matchFormat) meta.push(S.matchFormat);
+          main.innerHTML = '<div class="cb-notstarted"><div class="ns-teams">' + esc(S.teamA || 'Team 1') + '<span>v</span>' + esc(S.teamB || 'Team 2') + '</div>'
+            + '<div class="ns-msg">Match is not started yet.</div>'
+            + (meta.length ? '<div class="ns-meta">' + esc(meta.join(' • ')) + '</div>' : '') + '</div>';
+        }
+        var ps = $('cbPship'); if (ps){ ps.innerHTML = ''; ps.style.display = 'none'; }
+        var bt = $('cbBatterTable'); if (bt) bt.innerHTML = '';
+        var bw = $('cbBowlerTable'); if (bw) bw.innerHTML = '';
+        var cm = $('cbCommentary'); if (cm) cm.innerHTML = '<p class="cb-empty">Match is not started yet.</p>';
+        var ov = $('cbOversList'); if (ov) ov.innerHTML = '<p class="ov-empty">Match is not started yet.</p>';
+        var sw = $('cbOversSwitch'); if (sw) sw.innerHTML = '';
+      }
+      function renderMatchViewBar(){
+        var bar = $('cbArchiveBar'); if (!bar) return;
+        if (!matchView) return; /* renderArchiveBar owns the bar in every other mode */
+        var st = matchView.state;
+        if (matchView.kind === 'fixture'){
+          var meta = [];
+          if (st.matchKind === 'tournament' && st.tournament && st.tournament.name) meta.push(st.tournament.name);
+          if (st.matchDate) meta.push(fmtDateShort(st.matchDate));
+          if (st.matchTime) meta.push(st.matchTime);
+          bar.innerHTML = '<span class="ab-lab">Upcoming match</span>'
+            + (meta.length ? '<span class="ab-meta">' + esc(meta.join(' • ')) + '</span>' : '')
+            + '<span class="ab-meta">Match is not started yet — read-only</span>';
+        } else {
+          var meta2 = [];
+          if (st.matchKind === 'tournament' && st.tournament && st.tournament.name) meta2.push(st.tournament.name);
+          if (st.venue) meta2.push(st.venue);
+          var lab = (st.status === 'finished' && st.awaitingFinish) ? 'Play over' : (st.status === 'inningsBreak' ? 'Innings break' : 'In Progress');
+          bar.innerHTML = '<span class="ab-lab">' + lab + '</span>'
+            + (meta2.length ? '<span class="ab-meta">' + esc(meta2.join(' • ')) + '</span>' : '')
+            + '<span class="ab-meta">This match is being scored — read-only</span>';
+        }
+        bar.hidden = false;
+      }
+      /* Keep an open match view following its match: on every render
+         the display state is rebuilt from the latest confirmed
+         state, so a second in-progress match updates ball by ball
+         and a fixture picks up squad changes. When the match leaves
+         the list it was opened from — a fixture that has started, a
+         match that finished or was removed — the page hands back:
+         to the live scoreboard if this match itself moved onto the
+         scoring pad, otherwise to the Recent Matches list. */
+      function refreshMatchView(){
+        if (!matchView || archiveView) return;
+        if (typeof currentViewName === 'undefined' || currentViewName !== 'scoreboard') return;
+        if (!fbServerSeen) return;
+        var ds = liveDisplayState();
+        if (matchView.kind === 'slice'){
+          /* The pad match itself, watched while its scorer is
+             completing it: follow it while it stands; once the
+             scorer completes it (or a new match replaces it), hand
+             the page back to the ordinary scoreboard rendering —
+             the same match, now in its finished layout, or the
+             ghost guard if it is gone entirely. */
+          if (matchView.main){
+            if (ds && String(ds.matchId) === matchView.id && ds.awaitingFinish && !liveMatchTombstoned(ds)){
+              matchView.state = sliceDisplayState(mainMatchSlice(ds), ds);
+              return;
+            }
+            matchView = null;
+            return;
+          }
+          var slice = null;
+          (ds.pausedMatches || []).forEach(function(p){ if (p && String(p.matchId) === matchView.id) slice = p; });
+          if (slice && !liveMatchTombstoned(slice)){ matchView.state = sliceDisplayState(slice, ds); return; }
+          var becameLive = !!(ds && String(ds.matchId) === matchView.id && ds.teamA && ds.teamB && !liveMatchTombstoned(ds));
+          matchView = null;
+          if (becameLive) return; /* the ordinary live scoreboard takes over */
+          toast('That match is no longer in progress');
+          try { renderLiveHome(); } catch(e){}
+          setView('live');
+          return;
+        }
+        var list = (matchView.fxKind === 'tournament') ? ((ds.tournament && ds.tournament.fixtures) || []) : (ds.singleFixtures || []);
+        var f = null;
+        list.forEach(function(x){ if (x && String(x.id) === matchView.id) f = x; });
+        if (f){ matchView.state = fixtureDisplayState(f, matchView.fxKind, ds); return; }
+        matchView = null;
+        toast('That fixture is no longer on the list — the match may have started or been removed');
+        try { renderLiveHome(); } catch(e){}
+        setView('live');
+      }
       function openHistoryMatch(id){
         id = String(id);
+        matchView = null;
         if (id.indexOf('live:') === 0){ closePlayerProfile(); archiveView = null; setView('scoreboard'); return; }
         var e = HIST[id]; if (!e) return;
         closePlayerProfile();
@@ -10996,7 +11378,7 @@
         if (repTn) filt.push('Tournament filter: ' + repTn);
         if (repTeam) filt.push('Team filter: ' + repTeam);
         if (repPlayer && repPlayer.trim()) filt.push('Player filter: ' + repPlayer.trim());
-        return 'CRICCAST — ' + title.toUpperCase() + '\n'
+        return 'CricCast — ' + title.toUpperCase() + '\n'
           + 'Scope: ' + scopeTxt + (filt.length ? ' • ' + filt.join(' • ') : '') + '\n'
           + 'Matches in scope: ' + count + '\n'
           + 'Generated: ' + new Date().toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) + '\n'
@@ -11768,7 +12150,7 @@
         /* --- masthead --- */
         d.fill(0, 0, 595, 118, MRC.band);
         d.fill(0, 118, 595, 4, MRC.teal);
-        d.text('CRICCAST', MX, 30, 2, 8, MRC.accent, 'l', 2.4);
+        d.text('CricCast', MX, 30, 2, 8, MRC.accent, 'l', 2.4);
         if (S.matchKind === 'tournament' && S.tournament && S.tournament.name)
           d.text(mrFit(String(S.tournament.name).toUpperCase(), 9, true, 230), RX, 30, 2, 9, MRC.white, 'r', 1);
         d.text('Match Report', MX, 64, 2, 25, MRC.white, 'l');
@@ -12178,7 +12560,7 @@
         c.fillStyle = '#d7e2de'; c.font = '700 74px ' + COND; c.textAlign = 'left';
         c.fillText('SUMMARY', PAD, y);
         c.fillStyle = MUT; c.font = '700 27px ' + SANS; c.textAlign = 'right';
-        c.fillText('CRICCAST', W - PAD, 62);
+        c.fillText('CricCast', W - PAD, 62);
         c.textAlign = 'left';
         y += 12;
         var tnName = (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '';
@@ -12546,7 +12928,7 @@
         if (d.pill !== 'LIVE') c.fillStyle = '#8a8f8a';
         c.beginPath(); c.arc(PAD + 10, y - 10, 10, 0, Math.PI * 2); c.fill();
         c.fillStyle = '#ffffff'; c.font = '700 34px ' + SANS; c.textAlign = 'left';
-        c.fillText('CRICCAST', PAD + 34, y);
+        c.fillText('CricCast', PAD + 34, y);
         var pillTxt = d.pill;
         c.font = '700 30px ' + SANS;
         var pw = c.measureText(pillTxt).width + 44;
@@ -13780,8 +14162,9 @@
            Tournament button is shown under Match Info, exactly as in
            the reference screenshot. Single Match → the card is removed
            from view entirely (hidden + display:none), so the Info tab
-           carries no tournament segment at all. renderSbTeams applies
-           the same rule and fills in the card's summary text. */
+           carries nothing under Match Info at all. renderSbTeams
+           applies the same rule and fills in the card's summary
+           text. */
         var tourCardEl = $('sbTourCtaCard');
         if (tourCardEl){
           var isTnMatch = S.matchKind === 'tournament';
@@ -13791,15 +14174,11 @@
         /* Summary tab: shown only for a finished match, filled from
            the same state as every other panel. */
         try { renderSummaryPanel(); } catch(e){}
-        /* The Info tab's history entry follows who is looking: a
-           viewer gets Past Matches, the scorer History & Reports. */
-        var histTitleEl = $('sbHistCardTitle'), histBtnEl = $('sbHistCardBtn');
-        if (histTitleEl && histBtnEl){
-          var viewerLooking = false;
-          try { viewerLooking = isViewerSurface(); } catch(e){ viewerLooking = false; }
-          histTitleEl.textContent = viewerLooking ? '📜 Past Matches' : '📜 History & Reports';
-          histBtnEl.textContent = viewerLooking ? 'Open Past Matches' : 'Open History & Reports';
-        }
+        /* Nothing else lives under Match Info: a Single Match shows
+           no further card at all, and a tournament match shows only
+           the Follow Tournament card above. (Past Matches keeps its
+           own entries — the Recent Matches landing and the History
+           & Reports home — just not a card here.) */
         /* The archived-match bar follows whichever match the
            scoreboard is showing: visible only in archive mode. */
         try { renderArchiveBar(); } catch(e){}
@@ -13813,6 +14192,11 @@
            viewer link then sat on the home chooser in "Local Mode". */
         function step(fn){ try { fn(); } catch(e){} }
         step(function(){ normalizeSquads(); normalizeStateShape(); syncPlayersFromInputsSilent(); });
+        /* An open match view (another in-progress match, or a
+           fixture, opened from the Recent Matches list) first
+           re-reads its match from the confirmed state, so the
+           panels below render its latest figures. */
+        step(function(){ refreshMatchView(); });
         /* Public Scoreboard sections render from the CONFIRMED
            state only (see fbConfirmedState): this device's
            unconfirmed backup copy is never shown to viewers. The
@@ -13824,6 +14208,7 @@
              re-render (Firebase echo, a tab regaining focus) must
              never swap the live match back in underneath the viewer. */
           if (archiveView){ renderArchiveScoreboard(); return; }
+          if (matchView){ renderMatchViewScoreboard(); return; }
           renderWithDisplayState(function(){
             $('sbLive').innerHTML = scoreStripHTML();
             $('sbBatting').innerHTML = battingTableHTML(S.current);
@@ -13839,7 +14224,7 @@
         step(function(){ updateScoringOnly(); });
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
-        step(function(){ if (!archiveView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
+        step(function(){ if (!archiveView && !matchView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
         step(function(){ guardViewerScoreboard(); });
         step(renderSquads);
         step(renderOmFixtures);
@@ -14412,9 +14797,13 @@
         var meta = [];
         if (f.overs) meta.push(f.overs + ' overs');
         if (f.format) meta.push(f.format);
-        return '<div class="ml-row">' + mlLabel([label], false)
+        var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
+        return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'single\',' + fxIdArg(f.id) + ',event)', aria) + '>'
+          + mlPill('up') + mlLabel([label], false)
           + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
-          + '<div class="ml-status muted">Upcoming' + (meta.length ? ' • ' + esc(meta.join(' • ')) : '') + '</div></div>';
+          + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
+          + (meta.length ? '<div class="ml-status muted">' + esc(meta.join(' • ')) + '</div>' : '')
+          + '</div>';
       }
       /* ----- Toss, then Start Scoring ----- */
       function omStartMatchTap(){
@@ -14665,6 +15054,16 @@
         if (v !== 'scoreboard' && typeof archiveView !== 'undefined' && archiveView){
           archiveView = null; cbOversInnSel = -1;
           var abEl = $('cbArchiveBar'); if (abEl){ abEl.hidden = true; abEl.innerHTML = ''; }
+        }
+        /* Leaving the scoreboard also ends a match view (another
+           in-progress match, or a fixture, opened from the Recent
+           Matches list): the next visit shows the live match again.
+           Opening a match view sets matchView BEFORE
+           setView('scoreboard'), so it is never cleared by its own
+           navigation. */
+        if (v !== 'scoreboard' && typeof matchView !== 'undefined' && matchView){
+          matchView = null; cbOversInnSel = -1;
+          var mvEl = $('cbArchiveBar'); if (mvEl){ mvEl.hidden = true; mvEl.innerHTML = ''; }
         }
         document.body.classList.toggle('scoreboard-clean', v==='scoreboard');
         /* The header (brand bar) belongs to the home pages only —
