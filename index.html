@@ -3086,15 +3086,7 @@
            it back from the score. No length cap: trimming at 120 balls
            silently deleted the start of any 20-over innings with
            extras, and corrupted the over summaries built from it. */
-        /* A wide / no-ball bowled as the first ball of a new over sits
-           exactly on an over boundary (six legal balls already bowled)
-           and belongs to the NEXT over: labelling it with the old count
-           ("1.0") made it look like the last ball of the over that
-           just ended, in the feed's over column and the scorer's
-           history. Legal deliveries keep the count-after-the-ball
-           label; only an extra at a boundary moves to the next over. */
-        var labelBalls = (!isLegalDelivery(text) && inn.legalBalls > 0 && inn.legalBalls % 6 === 0) ? inn.legalBalls + 6 : inn.legalBalls;
-        var rec = { over: oversText(labelBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
+        var rec = { over: oversText(inn.legalBalls), overNo: (typeof overNo === 'number' ? overNo : (Math.floor(inn.legalBalls / 6) + 1)), text: text, cls: cls || '', bowler: inn.bowler || '', batter: inn.striker || '' };
         if (extraFields) for (var k in extraFields) rec[k] = extraFields[k];
         if (!Array.isArray(inn.balls)) inn.balls = []; /* heal a record Firebase dropped while it was empty */
         inn.balls.push(rec);
@@ -4607,7 +4599,7 @@
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
           status = need > 0
-            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.'
+            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
             : inn.battingTeam + ' have reached the target of ' + t;
         }
         else if (S.tossInfo) status = S.tossInfo;
@@ -5354,10 +5346,43 @@
           }
         } catch(e){ fbAuth = null; renderAuthBar(); }
       }
+      /* Inside the Android app (Capacitor WebView), Google blocks the
+         web popup/redirect sign-in (disallowed_useragent), so the app
+         carries the native Firebase Authentication plugin instead:
+         it opens the system account picker and hands back a Google
+         credential, which is exchanged for a normal Firebase web
+         session below — ownership, Rules and sync then behave
+         exactly as in a browser. In a real browser the plugin is
+         absent and the popup flow runs unchanged. */
+      function nativeAuthPlugin(){
+        try {
+          var C = window.Capacitor;
+          if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
+          var p = C.Plugins && C.Plugins.FirebaseAuthentication;
+          if (p && typeof p.signInWithGoogle === 'function') return p;
+        } catch(e){}
+        return null;
+      }
       function signInWithGoogle(){
         if (!fbAuth){
           if (!fbApp) toast('⏳ Firebase is still connecting — try signing in again in a moment.');
           else toast('⚠️ Google sign-in is unavailable right now — the sign-in library did not load. Live scores still work; check the connection and reload the page.');
+          return;
+        }
+        var nativeAuth = nativeAuthPlugin();
+        if (nativeAuth){
+          toast('Opening Google sign-in…');
+          nativeAuth.signInWithGoogle().then(function(res){
+            var cred = res && res.credential;
+            if (!cred || !cred.idToken) throw new Error('No Google credential returned by the app sign-in.');
+            var credential = firebase.auth.GoogleAuthProvider.credential(cred.idToken, cred.accessToken || null);
+            return fbAuth.signInWithCredential(credential);
+          }).then(function(){ /* onAuthStateChanged renders the signed-in state */ }).catch(function(err){
+            var code = (err && err.code) ? String(err.code) : '';
+            var msg = (err && err.message) ? err.message : String(err);
+            if (/cancel|12501|popup-closed/i.test(code + ' ' + msg)){ toast('Google sign-in was cancelled.'); return; }
+            toast('⚠️ Google sign-in failed in the app: ' + msg);
+          });
           return;
         }
         var provider = new firebase.auth.GoogleAuthProvider();
@@ -5375,7 +5400,9 @@
       }
       function signOutUser(){
         if (!fbAuth) return;
-        fbAuth.signOut().then(function(){ toast('Signed out — you are now in guest (view-only) mode'); }).catch(function(err){ toast('⚠️ Sign out failed: ' + ((err && err.message) ? err.message : err)); });
+        var nativeAuth = nativeAuthPlugin();
+        var nativeOut = nativeAuth ? nativeAuth.signOut().catch(function(){}) : Promise.resolve();
+        nativeOut.then(function(){ return fbAuth.signOut(); }).then(function(){ toast('Signed out — you are now in guest (view-only) mode'); }).catch(function(err){ toast('⚠️ Sign out failed: ' + ((err && err.message) ? err.message : err)); });
       }
       function googleGlyph(){
         return '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.7-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.3 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.7-.4-3.9z"/></svg>';
@@ -6905,8 +6932,7 @@
         /* Builds one innings' commentary feed (newest ball first, one
            summary card per completed over). Used for the current
            innings only — the LIVE feed never shows a finished
-           innings underneath the live one, except for the single
-           innings-ending ball appended below (see prevEnd). */
+           innings underneath the live one. */
         function feedHTMLFor(innX){
           if (!innX || !innX.balls || !innX.balls.length) return '';
           var snapsX = overSnapshots(innX);
@@ -6961,35 +6987,13 @@
              its batting / bowling cards in the Scorecard tab and
              every one of its overs, including the last-ball wicket,
              in the Overs tab — but it never bleeds into this feed. */
-          /* The LIVE feed belongs to the innings being played NOW —
-             only the current innings' balls, announcements and over
-             summary cards render here — but its very last ball DOES
-             belong here too: when the 1st innings ended on a wicket,
-             viewers watching the 2nd innings never saw that wicket —
-             it lived only in the Scorecard and Overs tabs. So ONE row
-             is appended at the bottom of the feed (the oldest end):
-             the final delivery of the previous innings, plus an
-             "End of 1st innings" line with the score and target.
-             The rest of the finished innings stays in the Overs and
-             Scorecard tabs and never bleeds into this feed. */
           var feedCur = feedHTMLFor(inn);
-          var prevEnd = (function(){
-            if (S.inningsNo !== 2 || !S.prevInnings) return '';
-            var prev = S.prevInnings, last = null;
-            (prev.balls || []).forEach(function(b){ if (!b.evt) last = b; });
-            if (!last) return '';
-            var who = (last.bowler && last.batter) ? '<b>' + plLink(prev.bowlingTeam, last.bowler) + '</b> to <b>' + plLink(prev.battingTeam, last.batter) + '</b>, ' : '';
-            var dism = (isWicketBall(last) && last.howOut) ? ' — ' + (last.outName ? (plLink(prev.battingTeam, last.outName) + ', ') : '') + esc(last.howOut) : '';
-            var t2 = target();
-            return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(last.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(last.text) + dism + '</span></div>'
-              + '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text">End of 1st innings — ' + esc(prev.battingTeam) + ' ' + prev.runs + '/' + prev.wickets + ' (' + oversText(prev.legalBalls) + ')' + (t2 ? ' • Target ' + t2 : '') + '.</span></div>';
-          })();
           if (!feedCur){
             commEl.innerHTML = (S.inningsNo === 2 && S.prevInnings)
-              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings\' final ball is below; the full 1st innings is in the Overs and Scorecard tabs.</p>' + prevEnd
+              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings is in the Overs and Scorecard tabs.</p>'
               : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
           } else {
-            commEl.innerHTML = feedCur + prevEnd;
+            commEl.innerHTML = feedCur;
           }
         }
         /* the per-over cards now live inside the commentary feed above */
