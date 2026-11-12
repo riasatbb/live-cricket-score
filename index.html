@@ -824,6 +824,108 @@
       .tn-pick .tp-meta{font-size:13px;color:var(--muted);display:block;margin-top:2px}
       .tn-pick .tp-badge{flex:none;font-size:11.5px;font-weight:700;background:var(--green);color:#fff;border-radius:999px;padding:4px 10px}
       .tn-pick .tp-open{flex:none;font-weight:700;color:var(--green)}
+      /* ---------- Open Match (Start Single Match setup, per reference) ---------- */
+      #view-openmatch .viewer-backbar{display:flex}
+      .om-card{max-width:640px;margin-left:auto;margin-right:auto}
+      .om-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+      .om-slot{text-align:center;min-width:0}
+      .om-lab{font-size:13.5px;color:var(--muted);font-weight:600;margin-bottom:10px}
+      .om-circle{width:112px;height:112px;max-width:32vw;aspect-ratio:1/1;border-radius:50%;border:1.5px solid var(--line);background:var(--surface2);color:var(--muted);font-size:44px;font-weight:300;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 20px rgba(10,40,25,.12);padding:8px;font-family:"Barlow Condensed",sans-serif;overflow:hidden;text-align:center}
+      .om-circle:active{transform:scale(.97)}
+      .om-circle .om-ini{font-size:34px;font-weight:700;letter-spacing:.03em;color:var(--green)}
+      .om-circle.c1{background:#fdf0d5}.om-circle.c1 .om-ini{color:#7a4d05}
+      .om-circle.c2{background:#e3f4e9}.om-circle.c2 .om-ini{color:#14532d}
+      .om-circle.c3{background:#e8eff8}.om-circle.c3 .om-ini{color:#175d8f}
+      .om-circle.c0{background:#fdecea}.om-circle.c0 .om-ini{color:#8f2a20}
+      @media (prefers-color-scheme: dark){
+        .om-circle.c1{background:#3a2c10}.om-circle.c1 .om-ini{color:#f5c877}
+        .om-circle.c2{background:#173527}.om-circle.c2 .om-ini{color:#9fe6bb}
+        .om-circle.c3{background:#16283a}.om-circle.c3 .om-ini{color:#a8cdf0}
+        .om-circle.c0{background:#3a1d1a}.om-circle.c0 .om-ini{color:#ffb0a6}
+      }
+      .om-tname{font-size:16px;font-weight:800;text-transform:uppercase;margin-top:10px;line-height:1.25;word-break:break-word}
+      .om-field{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px;color:var(--ink);text-align:left;cursor:pointer}
+      .om-field .om-ph{color:var(--muted)}
+      .om-chev{color:var(--muted);font-size:20px;line-height:1;flex:none}
+      .om-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+      .om-actions .btn{padding:14px 10px;text-transform:uppercase;letter-spacing:.03em}
+      @media (max-width:380px){.om-actions{grid-template-columns:1fr}}
+      .om-h{font-size:17px;font-weight:800;margin:18px 0 8px}
+      .om-h:first-of-type{margin-top:6px}
+      .om-opt{border-top:1px solid var(--line);padding:14px 0 4px}
+      .om-opt:first-of-type{border-top:none;padding-top:4px}
+      .om-opt h3{margin:0 0 10px;font-size:16.5px;font-weight:800}
+      .chip-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:9px}
+      .chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 15px;font-size:15px;font-weight:600;cursor:pointer}
+      .chip:active{transform:scale(.97)}
+      .chip.sel{background:var(--green);border-color:var(--green);color:#fff}
+      .tp-list{display:grid;gap:4px;margin-top:10px;max-height:46vh;overflow:auto}
+      .tp-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 4px;color:var(--ink);cursor:pointer}
+      .tp-row:last-child{border-bottom:none}
+      .tp-row:active{background:var(--surface2)}
+      .tp-row:disabled{opacity:.45;cursor:default}
+      .tp-badge{flex:none;width:46px;height:46px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:700;color:var(--green);overflow:hidden}
+      .tp-badge.c1{background:#fdf0d5;color:#7a4d05;border-color:#eec27a}
+      .tp-badge.c2{background:#e3f4e9;color:#14532d;border-color:#9ed3ae}
+      .tp-badge.c3{background:#e8eff8;color:#175d8f;border-color:#b9d2ea}
+      .tp-badge.c0{background:#fdecea;color:#8f2a20;border-color:#e5a49c}
+      @media (prefers-color-scheme: dark){
+        .tp-badge.c1{background:#3a2c10;color:#f5c877;border-color:#6b5518}
+        .tp-badge.c2{background:#173527;color:#9fe6bb;border-color:#2c5c40}
+        .tp-badge.c3{background:#16283a;color:#a8cdf0;border-color:#2c4a68}
+        .tp-badge.c0{background:#3a1d1a;color:#ffb0a6;border-color:#6b3530}
+      }
+      .tp-main{flex:1;min-width:0}
+      .tp-name{display:block;font-weight:800;font-size:15.5px;text-transform:uppercase;line-height:1.25;word-break:break-word}
+      .tp-id{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+      .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .toss-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 10px 13px;text-align:center;color:var(--ink);cursor:pointer;width:100%}
+      .toss-card:active{transform:scale(.98)}
+      .toss-card.sel{border-color:var(--gold);outline:2px solid var(--gold);outline-offset:1px}
+      .toss-card .om-circle{width:74px;height:74px;box-shadow:none;pointer-events:none}
+      .toss-card .om-circle .om-ini{font-size:24px}
+      .toss-name{display:block;font-weight:800;font-size:14.5px;text-transform:uppercase;margin-top:9px;line-height:1.3;word-break:break-word}
+      .om-fx-row{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:9px;background:var(--surface2)}
+      .om-fx-teams{font-weight:800;font-size:15.5px;line-height:1.3}
+      .om-fx-meta{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.45}
+
+      /* ---------- Firebase big box removed (thin top pill is enough) ---------- */
+      .connbar,.connbar-slot{display:none !important}
+      /* ---------- home pages: everything centre-aligned ---------- */
+      #view-home,#view-console,#view-live{text-align:center}
+      #view-home .mode-intro,#view-console .mode-intro,#view-live .mode-intro{text-align:center}
+      #view-home .mode-intro h2,#view-console .mode-intro h2,#view-live .mode-intro h2{text-align:center}
+      #view-home .mode-intro p,#view-console .mode-intro p{margin-left:auto;margin-right:auto;text-align:center}
+      #view-home .mode-grid{justify-items:stretch}
+      #view-home .mode-card{text-align:center}
+      #view-home .mode-card .mode-icon{margin-left:auto;margin-right:auto}
+      #view-home .mode-card h3,#view-home .mode-card .mode-desc{text-align:center}
+      #view-home .mode-card .mode-list{justify-items:center;text-align:center}
+      #view-home .mode-card .mode-list li{justify-content:center;text-align:center}
+      #view-console .console-home{margin-left:auto;margin-right:auto}
+      #view-console .console-opt{text-align:center}
+      #view-console .console-opt .co-title,#view-console .console-opt .co-sub{text-align:center}
+      #view-console .authbar{justify-content:center;text-align:center}
+      #view-console .authbar .ab-main{justify-content:center}
+      #view-console .authbar .ab-name,#view-console .authbar .ab-sub{text-align:center}
+      #view-live .scorer-entry{justify-content:center;text-align:center}
+      /* Live Matches home: the match list itself is centred too —
+         group headings, label line, score lines and status line all
+         sit in the middle like the rest of the home pages. */
+      #view-live .ml-list{text-align:center}
+      #view-live .ml-group{text-align:center}
+      #view-live .ml-row{text-align:center}
+      #view-live .ml-label{justify-content:center}
+      #view-live .ml-line{justify-content:center}
+      #view-live .ml-status{text-align:center}
+      /* ---------- My Teams (home-page team maintenance) ---------- */
+      #view-myteams{text-align:left}
+      #view-myteams .viewer-backbar{display:flex}
+      #view-myteams .mt-team-card{margin-bottom:12px}
+      #view-myteams .mt-team-card h3{font-size:19px}
+      body.viewer-mode #view-myteams .sq-x{display:none !important}
+      body.viewer-mode #view-myteams .names-row,body.viewer-mode #view-myteams .mt-addrow{display:none !important}
+      body.link-viewer #view-home .mode-card.myteams-entry,body.link-viewer #view-console .console-opt.myteams-entry{display:none !important}
     </style>
   </head>
   <body>
@@ -873,6 +975,11 @@
             <h3>Single Match</h3>
             <span class="mode-cta">Open Single Match →</span>
           </button>
+          <button type="button" class="mode-card myteams-entry" onclick="setView('myteams')">
+            <span class="mode-icon" aria-hidden="true">👥</span>
+            <h3>My Teams</h3>
+            <span class="mode-cta">Manage Teams →</span>
+          </button>
           <button type="button" class="mode-card tournament" onclick="setSegment('tournament')">
             <span class="mode-icon" aria-hidden="true">🏆</span>
             <h3>Tournament</h3>
@@ -889,7 +996,6 @@
       <!-- ================= SCORER CONSOLE HOME ================= -->
       <section class="view" id="view-console">
         <div class="authbar-slot"></div>
-        <div class="connbar-slot"></div>
         <div class="mode-intro">
           <h2>Scorer Console</h2>
         </div>
@@ -901,16 +1007,83 @@
             <span class="co-title">▶ Resume Scoring</span>
             <span class="co-sub" id="consoleResumeSub">Matches in progress — pick one to continue scoring.</span>
           </button>
+          <button type="button" class="console-opt myteams-entry" onclick="setView('myteams')">
+            <span class="co-title">👥 My Teams</span>
+            <span class="co-sub" id="consoleMyTeamsSub">Add teams and manage their players.</span>
+          </button>
           <button type="button" class="console-opt" onclick="setView('tournaments')">
             <span class="co-title">🏆 Tournament</span>
           </button>
         </div>
       </section>
 
+      <!-- ================= MY TEAMS ================= -->
+      <section class="view" id="view-myteams">
+        <div class="authbar-slot"></div>
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+          <button type="button" class="btn ghost sm" onclick="setView('home')">← All Modes</button>
+        </div>
+        <div class="card">
+          <h2>👥 My Teams</h2>
+          <p class="sub">Manage all your teams in one place. Teams and players added here are available everywhere — Single Match team picker, Match Setup and Tournament. Add a team below, then add or remove its players right under it.</p>
+          <label for="mtNewTeam">Add a team — one name per line for bulk entry</label>
+          <div class="rowflex names-row mt-addrow">
+            <textarea id="mtNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line"></textarea>
+            <button type="button" class="btn sm" onclick="addMyTeam()">Add Team</button>
+          </div>
+          <p class="note" id="mtSummary" style="margin-top:10px"></p>
+        </div>
+        <div id="mtList"></div>
+      </section>
+
+      <!-- ================= OPEN MATCH: START SINGLE MATCH SETUP ================= -->
+      <section class="view" id="view-openmatch">
+        <div class="authbar-slot"></div>
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+        </div>
+        <div class="card om-card">
+          <h2 style="text-align:center">Open Match</h2>
+          <div class="om-teams">
+            <div class="om-slot">
+              <div class="om-lab">Select Team</div>
+              <button type="button" class="om-circle" id="omCircleA" onclick="openTeamPicker('A')" aria-label="Select Team A"><span id="omCircleATxt">+</span></button>
+              <div class="om-tname" id="omNameA">Team A</div>
+            </div>
+            <div class="om-slot">
+              <div class="om-lab">Select Team</div>
+              <button type="button" class="om-circle" id="omCircleB" onclick="openTeamPicker('B')" aria-label="Select Team B"><span id="omCircleBTxt">+</span></button>
+              <div class="om-tname" id="omNameB">Team B</div>
+            </div>
+          </div>
+          <div style="margin-top:18px"><label for="omVenue">Venue</label><input id="omVenue" placeholder="e.g. Sheikh Abu Naser Stadium" /></div>
+          <div class="grid2" style="margin-top:12px">
+            <div><label for="omDate">Date</label><input id="omDate" type="date" /></div>
+            <div><label for="omTime">Time</label><input id="omTime" type="time" /></div>
+          </div>
+          <div style="margin-top:12px">
+            <label>Overs / Match Format</label>
+            <button type="button" class="om-field" id="omFormatField" onclick="openFormatModal()"><span id="omFormatTxt" class="om-ph">Select overs, format, wickets &amp; ball type</span><span class="om-chev" aria-hidden="true">›</span></button>
+          </div>
+          <div style="margin-top:12px">
+            <label for="omScorer">Select Scorer (Optional) — Gmail</label>
+            <input id="omScorer" type="email" placeholder="scorer@gmail.com" autocomplete="off" />
+          </div>
+          <div class="om-actions">
+            <button type="button" class="btn gold" onclick="omSaveFixture()">Save Fixture</button>
+            <button type="button" class="btn" onclick="omStartMatchTap()">Start Match</button>
+          </div>
+        </div>
+        <div class="card om-card" id="omFxCard" hidden>
+          <h2>Saved Fixtures</h2>
+          <div id="omFxList"></div>
+        </div>
+      </section>
+
       <!-- ================= TOURNAMENTS: PICK OR CREATE ================= -->
       <section class="view" id="view-tournaments">
         <div class="authbar-slot"></div>
-        <div class="connbar-slot"></div>
         <div class="viewer-backbar">
           <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
         </div>
@@ -936,7 +1109,6 @@
       <section class="view" id="view-scorer">
 
         <div class="authbar-slot"></div>
-        <div class="connbar-slot"></div>
         <div class="card">
           <h2>🔗 Your Two Links</h2>
           <div class="link-row">
@@ -1133,7 +1305,7 @@
             <div class="step"><div class="step-n">3</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
             <div class="step"><div class="step-n">4</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
             <div class="step"><div class="step-n">5</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
-            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — each history entry can be written or deleted only by its owner, and delete tombstones can be written by any signed-in account (the app only writes one while deleting its owner's match):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span></p></div></div>
+            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — each history entry can be written or deleted only by its owner, and delete tombstones can be written by any signed-in account (the app only writes one while deleting its owner's match). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span></p></div></div>
           </div>
           <div class="warn" style="margin-top:12px"><b>⚠️ Honest security note:</b> ownership is enforced <b>in this app</b> right away — the scoring pad, editors and delete buttons lock for everyone except the signed-in owner, and guests are view-only. <b>Server-side</b> enforcement starts only when the step-6 Rules above are published in the Firebase Console: until then the database itself still accepts public writes, so someone writing to it directly (outside this app) could still change data. Once those Rules are published, keep scoring from the account that owns the match — writes from any other account, signed in or not, are rejected by Firebase itself.</div>
           <div class="divider"></div>
@@ -1510,6 +1682,76 @@
       </div>
     </div>
 
+    <div class="modal-back" id="teamPickModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tpTitle">
+        <div class="modal-head">
+          <h2 id="tpTitle">Select Team</h2>
+          <button class="sq-x big" onclick="closeTeamPicker()" aria-label="Close team picker">×</button>
+        </div>
+        <div class="om-opt">
+          <h3>Option 1</h3>
+          <label for="tpId">Search by Team ID</label>
+          <div class="rowflex">
+            <input id="tpId" class="grow" placeholder="Team ID — shown under each team below" autocomplete="off" />
+            <button type="button" class="btn sm" onclick="tpFindById()">Find Team</button>
+          </div>
+        </div>
+        <div class="om-opt">
+          <h3>Option 2</h3>
+          <button type="button" class="btn" style="width:100%" onclick="tpShowCreate()">Create New Team</button>
+          <div id="tpCreate" hidden style="margin-top:12px">
+            <label for="tpNewName">New team name</label>
+            <div class="rowflex">
+              <input id="tpNewName" class="grow" placeholder="Team name" autocomplete="off" />
+              <button type="button" class="btn sm" onclick="tpCreateTeam()">Add &amp; Select</button>
+            </div>
+          </div>
+        </div>
+        <div class="om-opt">
+          <h3>Option 3</h3>
+          <p class="note" style="margin:0 0 8px">Select one from your existing teams</p>
+          <input id="tpSearch" placeholder="Search teams…" autocomplete="off" oninput="renderTeamPickerList()" aria-label="Search teams" />
+          <div class="tp-list" id="tpList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-back" id="formatModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fmTitle">
+        <div class="modal-head">
+          <h2 id="fmTitle">Overs / Format</h2>
+          <button class="sq-x big" onclick="closeFormatModal()" aria-label="Close">×</button>
+        </div>
+        <h3 class="om-h">Select Overs*</h3>
+        <input id="fmOvers" type="number" min="1" max="50" placeholder="Overs" oninput="fmRenderChips()" />
+        <div class="chip-row" id="fmOversChips"></div>
+        <h3 class="om-h">Select Format*</h3>
+        <div class="chip-row" id="fmFormatChips"></div>
+        <h3 class="om-h">Wickets</h3>
+        <input id="fmWickets" type="number" min="1" max="10" />
+        <h3 class="om-h">Ball Type*</h3>
+        <div class="chip-row" id="fmBallChips"></div>
+        <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="fmDone()">Done</button>
+      </div>
+    </div>
+
+    <div class="modal-back" id="tossModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tossTitle">
+        <div class="modal-head">
+          <h2 id="tossTitle">Toss</h2>
+          <button class="sq-x big" onclick="closeTossModal()" aria-label="Close">×</button>
+        </div>
+        <h3 class="om-h">Who won the toss?</h3>
+        <div class="toss-grid" id="tossGrid"></div>
+        <h3 class="om-h">Decided to?</h3>
+        <div class="chip-row">
+          <button type="button" class="chip" id="tossChipBat" onclick="tossDecide('bat')">Bat</button>
+          <button type="button" class="chip" id="tossChipBowl" onclick="tossDecide('bowl')">Bowl</button>
+        </div>
+        <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="omStartScoring()">Start Scoring</button>
+      </div>
+    </div>
+
     <div class="modal-back" id="playerModal">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
         <div class="modal-head">
@@ -1582,6 +1824,16 @@
           targetOverride: null, dlTarget: null, dlOvers: null, /* More-menu match adjustments */
           abandoned: false, pendingPenalty: null,
           venue: '', tossInfo: '', tossWinner: '', tossDecision: '',
+          /* Open Match details (set from the Open Match screen):
+             format label (T20, One Day…), ball type, the scheduled
+             date / time, and the designated scorer — a Gmail address
+             whose owner may sign in and score this match alongside
+             the match owner. */
+          matchFormat: '', ballType: '', matchDate: '', matchTime: '', scorerEmailHash: '',
+          /* Fixtures saved from the Open Match screen (Save Fixture)
+             instead of starting right away — global, like the parked
+             matches, so they survive a new match starting. */
+          singleFixtures: [],
           /* Match origin: 'single' (started via Start Single Match) or
              'tournament' (started from a tournament fixture). A Single
              Match NEVER enters any tournament — no points, no results,
@@ -1761,6 +2013,12 @@
         }
       }
       function renderConnPanel(){
+        /* Firebase panel removed at the owner's request: the thin
+           status pill at the very top already shows Firebase Live /
+           Connecting / Local Mode, so the big duplicate box is gone
+           from every screen. Connection + auto-retry logic still runs
+           underneath; only this panel's rendering is disabled. */
+        return;
         var slots = document.querySelectorAll('.connbar-slot');
         if (!slots.length) return;
         var mode, html;
@@ -2616,6 +2874,25 @@
            error, and the data is left exactly as it was. */
         if (typeof S.ownerUid !== 'string') S.ownerUid = '';
         if (typeof S.ownerName !== 'string') S.ownerName = '';
+        /* Open Match details: plain strings, empty on older states. */
+        ['matchFormat','ballType','matchDate','matchTime','scorerEmailHash'].forEach(function(k){ if (typeof S[k] !== 'string') S[k] = ''; });
+        /* Privacy migration: a state saved by the short-lived build
+           that kept the scorer's Gmail in plain text is converted to
+           the hash on first load and the address itself is dropped —
+           it must never sit in the publicly readable match record. */
+        if (typeof S.scorerEmail === 'string' && S.scorerEmail){
+          if (!S.scorerEmailHash) S.scorerEmailHash = hashEmail(S.scorerEmail);
+        }
+        if ('scorerEmail' in S) delete S.scorerEmail;
+        (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).forEach(function(f){
+          if (f && typeof f.scorerEmail === 'string' && f.scorerEmail && !f.scorerEmailHash) f.scorerEmailHash = hashEmail(f.scorerEmail);
+          if (f && 'scorerEmail' in f) delete f.scorerEmail;
+          if (f && typeof f.scorerEmailHash !== 'string') f.scorerEmailHash = '';
+        });
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(p){
+          if (p && typeof p.scorerEmail === 'string' && p.scorerEmail && !p.scorerEmailHash) p.scorerEmailHash = hashEmail(p.scorerEmail);
+          if (p && 'scorerEmail' in p) delete p.scorerEmail;
+        });
         /* Anything not explicitly a tournament match is a Single
            Match — the safe default, so an older state can never leak
            a single match into a tournament. */
@@ -2623,7 +2900,7 @@
         try { migratePlayerIds(); } catch(e){}
         /* Parked live matches + set-aside tournaments: same Firebase
            array-as-object coercion as nicknames. */
-        ['pausedMatches','tournamentsArchive'].forEach(function(k){
+        ['pausedMatches','tournamentsArchive','singleFixtures'].forEach(function(k){
           if (!Array.isArray(S[k])){
             if (S[k] && typeof S[k] === 'object') S[k] = Object.keys(S[k]).sort().map(function(key){ return S[k][key]; });
             else S[k] = [];
@@ -3687,6 +3964,7 @@
         var keepPaused = deep(S.pausedMatches || []);
         var keepLastFin = deep(S.lastFinishedSingle || null);
         var keepTnArc = deep(S.tournamentsArchive || []);
+        var keepSingleFx = deep(S.singleFixtures || []);
         /* Players entered for a team in the Tournament tab become that team's match squad */
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
         S = freshState();
@@ -3696,13 +3974,15 @@
         S.pausedMatches = keepPaused; /* parked live matches survive a new match starting */
         S.lastFinishedSingle = keepLastFin; /* the last finished Single Match stays on the viewer home */
         S.tournamentsArchive = keepTnArc;
+        S.singleFixtures = keepSingleFx; /* saved fixtures survive a new match starting */
         S.matchId = Date.now(); S.archivedMatchId = null;
         S.teamA = newA;
         S.teamB = newB;
         S.squadA = squadForMatch(newA, tnSquads, prevTeamA, keepA);
         S.squadB = squadForMatch(newB, tnSquads, prevTeamB, keepB);
         S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
-        S.wicketsLimit = keepWk; /* a format set in More survives Start Match */
+        S.wicketsLimit = (typeof nextWicketsLimit === 'number') ? nextWicketsLimit : keepWk; /* the Open Match format pick wins; otherwise a format set in More survives Start Match */
+        nextWicketsLimit = null;
         S.venue = $('venue').value.trim();
         S.tossWinner = tw; S.tossDecision = td;
         S.tossInfo = tw + ' won the toss and chose to ' + (td === 'bat' ? 'bat' : 'bowl') + '.';
@@ -3726,6 +4006,22 @@
         /* The creator owns the match: this account — and only this
            account — can score, edit or delete it from here on. */
         S.ownerUid = currentUid(); S.ownerName = authDisplayName();
+        /* Open Match extras (format, ball type, date / time and the
+           designated scorer's Gmail) chosen on the Open Match screen
+           ride in through nextMatchMeta and land on the new match. */
+        var scorerNodeEmail = '';
+        if (nextMatchMeta){
+          S.matchFormat = nextMatchMeta.format || '';
+          S.ballType = nextMatchMeta.ballType || '';
+          S.matchDate = nextMatchMeta.date || '';
+          S.matchTime = nextMatchMeta.time || '';
+          /* Only the HASH of the scorer's Gmail enters the match
+             record; the address itself goes solely to the separate
+             matchScorer record (syncScorerNode, after the commit). */
+          S.scorerEmailHash = nextMatchMeta.scorerEmail ? hashEmail(nextMatchMeta.scorerEmail) : (nextMatchMeta.scorerEmailHash || '');
+          scorerNodeEmail = nextMatchMeta.scorerEmail || '';
+          nextMatchMeta = null;
+        }
         /* No half-scored extra ball may leak into the new match. */
         pendingExtra = null; renderPending();
         cancelWicket();
@@ -3736,10 +4032,39 @@
         syncPlayersFromInputs();
         $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + S.oversLimit + ' overs';
         commit('Match started');
+        try { syncScorerNode(scorerNodeEmail); } catch(e){}
+      }
+      /* The designated scorer's Gmail lives ONLY in the separate
+         Firebase record at matchScorer — never in the publicly
+         readable live match. The published Rules let just two
+         accounts read it (the match owner, and the scorer named in
+         it) and let the database authorise that scorer's writes to
+         the live match by comparing the record's email against the
+         signed-in account. With no designated scorer the record is
+         cleared, so a previous match's scorer is never carried into
+         the next match. Best-effort: if the write is refused (older
+         Rules still published), the in-app hash check still gates
+         the scorer's screen — their balls then stay local until the
+         updated Rules are published. */
+      function syncScorerNode(email){
+        if (!fbApp) return;
+        var addr = String(email || '').trim().toLowerCase();
+        if (!addr && S.scorerEmailHash && authUser && authUser.email && hashEmail(authUser.email) === S.scorerEmailHash){
+          addr = String(authUser.email).trim().toLowerCase(); /* a scorer starting their own designated match names themselves */
+        }
+        var ref = fbApp.database().ref('matchScorer');
+        if (addr) ref.set({ email: addr, ownerUid: currentUid(), matchId: S.matchId || 0 }).catch(function(){});
+        else ref.set(null).catch(function(){});
       }
       function resetMatch(){
         if (scoringLocked()) return;
         if (!requireLiveOwner('delete this match')) return;
+        /* Deleting is the owner's alone: a designated scorer can
+           score the match, but never delete it. */
+        if ((S.ownerUid || '') && S.ownerUid !== currentUid()){
+          toast('🔒 Only the match owner (' + (S.ownerName || 'another account') + ') can delete this match — a designated scorer can score it, but not delete it.');
+          return;
+        }
         /* Deleting wipes the live match for every viewer, so it is
            confirmed first. */
         askVerify('Delete this match?', 'This deletes the current live match — teams, score, batters, bowlers and the innings — for you and for everyone watching. It cannot be undone. Tournament data, squads and Match History are kept; a finished match already saved in History stays there (delete it from History if you want it gone too). After deleting, a new match must be set up from the beginning. Continue?', doResetMatch);
@@ -3753,6 +4078,7 @@
            match is wiped only once Firebase confirms — see
            requestDeleteMatch. */
         try { archiveFinishedMatch(); } catch(e){}
+        try { syncScorerNode(''); } catch(e){}
         requestDeleteMatch();
       }
       function endInnings(auto){
@@ -4251,6 +4577,110 @@
       }
       function removeTournamentPlayer(teamIdx, playerIdx){
         if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var team = S.tournament.teams[teamIdx];
+        if (!team) return;
+        var arr = tournamentSquad(team);
+        var name = arr[playerIdx];
+        arr.splice(playerIdx, 1);
+        dropNicknamesFor(team, name);
+        syncTournamentSquadToMatch(team);
+        commit('Player removed', true); toast(name + ' removed from ' + team);
+      }
+      /* ---------- My Teams: team maintenance from the home page ----------
+         My Teams is not a second team list — it edits the SAME
+         teams and squads the Tournament, the Open Match team picker
+         and Match Setup all read (S.tournament.teams / squads), so a
+         team or player added here appears everywhere at once, and
+         one removed here is removed everywhere. */
+      function renderMyTeams(){
+        var list = $('mtList'); if (!list) return;
+        try { normalizeTournament(); } catch(e){}
+        var tn = S.tournament || { teams: [], squads: {} };
+        var totalPlayers = 0;
+        tn.teams.forEach(function(n){ totalPlayers += (Array.isArray(tn.squads[n]) ? tn.squads[n].length : 0); });
+        var summary = tn.teams.length
+          ? tn.teams.length + (tn.teams.length === 1 ? ' team' : ' teams') + ' • ' + totalPlayers + (totalPlayers === 1 ? ' player' : ' players') + ' in total'
+          : 'No teams yet — add your first team above.';
+        var sumEl = $('mtSummary'); if (sumEl) sumEl.textContent = summary;
+        var consoleSub = $('consoleMyTeamsSub');
+        if (consoleSub) consoleSub.textContent = tn.teams.length ? summary + ' — tap to add teams or manage players.' : 'Add teams and manage their players.';
+        /* Keep text already typed into the add boxes across re-renders. */
+        var keptNew = ''; var nt = $('mtNewTeam'); if (nt && document.activeElement === nt) keptNew = nt.value;
+        var keptPlayer = {}, keptNick = {};
+        tn.teams.forEach(function(_, i){ var el = $('mtPlayer-' + i); if (el) keptPlayer[i] = el.value; var ne = $('mtNick-' + i); if (ne) keptNick[i] = ne.value; });
+        list.innerHTML = tn.teams.length
+          ? tn.teams.map(function(n, i){
+              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
+              var rows = players.length
+                ? players.map(function(p, pi){ var nk = nickOf(n, p); var pid = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pid)) + '</span>' : '') + '<button type="button" class="sq-x" onclick="removeMyPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                : '<div class="tn-empty">No players yet for this team — add players below.</div>';
+              return '<div class="card mt-team-card">'
+                + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span><button type="button" class="sq-x" onclick="removeMyTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
+                + rows
+                + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="mtPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="addMyPlayer(' + i + ')">Add Players</button></div>'
+                + '<div class="rowflex" style="margin-top:8px"><input id="mtNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
+                + '</div>';
+            }).join('')
+          : '<div class="card"><p class="note" style="margin:0">No teams yet — add a team above, then add its players here. The same teams also appear in Tournament and in the team picker when you start a match.</p></div>';
+        tn.teams.forEach(function(_, i){ var el = $('mtPlayer-' + i); if (el && keptPlayer[i]) el.value = keptPlayer[i]; var ne = $('mtNick-' + i); if (ne && keptNick[i]) ne.value = keptNick[i]; });
+        var nt2 = $('mtNewTeam'); if (nt2 && keptNew) nt2.value = keptNew;
+      }
+      function addMyTeam(){
+        if (!requireTnOwner('edit My Teams')) return;
+        var inp = $('mtNewTeam');
+        var names = parseNameList(inp ? inp.value : '');
+        if (!names.length){ toast('Type or paste team names first — one name per line'); return; }
+        normalizeTournament();
+        var added = 0, skipped = 0;
+        names.forEach(function(name){
+          if (S.tournament.teams.indexOf(name) > -1) skipped++;
+          else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; }
+        });
+        if (inp) inp.value = '';
+        commit('Team entered', true);
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to My Teams — now add its players below');
+        else {
+          var msg = '✓ ' + added + (added === 1 ? ' team' : ' teams') + ' added';
+          if (skipped) msg += ' — ' + skipped + ' already added, skipped';
+          toast(msg);
+        }
+      }
+      function removeMyTeam(i){
+        if (!requireTnOwner('edit My Teams')) return;
+        normalizeTournament();
+        var name = S.tournament.teams[i]; if (!name) return;
+        S.tournament.teams.splice(i, 1);
+        if (S.tournament.squads) delete S.tournament.squads[name];
+        dropNicknamesFor(name, null);
+        commit('Team removed', true); toast(name + ' removed from My Teams');
+      }
+      function addMyPlayer(teamIdx){
+        if (!requireTnOwner('edit My Teams')) return;
+        normalizeTournament();
+        var team = S.tournament.teams[teamIdx];
+        if (!team) return;
+        var inp = $('mtPlayer-' + teamIdx);
+        var entries = parseNameEntries(inp ? inp.value : '');
+        if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
+        var nickInp = $('mtNick-' + teamIdx);
+        var arr = tournamentSquad(team);
+        var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
+        if (inp) inp.value = '';
+        if (nickInp) nickInp.value = '';
+        syncTournamentSquadToMatch(team);
+        commit('Player added', true);
+        if (res.added === 1 && res.skipped === 0 && !res.nicks) toast('✓ ' + entries[0].name + ' added to ' + team);
+        else {
+          var pmsg = '✓ ' + res.added + (res.added === 1 ? ' player' : ' players') + ' added to ' + team;
+          if (res.skipped) pmsg += ' — ' + res.skipped + ' already in the squad, skipped';
+          if (res.nicks) pmsg += ' — nickname set for ' + res.nicks + (res.nicks === 1 ? ' player' : ' players');
+          toast(pmsg);
+        }
+        var again = $('mtPlayer-' + teamIdx); if (again) { try { again.focus(); } catch(e){} }
+      }
+      function removeMyPlayer(teamIdx, playerIdx){
+        if (!requireTnOwner('edit My Teams')) return;
         normalizeTournament();
         var team = S.tournament.teams[teamIdx];
         if (!team) return;
@@ -4813,8 +5243,10 @@
         if (results.length){
           html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){ return resultRowHTML(m, tnName); }).join('');
         }
-        if (tn.fixtures.length){
-          html += '<div class="ml-group">Upcoming Fixtures</div>' + tn.fixtures.map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
+        var fixRows = tn.fixtures.map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
+        fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).map(function(f){ return singleFixtureRowHTML(f); }).join('');
+        if (fixRows){
+          html += '<div class="ml-group">Upcoming Fixtures</div>' + fixRows;
         }
         html += '</div>';
         listEl.innerHTML = html;
@@ -5371,7 +5803,7 @@
           fbConnecting = false;
           setFbStage('timeout');
           setPadLocked(false);
-          setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. The connection panel above keeps retrying on its own; check the internet connection, or tap Retry connection there.');
+          setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. It keeps retrying on its own — check the internet connection; the status line at the top shows when it is live again.');
           toast('⚠️ Firebase is not responding — Local Mode. Score is backed up on this device.');
           scheduleFbRetry();
         }, 8000);
@@ -5428,7 +5860,7 @@
         } catch(e){
           fbConnecting = false; fbReady = false; setPadLocked(false);
           setFbStage('error');
-          setConnStatus('local', 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode; scoring is backed up on this device only. The connection panel above retries on its own, or you can paste a config in Firebase Setup and tap Connect.');
+          setConnStatus('local', 'Firebase auto-connect failed (' + e.message + ') — running in Local Mode; scoring is backed up on this device only. It retries on its own, or you can paste a config in Firebase Setup and tap Connect.');
           scheduleFbRetry();
         }
       }
@@ -5670,12 +6102,24 @@
       /* ---------- ownership ---------- */
       function liveMatchExists(){ return !!(S && S.teamA && S.teamB && S.current); }
       function tnOwnerUid(){ return (S.tournament && S.tournament.ownerUid) || ''; }
+      /* The designated scorer: a match set up on the Open Match screen
+         can name a scorer by Gmail. Whoever signs in with exactly that
+         Google account may score the match alongside its owner —
+         scoring, players, settings — but never delete it or replace
+         it; those stay with the owner alone. */
+      function scorerHashMatches(hash){
+        if (!hash || !authUser || !authUser.email) return false;
+        return hashEmail(authUser.email) === hash;
+      }
+      function designatedScorer(){ return !!(S && scorerHashMatches(S.scorerEmailHash)); }
       function liveMatchLocked(){
         if (isViewerSession()) return true;
         if (!liveMatchExists()) return false;
         var o = S.ownerUid || '';
+        if (o && o === currentUid()) return false;
+        if (designatedScorer()) return false;
         if (!o) return !currentUid(); /* unowned: guests locked; a signed-in control-side user claims it */
-        return o !== currentUid();
+        return true;
       }
       function tournamentLocked(){
         if (isViewerSession()) return true;
@@ -5691,6 +6135,7 @@
       function requireLiveOwner(what){
         if (isViewerSession()){ toast('👀 View-only — open the control link and sign in as the match owner to ' + what + '.'); return false; }
         if (!liveMatchExists()) return true;
+        if (designatedScorer()) return true; /* the named scorer's Gmail may score this match */
         var o = S.ownerUid || '';
         if (!o){
           if (!currentUid()){ toast('🔑 Sign in with Google to ' + what + ' — the first account to sign in on the control side becomes this match\'s owner.'); return false; }
@@ -5756,7 +6201,7 @@
       function ownerLockMessage(){
         var o = S.ownerUid || '';
         if (!o) return '🔑 <b>Sign in with Google to score.</b> This match has no owner yet — the first account to sign in on the control side becomes its owner/admin, and only that account can score, edit or delete it.';
-        return '🔒 <b>View-only for this match.</b> It belongs to ' + esc(S.ownerName || 'its owner') + ' — only that signed-in Google account can score, edit or delete it.' + (authUser ? ' You are signed in as ' + esc(authDisplayName()) + '.' : ' You are in guest mode.');
+        return '🔒 <b>View-only for this match.</b> It belongs to ' + esc(S.ownerName || 'its owner') + ' — only that signed-in Google account can score, edit or delete it.' + (S.scorerEmailHash ? ' Its designated scorer can also score it.' : '') + (authUser ? ' You are signed in as ' + esc(authDisplayName()) + '.' : ' You are in guest mode.');
       }
       /* Reflect the ownership state in the UI: the account bar, the
          scoring-pad lock + reason note, and the tournament editor's
@@ -5795,6 +6240,14 @@
         var tv = $('view-tournament');
         if (tv && !inTnViewer){
           tv.querySelectorAll('input, textarea, select').forEach(function(el){
+            if (tnLocked){ if (!el.disabled){ el.disabled = true; el.setAttribute('data-ownlock', '1'); } }
+            else if (el.getAttribute('data-ownlock') === '1'){ el.disabled = false; el.removeAttribute('data-ownlock'); }
+          });
+        }
+        /* My Teams edits the same team list, so it follows the same lock. */
+        var mv = $('view-myteams');
+        if (mv && !inTnViewer){
+          mv.querySelectorAll('input, textarea, select').forEach(function(el){
             if (tnLocked){ if (!el.disabled){ el.disabled = true; el.setAttribute('data-ownlock', '1'); } }
             else if (el.getAttribute('data-ownlock') === '1'){ el.disabled = false; el.removeAttribute('data-ownlock'); }
           });
@@ -5937,6 +6390,9 @@
           tournamentName: (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '',
           matchKind: (S.matchKind === 'tournament') ? 'tournament' : 'single',
           tossInfo: S.tossInfo || '',
+          matchFormat: S.matchFormat || '', ballType: S.ballType || '',
+          matchDate: S.matchDate || '', matchTime: S.matchTime || '',
+          scorerEmailHash: S.scorerEmailHash || '',
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(),
           abandoned: !!S.abandoned,
           resultText: S.resultText || '',
@@ -6585,7 +7041,7 @@
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
             + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in owner: sign in with Google (the account that owns the match), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in owner: sign in with Google (the account that owns the match), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
           html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
@@ -7282,6 +7738,8 @@
           rows.push(['Bowling', inn.bowlingTeam || '—']);
           if (S.venue) rows.push(['Venue / Match', S.venue]);
           if (S.tossInfo) rows.push(['Toss', S.tossInfo]);
+          if (S.matchDate || S.matchTime) rows.push(['Scheduled', [S.matchDate ? fmtDateShort(S.matchDate) : '', S.matchTime || ''].filter(Boolean).join(' • ')]);
+          if (S.matchFormat || S.ballType) rows.push(['Format', [S.matchFormat || '', S.ballType || ''].filter(Boolean).join(' • ')]);
           rows.push(['Overs per innings', S.oversLimit ? String(S.oversLimit) : '—']);
           rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
           if (t) rows.push(['Target', String(t)]);
@@ -7334,7 +7792,9 @@
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
         step(function(){ renderWithDisplayState(function(){ renderScoreboardCB(); }); });
         step(renderSquads);
+        step(renderOmFixtures);
         step(renderTournament);
+        step(renderMyTeams);
         try { renderLiveHome(); } catch(e){}
         /* Permanent history: a finished match that is somehow not
            filed yet (restored backup, adopted remote state) is filed
@@ -7419,7 +7879,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchKind','status','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','matchId','archivedMatchId','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','matchId','archivedMatchId','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
@@ -7442,10 +7902,14 @@
          itself (S.matchKind), so the distinction survives parking,
          resuming, refresh and Firebase sync. */
       var pendingMatchKind = null;
+      /* One-shot extras handed from the Open Match screen to
+         doStartMatch: the format details for the match about to
+         start, and its wickets limit. Consumed (and cleared) there. */
+      var nextMatchMeta = null;
+      var nextWicketsLimit = null;
       function consoleStartSingle(){
         pendingMatchKind = 'single';
-        setView('scorer');
-        try { openSetupFold(); } catch(e){}
+        openMatchScreen();
       }
       function renderConsoleHome(){
         var btn = $('consoleResume'); if (!btn) return;
@@ -7500,8 +7964,8 @@
            like the live one. */
         var target = list[idx];
         var tOwner = target.ownerUid || '';
-        if (tOwner && tOwner !== currentUid()){
-          toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
+        if (tOwner && tOwner !== currentUid() && !scorerHashMatches(target.scorerEmailHash)){
+          toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
           return;
         }
         if (!tOwner && !currentUid()){
@@ -7523,6 +7987,392 @@
         setView('scorer');
         toast('▶ Scoring resumed — ' + S.teamA + ' vs ' + S.teamB);
       }
+      /* ============================================================
+         OPEN MATCH — the Start Single Match setup screen.
+         Two team circles open the Select Team picker (find by Team
+         ID, create a new team, or pick from the existing teams);
+         Venue stays the plain text field it has always been; the
+         date opens the calendar and the time the clock (both stay
+         typeable); Overs / Match Format opens its own dialog
+         (overs, format, wickets, ball type); an optional scorer
+         Gmail designates a second account that may score the match;
+         Save Fixture parks the whole setup as a fixture instead of
+         starting; Start Match asks the toss (winner + Bat / Bowl)
+         and Start Scoring begins the match through the very same
+         doStartMatch the Match Setup card uses.
+         ============================================================ */
+      /* SHA-256 (hex), synchronous and dependency-free. The designated
+         scorer's Gmail is NEVER stored in the match state — only this
+         one-way hash of it is — because the live match record is
+         publicly readable: anyone can watch the score, but nobody
+         should be able to read a third person's email address out of
+         it. The address itself lives only in the separate Firebase
+         matchScorer record (readable solely by the owner and by that
+         scorer — see the Rules in Firebase Setup) so the database
+         can still authorise the scorer's writes. */
+      var sha256Hex = (function(){
+        function rr(v, a){ return (v >>> a) | (v << (32 - a)); }
+        var maxWord = Math.pow(2, 32);
+        var hInit = [], kk = [], primeCounter = 0, isComposite = {};
+        for (var candidate = 2; primeCounter < 64; candidate++){
+          if (!isComposite[candidate]){
+            for (var ci = 0; ci < 313; ci += candidate){ isComposite[ci] = candidate; }
+            hInit[primeCounter] = (Math.pow(candidate, .5) * maxWord) | 0;
+            kk[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
+          }
+        }
+        return function(str){
+          var ascii = unescape(encodeURIComponent(String(str)));
+          var words = [], bitLen = ascii.length * 8;
+          ascii += '\x80';
+          while (ascii.length % 64 - 56) ascii += '\x00';
+          for (var i = 0; i < ascii.length; i++){
+            words[i >> 2] = (words[i >> 2] || 0) | (ascii.charCodeAt(i) << ((3 - i) % 4) * 8);
+          }
+          words[words.length] = ((bitLen / maxWord) | 0);
+          words[words.length] = bitLen;
+          var hash = hInit.slice(0, 8);
+          for (var j = 0; j < words.length;){
+            var w = words.slice(j, j += 16);
+            var old = hash.slice(0, 8);
+            hash = old.slice(0, 8);
+            for (var i2 = 0; i2 < 64; i2++){
+              var w15 = w[i2 - 15], w2 = w[i2 - 2];
+              var a = hash[0], e = hash[4];
+              var wi = i2 < 16 ? w[i2] : (w[i2 - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i2 - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0;
+              w[i2] = wi;
+              var temp1 = (hash[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + kk[i2] + wi) | 0;
+              var temp2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]))) | 0;
+              hash = [(temp1 + temp2) | 0].concat(hash);
+              hash[4] = (hash[4] + temp1) | 0;
+              hash.pop();
+            }
+            for (var i3 = 0; i3 < 8; i3++) hash[i3] = (hash[i3] + old[i3]) | 0;
+          }
+          var out = '';
+          for (var i4 = 0; i4 < 8; i4++){
+            for (var j2 = 3; j2 + 1; j2--){
+              var b = (hash[i4] >> (j2 * 8)) & 255;
+              out += (b < 16 ? '0' : '') + b.toString(16);
+            }
+          }
+          return out;
+        };
+      })();
+      function hashEmail(email){
+        var e = String(email || '').trim().toLowerCase();
+        return e ? sha256Hex(e) : '';
+      }
+      var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '' };
+      var OM_FORMATS = ['T10','T20','Club','L-4i','100','One Day','Test Match'];
+      var OM_FORMAT_OVERS = { 'T10': 10, 'T20': 20, 'One Day': 50 };
+      function teamIdFor(name){
+        var s = String(name || '');
+        var base = s.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) || 'team';
+        var h = 0;
+        for (var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) % 9973; }
+        return base + (1000 + (h % 9000));
+      }
+      function pad2(n){ return (n < 10 ? '0' : '') + n; }
+      function fmtDateShort(iso){
+        var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return String(iso || '');
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return parseInt(m[3], 10) + ' ' + (months[parseInt(m[2], 10) - 1] || '') + ' ' + m[1];
+      }
+      function openMatchScreen(){
+        om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
+        om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        var now = new Date();
+        var vEl = $('omVenue'); if (vEl) vEl.value = '';
+        var dEl = $('omDate'); if (dEl) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+        var tEl = $('omTime'); if (tEl) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+        var sEl = $('omScorer'); if (sEl) sEl.value = '';
+        omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
+        setView('openmatch');
+      }
+      function omRenderTeams(){
+        [['A', om.teamA], ['B', om.teamB]].forEach(function(pair, idx){
+          var circ = $('omCircle' + pair[0]), txt = $('omCircle' + pair[0] + 'Txt'), nm = $('omName' + pair[0]);
+          if (!circ || !txt || !nm) return;
+          circ.className = 'om-circle' + (pair[1] ? ' c' + (((S.tournament && S.tournament.teams ? S.tournament.teams.indexOf(pair[1]) : idx) + 4) % 4) : '');
+          txt.innerHTML = pair[1] ? '<span class="om-ini">' + esc(tnInitials(pair[1])) + '</span>' : '+';
+          nm.textContent = pair[1] || ('Team ' + pair[0]);
+        });
+      }
+      function omRenderFormatSummary(){
+        var el = $('omFormatTxt'); if (!el) return;
+        if (!om.overs && !om.format && !om.ballType){
+          el.textContent = 'Select overs, format, wickets & ball type';
+          el.classList.add('om-ph');
+          return;
+        }
+        el.classList.remove('om-ph');
+        var parts = [];
+        if (om.overs) parts.push(om.overs + (om.overs === 1 ? ' Over' : ' Overs'));
+        if (om.format) parts.push(om.format);
+        parts.push((om.wickets || 10) + ' Wkts');
+        if (om.ballType) parts.push(om.ballType);
+        el.textContent = parts.join(' • ');
+      }
+      /* ----- Select Team picker ----- */
+      function openTeamPicker(slot){
+        om.slot = slot;
+        var c = $('tpCreate'); if (c) c.hidden = true;
+        var s = $('tpSearch'); if (s) s.value = '';
+        var i = $('tpId'); if (i) i.value = '';
+        renderTeamPickerList();
+        $('teamPickModal').classList.add('show');
+      }
+      function closeTeamPicker(){ $('teamPickModal').classList.remove('show'); }
+      var tpCurrentList = [];
+      function renderTeamPickerList(){
+        var el = $('tpList'); if (!el) return;
+        try { normalizeTournament(); } catch(e){}
+        var q = (($('tpSearch') && $('tpSearch').value) || '').trim().toLowerCase();
+        var other = om.slot === 'A' ? om.teamB : om.teamA;
+        var teams = (S.tournament.teams || []).filter(function(n){ return !q || n.toLowerCase().indexOf(q) > -1; });
+        tpCurrentList = teams;
+        el.innerHTML = teams.length ? teams.map(function(n, i){
+          var taken = other && n === other;
+          return '<button type="button" class="tp-row" ' + (taken ? 'disabled' : '') + ' onclick="pickTeamIdx(' + i + ')">'
+            + '<span class="tp-badge c' + (i % 4) + '">' + esc(tnInitials(n)) + '</span>'
+            + '<span class="tp-main"><span class="tp-name">' + esc(n) + '</span>'
+            + '<span class="tp-id">Team ID: ' + esc(teamIdFor(n)) + (taken ? ' • Already picked' : '') + '</span></span></button>';
+        }).join('') : '<p class="note">No teams found — create a new team above.</p>';
+      }
+      function pickTeamIdx(i){ var n = tpCurrentList[i]; if (n) pickTeam(n); }
+      function pickTeam(name){
+        if (!name) return;
+        var other = om.slot === 'A' ? om.teamB : om.teamA;
+        if (other && name === other){ toast('⚠️ ' + name + ' is already picked as the other team'); return; }
+        if (om.slot === 'A') om.teamA = name; else om.teamB = name;
+        closeTeamPicker();
+        omRenderTeams();
+      }
+      function tpFindById(){
+        var raw = (($('tpId') && $('tpId').value) || '').trim().toLowerCase().replace(/\s+/g, '');
+        if (!raw){ toast('Type a Team ID first'); return; }
+        try { normalizeTournament(); } catch(e){}
+        var found = null;
+        (S.tournament.teams || []).forEach(function(n){ if (teamIdFor(n) === raw) found = n; });
+        if (!found){ toast('⚠️ No team with ID “' + raw + '” — check the ID under the team names below'); return; }
+        pickTeam(found);
+      }
+      function tpShowCreate(){
+        var c = $('tpCreate'); if (!c) return;
+        c.hidden = false;
+        var inp = $('tpNewName'); if (inp) try { inp.focus(); } catch(e){}
+      }
+      function tpCreateTeam(){
+        if (!requireTnOwner('add a team')) return;
+        var inp = $('tpNewName');
+        var name = inp ? inp.value.trim() : '';
+        if (!name){ toast('Type the new team name first'); return; }
+        try { normalizeTournament(); } catch(e){}
+        var exists = (S.tournament.teams || []).some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
+        ensureTournamentTeam(name);
+        commit('Team entered', true);
+        if (inp) inp.value = '';
+        toast(exists ? '✓ ' + name + ' is already in your teams — selected' : '✓ ' + name + ' created and selected');
+        pickTeam(name);
+      }
+      /* ----- Overs / Match Format dialog ----- */
+      function openFormatModal(){
+        $('fmOvers').value = om.overs || '';
+        $('fmWickets').value = om.wickets || 10;
+        fmRenderChips();
+        $('formatModal').classList.add('show');
+      }
+      function closeFormatModal(){ $('formatModal').classList.remove('show'); }
+      function fmRenderChips(){
+        var ov = parseInt(($('fmOvers') && $('fmOvers').value) || '', 10);
+        var oc = $('fmOversChips');
+        if (oc) oc.innerHTML = [10, 20, 30, 40, 50].map(function(n){
+          return '<button type="button" class="chip' + (ov === n ? ' sel' : '') + '" onclick="fmSetOvers(' + n + ')">' + n + '</button>';
+        }).join('');
+        var fc = $('fmFormatChips');
+        if (fc) fc.innerHTML = OM_FORMATS.map(function(f){
+          return '<button type="button" class="chip' + (om.format === f ? ' sel' : '') + '" onclick="fmSetFormat(\'' + f + '\')">' + f + '</button>';
+        }).join('');
+        var bc2 = $('fmBallChips');
+        if (bc2) bc2.innerHTML = ['Leather Ball', 'Tennis Ball'].map(function(b){
+          return '<button type="button" class="chip' + (om.ballType === b ? ' sel' : '') + '" onclick="fmSetBall(\'' + b + '\')">' + b + '</button>';
+        }).join('');
+      }
+      function fmSetOvers(n){ $('fmOvers').value = n; fmRenderChips(); }
+      function fmSetFormat(f){
+        om.format = f;
+        if (OM_FORMAT_OVERS[f]) $('fmOvers').value = OM_FORMAT_OVERS[f];
+        fmRenderChips();
+      }
+      function fmSetBall(b){ om.ballType = b; fmRenderChips(); }
+      function fmDone(){
+        var ov = parseInt($('fmOvers').value, 10);
+        if (isNaN(ov) || ov < 1 || ov > 50){ toast('⚠️ Select the overs (1–50) — tap a number or type it'); try { $('fmOvers').focus(); } catch(e){} return; }
+        if (!om.format){ toast('⚠️ Select the match format (T20, One Day…)'); return; }
+        if (!om.ballType){ toast('⚠️ Select the ball type (Leather Ball / Tennis Ball)'); return; }
+        var wk = parseInt($('fmWickets').value, 10);
+        om.overs = ov;
+        om.wickets = (isNaN(wk) || wk < 1 || wk > 10) ? 10 : wk;
+        closeFormatModal();
+        omRenderFormatSummary();
+      }
+      /* ----- shared form reading / validation ----- */
+      function omFormValues(){
+        var email = (($('omScorer') && $('omScorer').value) || '').trim().toLowerCase();
+        return {
+          venue: (($('omVenue') && $('omVenue').value) || '').trim(),
+          date: (($('omDate') && $('omDate').value) || '').trim(),
+          time: (($('omTime') && $('omTime').value) || '').trim(),
+          scorerEmail: email
+        };
+      }
+      function omValidate(){
+        if (!om.teamA || !om.teamB){ toast('⚠️ Select both teams first — tap the two circles'); return false; }
+        if (om.teamA === om.teamB){ toast('⚠️ Team A and Team B are the same team — pick two different teams'); return false; }
+        if (!om.overs || !om.format || !om.ballType){ toast('⚠️ Set the Overs / Match Format first'); openFormatModal(); return false; }
+        var v = omFormValues();
+        if (v.scorerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.scorerEmail)){ toast('⚠️ That scorer email does not look like a Gmail address — check it or leave it blank'); try { $('omScorer').focus(); } catch(e){} return false; }
+        return true;
+      }
+      /* ----- Save Fixture ----- */
+      function singleFixtures(){
+        if (!Array.isArray(S.singleFixtures)) S.singleFixtures = [];
+        return S.singleFixtures;
+      }
+      function omSaveFixture(){
+        if (!requireSignIn('save a fixture')) return;
+        if (!omValidate()) return;
+        var v = omFormValues();
+        singleFixtures().push({
+          id: Date.now(), teamA: om.teamA, teamB: om.teamB,
+          venue: v.venue, date: v.date, time: v.time,
+          overs: om.overs, format: om.format, wickets: om.wickets, ballType: om.ballType,
+          scorerEmailHash: v.scorerEmail ? hashEmail(v.scorerEmail) : '', ownerUid: currentUid(), ownerName: authDisplayName(), at: Date.now()
+        });
+        ensureTournamentTeam(om.teamA); ensureTournamentTeam(om.teamB);
+        commit('Fixture saved', true);
+        renderOmFixtures();
+        toast('✓ Fixture saved — ' + om.teamA + ' vs ' + om.teamB + '. Start it any time from Saved Fixtures below.');
+      }
+      function fixtureMetaLine(f){
+        var parts = [];
+        if (f.date) parts.push(fmtDateShort(f.date));
+        if (f.time) parts.push(f.time);
+        if (f.venue) parts.push(f.venue);
+        if (f.overs) parts.push(f.overs + ' overs' + (f.format ? ' • ' + f.format : '') + (f.ballType ? ' • ' + f.ballType : ''));
+        if (f.scorerEmailHash) parts.push('Designated scorer set');
+        return parts.join(' • ');
+      }
+      function renderOmFixtures(){
+        var card = $('omFxCard'), el = $('omFxList');
+        if (!card || !el) return;
+        var list = singleFixtures().slice().reverse();
+        card.hidden = !list.length;
+        el.innerHTML = list.map(function(f){
+          return '<div class="om-fx-row"><div class="om-fx-teams">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>'
+            + '<div class="om-fx-meta">' + esc(fixtureMetaLine(f)) + '</div>'
+            + '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="omStartFixture(' + f.id + ')">Toss &amp; Start →</button>'
+            + '<button type="button" class="btn ghost sm" onclick="omRemoveFixture(' + f.id + ')">Remove</button></div></div>';
+        }).join('');
+      }
+      function omRemoveFixture(id){
+        var list = singleFixtures();
+        var f = null;
+        list.forEach(function(x){ if (x.id === id) f = x; });
+        if (!f) return;
+        if (f.ownerUid && f.ownerUid !== currentUid()){
+          toast('🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that account can remove it.');
+          return;
+        }
+        S.singleFixtures = list.filter(function(x){ return x.id !== id; });
+        commit('Fixture removed', true);
+        renderOmFixtures();
+        toast('Fixture removed');
+      }
+      function omStartFixture(id){
+        var f = null;
+        singleFixtures().forEach(function(x){ if (x.id === id) f = x; });
+        if (!f) return;
+        om.teamA = f.teamA; om.teamB = f.teamB;
+        om.overs = f.overs; om.format = f.format || ''; om.wickets = f.wickets || 10; om.ballType = f.ballType || '';
+        if ($('omVenue')) $('omVenue').value = f.venue || '';
+        if ($('omDate') && f.date) $('omDate').value = f.date;
+        if ($('omTime') && f.time) $('omTime').value = f.time;
+        if ($('omScorer')) $('omScorer').value = '';
+        om.fixtureScorerHash = f.scorerEmailHash || ''; /* the fixture keeps its designated scorer — as a hash, never the address */
+        pendingMatchKind = 'single';
+        omRenderTeams(); omRenderFormatSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        omStartMatchTap();
+      }
+      function singleFixtureRowHTML(f){
+        var label = [f.date ? fmtDateShort(f.date) : '', f.time || '', f.venue || ''].filter(Boolean).join(' • ');
+        var meta = [];
+        if (f.overs) meta.push(f.overs + ' overs');
+        if (f.format) meta.push(f.format);
+        return '<div class="ml-row">' + mlLabel([label], false)
+          + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
+          + '<div class="ml-status muted">Upcoming' + (meta.length ? ' • ' + esc(meta.join(' • ')) : '') + '</div></div>';
+      }
+      /* ----- Toss, then Start Scoring ----- */
+      function omStartMatchTap(){
+        if (!omValidate()) return;
+        om.tossWinner = ''; om.tossDecision = '';
+        renderTossModal();
+        $('tossModal').classList.add('show');
+      }
+      function closeTossModal(){ $('tossModal').classList.remove('show'); }
+      function renderTossModal(){
+        var grid = $('tossGrid'); if (!grid) return;
+        grid.innerHTML = [om.teamA, om.teamB].map(function(n, i){
+          return '<button type="button" class="toss-card' + (om.tossWinner === n ? ' sel' : '') + '" onclick="tossPick(' + i + ')">'
+            + '<span class="om-circle c' + (i % 4) + '"><span class="om-ini">' + esc(tnInitials(n)) + '</span></span>'
+            + '<span class="toss-name">' + esc(n) + '</span></button>';
+        }).join('');
+        var b = $('tossChipBat'), w = $('tossChipBowl');
+        if (b) b.classList.toggle('sel', om.tossDecision === 'bat');
+        if (w) w.classList.toggle('sel', om.tossDecision === 'bowl');
+      }
+      function tossPick(i){
+        om.tossWinner = i === 0 ? om.teamA : om.teamB;
+        renderTossModal();
+      }
+      function tossDecide(d){
+        om.tossDecision = d;
+        renderTossModal();
+      }
+      function omStartScoring(){
+        if (!om.tossWinner){ toast('⚠️ Who won the toss? Tap the winning team'); return; }
+        if (!om.tossDecision){ toast('⚠️ Decided to Bat or Bowl? Tap one'); return; }
+        if (scoringLocked()){ closeTossModal(); toast('⏳ Still connecting to Firebase — scoring unlocks as soon as the live match loads. Try again in a moment.'); return; }
+        if (!requireSignIn('start a match')){ closeTossModal(); return; }
+        var curOwner = S.ownerUid || '';
+        if (liveMatchExists() && curOwner && curOwner !== currentUid()){
+          closeTossModal();
+          toast('🔒 The current match belongs to ' + (S.ownerName || 'another account') + ' — only its owner can replace it with a new match. You are signed in as ' + authDisplayName() + '.');
+          return;
+        }
+        var v = omFormValues();
+        /* Feed the shared start path: the Match Setup inputs carry
+           the teams / overs / venue, the toss selects carry the toss,
+           and nextMatchMeta / nextWicketsLimit carry the rest. */
+        $('teamA').value = om.teamA;
+        $('teamB').value = om.teamB;
+        $('oversLimit').value = om.overs;
+        $('venue').value = v.venue;
+        refreshTossOptions();
+        $('tossWinner').value = om.tossWinner;
+        $('tossDecision').value = om.tossDecision;
+        nextMatchMeta = { format: om.format, ballType: om.ballType, date: v.date, time: v.time, scorerEmail: v.scorerEmail, scorerEmailHash: v.scorerEmail ? '' : (om.fixtureScorerHash || '') };
+        om.fixtureScorerHash = '';
+        nextWicketsLimit = om.wickets || 10;
+        closeTossModal();
+        doStartMatch(om.teamA, om.teamB, om.tossWinner, om.tossDecision);
+        setView('scorer');
+      }
+
       /* ---------- tournaments: create / open (nothing is deleted) ---------- */
       function tournamentsArchive(){
         if (!Array.isArray(S.tournamentsArchive)) S.tournamentsArchive = [];
@@ -7640,6 +8490,7 @@
         var target = $('view-'+v);
         if (target) target.classList.add('show');
         if (v==='history'){ try { syncHistBackLabel(); } catch(e){} }
+        if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
         document.querySelectorAll('.vtab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
         var segBar = $('segmentBar'); if (segBar) segBar.hidden = !currentSegment;
         var tabs = $('singleTabs'); if (tabs) tabs.hidden = !isSingle;
@@ -7670,7 +8521,7 @@
         try { hv = (location.hash || '').replace(/^#/, ''); } catch(e){}
         var fallback = document.body.classList.contains('viewer-flow') ? 'live' : 'home';
         var target = st.view || hv || fallback;
-        var known = ['home','live','console','resume','tournaments','scorer','scoreboard','overlay','history','tournament'];
+        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament'];
         if (known.indexOf(target) === -1) target = fallback;
         navFromPop = true;
         if (target !== currentViewName) setView(target);
@@ -7757,6 +8608,7 @@
         else if (hashView === 'live' || hashView === 'viewer') enterViewerHome(true);
         else if (hashView === 'scorer' || hashView === 'control' || hashView === 'console') enterControlMode();
         else if (hashView === 'resume') setView('resume');
+        else if (hashView === 'myteams') setView('myteams');
         else if (hashView === 'tournaments') setView('tournaments');
         else if (hashView === 'overlay'){
           setDeviceViewerFlag(true);
@@ -7847,7 +8699,7 @@
         } else if (window.__fbLibFailed){
           fbConnecting = false; fbReady = false; setPadLocked(false);
           setFbStage('lib-failed');
-          setConnStatus('local', '⚠️ The Firebase library could not be loaded from any mirror — running in Local Mode; scoring is backed up on this device only. The connection panel above retries on its own; check the internet connection, or tap Retry connection there.');
+          setConnStatus('local', '⚠️ The Firebase library could not be loaded from any mirror — running in Local Mode; scoring is backed up on this device only. It retries on its own — check the internet connection; the status line at the top shows when it is live again.');
           scheduleFbRetry();
         } else {
           setFbStage('lib-loading');
@@ -7856,7 +8708,7 @@
           window.__onFbLibFailed = function(){
             fbConnecting = false; fbReady = false; setPadLocked(false);
             setFbStage('lib-failed');
-            setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. The connection panel above retries on its own; check the internet connection, or tap Retry connection there.');
+            setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. It retries on its own — check the internet connection; the status line at the top shows when it is live again.');
             toast('⚠️ Firebase library failed to load — Local Mode');
             scheduleFbRetry();
           };
