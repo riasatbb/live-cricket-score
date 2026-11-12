@@ -538,21 +538,19 @@
       body.viewer-mode #tnPanel-matches .match-row .rowflex{display:none !important}
       .viewer-backbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
       body.viewer-inpage .viewer-backbar{display:flex}
-      /* The History & Reports page keeps its back bar in every mode —
-         a scorer arriving from the console must always have a way back,
-         not only viewers in the in-page viewer flow. */
-      #view-history .viewer-backbar{display:flex}
-      /* The same rule for Resume Scoring and the Tournaments list:
-         both are reached from the Scorer Console, and on those two
-         screens the top tab bar is hidden too, so without their back
-         bar the scorer had no visible way back at all. Viewers never
-         open these two screens, so nothing changes for them. */
-      #view-resume .viewer-backbar{display:flex}
-      #view-tournaments .viewer-backbar{display:flex}
+      /* History & Reports, Resume Scoring and the Tournaments list
+         are clean inner pages now: each opens with a round back icon
+         at the left and its own centred title (.clean-top) — no boxed
+         back bar, no global header — so they need no forced back-bar
+         rule here. The way back is always visible in every mode. */
       /* The Scorer Console home keeps its back bar too: it is reached
          from the mode chooser, and its top tab bar is hidden there,
          so without this bar there was no in-app way back to All Modes. */
       #view-console .viewer-backbar{display:flex}
+      /* The tournament viewer's Back-to-Scoreboard bar follows the
+         clean-interface rule too: no box, border or shadow — just the
+         back control on the page background. */
+      #view-tournament .viewer-backbar{background:none;border:none;box-shadow:none;padding:2px 0}
       .sb-view-tour-card h2{border:none;text-align:center}
       .sb-view-tour-card .sub{max-width:520px;margin-left:auto;margin-right:auto}
       .sb-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px;padding:6px 2px 2px}
@@ -882,20 +880,32 @@
       .sq-role{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
       .sq-jersey{flex:none;background:var(--gold);border:1px solid var(--gold);color:#241a02;font-size:11.5px;font-weight:800;border-radius:999px;padding:1px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
       .hist-del{color:var(--red)}
-      /* ---------- home pages: dedicated History & Reports section ----------
-         A full section of its own on the two control-side home pages
-         (mode chooser + Scorer Console home): the finished matches
-         themselves, newest first, each with View / Edit / Delete —
-         the owner manages old matches without opening the full
-         History page. Viewers only ever get the View button: Edit
-         and Delete render solely for entries histEntryDeletable()
-         approves, and the CSS below hides them in viewer modes too. */
-      .home-hist{margin-top:26px;text-align:left}
-      .home-hist-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
-      .home-hist-head h3{font-family:"Barlow Condensed",sans-serif;font-size:27px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:0}
-      .home-hist .hist-match{background:var(--surface);box-shadow:var(--shadow)}
-      .home-hist-search{margin:10px 0 12px}
+      /* ---------- History & Reports: clean inner page ----------
+         No match data lives on the home pages any more — each home
+         carries ONE History & Reports box, and tapping it opens this
+         page. Like every inner page it opens clean: no global header,
+         just a round back icon at the left and the centred title
+         (.clean-top). Inside, two big options — Past Matches and
+         Reports — and only the chosen panel is shown. Edit / Delete
+         on a past match render solely for entries histEntryDeletable()
+         approves, and the rule below hides them in viewer modes too. */
       body.viewer-mode .hist-edit-btn,body.link-viewer .hist-edit-btn{display:none !important}
+      #view-history{text-align:center}
+      #view-history .card{text-align:left}
+      .hist-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px;margin:0 auto 16px}
+      @media (max-width:380px){.hist-opts{grid-template-columns:1fr}}
+      .hist-opt{display:block;width:100%;text-align:center;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:18px 14px 15px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer}
+      .hist-opt:active{transform:scale(.99)}
+      .hist-opt .ho-icon{font-size:30px;line-height:1;display:block;margin-bottom:7px}
+      .hist-opt .ho-title{display:block;font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
+      .hist-opt .ho-sub{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.4}
+      .hist-opt.active{border-color:var(--green);outline:2px solid var(--green);outline-offset:1px}
+      .hist-panel{max-width:860px;margin:0 auto;text-align:left}
+      .hist-panel[hidden]{display:none !important}
+      .hist-search{margin:12px 0 4px}
+      .rep-output{width:100%;min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre;resize:vertical}
+      .hist-quick{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:-4px 0 14px}
+      body.viewer-mode .hist-quick .scorer-entry-btn,body.link-viewer .hist-quick .scorer-entry-btn{display:none !important}
       /* ---------- scorer console home: three options, nothing else ---------- */
       .console-home{display:grid;gap:12px;max-width:640px}
       .console-opt{display:block;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer}
@@ -1032,6 +1042,84 @@
       body.viewer-mode #view-myteams .sq-x{display:none !important}
       body.viewer-mode #view-myteams .names-row,body.viewer-mode #view-myteams .mt-entry{display:none !important}
       body.link-viewer #view-home .mode-card.myteams-entry,body.link-viewer #view-console .console-opt.myteams-entry{display:none !important}
+
+      /* ---------- colour accents: lively, never plain ----------
+         A cricket palette, one colour per job — field green for
+         playing / Past Matches, sky blue for teams, gold for
+         tournaments and generating reports, warm rust for history.
+         Tints are translucent so they sit happily on both the light
+         and dark surfaces; titles and body text stay in --ink, so
+         nothing loses contrast. Colour lives on icon chips, tinted
+         card washes, top stripes and action buttons — the layout
+         itself stays exactly as clean as before. */
+      .mode-intro h2::after,.clean-top h2::after{content:"";display:block;width:46px;height:4px;border-radius:99px;background:var(--gold);margin:7px auto 0}
+      .clean-back{border-color:rgba(14,91,60,.5);color:var(--green)}
+      .clean-back:hover{background:#dcefe2}
+      @media (prefers-color-scheme: dark){.clean-back:hover{background:#173527}}
+      /* Home mode cards: a tinted wash + a coloured icon disc each */
+      .mode-card .mode-icon{display:flex;align-items:center;justify-content:center;width:66px;height:66px;border-radius:50%;font-size:32px;margin-bottom:12px}
+      .mc-single{background:linear-gradient(165deg,rgba(14,91,60,.13),var(--surface) 58%);border-color:rgba(14,91,60,.45)}
+      .mc-single .mode-icon{background:#d8edde}
+      .mc-single:hover{border-color:var(--green)}
+      .mc-teams{background:linear-gradient(165deg,rgba(23,93,143,.13),var(--surface) 58%);border-color:rgba(23,93,143,.45)}
+      .mc-teams .mode-icon{background:#d9e9f5}
+      .mc-teams .mode-cta{background:var(--blue);color:#fff}
+      .mc-teams:hover{border-color:var(--blue)}
+      .mode-card.tournament{background:linear-gradient(165deg,rgba(225,154,38,.16),var(--surface) 58%);border-color:rgba(225,154,38,.55)}
+      .mode-card.tournament .mode-icon{background:#fbeecd}
+      .mc-history{background:linear-gradient(165deg,rgba(176,74,36,.13),var(--surface) 58%);border-color:rgba(176,74,36,.5)}
+      .mc-history .mode-icon{background:#f9e2d4}
+      .mc-history .mode-cta{background:#9c4423;color:#fff}
+      .mc-history:hover{border-color:#b55024}
+      @media (prefers-color-scheme: dark){
+        .mc-single .mode-icon{background:#173527}
+        .mc-teams .mode-icon{background:#16283a}
+        .mode-card.tournament .mode-icon{background:#3a2c10}
+        .mc-history .mode-icon{background:#3d2317}
+        .mc-history .mode-cta{background:#c05a2e}
+      }
+      /* Scorer Console options: the same four colours, quieter */
+      .console-opt.co-single{background:linear-gradient(120deg,rgba(14,91,60,.12),rgba(14,91,60,.02));border-color:rgba(14,91,60,.45)}
+      .console-opt.co-teams{background:linear-gradient(120deg,rgba(23,93,143,.12),rgba(23,93,143,.02));border-color:rgba(23,93,143,.45)}
+      .console-opt.co-tournament{background:linear-gradient(120deg,rgba(225,154,38,.15),rgba(225,154,38,.03));border-color:rgba(225,154,38,.55)}
+      .console-opt.co-history{background:linear-gradient(120deg,rgba(176,74,36,.12),rgba(176,74,36,.02));border-color:rgba(176,74,36,.5)}
+      /* Tournament segment pill turns gold when it is the active mode */
+      #segBtnTournament.active{background:var(--gold);border-color:var(--gold);color:#241a02}
+      /* Viewer home: the History entry is a warm rust-tinted box */
+      #view-live .hist-entry-btn{background:rgba(176,74,36,.09);border-color:rgba(176,74,36,.5);color:var(--ink)}
+      /* History & Reports options: green for matches, gold for reports */
+      .hist-opt .ho-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;font-size:27px;margin:0 auto 8px}
+      .hist-opt.ho-matches{background:linear-gradient(165deg,rgba(14,91,60,.12),var(--surface) 62%);border-color:rgba(14,91,60,.4)}
+      .hist-opt.ho-matches .ho-icon{background:#d8edde}
+      .hist-opt.ho-matches.active{border-color:var(--green);outline-color:var(--green);background:linear-gradient(165deg,rgba(14,91,60,.22),var(--surface) 65%)}
+      .hist-opt.ho-matches.active .ho-title{color:var(--green)}
+      .hist-opt.ho-reports{background:linear-gradient(165deg,rgba(225,154,38,.15),var(--surface) 62%);border-color:rgba(225,154,38,.5)}
+      .hist-opt.ho-reports .ho-icon{background:#fbeecd}
+      .hist-opt.ho-reports.active{border-color:var(--gold);outline-color:var(--gold);background:linear-gradient(165deg,rgba(225,154,38,.26),var(--surface) 65%)}
+      .hist-opt.ho-reports.active .ho-title{color:var(--gold-ink)}
+      @media (prefers-color-scheme: dark){
+        .hist-opt.ho-matches .ho-icon{background:#173527}
+        .hist-opt.ho-reports .ho-icon{background:#3a2c10}
+      }
+      /* Panel headings pick up their panel's colour */
+      #histPanel-matches>.card>h2{color:var(--green);border-bottom-color:rgba(14,91,60,.45)}
+      #histPanel-reports>.card>h2{color:var(--gold-ink);border-bottom-color:rgba(225,154,38,.55)}
+      /* Each past match: a white card with a green top stripe and a
+         soft shadow, so the list reads as matches, not plain text */
+      .hist-match{background:var(--surface);box-shadow:var(--shadow);border-top:3px solid rgba(14,91,60,.55)}
+      .hist-match-head span:first-child{color:var(--green)}
+      @media (prefers-color-scheme: dark){.hist-match-head span:first-child{color:#7fd6a8}}
+      /* Leaderboards: gold-ruled board titles, tinted header row */
+      .rep-board h3{color:var(--green);border-bottom:2px solid rgba(225,154,38,.55);padding-bottom:5px}
+      .rep-board thead th{background:rgba(225,154,38,.13)}
+      /* Report generator actions: blue Copy, teal Download */
+      .btn.rep-copy{background:var(--blue);color:#fff}
+      .btn.rep-copy:hover{background:#124e73}
+      .btn.rep-dl{background:#0f766e;color:#fff}
+      .btn.rep-dl:hover{background:#0b5a54}
+      @media (prefers-color-scheme: dark){.btn.rep-copy{background:#1d6fa5}.btn.rep-dl{background:#12836f}}
+      .rep-output{background:#fdf6e0;border-color:rgba(225,154,38,.6)}
+      @media (prefers-color-scheme: dark){.rep-output{background:#221a0d}}
     </style>
   </head>
   <body>
@@ -1076,12 +1164,12 @@
           <h2>What are you covering?</h2>
         </div>
         <div class="mode-grid">
-          <button type="button" class="mode-card" onclick="setSegment('single')">
+          <button type="button" class="mode-card mc-single" onclick="setSegment('single')">
             <span class="mode-icon" aria-hidden="true">🏏</span>
             <h3>Single Match</h3>
             <span class="mode-cta">Open Single Match →</span>
           </button>
-          <button type="button" class="mode-card myteams-entry" onclick="setView('myteams')">
+          <button type="button" class="mode-card myteams-entry mc-teams" onclick="setView('myteams')">
             <span class="mode-icon" aria-hidden="true">👥</span>
             <h3>My Teams</h3>
             <span class="mode-cta">Manage Teams →</span>
@@ -1091,20 +1179,11 @@
             <h3>Tournament</h3>
             <span class="mode-cta">Open Tournament →</span>
           </button>
-          <button type="button" class="mode-card" onclick="setView('history')">
+          <button type="button" class="mode-card mc-history" onclick="setView('history')">
             <span class="mode-icon" aria-hidden="true">📜</span>
             <h3>History &amp; Reports</h3>
             <span class="mode-cta">Open History &amp; Reports →</span>
           </button>
-        </div>
-        <div class="home-hist" id="homeHistSection">
-          <div class="home-hist-head">
-            <h3>📜 History &amp; Reports</h3>
-            <button type="button" class="btn ghost sm" onclick="setView('history')">Filters, Leaderboards &amp; Full Reports →</button>
-          </div>
-          <p class="note" style="margin:0">Finished matches, newest first. Open the full scorecard, edit the match details, or delete a match — right from here.</p>
-          <input class="home-hist-search" type="search" placeholder="Search past matches — team, venue or tournament" aria-label="Search past matches" oninput="homeHistSearchInput(this)" />
-          <div id="homeHistList"></div>
         </div>
       </section>
 
@@ -1118,29 +1197,24 @@
           <h2>Scorer Console</h2>
         </div>
         <div class="console-home">
-          <button type="button" class="console-opt" onclick="consoleStartSingle()">
+          <button type="button" class="console-opt co-single" onclick="consoleStartSingle()">
             <span class="co-title">🏏 Start Single Match</span>
           </button>
           <button type="button" class="console-opt resume" id="consoleResume" onclick="setView('resume')" hidden>
             <span class="co-title">▶ Resume Scoring</span>
             <span class="co-sub" id="consoleResumeSub">Matches in progress — pick one to continue scoring.</span>
           </button>
-          <button type="button" class="console-opt myteams-entry" onclick="setView('myteams')">
+          <button type="button" class="console-opt myteams-entry co-teams" onclick="setView('myteams')">
             <span class="co-title">👥 My Teams</span>
             <span class="co-sub" id="consoleMyTeamsSub">Add teams and manage their players.</span>
           </button>
-          <button type="button" class="console-opt" onclick="setView('tournaments')">
+          <button type="button" class="console-opt co-tournament" onclick="setView('tournaments')">
             <span class="co-title">🏆 Tournament</span>
           </button>
-        </div>
-        <div class="home-hist" id="consoleHistSection" style="max-width:640px;margin-left:auto;margin-right:auto">
-          <div class="home-hist-head">
-            <h3>📜 History &amp; Reports</h3>
-            <button type="button" class="btn ghost sm" onclick="setView('history')">Filters, Leaderboards &amp; Full Reports →</button>
-          </div>
-          <p class="note" style="margin:0">Finished matches, newest first. Open the full scorecard, edit the match details, or delete a match — right from here.</p>
-          <input class="home-hist-search" type="search" placeholder="Search past matches — team, venue or tournament" aria-label="Search past matches" oninput="homeHistSearchInput(this)" />
-          <div id="consoleHistList"></div>
+          <button type="button" class="console-opt co-history" onclick="setView('history')">
+            <span class="co-title">📜 History &amp; Reports</span>
+            <span class="co-sub">Past matches — view, edit or delete — and reports you can generate, copy or download.</span>
+          </button>
         </div>
       </section>
 
@@ -1205,10 +1279,11 @@
 
       <!-- ================= TOURNAMENTS: PICK OR CREATE ================= -->
       <section class="view" id="view-tournaments">
-        <div class="authbar-slot"></div>
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
+          <h2>Tournaments</h2>
         </div>
+        <div class="authbar-slot"></div>
         <div class="card">
           <h2>🏆 Tournaments</h2>
           <button type="button" class="btn" onclick="createTournament()">➕ Create Tournament</button>
@@ -1218,8 +1293,9 @@
 
       <!-- ================= RESUME SCORING: ALL LIVE MATCHES ================= -->
       <section class="view" id="view-resume">
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
+          <h2>Resume Scoring</h2>
         </div>
         <div class="card">
           <h2>▶ Matches in Progress</h2>
@@ -1538,27 +1614,67 @@
 
       <!-- ================= HISTORY & REPORTS ================= -->
       <section class="view" id="view-history">
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" id="histBackBtn" onclick="historyBack()">← Back</button>
+        <div class="clean-top">
+          <button type="button" class="clean-back" id="histBackBtn" onclick="historyBack()" aria-label="Back">←</button>
+          <h2>History &amp; Reports</h2>
+        </div>
+        <div class="hist-quick">
           <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
           <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
         </div>
-        <div class="card">
-          <h2>📜 Match History &amp; Reports</h2>
-          <div id="histSyncStatus"></div>
-          <div class="grid3" style="margin-top:14px">
-            <div><label for="repTnFilter">Tournament</label><select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select></div>
-            <div><label for="repTeamFilter">Team</label><select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select></div>
-            <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat" oninput="repFilterChanged()" /></div></div>
+        <div class="hist-opts" role="tablist" aria-label="History and Reports options">
+          <button type="button" class="hist-opt ho-matches active" id="histOptMatches" data-histtab="matches" role="tab" aria-selected="true" onclick="setHistTab('matches')">
+            <span class="ho-icon" aria-hidden="true">🏏</span>
+            <span class="ho-title">Past Matches</span>
+            <span class="ho-sub">Every finished match — open it, edit its details, or delete it from here.</span>
+          </button>
+          <button type="button" class="hist-opt ho-reports" id="histOptReports" data-histtab="reports" role="tab" aria-selected="false" onclick="setHistTab('reports')">
+            <span class="ho-icon" aria-hidden="true">📊</span>
+            <span class="ho-title">Reports</span>
+            <span class="ho-sub">Career leaderboards and reports you can generate, copy or download.</span>
+          </button>
+        </div>
+
+        <div class="hist-panel" id="histPanel-matches">
+          <div class="card">
+            <h2>🏏 Past Matches</h2>
+            <div id="histSyncStatus"></div>
+            <input class="hist-search" id="histSearch" type="search" placeholder="Search past matches — team, venue, tournament or result" aria-label="Search past matches" oninput="histSearchInput(this)" />
+            <div class="grid3" style="margin-top:12px">
+              <div><label for="repTnFilter">Tournament</label><select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select></div>
+              <div><label for="repTeamFilter">Team</label><select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select></div>
+              <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat" oninput="repFilterChanged()" /></div></div>
+            </div>
           </div>
-        </div>
-        <div class="card">
-          <h2>Career Leaderboards</h2>
-          <div id="repBoards"></div>
-        </div>
-        <div class="card">
-          <h2>Past Matches</h2>
           <div id="histList"></div>
+        </div>
+
+        <div class="hist-panel" id="histPanel-reports" hidden>
+          <div class="card">
+            <h2>Career Leaderboards</h2>
+            <p class="sub">These follow the Tournament, Team and Player filters in the Past Matches panel.</p>
+            <div id="repBoards"></div>
+          </div>
+          <div class="card">
+            <h2>Generate a Report</h2>
+            <p class="sub">Built only from your recorded matches — the filters in Past Matches and the scope below decide what goes in. Nothing is invented: with no matches in scope, the report says so.</p>
+            <div class="grid2">
+              <div><label for="repGenType">Report type</label><select id="repGenType">
+                <option value="results">Match Results Summary</option>
+                <option value="batting">Batting Report</option>
+                <option value="bowling">Bowling Report</option>
+                <option value="teams">Team Summary</option>
+                <option value="potm">Player of the Match Awards</option>
+              </select></div>
+              <div><label for="repGenScope">Scope</label><select id="repGenScope"><option value="">All matches</option><option value="single">Single Matches only</option></select></div>
+            </div>
+            <div class="rowflex" style="margin-top:14px">
+              <button type="button" class="btn gold" onclick="generateReport()">Generate Report</button>
+              <button type="button" class="btn rep-copy" onclick="copyReport()">Copy</button>
+              <button type="button" class="btn rep-dl" onclick="downloadReport()">Download PDF</button>
+            </div>
+            <div style="margin-top:14px"><label for="repOutput">Report</label><textarea class="rep-output" id="repOutput" readonly placeholder="Choose a report type and scope, then tap Generate Report."></textarea></div>
+          </div>
         </div>
       </section>
 
@@ -2079,6 +2195,13 @@
          device's unconfirmed backup copy: a match that has not
          reached the server is shown nowhere until it syncs. */
       var fbConfirmedState = null;
+      /* True once Firebase has actually answered with a snapshot of
+         liveMatch in THIS session (the snapshot may be null — the
+         server saying "there is no live match" is still server
+         data). Until then the viewer end must not state anything
+         about the match at all: not this device's backup, and not
+         even "no match" — only a waiting-for-server state. */
+      var fbServerSeen = false;
       function liveDisplayState(){ return fbConfirmedState || freshState(); }
       /* Run fn with S swapped to the confirmed display state, then
          restore the real state — the mechanism behind the rule
@@ -4794,7 +4917,7 @@
         try { renderTournamentHome(); } catch(e){}
         /* save silently without a toast on every keystroke */
         S.updatedAt = Date.now();
-        if (fbRef && !fbReady) fbLocalDirty = true;
+        if (!fbReady) fbLocalDirty = true;
         saveLocalBackup();
         if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
         pushToFirebase();
@@ -5497,7 +5620,20 @@
           if (batFirst) lines += mlTeamLine(batFirst);
           if (other && other !== batFirst) lines += mlTeamLine(other);
         }
-        var aria = (S.teamA || S.teamB) ? ('Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2')) : 'Open the scoreboard';
+        /* The row is tappable ONLY when a real match exists in the
+           confirmed state (both teams set). The empty state — "No
+           match is being scored right now" — is a plain, inert row:
+           it used to be a button that opened an empty scoreboard
+           ("— v —", 0-0, labelled LIVE) for a match that did not
+           exist, and Back from there resurfaced the ghost. */
+        if (!(S.teamA && S.teamB)){
+          return '<div class="ml-row">'
+            + mlLabel([S.venue, tnName], false)
+            + lines
+            + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
+            + '</div>';
+        }
+        var aria = 'Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
         return '<div class="ml-row tap" role="button" tabindex="0" aria-label="' + esc(aria) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
           + mlLabel([S.venue, tnName], !finished && started)
           + lines
@@ -5541,6 +5677,16 @@
       }
       function renderLiveHomeDisplay(){
         var listEl = $('liveList'); if (!listEl) return;
+        /* Viewer end = server data only. Until Firebase has
+           answered in this session, this page states nothing about
+           any match — no on-device backup, and not even "no match"
+           (that claim, too, must come from the server). Only a
+           waiting row is shown; the first server snapshot replaces
+           it with the real list. */
+        if (!fbServerSeen){
+          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server — live matches will appear here as soon as it answers…</div></div></div>';
+          return;
+        }
         normalizeTournament();
         var tn = S.tournament;
         var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
@@ -5642,9 +5788,43 @@
         setView('console');
       }
       function openLiveMatch(){
+        /* The scoreboard opens only for a match the SERVER has
+           confirmed (both teams present in the confirmed state).
+           Anything else — no server answer yet, or a confirmed
+           blank / deleted match — stays on the Live Matches list:
+           an empty scoreboard for a non-existent match must never
+           be reachable. */
+        if (!fbServerSeen){ toast('⏳ Still connecting to the server — the live match will appear here in a moment'); return; }
+        var ds = liveDisplayState();
+        if (!ds || !ds.teamA || !ds.teamB){
+          toast('No match is being scored right now');
+          try { renderLiveHome(); } catch(e){}
+          return;
+        }
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         setView('scoreboard');
+      }
+      /* Ghost-match guard: while a viewer sits on the Public
+         Scoreboard, the moment the server-confirmed state says
+         there is no match (both teams gone — e.g. the match was
+         deleted), the viewer is returned to the Live Matches list
+         instead of being left on an empty "— v —" scoreboard
+         labelled LIVE for a match that no longer exists. The guard
+         waits until the server has answered (fbServerSeen), so a
+         real match that is still loading is never bounced. The
+         scorer's own console carries no viewer classes and is
+         never bounced; an archived match opened from History is
+         not the live scoreboard and is left alone. */
+      function guardViewerScoreboard(){
+        if (typeof archiveView !== 'undefined' && archiveView) return;
+        if (typeof currentViewName === 'undefined' || currentViewName !== 'scoreboard') return;
+        var viewer = document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer');
+        if (!viewer) return;
+        if (!fbServerSeen) return;
+        if (fbConfirmedState && fbConfirmedState.teamA && fbConfirmedState.teamB) return;
+        toast('No match is being scored right now');
+        backToLiveMatches();
       }
       function backToLiveMatches(){
         /* From an archived match opened out of History, Back returns
@@ -5671,7 +5851,46 @@
       function syncHistBackLabel(){
         var b = $('histBackBtn'); if (!b) return;
         var viewer = document.body.classList.contains('viewer-inpage') || document.body.classList.contains('viewer-mode');
-        b.textContent = viewer ? '← Back to Live Matches' : '← Back to Scorer Console';
+        var label = viewer ? 'Back to Live Matches' : 'Back to Scorer Console';
+        b.setAttribute('aria-label', label);
+        b.title = label;
+      }
+      /* ---------- History & Reports: Past Matches / Reports tabs ----------
+         The page opens on Past Matches every time it is entered
+         (setView resets the tab); Reports is reached only by tapping
+         its option card, or explicitly via openHistoryReports(). Only
+         the active panel is shown. */
+      var histTab = 'matches';
+      function setHistTab(tab){
+        histTab = (tab === 'reports') ? 'reports' : 'matches';
+        var pm = $('histPanel-matches'), pr = $('histPanel-reports');
+        if (pm) pm.hidden = histTab !== 'matches';
+        if (pr) pr.hidden = histTab !== 'reports';
+        document.querySelectorAll('.hist-opt').forEach(function(b){
+          var on = b.getAttribute('data-histtab') === histTab;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        if (histTab === 'reports'){ try { renderRepScopeOptions(); } catch(e){} }
+      }
+      function openHistoryReports(){
+        setView('history');
+        setHistTab('reports');
+      }
+      /* Free-text search over the Past Matches list (team, venue,
+         tournament, result) — on top of the Tournament / Team /
+         Player filters, which keep working exactly as before. */
+      var histSearchQuery = '';
+      function histSearchInput(el){
+        histSearchQuery = el ? (el.value || '') : '';
+        try { renderHistList(); } catch(e){}
+      }
+      function histSearchMatch(e){
+        var q = histSearchQuery.trim().toLowerCase();
+        if (!q) return true;
+        var res = e.resultText || '';
+        try { if (!res) res = matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }); } catch(err){}
+        return [e.teamA, e.teamB, e.venue, e.tournamentName, res, e.potmName].join(' ').toLowerCase().indexOf(q) > -1;
       }
       function exitViewerMode(){
         setDeviceViewerFlag(false);
@@ -5951,8 +6170,12 @@
            the control page restores the score instantly. Firebase is
            pushed only once its first snapshot has been read (fbReady) —
            before that, a push could overwrite the real match with this
-           tab's not-yet-loaded state. */
-        if (fbRef && !fbReady) fbLocalDirty = true;
+           tab's not-yet-loaded state. Any change made before Firebase
+           is ready — connected or not — marks this session's work as
+           its own (fbLocalDirty): that flag, and only that flag, is
+           what may later seed or re-sync an empty/older database, so
+           a merely-restored backup can never be republished. */
+        if (!fbReady) fbLocalDirty = true;
         saveLocalBackup();
         renderAll(true);
         if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
@@ -6037,7 +6260,7 @@
         fbRetryStopped = false;
         setFbStage('db-connecting');
         fbReady = false; fbConnecting = true; fbErrorShown = false;
-        fbConfirmedState = null;
+        fbConfirmedState = null; fbServerSeen = false;
         setPadLocked(true);
         setConnStatus('connecting', '⏳ Connecting to Firebase — loading the live match from the database before scoring unlocks…');
         fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
@@ -6096,9 +6319,13 @@
           var v = snap.val();
           /* Whatever the database holds right now is the confirmed
              state — viewer surfaces show exactly this, even when
-             this device's own copy is ahead of it or stranded. */
+             this device's own copy is ahead of it or stranded. The
+             server has now answered (even with null = no live
+             match), so viewer surfaces may state what it said. */
+          fbServerSeen = true;
           fbConfirmedState = v ? deep(v) : null;
           if (shouldAdoptRemote(v)) adoptRemoteState(v);
+          try { guardViewerScoreboard(); } catch(e){}
         }, function(err){
           if (fbRef !== myRef) return;
           /* A failed read must never leave the pad locked forever or the
@@ -6111,12 +6338,18 @@
           scheduleFbRetry();
         });
         /* One-time read before any write: adopt remote if it exists. The
-           database is seeded ONLY with a state that carries a real match
-           (restored from this device's backup or already scored) — a
-           fresh tab's untouched 0/0 demo state is never written. */
+           database is seeded ONLY with work actually scored or edited
+           in THIS session (fbLocalDirty) that carries a real match —
+           a fresh tab's untouched 0/0 demo state is never written,
+           and neither is a state merely restored from this device's
+           on-device backup: the viewer end must only ever show what
+           the server holds, so an empty database stays empty (a
+           match deleted on the server must never be pushed back
+           from a phone's memory). */
         myRef.once('value').then(function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
+          fbServerSeen = true;
           fbConfirmedState = v ? deep(v) : null;
           if (v){
             if (shouldAdoptRemote(v)) adoptRemoteState(v);
@@ -6132,12 +6365,15 @@
             markFirebaseReady(isDefault);
             /* A pending delete is never seeded with the old match:
                the cleared state goes out through publishReset() once
-               Firebase is ready (see markFirebaseReady). */
-            if (!fbPendingDelete && (hasMeaningfulState(S) || fbPendingFreshPublish)){
+               Firebase is ready (see markFirebaseReady). And only
+               THIS session's own work (fbLocalDirty) may seed an
+               empty database — never a restored on-device backup. */
+            if (!fbPendingDelete && fbLocalDirty && hasMeaningfulState(S)){
               var pushedSeed = deep(S);
               myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSeed; saveLocalBackup(); try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'seed'); });
             }
           }
+          try { guardViewerScoreboard(); } catch(e){}
         }).catch(function(err){
           if (fbRef !== myRef) return;
           if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
@@ -6231,7 +6467,7 @@
         fbRetryAt = 0; fbRetryStopped = true;
         setFbStage('idle');
         fbRef=null; fbApp=null; fbIsDefault=false; fbReady=false; fbConnecting=false;
-        fbConfirmedState = null;
+        fbConfirmedState = null; fbServerSeen = false;
         fbAuth=null; authUser=null; renderAuthBar();
         setPadLocked(false);
         setConnStatus('local', 'Firebase disconnected — running in Local Mode. Scoring continues and is backed up on this device.');
@@ -6345,7 +6581,11 @@
          hand. The success toast appears only after an open call has
          actually gone through — never before, never on failure. */
       function openControlInBrowser(){
-        var url = location.origin + location.pathname + '?view=scorer';
+        /* The published control link, written out in full (the same
+           link shown in the "Your Two Links" card) — never built from
+           this page's own address, which inside a preview shell or the
+           app WebView is not the shareable address at all. */
+        var url = 'https://riasatbb.github.io/live-cricket-score/?view=scorer';
         var Browser = null;
         try {
           var C = window.Capacitor;
@@ -7708,7 +7948,7 @@
         renderArchiveScoreboard();
       }
       function closeHistoryMatch(){ var m = $('histModal'); if (m) m.classList.remove('show'); }
-      /* ---------- one match card, shared by History and the home section ---------- */
+      /* ---------- one match card for the Past Matches panel ---------- */
       function histMatchCardHTML(e){
         var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
         var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
@@ -7726,42 +7966,266 @@
           + '</div>';
         return '<div class="hist-match">' + head + lines + (res ? '<div class="mr-result">' + esc(res) + '</div>' : '') + potm + btns + '</div>';
       }
-      /* ---------- Home page: History & Reports section ----------
-         The same record book as the History page (allRecordMatches —
-         Firebase-confirmed archive plus the live entry), rendered
-         straight onto the home pages so old matches are one glance
-         away. View opens the match in the five-tab scoreboard (the
-         live-match interface, read-only); Edit and
-         Delete appear only where histEntryDeletable() approves —
-         the owner on the control side — exactly as on the History
-         page. Shows the newest matches; the full page keeps the
-         filters and leaderboards. */
-      var homeHistQuery = '';
-      var HOME_HIST_LIMIT = 10;
-      function homeHistSearchInput(el){
-        homeHistQuery = el ? (el.value || '') : '';
-        document.querySelectorAll('.home-hist-search').forEach(function(inp){ if (inp !== el) inp.value = homeHistQuery; });
-        renderHomeHistory();
+      /* ---------- Reports: scope options + text report generator ----------
+         Reports are computed ONLY from the real record book
+         (allRecordMatches — the Firebase-confirmed archive plus the
+         live entry), filtered by the existing Tournament / Team /
+         Player filters and by the chosen scope. With no matches in
+         scope the output says so plainly — no figures are invented. */
+      function renderRepScopeOptions(){
+        var sel = $('repGenScope'); if (!sel) return;
+        var cur = sel.value || '';
+        var names = {};
+        try { allRecordMatches().forEach(function(e){ if (e.tournamentName) names[e.tournamentName] = 1; }); } catch(e){}
+        var html = '<option value="">All matches</option><option value="single">Single Matches only</option>'
+          + Object.keys(names).sort().map(function(n){ return '<option value="tn:' + esc(n) + '">Tournament: ' + esc(n) + '</option>'; }).join('');
+        if (sel.innerHTML !== html) sel.innerHTML = html;
+        sel.value = cur;
+        if (sel.value !== cur) sel.value = '';
       }
-      function renderHomeHistory(){
-        var targets = [$('homeHistList'), $('consoleHistList')];
-        if (!targets[0] && !targets[1]) return;
-        var all = [];
-        try { all = allRecordMatches(); } catch(e){ all = []; }
-        var q = homeHistQuery.trim().toLowerCase();
-        var matches = q ? all.filter(function(e){
-          return [e.teamA, e.teamB, e.venue, e.tournamentName, e.resultText].join(' ').toLowerCase().indexOf(q) > -1;
-        }) : all;
-        var html;
-        if (!all.length){
-          html = '<div class="card"><p class="note" style="margin:0">No finished matches yet — when a match ends it is saved here automatically, and stays here.</p></div>';
-        } else if (!matches.length){
-          html = '<p class="note">No past matches match “' + esc(homeHistQuery.trim()) + '”. Clear the search to see them all.</p>';
-        } else {
-          html = matches.slice(0, HOME_HIST_LIMIT).map(histMatchCardHTML).join('');
-          if (matches.length > HOME_HIST_LIMIT) html += '<button type="button" class="btn ghost hist-entry-btn" onclick="setView(\'history\')">See all ' + matches.length + ' matches in History &amp; Reports →</button>';
+      function reportMatchesInScope(){
+        var scopeEl = $('repGenScope');
+        var scope = scopeEl ? (scopeEl.value || '') : '';
+        var list = [];
+        try { list = allRecordMatches().filter(matchInFilter); } catch(e){ list = []; }
+        if (scope === 'single') list = list.filter(function(e){ return (e.matchKind || 'single') !== 'tournament' && !(e.tournamentName || ''); });
+        else if (scope.indexOf('tn:') === 0){ var tnName = scope.slice(3); list = list.filter(function(e){ return (e.tournamentName || '') === tnName; }); }
+        return { list: list, scope: scope };
+      }
+      function reportHeader(title, scope, count){
+        var scopeTxt = scope === 'single' ? 'Single Matches only' : (scope.indexOf('tn:') === 0 ? 'Tournament: ' + scope.slice(3) : 'All matches');
+        var filt = [];
+        if (repTn) filt.push('Tournament filter: ' + repTn);
+        if (repTeam) filt.push('Team filter: ' + repTeam);
+        if (repPlayer && repPlayer.trim()) filt.push('Player filter: ' + repPlayer.trim());
+        return 'LIVE CRICKET SCORE — ' + title.toUpperCase() + '\n'
+          + 'Scope: ' + scopeTxt + (filt.length ? ' • ' + filt.join(' • ') : '') + '\n'
+          + 'Matches in scope: ' + count + '\n'
+          + 'Generated: ' + new Date().toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) + '\n'
+          + '----------------------------------------\n';
+      }
+      function generateReport(){
+        var typeEl = $('repGenType'), outEl = $('repOutput');
+        if (!outEl) return;
+        var type = typeEl ? (typeEl.value || 'results') : 'results';
+        var scoped = reportMatchesInScope();
+        var matches = scoped.list;
+        var titles = { results:'Match Results Summary', batting:'Batting Report', bowling:'Bowling Report', teams:'Team Summary', potm:'Player of the Match Awards' };
+        var text = reportHeader(titles[type] || 'Report', scoped.scope, matches.length);
+        if (!matches.length){
+          text += '\nNo matches found for the selected filters and scope.\nNothing to report yet — finish a match and it will be included here automatically.\n';
+          outEl.value = text;
+          toast('No matches in scope — the report says so');
+          return;
         }
-        targets.forEach(function(el){ if (el) el.innerHTML = html; });
+        function resOf(e){
+          if (e.live) return e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : 'Match in progress';
+          if (e.abandoned) return 'Match abandoned';
+          var r = e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : '';
+          if (!r){ try { r = matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }); } catch(err){} }
+          return r || 'No result recorded';
+        }
+        function dateOf(e){
+          if (e.matchDate) return e.matchDate + (e.matchTime ? ' ' + e.matchTime : '');
+          return e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+        }
+        function innLine(inn){ return (inn.battingTeam || '—') + ' ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)'; }
+        if (type === 'results'){
+          text += '\n' + matches.map(function(e, i){
+            var lines = (e.innings || []).map(innLine).join('\n  ');
+            return (i + 1) + '. ' + (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2')
+              + (e.tournamentName ? ' — ' + e.tournamentName : ' — Single Match')
+              + (dateOf(e) ? '\n  ' + dateOf(e) : '') + (e.venue ? ' • ' + e.venue : '')
+              + (lines ? '\n  ' + lines : '')
+              + '\n  Result: ' + resOf(e)
+              + (e.potmName ? '\n  Player of the Match: ' + dispIn(e.nicknames, e.potmTeam, e.potmName) + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') : '');
+          }).join('\n\n') + '\n';
+        } else if (type === 'batting' || type === 'bowling'){
+          var players = aggregatePlayers(matches);
+          if (!players.length){
+            text += '\nNo player figures recorded in these matches yet.\n';
+          } else if (type === 'batting'){
+            var bat = players.filter(function(r){ return r.batInns > 0; }).sort(function(a, b){ return (b.runs - a.runs) || (b.balls - a.balls); });
+            if (!bat.length) text += '\nNo batting recorded in these matches yet.\n';
+            else text += '\n' + bat.map(function(r, i){
+              var sr = r.balls > 0 ? (r.runs / r.balls * 100).toFixed(1) : '0.0';
+              var ave = r.outs > 0 ? (r.runs / r.outs).toFixed(2) : '—';
+              var best = r.best < 0 ? '—' : (r.best + (r.bestNO ? '*' : ''));
+              return (i + 1) + '. ' + r.name + ' (' + r.teams.join(' / ') + ')\n  Matches ' + r.matches + ' • Innings ' + r.batInns + ' • Runs ' + r.runs + ' • Balls ' + r.balls + ' • 4s ' + r.fours + ' • 6s ' + r.sixes + '\n  Average ' + ave + ' • Strike rate ' + sr + ' • Best ' + best;
+            }).join('\n\n') + '\n';
+          } else {
+            var bowl = players.filter(function(r){ return r.bowlBalls > 0; }).sort(function(a, b){ return (b.wkts - a.wkts) || (a.bowlRuns - b.bowlRuns); });
+            if (!bowl.length) text += '\nNo bowling recorded in these matches yet.\n';
+            else text += '\n' + bowl.map(function(r, i){
+              var econ = r.bowlBalls > 0 ? (r.bowlRuns / (r.bowlBalls / 6)).toFixed(2) : '0.00';
+              var bestB = r.bestBW < 0 ? '—' : (r.bestBW + '/' + r.bestBR);
+              return (i + 1) + '. ' + r.name + ' (' + r.teams.join(' / ') + ')\n  Matches ' + r.matches + ' • Overs ' + oversText(r.bowlBalls) + ' • Runs conceded ' + r.bowlRuns + ' • Wickets ' + r.wkts + '\n  Economy ' + econ + ' • Best bowling ' + bestB;
+            }).join('\n\n') + '\n';
+          }
+        } else if (type === 'teams'){
+          var teamMap = {};
+          matches.forEach(function(e){
+            [e.teamA, e.teamB].forEach(function(t){ if (t && !teamMap[t]) teamMap[t] = { name:t, played:0, won:0, lost:0, tied:0, noResult:0, runsFor:0, runsAgainst:0, potm:0 }; });
+            (e.innings || []).forEach(function(inn){
+              var bat = teamMap[inn.battingTeam], bowl = teamMap[inn.bowlingTeam];
+              if (bat) bat.runsFor += inn.runs || 0;
+              if (bowl) bowl.runsAgainst += inn.runs || 0;
+            });
+            var counted = {};
+            [e.teamA, e.teamB].forEach(function(t){ if (t && !counted[t]){ counted[t] = 1; if (teamMap[t]) teamMap[t].played++; } });
+            if (!e.live && !e.abandoned && (e.innings || []).length >= 2){
+              var a = e.innings[0], b = e.innings[e.innings.length - 1];
+              if (b.runs > a.runs){ if (teamMap[b.battingTeam]) teamMap[b.battingTeam].won++; if (teamMap[a.battingTeam]) teamMap[a.battingTeam].lost++; }
+              else if (a.runs > b.runs){ if (teamMap[a.battingTeam]) teamMap[a.battingTeam].won++; if (teamMap[b.battingTeam]) teamMap[b.battingTeam].lost++; }
+              else { if (teamMap[e.teamA]) teamMap[e.teamA].tied++; if (teamMap[e.teamB] && e.teamB !== e.teamA) teamMap[e.teamB].tied++; }
+            } else if (e.abandoned){ if (teamMap[e.teamA]) teamMap[e.teamA].noResult++; if (teamMap[e.teamB] && e.teamB !== e.teamA) teamMap[e.teamB].noResult++; }
+            if (e.potmName && e.potmTeam && teamMap[e.potmTeam]) teamMap[e.potmTeam].potm++;
+          });
+          var teams = Object.keys(teamMap).map(function(k){ return teamMap[k]; }).sort(function(a, b){ return (b.won - a.won) || (b.played - a.played) || a.name.localeCompare(b.name); });
+          if (!teams.length) text += '\nNo teams found in these matches yet.\n';
+          else text += '\n' + teams.map(function(t, i){
+            return (i + 1) + '. ' + t.name + '\n  Played ' + t.played + ' • Won ' + t.won + ' • Lost ' + t.lost + ' • Tied ' + t.tied + (t.noResult ? ' • No result ' + t.noResult : '') + '\n  Runs scored ' + t.runsFor + ' • Runs conceded ' + t.runsAgainst + ' • Player of the Match awards ' + t.potm;
+          }).join('\n\n') + '\n';
+        } else if (type === 'potm'){
+          var awards = matches.filter(function(e){ return !!e.potmName; });
+          if (!awards.length){
+            text += '\nNo Player of the Match has been decided in these matches yet.\nThe scorer chooses the Player of the Match after a match finishes — awards appear here once chosen.\n';
+          } else {
+            var counts = {};
+            awards.forEach(function(e){
+              var disp = dispIn(e.nicknames, e.potmTeam, e.potmName);
+              var key = disp + '|' + (e.potmTeam || '');
+              if (!counts[key]) counts[key] = { name: disp, team: e.potmTeam || '', n: 0, list: [] };
+              counts[key].n++;
+              counts[key].list.push(e);
+            });
+            var rows = Object.keys(counts).map(function(k){ return counts[k]; }).sort(function(a, b){ return (b.n - a.n) || a.name.localeCompare(b.name); });
+            text += '\nAWARDS BY PLAYER\n' + rows.map(function(r, i){
+              return (i + 1) + '. ' + r.name + (r.team ? ' (' + r.team + ')' : '') + ' — ' + r.n + (r.n === 1 ? ' award' : ' awards');
+            }).join('\n') + '\n\nAWARD IN EACH MATCH\n' + awards.map(function(e, i){
+              return (i + 1) + '. ' + (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2') + (dateOf(e) ? ' — ' + dateOf(e) : '') + '\n  Player of the Match: ' + dispIn(e.nicknames, e.potmTeam, e.potmName) + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') + '\n  Result: ' + resOf(e);
+            }).join('\n\n') + '\n';
+          }
+        }
+        outEl.value = text;
+        toast('✓ Report generated — ' + matches.length + (matches.length === 1 ? ' match' : ' matches') + ' in scope');
+      }
+      function copyReport(){
+        var outEl = $('repOutput');
+        if (!outEl || !outEl.value){ toast('Generate a report first, then copy it'); return; }
+        function done(){ toast('✓ Report copied'); }
+        function fallback(){
+          try { outEl.focus(); outEl.select(); if (document.execCommand('copy')) done(); else toast('Copy failed — select the report text and copy it manually'); }
+          catch(e){ toast('Copy failed — select the report text and copy it manually'); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(outEl.value).then(done, fallback);
+        } else fallback();
+      }
+      /* ---------- Report download: a real PDF, built in the browser ----------
+         The report text is laid out into a proper multi-page PDF
+         (A4, Helvetica, bold title line, page numbers) entirely on
+         the device — no server, no library to load, so it works the
+         same in the phone WebView as in a desktop browser. PDF text
+         strings here are plain ASCII: typographic characters in the
+         report (•, —, ’ …) are mapped to their closest ASCII form
+         and anything else outside printable ASCII becomes '?'. */
+      function pdfSafeText(text){
+        var map = { '•':'-', '—':'-', '–':'-', '‘':"'", '’':"'", '“':'"', '”':'"', '…':'...', '×':'x', '→':'->' };
+        var out = '';
+        var s = String(text == null ? '' : text).replace(/\t/g, '    ');
+        for (var i = 0; i < s.length; i++){
+          var ch = s.charAt(i), code = s.charCodeAt(i);
+          if (ch === '\n' || ch === '\r'){ out += ch; }
+          else if (map[ch]) out += map[ch];
+          else if (code >= 32 && code <= 126) out += ch;
+          else if (code > 126) out += '?';
+        }
+        return out;
+      }
+      function pdfEscape(str){
+        return str.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+      }
+      function pdfWrapLine(line, max){
+        if (line.length <= max) return [line];
+        var indent = (line.match(/^\s*/) || [''])[0];
+        var out = [], rest = line;
+        while (rest.length > max){
+          var cut = rest.lastIndexOf(' ', max);
+          if (cut <= indent.length) cut = max;
+          out.push(rest.slice(0, cut).replace(/\s+$/, ''));
+          rest = indent + '  ' + rest.slice(cut).replace(/^\s+/, '');
+        }
+        if (rest) out.push(rest);
+        return out;
+      }
+      function buildReportPdf(text){
+        var MAXCH = 100, LEAD = 13.5, TOP = 792, PERPAGE = 54;
+        var lines = [];
+        pdfSafeText(text).split(/\r?\n/).forEach(function(l){
+          pdfWrapLine(l, MAXCH).forEach(function(w){ lines.push(w); });
+        });
+        if (!lines.length) lines = [''];
+        var pages = [];
+        for (var i = 0; i < lines.length; i += PERPAGE) pages.push(lines.slice(i, i + PERPAGE));
+        var FONT = 3, FONTB = 4, FIRSTPAGE = 5;
+        var objs = [];
+        objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+        var kids = pages.map(function(_, pi){ return (FIRSTPAGE + pi * 2) + ' 0 R'; }).join(' ');
+        objs[2] = '<< /Type /Pages /Kids [' + kids + '] /Count ' + pages.length + ' >>';
+        objs[FONT] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+        objs[FONTB] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+        pages.forEach(function(pageLines, pi){
+          var pageObj = FIRSTPAGE + pi * 2, contObj = pageObj + 1;
+          objs[pageObj] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ' + FONT + ' 0 R /F2 ' + FONTB + ' 0 R >> >> /Contents ' + contObj + ' 0 R >>';
+          var ops = ['BT', '/F1 9.5 Tf', LEAD + ' TL', '42 ' + TOP + ' Td'];
+          pageLines.forEach(function(line, li){
+            if (li > 0) ops.push('T*');
+            if (pi === 0 && li === 0 && line){
+              ops.push('/F2 11.5 Tf', '(' + pdfEscape(line) + ') Tj', '/F1 9.5 Tf');
+            } else {
+              ops.push('(' + pdfEscape(line) + ') Tj');
+            }
+          });
+          ops.push('ET');
+          ops.push('BT', '/F1 8 Tf', '42 26 Td', '(Page ' + (pi + 1) + ' of ' + pages.length + ') Tj', 'ET');
+          var stream = ops.join('\n');
+          objs[contObj] = '<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream';
+        });
+        var total = FIRSTPAGE + pages.length * 2 - 1;
+        var pdf = '%PDF-1.4\n';
+        var offsets = [0];
+        for (var n = 1; n <= total; n++){
+          offsets[n] = pdf.length;
+          pdf += n + ' 0 obj\n' + objs[n] + '\nendobj\n';
+        }
+        var xrefAt = pdf.length;
+        pdf += 'xref\n0 ' + (total + 1) + '\n0000000000 65535 f \n';
+        for (var m = 1; m <= total; m++){
+          var off = String(offsets[m]);
+          while (off.length < 10) off = '0' + off;
+          pdf += off + ' 00000 n \n';
+        }
+        pdf += 'trailer\n<< /Size ' + (total + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
+        return pdf;
+      }
+      function downloadReport(){
+        var outEl = $('repOutput');
+        if (!outEl || !outEl.value){ toast('Generate a report first, then download it'); return; }
+        var typeEl = $('repGenType');
+        var type = typeEl ? (typeEl.value || 'report') : 'report';
+        try {
+          var blob = new Blob([buildReportPdf(outEl.value)], { type:'application/pdf' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'cricket-report-' + type + '.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
+          toast('✓ Report downloaded as PDF');
+        } catch(e){ toast('PDF download failed in this browser — use Copy instead'); }
       }
       /* ---------- Edit an archived match's details ----------
          Only the details around the score can change — venue,
@@ -7852,9 +8316,9 @@
       function renderHistory(){
         renderHistStatus();
         renderHistFilters();
+        try { renderRepScopeOptions(); } catch(e){}
         renderReports();
         renderHistList();
-        try { renderHomeHistory(); } catch(e){}
         if (profileCtx) { try { renderPlayerProfile(); } catch(e){} }
       }
       function renderHistStatus(){
@@ -7972,9 +8436,14 @@
       }
       function renderHistList(){
         var el = $('histList'); if (!el) return;
-        var matches = allRecordMatches().filter(matchInFilter);
+        var all = allRecordMatches();
+        var matches = all.filter(matchInFilter).filter(histSearchMatch);
+        if (!all.length){
+          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No matches recorded yet. When a match finishes it appears here automatically — and stays.</p></div>';
+          return;
+        }
         if (!matches.length){
-          el.innerHTML = '<p class="note">No matches recorded yet. When a match finishes it appears here automatically — and stays.</p>';
+          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No past matches match the current search and filters. Clear the search or a filter to see them all.</p></div>';
           return;
         }
         el.innerHTML = matches.map(histMatchCardHTML).join('');
@@ -8657,6 +9126,7 @@
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
         step(function(){ if (!archiveView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
+        step(function(){ guardViewerScoreboard(); });
         step(renderSquads);
         step(renderOmFixtures);
         step(renderTournament);
@@ -9376,9 +9846,14 @@
         document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('show'); });
         var target = $('view-'+v);
         if (target) target.classList.add('show');
-        if (v==='history'){ try { syncHistBackLabel(); } catch(e){} }
+        if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('matches'); } catch(e){} try { renderHistory(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
-        if (v==='home' || v==='console'){ try { renderHomeHistory(); } catch(e){} }
+        /* Entering the Live Matches list always re-renders it from
+           the server-confirmed state, so Back (in-page or browser)
+           can never land on a stale list left over from before a
+           match was deleted. Entering the scoreboard runs the
+           ghost guard for the same reason. */
+        if (v==='live'){ try { renderLiveHome(); } catch(e){} }
         document.querySelectorAll('.vtab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
         var segBar = $('segmentBar'); if (segBar) segBar.hidden = !currentSegment;
         var tabs = $('singleTabs'); if (tabs) tabs.hidden = !isSingle;
@@ -9389,6 +9864,7 @@
           else history.replaceState(navStateFor(v), '', navUrlFor(v));
         } catch(e){}
         currentViewName = v;
+        if (v==='scoreboard'){ try { guardViewerScoreboard(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
       }
       /* System / browser Back: follow the same path as the in-page
@@ -9429,14 +9905,32 @@
 
       /* ---------- init from URL ---------- */
       (function init(){
+        /* Viewer sessions are SERVER-ONLY: a session that arrives
+           through the viewer link (or on a device remembered as a
+           viewer, without the control link) never loads ANY
+           on-device backup — not the match backup, not the history
+           backup. Everything a viewer sees (Live Matches, the
+           Public Scoreboard, the tournament viewer, History) is
+           filled only by what Firebase sends, so nothing stored in
+           the phone's memory can ever be shown on the viewer end —
+           including a match that has since been deleted. The
+           control side keeps its backup restore exactly as before:
+           refreshing the scorer's page brings the score back. */
+        var qEarly = '';
+        try { qEarly = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
+        var earlyControl = qEarly.indexOf('view=control')>-1 || qEarly.indexOf('view=scorer')>-1 || qEarly.indexOf('#control')>-1 || qEarly.indexOf('#scorer')>-1 || qEarly.indexOf('control=1')>-1;
+        var earlyViewer = qEarly.indexOf('view=live')>-1 || qEarly.indexOf('view=viewer')>-1 || qEarly.indexOf('#live')>-1 || qEarly.indexOf('#viewer')>-1 || qEarly.indexOf('#scoreboard')>-1 || qEarly.indexOf('viewer=1')>-1 || qEarly.indexOf('view=scoreboard')>-1;
+        var pureViewerSession = !earlyControl && (earlyViewer || deviceViewerFlag());
         /* Restore this device's backup first, so refreshing the control
            page brings the score straight back instead of resetting to
            the 0/0 demo. Firebase (auto-connect below) then takes over:
            a newer match already in the database is adopted over it. */
         /* The permanent history's on-device backup loads first too —
-           past matches are on the record even before Firebase answers. */
-        try { loadHistLocal(); } catch(e){}
-        var backup = loadLocalBackup();
+           past matches are on the record even before Firebase answers.
+           (Both loads are skipped entirely for viewer sessions — see
+           the server-only rule above.) */
+        if (!pureViewerSession){ try { loadHistLocal(); } catch(e){} }
+        var backup = pureViewerSession ? null : loadLocalBackup();
         if (backup){
           S = backup;
           try { cleanGhostPlayers(); } catch(e){}
