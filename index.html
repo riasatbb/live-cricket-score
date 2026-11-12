@@ -5363,6 +5363,48 @@
         } catch(e){}
         return null;
       }
+      /* The plugin can be present in the page while its Android side is
+         not actually initialised (its internal FirebaseAuth object is
+         null) — calling signInWithGoogle() then dies inside the plugin
+         with "Attempt to invoke virtual method ... on a null object
+         reference" before the account picker ever appears. Probe it
+         first with a harmless getCurrentUser() call: if that call
+         crashes the same way, the native sign-in is treated as broken
+         and the user is offered the browser fallback below instead of
+         a dead button. */
+      function nativeAuthProbe(nativeAuth){
+        return new Promise(function(resolve){
+          var settled = false;
+          var timer = setTimeout(function(){ if (!settled){ settled = true; resolve(false); } }, 4000);
+          function done(ok){ if (!settled){ settled = true; clearTimeout(timer); resolve(ok); } }
+          try {
+            if (typeof nativeAuth.getCurrentUser !== 'function'){ done(true); return; }
+            nativeAuth.getCurrentUser().then(function(){ done(true); }).catch(function(err){
+              var msg = (err && err.message) ? err.message : String(err || '');
+              done(!/null object reference/i.test(msg));
+            });
+          } catch(e){ done(false); }
+        });
+      }
+      function isNativePluginCrash(msg){
+        return /null object reference/i.test(msg || '') || /capawesome|firebaseauthentication/i.test(msg || '');
+      }
+      function openControlInBrowser(){
+        var url = location.origin + location.pathname + '?view=scorer';
+        try { window.open(url, '_system'); } catch(e){}
+        toast('Opening the control page in your browser — sign in with Google there to score.');
+      }
+      function showNativeSignInFallback(){
+        var slots = document.querySelectorAll('.authbar-slot');
+        slots.forEach(function(s){
+          s.innerHTML = '<div class="authbar"><div class="ab-main"><span class="ab-avatar" aria-hidden="true">👤</span>'
+            + '<div><div class="ab-name">Guest mode<span class="ab-badge" style="background:var(--chip);color:var(--muted);border:1px solid var(--line)">View only</span></div>'
+            + '<div class="ab-sub">In-app Google sign-in is not working in this app build yet. Sign in from your browser instead — same account, same matches.</div></div></div>'
+            + '<button type="button" class="btn primary" onclick="openControlInBrowser()">Open in browser to sign in</button>'
+            + '<button type="button" class="btn ghost sm" onclick="renderAuthBar()">Back</button></div>';
+        });
+        toast('⚠️ In-app Google sign-in is unavailable in this app build — tap "Open in browser to sign in" to sign in from your browser instead.');
+      }
       function signInWithGoogle(){
         if (!fbAuth){
           if (!fbApp) toast('⏳ Firebase is still connecting — try signing in again in a moment.');
@@ -5372,16 +5414,20 @@
         var nativeAuth = nativeAuthPlugin();
         if (nativeAuth){
           toast('Opening Google sign-in…');
-          nativeAuth.signInWithGoogle().then(function(res){
-            var cred = res && res.credential;
-            if (!cred || !cred.idToken) throw new Error('No Google credential returned by the app sign-in.');
-            var credential = firebase.auth.GoogleAuthProvider.credential(cred.idToken, cred.accessToken || null);
-            return fbAuth.signInWithCredential(credential);
-          }).then(function(){ /* onAuthStateChanged renders the signed-in state */ }).catch(function(err){
-            var code = (err && err.code) ? String(err.code) : '';
-            var msg = (err && err.message) ? err.message : String(err);
-            if (/cancel|12501|popup-closed/i.test(code + ' ' + msg)){ toast('Google sign-in was cancelled.'); return; }
-            toast('⚠️ Google sign-in failed in the app: ' + msg);
+          nativeAuthProbe(nativeAuth).then(function(ready){
+            if (!ready){ showNativeSignInFallback(); return; }
+            nativeAuth.signInWithGoogle().then(function(res){
+              var cred = res && res.credential;
+              if (!cred || !cred.idToken) throw new Error('No Google credential returned by the app sign-in.');
+              var credential = firebase.auth.GoogleAuthProvider.credential(cred.idToken, cred.accessToken || null);
+              return fbAuth.signInWithCredential(credential);
+            }).then(function(){ /* onAuthStateChanged renders the signed-in state */ }).catch(function(err){
+              var code = (err && err.code) ? String(err.code) : '';
+              var msg = (err && err.message) ? err.message : String(err);
+              if (/cancel|12501|popup-closed/i.test(code + ' ' + msg)){ toast('Google sign-in was cancelled.'); return; }
+              if (isNativePluginCrash(msg)){ showNativeSignInFallback(); return; }
+              toast('⚠️ Google sign-in failed in the app: ' + msg);
+            });
           });
           return;
         }
