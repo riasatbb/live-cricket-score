@@ -413,6 +413,32 @@
       .mc-wktwrap{padding:0 14px 14px}
       .mc-wktwrap:empty{display:none}
 
+      /* ---------- scoring-only screen ----------
+         Once a match has started, the scorer screen shows ONLY the
+         scoring centre (team, score, extras / overs / CRR,
+         partnership, Batsman and Bowler tables, this-over balls and
+         the scoring pad) — nothing else stays on screen: the links
+         card, Match Setup, Team Squads, Batters & Bowler, the
+         ball-by-ball history card and the Firebase / OBS help cards
+         all leave the page. The pad alone is enough for scoring:
+         new batter / bowler pickers still pop up on their own at a
+         wicket or an over change, and tapping the Edit (✎) icon
+         beside Batsman or Bowler — or a More-menu entry — opens the
+         card it needs as a popup over the pad, which closes straight
+         back to the pad alone. With no match started (fresh page, or
+         after Delete Match) the full setup page returns, so a new
+         match can be set up from the beginning. */
+      #view-scorer.scoring-only>.card:not(.pop),
+      #view-scorer.scoring-only>.authbar-slot{display:none !important}
+      #view-scorer.scoring-only .clean-top{margin-bottom:8px}
+      #view-scorer.scoring-only .clean-top h2{display:none}
+      #view-scorer.scoring-only #scorerCentre{margin-bottom:0}
+      .sc-popback{position:fixed;inset:0;background:rgba(5,12,8,.55);z-index:80}
+      #view-scorer>.card.pop{position:fixed;left:10px;right:10px;bottom:10px;top:auto;z-index:85;max-height:84vh;overflow:auto;margin:0;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+      @media (min-width:640px){#view-scorer>.card.pop{left:50%;right:auto;width:560px;transform:translateX(-50%)}}
+      .sc-pop-x{display:none}
+      #view-scorer>.card.pop .sc-pop-x{display:flex;position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-size:16px;line-height:1;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0}
+
       /* ---------- tournament ---------- */
       .ptable{font-size:13px}
       .ptable th,.ptable td{padding:6px 4px;text-align:center}
@@ -1120,6 +1146,26 @@
       @media (prefers-color-scheme: dark){.btn.rep-copy{background:#1d6fa5}.btn.rep-dl{background:#12836f}}
       .rep-output{background:#fdf6e0;border-color:rgba(225,154,38,.6)}
       @media (prefers-color-scheme: dark){.rep-output{background:#221a0d}}
+      /* ---------- home 3-dots menu (top right): Sign In + Instructions ---------- */
+      .dots-wrap{position:relative;flex:none}
+      .dots-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-size:21px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 0 6px}
+      .dots-btn:active{transform:scale(.94)}
+      .dots-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:196px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:70}
+      .dots-menu[hidden]{display:none}
+      .dots-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;padding:12px;font-size:15.5px;font-weight:700;color:var(--ink);border-radius:8px;cursor:pointer;font-family:inherit}
+      .dots-item:hover{background:var(--surface2)}
+      /* Instructions popup: three boxes, each opens its own page */
+      .ins-list{display:grid;gap:12px;margin-top:14px}
+      .ins-box{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surface2);border:1.5px solid var(--line);border-radius:14px;padding:17px 16px;cursor:pointer;color:var(--ink);font-family:inherit}
+      .ins-box:active{transform:scale(.99)}
+      .ins-box .ins-ic{width:48px;height:48px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:24px}
+      .ins-box.ins-links .ins-ic{background:#0e6b4f}
+      .ins-box.ins-firebase .ins-ic{background:#e19a26}
+      .ins-box.ins-obs .ins-ic{background:#175d8a}
+      .ins-box .ins-title{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
+      .ins-box .ins-chev{margin-left:auto;color:var(--muted);font-size:22px;flex:none}
+      /* Sign-in popup reuses the shared auth bar; drop its outer margin */
+      #signinModal .authbar{margin:12px 0 0}
     </style>
   </head>
   <body>
@@ -1130,9 +1176,15 @@
           <h1>Live Cricket Score</h1>
         </div>
         <span class="conn" id="connPill">● Local Mode — Live across tabs in this browser</span>
+        <div class="dots-wrap">
+          <button type="button" class="dots-btn" id="homeDotsBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false" onclick="toggleDotsMenu(event)">⋮</button>
+          <div class="dots-menu" id="homeDotsMenu" hidden role="menu" aria-label="Home options">
+            <button type="button" class="dots-item" role="menuitem" onclick="dotsSignIn()">👤 Sign In</button>
+            <button type="button" class="dots-item" role="menuitem" onclick="dotsInstructions()">📖 Instructions</button>
+          </div>
+        </div>
       </div>
       <nav class="segmentbar" id="segmentBar" aria-label="Choose mode" hidden>
-        <button class="segbtn seg-home" onclick="setView('home')">← All Modes</button>
         <button class="segbtn" id="segBtnSingle" onclick="setSegment('single')">🏏 Single Match</button>
         <button class="segbtn" id="segBtnTournament" onclick="setSegment('tournament')">🏆 Tournament</button>
       </nav>
@@ -1188,9 +1240,6 @@
 
       <!-- ================= SCORER CONSOLE HOME ================= -->
       <section class="view" id="view-console">
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="setView('home')">← All Modes</button>
-        </div>
         <div class="authbar-slot"></div>
         <div class="mode-intro">
           <h2>Scorer Console</h2>
@@ -1305,8 +1354,10 @@
           <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
           <h2>Scorer Console</h2>
         </div>
+        <div class="sc-popback" id="scPopBack" hidden onclick="closeScorerPop()"></div>
         <div class="authbar-slot"></div>
-        <div class="card">
+        <div class="card" id="linksCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <h2>🔗 Your Two Links</h2>
           <div class="link-row">
             <div class="link-label"><span class="link-tag">Control — only for you</span> Scorer Console</div>
@@ -1323,6 +1374,7 @@
         </div>
 
         <div class="card fold" id="setupCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
           <div class="fold-body" hidden>
           <div class="grid3">
@@ -1347,6 +1399,7 @@
         </div>
 
         <div class="card fold" id="squadCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Team Squads</button>
           <div class="fold-body" hidden>
           <div class="grid2">
@@ -1472,6 +1525,7 @@
         </div>
 
         <div class="card fold" id="playersCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Batters &amp; Bowler</button>
           <div class="fold-body" hidden>
           <div class="players-grid">
@@ -1489,11 +1543,13 @@
         </div>
 
         <div class="card" id="historyCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <h2>Ball-by-Ball History</h2>
           <div id="historyList"><p class="note">No balls bowled yet.</p></div>
         </div>
 
-        <div class="card fold">
+        <div class="card fold" id="fbSetupCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">🌐 Firebase Setup — Internet Live</button>
           <div class="fold-body" hidden>
           <div class="steps">
@@ -1516,7 +1572,8 @@
           </div>
         </div>
 
-        <div class="card fold">
+        <div class="card fold" id="obsGuideCard">
+          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">📺 Adding the Overlay in OBS</button>
           <div class="fold-body" hidden>
           <div class="steps">
@@ -1877,6 +1934,42 @@
         <div class="overlay-stage" id="overlayStage"><div id="overlayMain" style="width:100%;display:flex;justify-content:center"></div></div>
       </section>
     </main>
+
+    <div class="modal-back" id="signinModal" onclick="if(event.target===this)closeSignIn()">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="signinTitle">
+        <div class="modal-head">
+          <h2 id="signinTitle">Sign In</h2>
+          <button class="sq-x big" onclick="closeSignIn()" aria-label="Close sign in">×</button>
+        </div>
+        <div class="authbar-slot"></div>
+      </div>
+    </div>
+
+    <div class="modal-back" id="instructionsModal" onclick="if(event.target===this)closeInstructions()">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="instructionsTitle">
+        <div class="modal-head">
+          <h2 id="instructionsTitle">Instructions</h2>
+          <button class="sq-x big" onclick="closeInstructions()" aria-label="Close instructions">×</button>
+        </div>
+        <div class="ins-list">
+          <button type="button" class="ins-box ins-links" onclick="openInstruction('links')">
+            <span class="ins-ic" aria-hidden="true">🔗</span>
+            <span class="ins-title">Your Two Links</span>
+            <span class="ins-chev" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="ins-box ins-firebase" onclick="openInstruction('firebase')">
+            <span class="ins-ic" aria-hidden="true">🌐</span>
+            <span class="ins-title">Firebase Setup</span>
+            <span class="ins-chev" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="ins-box ins-obs" onclick="openInstruction('obs')">
+            <span class="ins-ic" aria-hidden="true">📺</span>
+            <span class="ins-title">Overlay in OBS</span>
+            <span class="ins-chev" aria-hidden="true">›</span>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="modal-back" id="pickerModal">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
@@ -3432,14 +3525,7 @@
         if (cur && (cur === a || cur === b) && sel.value !== cur) sel.value = cur;
       }
       function clearReqMark(el){ if (el) el.classList.remove('req-missing'); }
-      function openSetupFold(){
-        var card = $('setupCard'); if (!card) return;
-        var body = card.querySelector('.fold-body'); if (!body) return;
-        if (body.hidden){
-          body.hidden = false; card.classList.add('open');
-          var btn = card.querySelector('.fold-sum'); if (btn) btn.setAttribute('aria-expanded', 'true');
-        }
-      }
+      function openSetupFold(){ openFoldById('setupCard'); }
 
       /* ---------- fresh squads for a (possibly new) pair of teams ----------
          A team's players always come from that team's own tournament
@@ -3950,13 +4036,58 @@
       /* ---------- clean scorer centre (Match Centre-style) ---------- */
       function toggleMcMore(){ var m = $('mcMore'); if (m) m.classList.toggle('show'); }
       function toggleMcOther(){ var m = $('mcOtherRuns'); if (m) m.classList.toggle('show'); }
-      function scrollToHistory(){ var h = $('historyCard'); if (h){ try { h.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} } }
+      /* ---------- scoring-only screen ----------
+         A started match (both teams set — live, innings break or
+         finished) turns the scorer screen into the pad alone; see
+         the CSS block of the same name. Refreshed from renderAll, so
+         it switches on the moment Start Match lands and off again
+         when the match is deleted / cleared. */
+      function updateScoringOnly(){
+        var view = $('view-scorer'); if (!view) return;
+        var on = false;
+        try { on = liveMatchExists(); } catch(e){}
+        view.classList.toggle('scoring-only', on);
+        if (!on) closeScorerPop();
+      }
+      function closeScorerPop(){
+        document.querySelectorAll('#view-scorer .card.pop').forEach(function(c){ c.classList.remove('pop'); });
+        var b = $('scPopBack'); if (b) b.hidden = true;
+      }
+      /* The Batsman table's Edit (✎) icon: opens the Batters &
+         Bowler card — as a popup over the pad while scoring — so the
+         striker / non-striker can be changed without leaving the
+         scoring screen. (The Bowler table's ✎ opens the bowler
+         picker directly, via changeBowler.) */
+      function editPlayers(){
+        if (!requireLiveOwner('change players')) return;
+        if (matchFinishedGuard()) return;
+        openFoldById('playersCard');
+      }
+      function scrollToHistory(){
+        var h = $('historyCard'); if (!h) return;
+        var view = $('view-scorer');
+        if (view && view.classList.contains('scoring-only')){
+          h.classList.add('pop');
+          var b = $('scPopBack'); if (b) b.hidden = false;
+          return;
+        }
+        try { h.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+      }
       function openFoldById(id){
         var card = $(id); if (!card) return;
         var body = card.querySelector('.fold-body');
         if (body && body.hidden){
           body.hidden = false; card.classList.add('open');
           var btn = card.querySelector('.fold-sum'); if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+        /* On the scoring-only screen the card is not on the page at
+           all: show it as a popup over the pad instead of scrolling
+           to a card that is not there. */
+        var view = $('view-scorer');
+        if (view && view.classList.contains('scoring-only') && card.closest('#view-scorer')){
+          card.classList.add('pop');
+          var b = $('scPopBack'); if (b) b.hidden = false;
+          return;
         }
         try { card.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
       }
@@ -4007,7 +4138,13 @@
         row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
         $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b></span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
           + '<div class="mrow">' + row2 + '</div>';
-        var pencil = '<button type="button" class="mc-edit" onclick="openFoldById(\'playersCard\')" aria-label="Edit batters and bowler">✎</button>';
+        /* One Edit (✎) icon beside Batsman and one beside Bowler:
+           the Batsman icon opens the Batters & Bowler popup (change
+           the striker or the non-striker), the Bowler icon opens the
+           bowler picker popup directly (change the bowler). Neither
+           needs a card on the scoring screen itself. */
+        var batPencil = '<button type="button" class="mc-edit" onclick="editPlayers()" aria-label="Edit batters — change the striker or non-striker">✎</button>';
+        var bowlPencil = '<button type="button" class="mc-edit" onclick="changeBowler()" aria-label="Edit bowler — change the bowler">✎</button>';
         function batRow(name, isStriker){
           if (!name) return '<tr><td><span class="mc-missing">' + (isStriker ? 'Select striker batter' : 'Select non-striker') + '</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>';
           var b = cbBatterFull(inn, name);
@@ -4017,9 +4154,9 @@
             : '<span class="mc-pname on">' + plLink(inn.battingTeam, name) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
-        $('mcBatters').innerHTML = '<table><thead><tr><th>' + pencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
+        $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
           + batRow(inn.striker, true) + batRow(inn.nonStriker, false) + '</tbody></table>';
-        var bwHead = '<table><thead><tr><th>' + pencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
+        var bwHead = '<table><thead><tr><th>' + bowlPencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
           var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
@@ -4427,6 +4564,10 @@
           }
         }
         commit('Match started');
+        /* The match is on: any setup popup closes and the scorer
+           screen becomes the pad alone (updateScoringOnly, run by
+           the commit's render, has already switched it). */
+        try { closeScorerPop(); } catch(e){}
         try { syncScorerNode(scorerNodeEmail); } catch(e){}
       }
       /* The designated scorer's Gmail lives ONLY in the separate
@@ -5268,8 +5409,7 @@
         $('teamA').value = fx.teamA; $('teamB').value = fx.teamB;
         if (fx.label) $('venue').value = fx.label;
         setView('scorer');
-        var setupBody = document.querySelector('#setupCard .fold-body');
-        if (setupBody && setupBody.hidden){ var btn = document.querySelector('#setupCard .fold-sum'); if (btn) toggleFold(btn); }
+        openFoldById('setupCard');
         toast(fx.teamA + ' vs ' + fx.teamB + ' — tap Start Match when ready');
       }
       function computePoints(){
@@ -6743,6 +6883,65 @@
             + '<button type="button" class="btn google" onclick="signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button></div>';
         }
         slots.forEach(function(s){ s.innerHTML = html; });
+      }
+      /* ---------- home 3-dots menu: Sign In + Instructions ----------
+         The header's ⋮ button (top right of every home page) opens a
+         small menu with exactly two options. Sign In opens the
+         sign-in popup — it hosts a shared auth-bar slot, so it shows
+         the same guest / signed-in state as every other auth bar and
+         the Google button works from inside it. Instructions opens a
+         popup with three boxes; each box opens its own page on the
+         Scorer Console: Your Two Links lands on the links card, and
+         Firebase Setup / Overlay in OBS open their guide fold,
+         expanded and scrolled into view (as a popup over the pad
+         while a match is being scored, like the other setup cards). */
+      function toggleDotsMenu(ev){
+        if (ev) ev.stopPropagation();
+        var m = $('homeDotsMenu'); if (!m) return;
+        var open = !!m.hidden;
+        m.hidden = !open;
+        var b = $('homeDotsBtn'); if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      function closeDotsMenu(){
+        var m = $('homeDotsMenu'); if (m) m.hidden = true;
+        var b = $('homeDotsBtn'); if (b) b.setAttribute('aria-expanded', 'false');
+      }
+      document.addEventListener('click', function(e){
+        var w = document.querySelector('.dots-wrap');
+        if (w && !w.contains(e.target)) closeDotsMenu();
+      });
+      function dotsSignIn(){ closeDotsMenu(); openSignIn(); }
+      function openSignIn(){
+        try { renderAuthBar(); } catch(e){}
+        var m = $('signinModal'); if (m) m.classList.add('show');
+      }
+      function closeSignIn(){ var m = $('signinModal'); if (m) m.classList.remove('show'); }
+      function dotsInstructions(){
+        closeDotsMenu();
+        var m = $('instructionsModal'); if (m) m.classList.add('show');
+      }
+      function closeInstructions(){ var m = $('instructionsModal'); if (m) m.classList.remove('show'); }
+      function openInstruction(which){
+        closeInstructions();
+        /* From the viewer's Live Matches home, step out of viewer
+           mode first — the guides live on the Scorer Console. */
+        if (document.body.classList.contains('link-viewer')){ try { exitViewerMode(); } catch(e){} }
+        setView('scorer');
+        setTimeout(function(){
+          if (which === 'links') openScorerCardById('linksCard');
+          else if (which === 'firebase') openFoldById('fbSetupCard');
+          else if (which === 'obs') openFoldById('obsGuideCard');
+        }, 80);
+      }
+      function openScorerCardById(id){
+        var card = $(id); if (!card) return;
+        var view = $('view-scorer');
+        if (view && view.classList.contains('scoring-only')){
+          card.classList.add('pop');
+          var b = $('scPopBack'); if (b) b.hidden = false;
+          return;
+        }
+        try { card.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
       }
       /* ---------- ownership ---------- */
       function liveMatchExists(){ return !!(S && S.teamA && S.teamB && S.current); }
@@ -9235,6 +9434,7 @@
           });
         });
         try { renderScorerCentre(); } catch(e){}
+        step(function(){ updateScoringOnly(); });
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
         step(function(){ if (!archiveView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
@@ -9977,6 +10177,7 @@
         } catch(e){}
         currentViewName = v;
         if (v==='scoreboard'){ try { guardViewerScoreboard(); } catch(e){} }
+        if (v==='scorer'){ try { updateScoringOnly(); } catch(e){} } else { try { closeScorerPop(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
       }
       /* System / browser Back: follow the same path as the in-page
