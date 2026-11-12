@@ -711,6 +711,12 @@
       .logo-edit .le-prev.wide img{object-fit:cover;padding:0}
       .logo-edit .note{flex:1;min-width:140px;margin:0}
       body.viewer-mode .logo-edit,body.link-viewer .logo-edit{display:none !important}
+      /* Team Page head badge IS the logo control: tapping the round
+         badge opens the image picker (no separate Upload Logo row). */
+      .tp-logo-btn{position:relative;flex:none;border:none;background:none;padding:0;margin:0;cursor:pointer;border-radius:50%;font:inherit;-webkit-tap-highlight-color:transparent}
+      .tp-logo-btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+      .tp-logo-edit{position:absolute;right:-3px;bottom:-3px;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);pointer-events:none}
+      .tp-logo-remove{background:none;border:none;padding:0;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:underline;cursor:pointer}
       .sb-team-tile.active .sb-team-logo{outline:3px solid var(--gold);outline-offset:2px}
       .sb-team-name{font-size:16px;font-weight:800;line-height:1.25;text-transform:uppercase;word-break:break-word}
       .sb-team-count{font-size:12.5px;color:var(--muted);font-weight:600;margin-top:2px}
@@ -731,6 +737,25 @@
       .tn-team-players-head .sb-team-logo{width:64px;height:64px;font-size:19px;margin:0;flex:none}
       .tn-team-players-head h3{margin:0;font-size:20px;line-height:1.2;text-transform:uppercase}
       .tn-team-players-head .note{margin-top:2px}
+
+      /* ---------- dedicated team page + leadership (C / VC / WK) ---------- */
+      .tp-card{max-width:720px;margin:0 auto;text-align:left}
+      .tp-card .sb-detail-head > div{flex:1;min-width:0}
+      .tp-sec{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+      .tp-sec h4{margin:0 0 10px;font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+      .lead-chip{flex:none;display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:2px 6px;line-height:1.4;vertical-align:middle}
+      .lead-chip.c{background:var(--gold);color:#241a02}
+      .lead-chip.vc{background:var(--blue);color:#fff}
+      .lead-chip.wk{background:var(--green);color:#fff}
+      .lead-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      @media (max-width:560px){.lead-grid{grid-template-columns:1fr}}
+      .lead-pick label{display:block;margin-bottom:4px}
+      .lead-rows{display:grid;gap:9px}
+      .lead-row{display:flex;align-items:center;gap:9px;font-size:15px;flex-wrap:wrap}
+      .lead-role{color:var(--muted);font-weight:600;min-width:108px}
+      .lead-name{font-weight:700}
+      .lead-line{margin-top:6px;font-size:13.5px;color:var(--muted)}
+      .lead-line .pl-link{font-size:13.5px}
 
       /* ---------- viewer landing: live matches list ---------- */
       body.viewer-mode .viewtabs{display:none !important}
@@ -1093,6 +1118,9 @@
       .tn-pick .tp-meta{font-size:13px;color:var(--muted);display:block;margin-top:2px}
       .tn-pick .tp-badge{flex:none;font-size:11.5px;font-weight:700;background:var(--green);color:#fff;border-radius:999px;padding:4px 10px}
       .tn-pick .tp-open{flex:none;font-weight:700;color:var(--green)}
+      .tn-row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+      .tn-row .tn-pick{margin-bottom:0;flex:1;min-width:0}
+      .tn-row .tn-delbtn{flex:none;align-self:center}
       /* ---------- Open Match (Start Single Match setup, per reference) ---------- */
       /* Clean page top: a bare back icon at the left, the page title
          centred — no header, no sign-in bar, no boxed back bar. */
@@ -1432,6 +1460,15 @@
           <p class="note" id="mtSummary" style="margin-top:10px"></p>
         </div>
         <div id="mtList"></div>
+      </section>
+
+      <!-- ================= TEAM PAGE: one team's own page ================= -->
+      <section class="view" id="view-teampage">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="closeTeamPage()" aria-label="Back to the teams list">←</button>
+          <h2 id="tpTitle">Team</h2>
+        </div>
+        <div id="tpBody"></div>
       </section>
 
       <!-- ================= OPEN MATCH: START SINGLE MATCH SETUP ================= -->
@@ -1993,7 +2030,6 @@
             <div class="card">
               <h2>Teams</h2>
               <div id="tnTeamsGrid"></div>
-              <div id="tnTeamDetail"></div>
             </div>
             <div class="card tn-editor-card">
               <h2>Team Entry &amp; Players</h2>
@@ -2411,7 +2447,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v97';
+      var APP_VERSION = 'v100';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -2520,7 +2556,15 @@
           /* Tournaments set aside by Create Tournament / opening another
              one — the full list behind the Tournaments screen. */
           tournamentsArchive: [],
-          tournament: { name: '', venue: '', dates: '', banner: '', teamLogos: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
+          /* My Teams: the user's own team pool, kept APART from every
+             tournament. Teams added in My Teams live only here — they
+             never enter a tournament on their own; a tournament's
+             teams are added from inside that tournament (its Teams
+             tab). Seeded once from the teams the user already had
+             when the stores split (see normalizeMyTeams), so no team
+             or player is lost by the split. */
+          myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
+          tournament: { name: '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
         };
       }
@@ -2817,6 +2861,7 @@
         var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var ns = freshState();
         ns.tournament = keepTn;
+        ns.myTeams = deep(S.myTeams || { teams: [], squads: {}, seeded: false });
         ns.nicknames = deep(S.nicknames || []);
         ns.players = deep(S.players || []);
         ns.playerIds = deep(S.playerIds || []);
@@ -3317,6 +3362,9 @@
         if (S.tournament && S.tournament.squads && typeof S.tournament.squads === 'object'){
           Object.keys(S.tournament.squads).forEach(function(team){ regSquad(team, S.tournament.squads[team]); });
         }
+        if (S.myTeams && S.myTeams.squads && typeof S.myTeams.squads === 'object'){
+          Object.keys(S.myTeams.squads).forEach(function(team){ regSquad(team, S.myTeams.squads[team]); });
+        }
         regSquad(S.teamA, S.squadA); regSquad(S.teamB, S.squadB);
         regSquad(S.teamA, S.finalSquadA); regSquad(S.teamB, S.finalSquadB);
         stampInningsPids(S.current); stampInningsPids(S.prevInnings);
@@ -3770,6 +3818,9 @@
            Match — the safe default, so an older state can never leak
            a single match into a tournament. */
         if (S.matchKind !== 'tournament') S.matchKind = 'single';
+        /* The My Teams pool: shape-healed (and seeded, the first
+           time) on every load / adopt / commit, like the tournament. */
+        try { normalizeMyTeams(); } catch(e){}
         try { migratePlayerIds(); } catch(e){}
         /* Parked live matches + set-aside tournaments: same Firebase
            array-as-object coercion as nicknames. */
@@ -3936,6 +3987,12 @@
       function squadForMatch(teamName, tnSquads, prevTeam, prevSquad){
         var tn = tnSquads ? tnSquads[teamName] : null;
         if (Array.isArray(tn) && tn.length) return deep(tn);
+        /* A team kept only in the My Teams pool brings its pool squad
+           into the match the same way — the pool is READ here, never
+           written, so starting a match cannot leak a team or a squad
+           into any tournament. */
+        var pool = (S.myTeams && S.myTeams.squads) ? S.myTeams.squads[teamName] : null;
+        if (Array.isArray(pool) && pool.length) return deep(pool);
         if (teamName === prevTeam && Array.isArray(prevSquad)) return deep(prevSquad);
         if (DEFAULT_TOURNAMENT_SQUADS[teamName]) return DEFAULT_TOURNAMENT_SQUADS[teamName].slice();
         return [];
@@ -4084,6 +4141,7 @@
         if (name===S.teamA) return S.squadA;
         if (name===S.teamB) return S.squadB;
         if (S.tournament && S.tournament.squads && Array.isArray(S.tournament.squads[name])) return S.tournament.squads[name];
+        if (S.myTeams && S.myTeams.squads && Array.isArray(S.myTeams.squads[name])) return S.myTeams.squads[name];
         return [];
       }
       function battingSquad(){ return squadForTeam(S.current.battingTeam); }
@@ -4156,11 +4214,21 @@
       function removePlayer(which, i){
         if (!requireLiveOwner('edit the squads')) return;
         var arr = which==='A' ? S.squadA : S.squadB;
-        var name = arr[i]; arr.splice(i,1);
-        dropNicknamesFor(which==='A' ? S.teamA : S.teamB, name);
-        S.squadConfirmed = false;
-        syncMatchSquadToTournament(which);
-        commit('Squad updated', true); toast(name + ' removed from the squad');
+        var name = arr[i];
+        if (!name) return;
+        var team = which==='A' ? S.teamA : S.teamB;
+        askVerify('Remove this player?',
+          name + ' will be removed from ' + (team || 'the') + ' squad for this match. This cannot be undone.',
+          function(){
+            var a2 = which==='A' ? S.squadA : S.squadB;
+            var ix = a2.indexOf(name);
+            if (ix < 0) return;
+            a2.splice(ix, 1);
+            dropNicknamesFor(team, name);
+            S.squadConfirmed = false;
+            syncMatchSquadToTournament(which);
+            commit('Squad updated', true); toast(name + ' removed from the squad');
+          });
       }
       /* Move a player one position up / down in the squad order while
          the squad is being prepared for confirmation. Like adding or
@@ -5058,10 +5126,12 @@
         var keepLastFin = deep(S.lastFinishedSingle || null);
         var keepTnArc = deep(S.tournamentsArchive || []);
         var keepSingleFx = deep(S.singleFixtures || []);
+        var keepMyTeams = deep(S.myTeams || { teams: [], squads: {}, seeded: false });
         /* Players entered for a team in the Tournament tab become that team's match squad */
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
         S = freshState();
         S.tournament = keepTn;
+        S.myTeams = keepMyTeams; /* the My Teams pool is the user's own — it survives every match start, like the tournament data */
         S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
         S.players = keepPlayers; S.playerIds = keepPlayerIds; /* the player registry is permanent — Player IDs never reset with a match */
         S.pausedMatches = keepPaused; /* parked live matches survive a new match starting */
@@ -5783,6 +5853,77 @@
       }
 
       /* ---------- tournament ---------- */
+      /* ---------- My Teams pool: the user's own teams, apart from
+         every tournament. Until the split, My Teams edited the
+         tournament's team list directly, so a team added at home
+         turned up inside the tournament uninvited. The pool is its
+         own store now: My Teams reads and writes ONLY the pool, a
+         tournament's teams change only from inside that tournament
+         (its Teams tab), and the pickers that legitimately span both
+         (Open Match, the team datalist) read the union through
+         allKnownTeams(). ---------- */
+      function normalizeMyTeams(){
+        if (!S.myTeams || typeof S.myTeams !== 'object' || Array.isArray(S.myTeams)) S.myTeams = { teams: [], squads: {}, seeded: false };
+        if (!Array.isArray(S.myTeams.teams)) S.myTeams.teams = [];
+        if (!S.myTeams.squads || typeof S.myTeams.squads !== 'object' || Array.isArray(S.myTeams.squads)) S.myTeams.squads = {};
+        S.myTeams.teams.forEach(function(n){ if (!Array.isArray(S.myTeams.squads[n])) S.myTeams.squads[n] = []; });
+        /* Team leadership (Captain / Vice-Captain / Wicket-keeper):
+           an ARRAY of {t, c, vc, wk} entries keyed by team name —
+           never an object keyed by name (Firebase key rules, same
+           as teamLogos). States saved before leadership existed
+           simply have none selected yet. */
+        S.myTeams.leadership = normLeadershipArr(S.myTeams.leadership);
+        /* One-time seed: the pool starts as a copy of the teams the
+           user already has — until now they all lived in the
+           tournament store — so nothing disappears from My Teams
+           when the stores split. The tournament keeps its own copy;
+           from here on the two lists lead separate lives. */
+        if (!S.myTeams.seeded){
+          try { normalizeTournament(); } catch(e){}
+          var tn = S.tournament || { teams: [], squads: {} };
+          (tn.teams || []).forEach(function(n){
+            if (S.myTeams.teams.indexOf(n) === -1){
+              S.myTeams.teams.push(n);
+              S.myTeams.squads[n] = deep(Array.isArray(tn.squads[n]) ? tn.squads[n] : []);
+              var le = null;
+              (tn.leadership || []).forEach(function(e){ if (e && e.t === n) le = e; });
+              if (le) S.myTeams.leadership.push(deep(le));
+            }
+          });
+          S.myTeams.seeded = true;
+        }
+      }
+      function poolSquad(name){
+        normalizeMyTeams();
+        if (!Array.isArray(S.myTeams.squads[name])) S.myTeams.squads[name] = [];
+        return S.myTeams.squads[name];
+      }
+      function ensurePoolTeam(name){
+        normalizeMyTeams();
+        if (!name) return;
+        if (S.myTeams.teams.indexOf(name) === -1) S.myTeams.teams.push(name);
+        if (!Array.isArray(S.myTeams.squads[name])) S.myTeams.squads[name] = [];
+      }
+      /* Every team the user can pick anywhere: the My Teams pool
+         first, then any team that exists only inside the current
+         tournament. Names are de-duplicated (a team kept in both
+         places is still one pickable team). */
+      function allKnownTeams(){
+        normalizeMyTeams();
+        try { normalizeTournament(); } catch(e){}
+        var out = [];
+        (S.myTeams.teams || []).forEach(function(n){ if (n && out.indexOf(n) === -1) out.push(n); });
+        ((S.tournament && S.tournament.teams) || []).forEach(function(n){ if (n && out.indexOf(n) === -1) out.push(n); });
+        return out;
+      }
+      /* Mirror of syncTournamentSquadToMatch for the pool: when a
+         pool team's players change while that team is playing the
+         live match, the match squad follows. */
+      function syncPoolSquadToMatch(teamName){
+        var arr = poolSquad(teamName);
+        if (teamName === S.teamA){ S.squadA = deep(arr); S.squadConfirmed = false; }
+        if (teamName === S.teamB){ S.squadB = deep(arr); S.squadConfirmed = false; }
+      }
       function normalizeTournament(){
         if (!S.tournament || typeof S.tournament !== 'object') S.tournament = { name:'', teams:[], matches:[], fixtures:[], squads:{} };
         if (!Array.isArray(S.tournament.teams)) S.tournament.teams = [];
@@ -5820,6 +5961,13 @@
           tlSeen[e.t] = 1;
           return true;
         });
+        /* Team leadership (Captain / Vice-Captain / Wicket-keeper)
+           for THIS tournament's teams: an ARRAY of {t, c, vc, wk}
+           entries keyed by team name, normalised exactly like the
+           My Teams pool's list (see normLeadershipArr). A leadership
+           pick belongs to the store it was made in — the pool and a
+           tournament each keep their own. */
+        S.tournament.leadership = normLeadershipArr(S.tournament.leadership);
         if (typeof S.tournament.ownerUid !== 'string') S.tournament.ownerUid = '';
         if (typeof S.tournament.ownerName !== 'string') S.tournament.ownerName = '';
         /* Knockout bracket: { createdAt, matches:[{id, stage, label,
@@ -5941,11 +6089,25 @@
       function removeTournamentTeam(i){
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
-        var name = S.tournament.teams[i]; S.tournament.teams.splice(i,1);
-        if (name && S.tournament.squads) delete S.tournament.squads[name];
-        if (name) dropTeamLogo(name);
-        if (name) dropNicknamesFor(name, null);
-        commit('Team removed', true); toast(name + ' removed');
+        var name = S.tournament.teams[i];
+        if (!name) return;
+        var count = Array.isArray(S.tournament.squads[name]) ? S.tournament.squads[name].length : 0;
+        askVerify('Remove this team from the tournament?',
+          name + ' and its ' + count + (count === 1 ? ' player' : ' players') + ' will be removed from this tournament. Results already saved stay as they are. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            var idx = S.tournament.teams.indexOf(name);
+            if (idx < 0) return;
+            S.tournament.teams.splice(idx, 1);
+            if (S.tournament.squads) delete S.tournament.squads[name];
+            dropLeadershipTeam('tn', name);
+            /* Logo / nicknames are shared by team name — drop them
+               only when the team is gone from My Teams too. */
+            var inPool = false;
+            try { normalizeMyTeams(); inPool = S.myTeams.teams.indexOf(name) > -1; } catch(e){}
+            if (!inPool){ dropTeamLogo(name); dropNicknamesFor(name, null); }
+            commit('Team removed', true); toast(name + ' removed');
+          });
       }
       function addTournamentPlayer(teamIdx){
         if (!requireTnOwner('edit this tournament')) return;
@@ -5979,21 +6141,34 @@
         if (!team) return;
         var arr = tournamentSquad(team);
         var name = arr[playerIdx];
-        arr.splice(playerIdx, 1);
-        dropNicknamesFor(team, name);
-        syncTournamentSquadToMatch(team);
-        commit('Player removed', true); toast(name + ' removed from ' + team);
+        if (!name) return;
+        askVerify('Remove this player?',
+          name + ' will be removed from ' + team + ' in this tournament. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            var a2 = tournamentSquad(team);
+            var ix = a2.indexOf(name);
+            if (ix < 0) return;
+            a2.splice(ix, 1);
+            dropNicknamesFor(team, name);
+            clearLeadershipPlayer('tn', team, name);
+            syncTournamentSquadToMatch(team);
+            commit('Player removed', true); toast(name + ' removed from ' + team);
+          });
       }
       /* ---------- My Teams: team maintenance from the home page ----------
-         My Teams is not a second team list — it edits the SAME
-         teams and squads the Tournament, the Open Match team picker
-         and Match Setup all read (S.tournament.teams / squads), so a
-         team or player added here appears everywhere at once, and
-         one removed here is removed everywhere. */
-      /* The team whose detail (logo, players, add-player) is open on
-         the My Teams page, and the live search text from the entry
-         bar. Both survive re-renders: the entry bar itself is static
-         HTML above the list, so typing never loses focus. */
+         My Teams edits the user's OWN team pool (S.myTeams) — its
+         teams and squads live apart from every tournament, so a team
+         added here never appears inside a tournament on its own. A
+         tournament's teams are added from inside that tournament,
+         on its Teams tab. The Open Match picker and the Match Setup
+         team list read the union of the pool and the current
+         tournament's teams (allKnownTeams), so any team the user
+         keeps can be picked for a match. */
+      /* The live search text from the My Teams entry bar. It
+         survives re-renders: the entry bar itself is static HTML
+         above the list, so typing never loses focus. (A tapped team
+         opens on its own page now — see the team page block.) */
       var mtSelectedTeam = null;
       var mtFilterText = '';
       function mtSearchInput(){
@@ -6001,17 +6176,15 @@
         mtFilterText = inp ? inp.value.trim().toLowerCase() : '';
         renderMyTeams();
       }
+      /* Tapping a My Teams tile opens that team's own page — the
+         list itself no longer expands a detail underneath it. */
       function selectMyTeam(i){
-        try { normalizeTournament(); } catch(e){}
-        var name = S.tournament && S.tournament.teams ? S.tournament.teams[i] : null;
-        if (!name) return;
-        mtSelectedTeam = (mtSelectedTeam === name) ? null : name;
-        renderMyTeams();
+        openTeamPageIdx('mt', i);
       }
       function renderMyTeams(){
         var list = $('mtList'); if (!list) return;
-        try { normalizeTournament(); } catch(e){}
-        var tn = S.tournament || { teams: [], squads: {} };
+        try { normalizeMyTeams(); } catch(e){}
+        var tn = S.myTeams || { teams: [], squads: {} };
         var totalPlayers = 0;
         tn.teams.forEach(function(n){ totalPlayers += (Array.isArray(tn.squads[n]) ? tn.squads[n].length : 0); });
         var summary = tn.teams.length
@@ -6020,11 +6193,6 @@
         var sumEl = $('mtSummary'); if (sumEl) sumEl.textContent = summary;
         var consoleSub = $('consoleMyTeamsSub');
         if (consoleSub) consoleSub.textContent = tn.teams.length ? summary + ' — tap to add teams or manage players.' : 'Add teams and manage their players.';
-        if (mtSelectedTeam && tn.teams.indexOf(mtSelectedTeam) === -1) mtSelectedTeam = null;
-        /* Keep text already typed into the open team's add boxes
-           across re-renders. */
-        var keptPlayer = ''; var pb0 = $('mtPlayerBox'); if (pb0) keptPlayer = pb0.value;
-        var keptNick = ''; var nb0 = $('mtNickBox'); if (nb0) keptNick = nb0.value;
         /* Teams are listed alphabetically (like the reference Teams
            page); each tile keeps its real index for the actions. While
            the user types in the entry bar, the grid live-filters to the
@@ -6035,59 +6203,41 @@
         var shown = q ? order.filter(function(o){ return o.name.toLowerCase().indexOf(q) > -1; }) : order;
         var html = '';
         if (!tn.teams.length){
-          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. The same teams also appear in Tournament and in the team picker when you start a match.</p></div>';
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. These are your own teams for matches — a tournament keeps its own team list, added from inside the tournament.</p></div>';
         } else if (!shown.length){
           html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing — tap Add Team to add it as a new team.</p></div>';
         } else {
           html = '<div class="sb-teams-grid">' + shown.map(function(o){
               var players = Array.isArray(tn.squads[o.name]) ? tn.squads[o.name] : [];
-              return '<button type="button" class="sb-team-tile' + (o.name === mtSelectedTeam ? ' active' : '') + '" onclick="selectMyTeam(' + o.idx + ')" aria-label="Open ' + esc(o.name) + '">'
+              return '<button type="button" class="sb-team-tile" onclick="selectMyTeam(' + o.idx + ')" aria-label="Open ' + esc(o.name) + '">'
                 + teamBadgeHTML(o.name, o.idx)
                 + '<span class="sb-team-name">' + esc(o.name) + '</span>'
                 + '<span class="sb-team-count" style="display:block">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span>'
                 + '</button>';
             }).join('') + '</div>';
         }
-        /* Tapping a team opens its detail under the grid: the team
-           logo, its players, and the add / remove player system. */
-        if (mtSelectedTeam && tn.teams.indexOf(mtSelectedTeam) > -1){
-          var ti = tn.teams.indexOf(mtSelectedTeam);
-          var team = mtSelectedTeam;
-          var tPlayers = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
-          var rows = tPlayers.length
-            ? tPlayers.map(function(p, pi){ var nk = nickOf(team, p); var pid = lookupPlayerId(team, p); return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + '<button type="button" class="sq-x" onclick="removeMyPlayer(' + ti + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '">×</button></div>'; }).join('')
-            : '<div class="tn-empty">No players yet for this team — add players below.</div>';
-          html += '<div class="card mt-detail">'
-            + '<div class="sb-detail-head">' + teamBadgeHTML(team, ti) + '<div><h3>' + esc(team) + '</h3><div class="note">' + tPlayers.length + (tPlayers.length === 1 ? ' player' : ' players') + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div></div><button type="button" class="sq-x" onclick="removeMyTeam(' + ti + ')" aria-label="Remove team ' + esc(team) + '" title="Remove team">×</button></div>'
-            + teamLogoEditHTML(ti)
-            + rows
-            + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="mtPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="addMyPlayer(' + ti + ')">Add Players</button></div>'
-            + '<div class="rowflex" style="margin-top:8px"><input id="mtNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
-            + '</div>';
-        }
         list.innerHTML = html;
-        var pb = $('mtPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
-        var nb = $('mtNickBox'); if (nb && keptNick) nb.value = keptNick;
       }
       function addMyTeam(){
         if (!requireTnOwner('edit My Teams')) return;
         var inp = $('mtNewTeam');
         var names = parseNameList(inp ? inp.value : '');
         if (!names.length){ toast('Type or paste team names first — one name per line'); return; }
-        normalizeTournament();
+        normalizeMyTeams();
         var added = 0, skipped = 0, firstAdded = null;
         names.forEach(function(name){
-          if (S.tournament.teams.indexOf(name) > -1) skipped++;
-          else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; if (!firstAdded) firstAdded = name; }
+          if (S.myTeams.teams.indexOf(name) > -1) skipped++;
+          else { S.myTeams.teams.push(name); S.myTeams.squads[name] = []; added++; if (!firstAdded) firstAdded = name; }
         });
         if (inp) inp.value = '';
         mtFilterText = '';
-        /* Open the team straight away so its players can be added —
-           the one just added, or the existing one that was typed. */
-        if (firstAdded) mtSelectedTeam = firstAdded;
-        else if (skipped && names.length === 1) mtSelectedTeam = names[0];
         commit('Team entered', true);
-        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to My Teams — now add its players below');
+        /* Open the team's own page straight away so its players can
+           be added there — the team just added, or the existing one
+           that was typed. */
+        if (firstAdded) openTeamPage('mt', firstAdded);
+        else if (skipped && names.length === 1) openTeamPage('mt', names[0]);
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to My Teams — now add its players');
         else {
           var msg = '✓ ' + added + (added === 1 ? ' team' : ' teams') + ' added';
           if (skipped) msg += ' — ' + skipped + ' already added, skipped';
@@ -6096,28 +6246,42 @@
       }
       function removeMyTeam(i){
         if (!requireTnOwner('edit My Teams')) return;
-        normalizeTournament();
-        var name = S.tournament.teams[i]; if (!name) return;
-        S.tournament.teams.splice(i, 1);
-        if (S.tournament.squads) delete S.tournament.squads[name];
-        dropTeamLogo(name);
-        dropNicknamesFor(name, null);
-        commit('Team removed', true); toast(name + ' removed from My Teams');
+        normalizeMyTeams();
+        var name = S.myTeams.teams[i]; if (!name) return;
+        var count = Array.isArray(S.myTeams.squads[name]) ? S.myTeams.squads[name].length : 0;
+        askVerify('Remove this team?',
+          name + ' and its ' + count + (count === 1 ? ' player' : ' players') + ' will be removed from My Teams. Tournaments keep their own team lists — a tournament that has this team keeps it. This cannot be undone.',
+          function(){
+            normalizeMyTeams();
+            var idx = S.myTeams.teams.indexOf(name);
+            if (idx < 0) return;
+            S.myTeams.teams.splice(idx, 1);
+            if (S.myTeams.squads) delete S.myTeams.squads[name];
+            dropLeadershipTeam('mt', name);
+            /* The logo and nicknames are shared by team name: they
+               are dropped only when the team is gone from the
+               tournament's list too. */
+            var inTn = false;
+            try { normalizeTournament(); inTn = S.tournament.teams.indexOf(name) > -1; } catch(e){}
+            if (!inTn){ dropTeamLogo(name); dropNicknamesFor(name, null); }
+            if (mtSelectedTeam === name) mtSelectedTeam = null;
+            commit('Team removed', true); toast(name + ' removed from My Teams');
+          });
       }
       function addMyPlayer(teamIdx){
         if (!requireTnOwner('edit My Teams')) return;
-        normalizeTournament();
-        var team = S.tournament.teams[teamIdx];
+        normalizeMyTeams();
+        var team = S.myTeams.teams[teamIdx];
         if (!team) return;
         var inp = $('mtPlayerBox');
         var entries = parseNameEntries(inp ? inp.value : '');
         if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
         var nickInp = $('mtNickBox');
-        var arr = tournamentSquad(team);
+        var arr = poolSquad(team);
         var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
         if (inp) inp.value = '';
         if (nickInp) nickInp.value = '';
-        syncTournamentSquadToMatch(team);
+        syncPoolSquadToMatch(team);
         commit('Player added', true);
         if (res.added === 1 && res.skipped === 0 && !res.nicks) toast('✓ ' + entries[0].name + ' added to ' + team);
         else {
@@ -6130,15 +6294,25 @@
       }
       function removeMyPlayer(teamIdx, playerIdx){
         if (!requireTnOwner('edit My Teams')) return;
-        normalizeTournament();
-        var team = S.tournament.teams[teamIdx];
+        normalizeMyTeams();
+        var team = S.myTeams.teams[teamIdx];
         if (!team) return;
-        var arr = tournamentSquad(team);
+        var arr = poolSquad(team);
         var name = arr[playerIdx];
-        arr.splice(playerIdx, 1);
-        dropNicknamesFor(team, name);
-        syncTournamentSquadToMatch(team);
-        commit('Player removed', true); toast(name + ' removed from ' + team);
+        if (!name) return;
+        askVerify('Remove this player?',
+          name + ' will be removed from ' + team + ' in My Teams. This cannot be undone.',
+          function(){
+            normalizeMyTeams();
+            var a2 = poolSquad(team);
+            var ix = a2.indexOf(name);
+            if (ix < 0) return;
+            a2.splice(ix, 1);
+            dropNicknamesFor(team, name);
+            clearLeadershipPlayer('mt', team, name);
+            syncPoolSquadToMatch(team);
+            commit('Player removed', true); toast(name + ' removed from ' + team);
+          });
       }
       function parseOversToBalls(txt, fallbackBalls){
         if (txt == null || String(txt).trim() === '') return fallbackBalls || 0;
@@ -6284,9 +6458,18 @@
       function removeArchivedMatch(id){
         if (!requireTnOwner('remove results from this tournament')) return;
         normalizeTournament();
-        S.tournament.matches = S.tournament.matches.filter(function(m){ return m.id !== id; });
-        if (S.archivedMatchId === id) S.archivedMatchId = null;
-        commit('Result removed', true); toast('Match result removed');
+        var m = null;
+        S.tournament.matches.forEach(function(x){ if (x.id === id) m = x; });
+        if (!m) return;
+        var label = (m.innings || []).map(function(inn){ return inn.battingTeam; }).filter(Boolean).join(' vs ');
+        askVerify('Remove this result?',
+          (label ? label + ' — ' : '') + matchResultText(m) + '. The result will be removed from this tournament, and the points table and statistics will be recalculated without it. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            S.tournament.matches = S.tournament.matches.filter(function(x){ return x.id !== id; });
+            if (S.archivedMatchId === id) S.archivedMatchId = null;
+            commit('Result removed', true); toast('Match result removed');
+          });
       }
       function addFixture(){
         if (!requireTnOwner('edit this tournament')) return;
@@ -6302,8 +6485,17 @@
       function removeFixture(id){
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
-        S.tournament.fixtures = S.tournament.fixtures.filter(function(f){ return f.id !== id; });
-        commit('Fixture removed', true);
+        var fx = null;
+        S.tournament.fixtures.forEach(function(f){ if (f.id === id) fx = f; });
+        if (!fx) return;
+        askVerify('Remove this fixture?',
+          (fx.teamA || 'Team 1') + ' vs ' + (fx.teamB || 'Team 2') + ' will be removed from this tournament\'s fixtures. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            S.tournament.fixtures = S.tournament.fixtures.filter(function(f){ return f.id !== id; });
+            commit('Fixture removed', true);
+            toast('Fixture removed');
+          });
       }
       function startFixture(id){
         if (!requireSignIn('start a match')) return;
@@ -6616,9 +6808,14 @@
       function removeBracket(){
         if (!requireTnOwner('remove the knockout bracket')) return;
         normalizeTournament();
-        S.tournament.bracket = null;
-        commit('Knockout bracket removed', true);
-        toast('Knockout bracket removed — results already saved stay in Match Results');
+        askVerify('Remove the knockout bracket?',
+          'The semi-finals, final and 3rd-place fixtures in the bracket will be removed. Results already saved stay in Match Results. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            S.tournament.bracket = null;
+            commit('Knockout bracket removed', true);
+            toast('Knockout bracket removed — results already saved stay in Match Results');
+          });
       }
       function startBracketMatch(id){
         if (!requireSignIn('start a match')) return;
@@ -6945,52 +7142,270 @@
         }
         window.scrollTo({ top:0, behavior:'smooth' });
       }
+      /* ---------- team leadership: Captain / Vice-Captain / Wicket-keeper ----------
+         Every team (in the My Teams pool and in a tournament alike)
+         may name a Captain, a Vice-Captain and a Wicket-keeper from
+         its own squad. The picks live in the owning store's
+         leadership list — an ARRAY of {t, c, vc, wk} entries keyed
+         by team name, values are player names from that squad (the
+         same name strings the squads themselves carry). One player
+         holds at most one of the three roles in a team: naming a
+         player Captain clears them as Vice-Captain / Wicket-keeper.
+         Removing a player from a squad clears their roles with it,
+         and a rename carries the roles to the new name. */
+      var LEAD_ROLES = [['c', 'Captain', 'C'], ['vc', 'Vice-Captain', 'VC'], ['wk', 'Wicket-keeper', 'WK']];
+      function normLeadershipArr(raw){
+        var arr = [];
+        if (Array.isArray(raw)) arr = raw;
+        else if (raw && typeof raw === 'object') arr = Object.keys(raw).sort().map(function(k){ return raw[k]; });
+        var seen = {}, out = [];
+        arr.forEach(function(e){
+          if (!e || typeof e !== 'object' || !e.t || seen[e.t]) return;
+          seen[e.t] = 1;
+          out.push({ t: e.t, c: typeof e.c === 'string' ? e.c : '', vc: typeof e.vc === 'string' ? e.vc : '', wk: typeof e.wk === 'string' ? e.wk : '' });
+        });
+        return out;
+      }
+      function leadershipStore(src){ return src === 'mt' ? S.myTeams : S.tournament; }
+      function leadershipFor(src, team){
+        var store = leadershipStore(src);
+        var list = (store && Array.isArray(store.leadership)) ? store.leadership : [];
+        for (var i = 0; i < list.length; i++) if (list[i] && list[i].t === team) return list[i];
+        return { t: team, c: '', vc: '', wk: '' };
+      }
+      function setLeadershipRole(src, team, role, name){
+        if (src === 'mt') normalizeMyTeams(); else normalizeTournament();
+        var store = leadershipStore(src);
+        if (!Array.isArray(store.leadership)) store.leadership = [];
+        var entry = null;
+        store.leadership.forEach(function(e){ if (e && e.t === team) entry = e; });
+        if (!entry){ entry = { t: team, c: '', vc: '', wk: '' }; store.leadership.push(entry); }
+        if (name) LEAD_ROLES.forEach(function(r){ if (r[0] !== role && entry[r[0]] === name) entry[r[0]] = ''; });
+        entry[role] = name || '';
+        if (!entry.c && !entry.vc && !entry.wk) store.leadership = store.leadership.filter(function(e){ return e !== entry; });
+      }
+      function clearLeadershipPlayer(src, team, name){
+        var store = leadershipStore(src);
+        if (!store || !Array.isArray(store.leadership)) return;
+        store.leadership.forEach(function(e){
+          if (e && e.t === team) LEAD_ROLES.forEach(function(r){ if (e[r[0]] === name) e[r[0]] = ''; });
+        });
+        store.leadership = store.leadership.filter(function(e){ return e && (e.c || e.vc || e.wk); });
+      }
+      function dropLeadershipTeam(src, team){
+        var store = leadershipStore(src);
+        if (!store || !Array.isArray(store.leadership)) return;
+        store.leadership = store.leadership.filter(function(e){ return !e || e.t !== team; });
+      }
+      /* The small C / VC / WK chips shown beside a player's name in
+         squad rows — gold for the Captain, blue for the Vice-Captain,
+         green for the Wicket-keeper. */
+      function leadBadgesHTML(src, team, name){
+        if (!name) return '';
+        var L = leadershipFor(src, team);
+        var out = '';
+        LEAD_ROLES.forEach(function(r){ if (L[r[0]] === name) out += '<span class="lead-chip ' + r[0] + '" title="' + r[1] + ' of ' + esc(team) + '">' + r[2] + '</span>'; });
+        return out;
+      }
+      function leadSummaryHTML(src, team){
+        var L = leadershipFor(src, team);
+        var parts = [];
+        LEAD_ROLES.forEach(function(r){ if (L[r[0]]) parts.push(r[1] + ': ' + plLink(team, L[r[0]])); });
+        return parts.length ? '<div class="lead-line">' + parts.join(' • ') + '</div>' : '';
+      }
+
+      /* ---------- dedicated team page ----------
+         Tapping a team ANYWHERE a teams section lists it (the My
+         Teams grid, a tournament's Teams gallery, the scoreboard's
+         tournament teams) opens that team's OWN page — header, Team
+         ID, leadership and full squad — instead of expanding the
+         team's details underneath the list. The page's Back button
+         returns to whichever list the tap came from. On the control
+         side the page is also where the team is managed: logo,
+         C / VC / WK pickers, add / remove players, remove team.
+         Viewers get the same page read-only (the scoreboard source
+         keeps its Players / Matches / Statistics tabs). */
+      var teamPageCtx = null; /* { src:'mt'|'tn'|'sb', team, back } */
+      function openTeamPage(src, team, back){
+        if (!team) return;
+        if (src === 'sb'){ sbSelectedTeam = team; sbTeamDetailTab = 'players'; }
+        teamPageCtx = { src: src, team: team, back: back || (src === 'mt' ? 'myteams' : (src === 'sb' ? 'scoreboard' : 'tournament')) };
+        setView('teampage');
+      }
+      function openTeamPageIdx(src, idx){
+        var name = null;
+        if (src === 'mt'){ try { normalizeMyTeams(); } catch(e){} name = S.myTeams && S.myTeams.teams ? S.myTeams.teams[idx] : null; }
+        else if (src === 'sb'){ var d = liveDisplayState(); name = d && d.tournament && d.tournament.teams ? d.tournament.teams[idx] : null; }
+        else { try { normalizeTournament(); } catch(e){} name = S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null; }
+        if (name) openTeamPage(src, name);
+      }
+      function closeTeamPage(){
+        var back = teamPageCtx ? teamPageCtx.back : 'home';
+        if (back === 'tournament'){ setView('tournament'); try { setTnTab('teams'); } catch(e){} }
+        else setView(back || 'home');
+      }
+      function teamPageEditable(){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return false;
+        if (isViewerSession()) return false;
+        if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
+        return true;
+      }
+      function renderTeamPage(){
+        var wrap = $('tpBody'); if (!wrap) return;
+        var title = $('tpTitle');
+        if (!teamPageCtx || !teamPageCtx.team){
+          if (title) title.textContent = 'Team';
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Pick a team from My Teams or a tournament\u2019s Teams tab to open its page.</p></div>';
+          return;
+        }
+        var team = teamPageCtx.team;
+        if (title) title.textContent = team;
+        if (teamPageCtx.src === 'sb'){
+          /* The scoreboard's team page is a viewer surface: it is
+             built from the Firebase-confirmed display state only,
+             with its Players / Matches / Statistics tabs. */
+          wrap.innerHTML = '<div class="card"><div id="tpSbDetail"></div></div>';
+          renderWithDisplayState(function(){ renderSbTeamDetailDisplay($('tpSbDetail')); });
+          return;
+        }
+        var src = teamPageCtx.src;
+        if (src === 'mt') normalizeMyTeams(); else normalizeTournament();
+        var store = leadershipStore(src);
+        var teams = (store && store.teams) || [];
+        var ti = teams.indexOf(team);
+        if (ti === -1){
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">This team is no longer in the list — go back and pick another team.</p></div>';
+          return;
+        }
+        /* Keep text already typed into the add-player boxes across
+           re-renders (a Firebase update must not eat it). */
+        var keptPlayer = ''; var pb0 = $('tpPlayerBox'); if (pb0) keptPlayer = pb0.value;
+        var keptNick = ''; var nb0 = $('tpNickBox'); if (nb0) keptNick = nb0.value;
+        var players = Array.isArray(store.squads[team]) ? store.squads[team] : [];
+        var editable = teamPageEditable();
+        var L = leadershipFor(src, team);
+        var leadHTML = LEAD_ROLES.map(function(r){
+          var cur = L[r[0]] || '';
+          if (!editable){
+            return '<div class="lead-row"><span class="lead-chip ' + r[0] + '">' + r[2] + '</span><span class="lead-role">' + r[1] + '</span><span class="lead-name">' + (cur ? plLink(team, cur) : '<span class="note">Not selected</span>') + '</span></div>';
+          }
+          var opts = '<option value="">— None —</option>' + players.map(function(p){ return '<option value="' + esc(p) + '"' + (p === cur ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('');
+          return '<div class="lead-pick"><label for="tpLead-' + r[0] + '">' + r[1] + ' (' + r[2] + ')</label><select id="tpLead-' + r[0] + '" class="tn-select" onchange="tpSetLeadership(\'' + r[0] + '\', this.value)">' + opts + '</select></div>';
+        }).join('');
+        var rows = players.length
+          ? players.map(function(p, pi){
+              var nk = nickOf(team, p); var pid = lookupPlayerId(team, p);
+              return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + leadBadgesHTML(src, team, p) + playerMetaHTML(team, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + (editable ? '<button type="button" class="sq-x" onclick="tpRemovePlayer(' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '">×</button>' : '') + '</div>';
+            }).join('')
+          : '<div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div>';
+        /* No separate Upload Logo option on the Team Page: the round
+           badge in the head is itself the control — tapping it opens
+           the image picker, exactly what the old Upload Logo button
+           did. A small Remove logo link stays only while a logo is
+           set. Viewers keep the plain, non-tappable badge. */
+        var logoNow = teamLogoFor(team);
+        var logoSrcArg = src === 'mt' ? ",'mt'" : '';
+        var badgeHTML = editable
+          ? '<button type="button" class="tp-logo-btn" onclick="pickTeamLogo(' + ti + logoSrcArg + ')" title="' + (logoNow ? 'Change the logo of ' : 'Add a logo for ') + esc(team) + '" aria-label="' + (logoNow ? 'Change the logo of ' : 'Add a logo for ') + esc(team) + '">' + teamBadgeHTML(team, ti) + '<span class="tp-logo-edit" aria-hidden="true">✎</span></button>'
+          : teamBadgeHTML(team, ti);
+        wrap.innerHTML = '<div class="card tp-card">'
+          + '<div class="sb-detail-head">' + badgeHTML + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div>'
+          + (editable && logoNow ? '<div style="margin-top:5px"><button type="button" class="tp-logo-remove" onclick="removeTeamLogo(' + ti + logoSrcArg + ')">Remove logo</button></div>' : '')
+          + '</div>'
+          + (editable ? '<button type="button" class="sq-x" onclick="tpRemoveTeam()" aria-label="Remove team ' + esc(team) + '" title="Remove team">×</button>' : '')
+          + '</div>'
+          + '<div class="tp-sec"><h4>Leadership</h4>' + (editable ? '<div class="lead-grid">' + leadHTML + '</div><p class="note" style="margin-top:8px">Pick the Captain, Vice-Captain and Wicket-keeper from the squad. One player can hold only one of the three roles.</p>' : '<div class="lead-rows">' + leadHTML + '</div>') + '</div>'
+          + '<div class="tp-sec"><h4>Squad</h4>' + rows + '</div>'
+          + (editable
+            ? '<div class="rowflex names-row" style="margin-top:12px"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
+            + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
+            : '')
+          + '</div>';
+        var pb = $('tpPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
+        var nb = $('tpNickBox'); if (nb && keptNick) nb.value = keptNick;
+      }
+      function tpSetLeadership(role, val){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        if (!requireTnOwner('set team leadership')){ renderTeamPage(); return; }
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        setLeadershipRole(src, team, role, val || '');
+        commit('Leadership updated', true);
+        var label = role === 'c' ? 'Captain' : (role === 'vc' ? 'Vice-Captain' : 'Wicket-keeper');
+        toast(val ? ('✓ ' + val + ' is now ' + label + ' of ' + team) : (label + ' cleared for ' + team));
+      }
+      function tpAddPlayer(){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        if (!requireTnOwner('edit this team')) return;
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var inp = $('tpPlayerBox');
+        var entries = parseNameEntries(inp ? inp.value : '');
+        if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
+        var nickInp = $('tpNickBox');
+        var arr = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+        var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
+        if (inp) inp.value = '';
+        if (nickInp) nickInp.value = '';
+        if (src === 'mt') syncPoolSquadToMatch(team); else syncTournamentSquadToMatch(team);
+        commit('Player added', true);
+        if (res.added === 1 && res.skipped === 0 && !res.nicks) toast('✓ ' + entries[0].name + ' added to ' + team);
+        else {
+          var pmsg = '✓ ' + res.added + (res.added === 1 ? ' player' : ' players') + ' added to ' + team;
+          if (res.skipped) pmsg += ' — ' + res.skipped + ' already in the squad, skipped';
+          if (res.nicks) pmsg += ' — nickname set for ' + res.nicks + (res.nicks === 1 ? ' player' : ' players');
+          toast(pmsg);
+        }
+        var again = $('tpPlayerBox'); if (again) { try { again.focus(); } catch(e){} }
+      }
+      function tpRemovePlayer(playerIdx){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        if (!requireTnOwner('edit this team')) return;
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var arr = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+        var name = arr[playerIdx];
+        if (!name) return;
+        askVerify('Remove this player?',
+          name + ' will be removed from ' + team + '. This cannot be undone.',
+          function(){
+            var a2 = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+            var ix = a2.indexOf(name);
+            if (ix < 0) return;
+            a2.splice(ix, 1);
+            dropNicknamesFor(team, name);
+            clearLeadershipPlayer(src, team, name);
+            if (src === 'mt') syncPoolSquadToMatch(team); else syncTournamentSquadToMatch(team);
+            commit('Player removed', true); toast(name + ' removed from ' + team);
+          });
+      }
+      function tpRemoveTeam(){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var ti = (src === 'mt' ? S.myTeams.teams : S.tournament.teams).indexOf(team);
+        if (ti < 0) return;
+        if (src === 'mt') removeMyTeam(ti); else removeTournamentTeam(ti);
+      }
+
       /* ---------- tournament TEAMS gallery: all teams at a glance ---------- */
-      var tnSelectedTeam = null;
+      /* Tapping a team tile opens that team's own page (see the
+         team page block above) — the gallery itself no longer
+         expands a detail under the grid. */
       function selectTnTeam(teamName){
-        tnSelectedTeam = teamName;
-        renderTnTeamsGallery();
-        var det = $('tnTeamDetail');
-        if (det){ try { det.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+        openTeamPage('tn', teamName);
       }
       function renderTnTeamsGallery(){
         var grid = $('tnTeamsGrid');
         if (!grid) return;
         normalizeTournament();
         var tn = S.tournament;
-        if (tnSelectedTeam && tn.teams.indexOf(tnSelectedTeam) === -1) tnSelectedTeam = null;
-        if (!tnSelectedTeam && tn.teams.length) tnSelectedTeam = tn.teams[0];
         grid.innerHTML = tn.teams.length
           ? '<div class="sb-teams-grid">' + tn.teams.map(function(n, i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
-              return '<button type="button" class="sb-team-tile' + (n === tnSelectedTeam ? ' active' : '') + '" data-tn-team-idx="' + i + '" aria-label="Show players of ' + esc(n) + '">'
+              return '<button type="button" class="sb-team-tile" data-tn-team-idx="' + i + '" aria-label="Open ' + esc(n) + '">'
                 + teamBadgeHTML(n, i)
                 + '<span class="sb-team-name">' + esc(n) + '</span>'
                 + '<span class="sb-team-count" style="display:block">' + players.length + (players.length===1 ? ' player' : ' players') + '</span>'
                 + '</button>';
             }).join('') + '</div>'
           : '<p class="note">No teams in this tournament yet.</p>';
-        renderTnTeamDetail();
-      }
-      function renderTnTeamDetail(){
-        var wrap = $('tnTeamDetail');
-        if (!wrap) return;
-        normalizeTournament();
-        var tn = S.tournament;
-        if (!tnSelectedTeam){
-          wrap.innerHTML = '';
-          return;
-        }
-        var team = tnSelectedTeam;
-        var teamIdx = tn.teams.indexOf(team);
-        var players = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
-        var body = players.length
-          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('')
-          : '<p class="note">No players entered for this team yet.</p>';
-        wrap.innerHTML = '<div class="tn-team-players">'
-          + '<div class="tn-team-players-head">' + teamBadgeHTML(team, teamIdx >= 0 ? teamIdx : 0) + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div></div></div>'
-          + body
-          + '</div>';
       }
       document.addEventListener('click', function(e){
         var t = e.target;
@@ -7101,10 +7516,18 @@
         reader.onerror = function(){ toast('⚠️ That image could not be read — try again'); };
         try { reader.readAsDataURL(file); } catch(e){ toast('⚠️ That image could not be read — try again'); }
       }
-      function pickTeamLogo(teamIdx){
-        if (!requireTnOwner('edit team logos')) return;
+      /* Logos are stored by team NAME, so one logo serves the team
+         wherever it appears; the edit controls sit on two different
+         lists though — src 'mt' indexes the My Teams pool, anything
+         else indexes the current tournament's teams. */
+      function logoTeamName(teamIdx, src){
+        if (src === 'mt'){ normalizeMyTeams(); return S.myTeams.teams[teamIdx] || null; }
         normalizeTournament();
-        var name = S.tournament.teams[teamIdx];
+        return S.tournament.teams[teamIdx] || null;
+      }
+      function pickTeamLogo(teamIdx, src){
+        if (!requireTnOwner('edit team logos')) return;
+        var name = logoTeamName(teamIdx, src);
         if (!name) return;
         imgPickCtx = { kind: 'team', team: name };
         var inp = $('teamLogoFile');
@@ -7117,34 +7540,37 @@
         processPickedImage(file, 'logo', function(url){
           /* The team list may have changed while the picker was
              open — only save for a team that still exists. */
-          normalizeTournament();
-          if (S.tournament.teams.indexOf(ctx.team) === -1){ toast('⚠️ That team is no longer in the list — the logo was not saved'); return; }
+          if (allKnownTeams().indexOf(ctx.team) === -1){ toast('⚠️ That team is no longer in the list — the logo was not saved'); return; }
           setTeamLogo(ctx.team, url);
           commit('Team logo updated', true);
           toast('✓ Logo saved for ' + ctx.team + ' — it now shows everywhere instead of the initials badge');
         });
         if (inp) inp.value = '';
       }
-      function removeTeamLogo(teamIdx){
+      function removeTeamLogo(teamIdx, src){
         if (!requireTnOwner('edit team logos')) return;
-        normalizeTournament();
-        var name = S.tournament.teams[teamIdx];
+        var name = logoTeamName(teamIdx, src);
         if (!name || !teamLogoFor(name)) return;
-        setTeamLogo(name, '');
-        commit('Team logo removed', true);
-        toast('Logo removed for ' + name + ' — the initials badge is back');
+        askVerify('Remove this logo?',
+          'The logo for ' + name + ' will be removed everywhere it appears, and the initials badge will be shown instead. This cannot be undone.',
+          function(){
+            setTeamLogo(name, '');
+            commit('Team logo removed', true);
+            toast('Logo removed for ' + name + ' — the initials badge is back');
+          });
       }
-      /* The upload / change / remove row shown under a team's head
-         in My Teams and in the tournament Team Entry boxes. */
-      function teamLogoEditHTML(teamIdx){
-        normalizeTournament();
-        var name = S.tournament.teams[teamIdx];
+      /* The upload / change / remove row shown in the tournament
+         Team Entry boxes. (The Team Page has no such row — its head
+         badge is tapped instead; see renderTeamPage.) */
+      function teamLogoEditHTML(teamIdx, src){
+        var name = logoTeamName(teamIdx, src);
         if (!name) return '';
         var logo = teamLogoFor(name);
+        var srcArg = src === 'mt' ? ",'mt'" : '';
         return '<div class="logo-edit">'
           + '<span class="le-prev">' + (logo ? '<img src="' + esc(logo) + '" alt="" />' : esc(tnInitials(name))) + '</span>'
-          + '<button type="button" class="btn ghost sm" onclick="pickTeamLogo(' + teamIdx + ')">' + (logo ? 'Change Logo' : 'Upload Logo') + '</button>'
-          + (logo ? '<button type="button" class="btn ghost sm" onclick="removeTeamLogo(' + teamIdx + ')">Remove Logo</button>' : '')
+          + '<button type="button" class="btn ghost sm" onclick="pickTeamLogo(' + teamIdx + srcArg + ')">' + (logo ? 'Change Logo' : 'Upload Logo') + '</button>'
+          + (logo ? '<button type="button" class="btn ghost sm" onclick="removeTeamLogo(' + teamIdx + srcArg + ')">Remove Logo</button>' : '')
           + '<p class="note">' + (logo ? 'This logo shows everywhere ' + esc(name) + ' appears, instead of the initials badge.' : 'No logo yet — the initials badge is shown. Upload a logo image and it replaces the badge everywhere.') + '</p>'
           + '</div>';
       }
@@ -7170,9 +7596,14 @@
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
         if (!S.tournament.banner) return;
-        S.tournament.banner = '';
-        commit('Tournament banner removed', true);
-        toast('Banner removed — the standard tournament header is back');
+        askVerify('Remove the tournament banner?',
+          'The banner image will be removed and the standard tournament header will be shown instead. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            S.tournament.banner = '';
+            commit('Tournament banner removed', true);
+            toast('Banner removed — the standard tournament header is back');
+          });
       }
       function tnInitials(name){
         if (!name) return '—';
@@ -7765,13 +8196,13 @@
           try { panel.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
         }
       }
+      /* Tapping a team on the scoreboard opens that team's own
+         page (Players / Matches / Statistics), like every other
+         teams section — nothing expands under the grid any more. */
       function selectSbTeam(teamName){
         sbSelectedTeam = teamName;
         sbTeamDetailTab = 'players';
-        if (!sbTournamentOpen) toggleSbTournament();
-        renderSbTeams();
-        var det = $('sbTeamDetail');
-        if (det){ try { det.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+        openTeamPage('sb', teamName, 'scoreboard');
       }
       function setSbTeamTab(tab){
         sbTeamDetailTab = tab;
@@ -7822,13 +8253,19 @@
                 + '</button>';
             }).join('') + '</div>'
           : '<p class="note">No teams in this tournament yet.</p>';
-        renderSbTeamDetail();
+        /* The tapped team's details live on its own page now — the
+           slot under this grid stays empty. */
+        var det0 = $('sbTeamDetail');
+        if (det0) det0.innerHTML = '';
       }
       function renderSbTeamDetail(){
-        renderWithDisplayState(renderSbTeamDetailDisplay);
+        /* The detail renders on the dedicated team page; the tab
+           buttons inside it call back here. */
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'teampage' && teamPageCtx && teamPageCtx.src === 'sb'){ renderTeamPage(); return; }
+        renderWithDisplayState(function(){ renderSbTeamDetailDisplay(null); });
       }
-      function renderSbTeamDetailDisplay(){
-        var wrap = $('sbTeamDetail');
+      function renderSbTeamDetailDisplay(targetEl){
+        var wrap = targetEl || $('sbTeamDetail');
         if (!wrap) return;
         if (!sbSelectedTeam){
           wrap.innerHTML = '';
@@ -7847,7 +8284,7 @@
         var body = '';
         if (sbTeamDetailTab === 'players'){
           body = players.length
-            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('')
+            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + leadBadgesHTML('tn', team, p) + playerMetaHTML(team, p) + '</div>'; }).join('')
             : '<p class="note">No players entered for this team yet.</p>';
         } else if (sbTeamDetailTab === 'matches'){
           var tm = sbTeamMatches(team);
@@ -7887,7 +8324,7 @@
           body = sParts.join('');
         }
         wrap.innerHTML = '<div class="sb-team-detail">'
-          + '<div class="sb-detail-head">' + teamBadgeHTML(team, teamIdx >= 0 ? teamIdx : 0) + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + ' • ' + esc(record) + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div></div></div>'
+          + '<div class="sb-detail-head">' + teamBadgeHTML(team, teamIdx >= 0 ? teamIdx : 0) + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + ' • ' + esc(record) + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div>' + leadSummaryHTML('tn', team) + '</div></div>'
           + '<div class="sb-detail-tabs" role="tablist" aria-label="' + esc(team) + ' details">' + tabs + '</div>'
           + body
           + '</div>';
@@ -7918,10 +8355,11 @@
           ? tn.teams.map(function(n,i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
               var playerRows = players.length
-                ? players.map(function(p,pi){ var nk = nickOf(n, p); var pidT = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + playerMetaHTML(n, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidT ? pidChipHTML(pidT) : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                ? players.map(function(p,pi){ var nk = nickOf(n, p); var pidT = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + leadBadgesHTML('tn', n, p) + playerMetaHTML(n, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidT ? pidChipHTML(pidT) : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
                 : '<div class="tn-empty">No players yet for this team — add players below.</div>';
               return '<div class="squad-box tn-team-box">'
-                + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
+                + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button type="button" class="btn ghost sm" onclick="openTeamPageIdx(\'tn\',' + i + ')">Open Team →</button><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
+                + leadSummaryHTML('tn', n)
                 + teamLogoEditHTML(i)
                 + playerRows
                 + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="tnPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button class="btn sm" onclick="addTournamentPlayer(' + i + ')">Add Players</button></div>'
@@ -7964,7 +8402,7 @@
             : '<p class="note">No results yet.</p>';
         });
         if ($('sbSquads')) $('sbSquads').innerHTML = sbSquadsHtml;
-        $('dlTeams').innerHTML = tn.teams.map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
+        $('dlTeams').innerHTML = allKnownTeams().map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
         var pts = pointsTableHTML();
         $('tnPoints').innerHTML = pts;
         var bkEl = $('tnBracket'); if (bkEl) bkEl.innerHTML = bracketHTML();
@@ -8768,7 +9206,8 @@
             else if (el.getAttribute('data-ownlock') === '1'){ el.disabled = false; el.removeAttribute('data-ownlock'); }
           });
         }
-        /* My Teams edits the same team list, so it follows the same lock. */
+        /* My Teams edits are gated by the same admin account
+           (requireTnOwner), so its inputs follow the same lock. */
         var mv = $('view-myteams');
         if (mv && !inTnViewer){
           mv.querySelectorAll('input, textarea, select').forEach(function(el){
@@ -9613,6 +10052,20 @@
         if (typeof HIST !== 'undefined' && HIST) Object.keys(HIST).forEach(function(id){ var e = HIST[id]; if (e){ noteTeam(e.teamA); noteTeam(e.teamB); } });
         S.playerIds.forEach(function(e){ if (e && e.id === pid) e.n = newName; });
         (S.nicknames || []).forEach(function(e){ if (e && e.n === oldName && (!ctxTeam || e.t === ctxTeam || !e.t)) e.n = newName; });
+        /* Team leadership picks (C / VC / WK) carry the player's
+           name too — a rename follows the player into them, in the
+           pool, the current tournament and archived tournaments. */
+        var renameLeadershipIn = function(store){
+          if (!store || !Array.isArray(store.leadership)) return;
+          store.leadership.forEach(function(e){
+            if (!e) return;
+            if (!belongs[e.t] && e.t !== (ctxTeam || '')) return;
+            ['c','vc','wk'].forEach(function(r){ if (e[r] === oldName) e[r] = newName; });
+          });
+        };
+        renameLeadershipIn(S.myTeams);
+        renameLeadershipIn(S.tournament);
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){ renameLeadershipIn(a && a.data); });
         /* Tournament / My Teams squads (the shared team lists). */
         if (S.tournament && S.tournament.squads){
           Object.keys(S.tournament.squads).forEach(function(team){ renameSquadArr(team, S.tournament.squads[team], oldName, newName, belongs); });
@@ -9947,7 +10400,7 @@
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
-        base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], teams: [], matches: [], fixtures: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
         base.status = 'finished'; base.inningsNo = innNo;
         base.current = cur; base.prevInnings = prev;
         base.squadA = deep(e.squadA || []); base.squadB = deep(e.squadB || []);
@@ -11851,6 +12304,7 @@
         step(renderOmFixtures);
         step(renderTournament);
         step(renderMyTeams);
+        step(renderTeamPage);
         try { renderLiveHome(); } catch(e){}
         /* Permanent history: a finished match that is somehow not
            filed yet (restored backup, adopted remote state) is filed
@@ -12169,7 +12623,7 @@
           var circ = $('omCircle' + pair[0]), txt = $('omCircle' + pair[0] + 'Txt'), nm = $('omName' + pair[0]);
           if (!circ || !txt || !nm) return;
           var logo = pair[1] ? teamLogoFor(pair[1]) : '';
-          circ.className = 'om-circle' + (pair[1] ? ' c' + (((S.tournament && S.tournament.teams ? S.tournament.teams.indexOf(pair[1]) : idx) + 4) % 4) : '') + (logo ? ' has-logo' : '');
+          circ.className = 'om-circle' + (pair[1] ? ' c' + (((allKnownTeams().indexOf(pair[1]) + 4) % 4)) : '') + (logo ? ' has-logo' : '');
           txt.innerHTML = pair[1] ? omLogoInnerHTML(pair[1]) : '+';
           nm.textContent = pair[1] || ('Team ' + pair[0]);
         });
@@ -12202,10 +12656,12 @@
       var tpCurrentList = [];
       function renderTeamPickerList(){
         var el = $('tpList'); if (!el) return;
-        try { normalizeTournament(); } catch(e){}
         var q = (($('tpSearch') && $('tpSearch').value) || '').trim().toLowerCase();
         var other = om.slot === 'A' ? om.teamB : om.teamA;
-        var teams = (S.tournament.teams || []).filter(function(n){ return !q || n.toLowerCase().indexOf(q) > -1; });
+        /* The picker offers every team the user keeps — the My Teams
+           pool plus the current tournament's teams — never one list
+           silently standing in for the other. */
+        var teams = allKnownTeams().filter(function(n){ return !q || n.toLowerCase().indexOf(q) > -1; });
         tpCurrentList = teams;
         el.innerHTML = teams.length ? teams.map(function(n, i){
           var taken = other && n === other;
@@ -12227,9 +12683,8 @@
       function tpFindById(){
         var raw = (($('tpId') && $('tpId').value) || '').trim().toLowerCase().replace(/\s+/g, '');
         if (!raw){ toast('Type a Team ID first'); return; }
-        try { normalizeTournament(); } catch(e){}
         var found = null;
-        (S.tournament.teams || []).forEach(function(n){ if (teamIdFor(n) === raw) found = n; });
+        allKnownTeams().forEach(function(n){ if (teamIdFor(n) === raw) found = n; });
         if (!found){ toast('⚠️ No team with ID “' + raw + '” — check the ID under the team names below'); return; }
         pickTeam(found);
       }
@@ -12243,9 +12698,10 @@
         var inp = $('tpNewName');
         var name = inp ? inp.value.trim() : '';
         if (!name){ toast('Type the new team name first'); return; }
-        try { normalizeTournament(); } catch(e){}
-        var exists = (S.tournament.teams || []).some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
-        ensureTournamentTeam(name);
+        var exists = allKnownTeams().some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
+        /* A team created from the match picker joins the My Teams
+           pool — never a tournament it was not entered into. */
+        ensurePoolTeam(name);
         commit('Team entered', true);
         if (inp) inp.value = '';
         toast(exists ? '✓ ' + name + ' is already in your teams — selected' : '✓ ' + name + ' created and selected');
@@ -12360,10 +12816,14 @@
           toast('🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that account can remove it.');
           return;
         }
-        S.singleFixtures = list.filter(function(x){ return x.id !== id; });
-        commit('Fixture removed', true);
-        renderOmFixtures();
-        toast('Fixture removed');
+        askVerify('Remove this fixture?',
+          (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' will be removed from Saved Fixtures. This cannot be undone.',
+          function(){
+            S.singleFixtures = singleFixtures().filter(function(x){ return x.id !== id; });
+            commit('Fixture removed', true);
+            renderOmFixtures();
+            toast('Fixture removed');
+          });
       }
       function omStartFixture(id){
         var f = null;
@@ -12449,7 +12909,7 @@
         setView('scorer');
       }
 
-      /* ---------- tournaments: create / open (nothing is deleted) ---------- */
+      /* ---------- tournaments: create / open / delete ---------- */
       function tournamentsArchive(){
         if (!Array.isArray(S.tournamentsArchive)) S.tournamentsArchive = [];
         return S.tournamentsArchive;
@@ -12509,6 +12969,54 @@
             doIt);
         } else doIt();
       }
+      /* Deleting a tournament is permanent and always confirmed
+         first. Only the tournament's admin can delete it (an
+         unowned tournament can be deleted by a signed-in account,
+         which claims it the same way edits do). My Teams is a
+         separate pool and is never touched by a tournament delete. */
+      function deleteCurrentTournament(){
+        if (!requireTnOwner('delete this tournament')) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        var label = tn.name || 'Current Tournament';
+        askVerify('Delete this tournament?',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results, points table and statistics go with it. Your My Teams pool is separate and is not touched. This cannot be undone.',
+          function(){
+            if (tn.id) S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== tn.id; });
+            var fresh = deep(freshState().tournament);
+            fresh.id = 'tn' + Date.now();
+            fresh.ownerUid = currentUid(); fresh.ownerName = authDisplayName();
+            S.tournament = fresh;
+            commit('Tournament deleted', true);
+            renderTournamentList();
+            toast('🗑 ' + label + ' deleted');
+          });
+      }
+      function deleteArchivedTournament(id){
+        var arc = tournamentsArchive();
+        var entry = null;
+        arc.forEach(function(a){ if (a.id === id) entry = a; });
+        if (!entry) return;
+        var d = entry.data || {};
+        var o = d.ownerUid || '';
+        if (o && o !== currentUid()){
+          toast('🔒 Only the tournament admin (' + (d.ownerName || 'another account') + ') can delete this tournament. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
+          return;
+        }
+        if (!o && !currentUid()){
+          toast('🔑 Sign in with Google to delete this tournament — it was saved before sign-in existed, so it can be deleted by a signed-in account, not in guest mode.');
+          return;
+        }
+        var label = entry.name || d.name || 'Tournament';
+        askVerify('Delete this tournament?',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results and statistics go with it. Your My Teams pool is separate and is not touched. This cannot be undone.',
+          function(){
+            S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== id; });
+            commit('Tournament deleted', true);
+            renderTournamentList();
+            toast('🗑 ' + label + ' deleted');
+          });
+      }
       function renderTournamentList(){
         var el = $('tnList'); if (!el) return;
         try { normalizeTournament(); } catch(e){}
@@ -12516,18 +13024,20 @@
         function meta(t){
           return (t.teams || []).length + ((t.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (t.matches || []).length + ((t.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (t.ownerName ? ' • Admin: ' + t.ownerName : '');
         }
-        var html = '<button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
+        var html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
           + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
           + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
-          + '<span class="tp-badge">CURRENT</span></button>';
+          + '<span class="tp-badge">CURRENT</span></button>'
+          + '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button></div>';
         var arc = tournamentsArchive().slice().reverse();
         html += arc.map(function(a){
           var d = a.data || {};
           var date = a.at ? new Date(a.at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
-          return '<button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
+          return '<div class="tn-row"><button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
             + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span>'
-            + '<span class="tp-open">Open →</span></button>';
+            + '<span class="tp-open">Open →</span></button>'
+            + '<button type="button" class="btn red sm tn-delbtn" onclick="deleteArchivedTournament(\'' + esc(a.id) + '\')" aria-label="Delete ' + esc(a.name || d.name || 'this tournament') + '">🗑 Delete</button></div>';
         }).join('');
         el.innerHTML = html;
       }
@@ -12547,7 +13057,8 @@
       function navStateFor(v){
         return { view: v,
           tnTab: (typeof currentTnTab !== 'undefined' && currentTnTab) ? currentTnTab : null,
-          cbTab: (typeof currentCbTab !== 'undefined' && currentCbTab) ? currentCbTab : null };
+          cbTab: (typeof currentCbTab !== 'undefined' && currentCbTab) ? currentCbTab : null,
+          tp: (typeof teamPageCtx !== 'undefined' && teamPageCtx) ? { src: teamPageCtx.src, team: teamPageCtx.team, back: teamPageCtx.back } : null };
       }
       function navUrlFor(v){
         return v === 'home' ? (location.pathname + location.search) : '#' + v;
@@ -12586,6 +13097,7 @@
         if (target) target.classList.add('show');
         if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('home'); } catch(e){} try { renderHistory(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
+        if (v==='teampage'){ try { renderTeamPage(); } catch(e){} }
         /* Entering the Live Matches list always re-renders it from
            the server-confirmed state, so Back (in-page or browser)
            can never land on a stale list left over from before a
@@ -12625,8 +13137,15 @@
         try { hv = (location.hash || '').replace(/^#/, ''); } catch(e){}
         var fallback = document.body.classList.contains('viewer-flow') ? 'live' : 'home';
         var target = st.view || hv || fallback;
-        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament'];
+        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament','teampage'];
         if (known.indexOf(target) === -1) target = fallback;
+        /* A team-page entry carries which team it shows; without
+           one (or a live context) there is no team page to return
+           to, so Back falls back to the landing view instead. */
+        if (target === 'teampage'){
+          if (st.tp && st.tp.team) teamPageCtx = { src: st.tp.src || 'tn', team: st.tp.team, back: st.tp.back || 'home' };
+          else if (!teamPageCtx) target = fallback;
+        }
         navFromPop = true;
         if (target !== currentViewName) setView(target);
         if (target === 'tournament' && st.tnTab){ try { setTnTab(st.tnTab); } catch(e){} }
