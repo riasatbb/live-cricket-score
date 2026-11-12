@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "264859542758",
+    "firebase_url": "https://live-cricket-score-1cdf8-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "live-cricket-score-1cdf8",
+    "storage_bucket": "live-cricket-score-1cdf8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264859542758:android:8ea365b9c0ba96554e8727",
+        "android_client_info": {
+          "package_name": "com.riasatbb.livecricketscore.control"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "264859542758-r9lrsl9obmf3g0d26nd392jhqgrc6ncq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.riasatbb.livecricketscore.control",
+            "certificate_hash": "2dd08daeeae5383faea85ad86f1e6ba71385487d"
+          }
+        },
+        {
+          "client_id": "264859542758-61gq3e3kmrbh7rqt25hj734te14mhr5d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCq3wlKolhPZLEvhW0dgXZnDxd2nzVmZ7g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "264859542758-61gq3e3kmrbh7rqt25hj734te14mhr5d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
