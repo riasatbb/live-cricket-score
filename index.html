@@ -444,6 +444,33 @@
       .sc-pop-x{display:none}
       #view-scorer>.card.pop .sc-pop-x{display:flex;position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-size:16px;line-height:1;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0}
 
+      /* ---------- scorer's match tabs (during scoring) ----------
+         The scoring pad stays the scorer's home, but the five
+         scoreboard views — Info, Live, Scorecard, Squads, Overs —
+         stay one tap away while scoring: this tab strip sits above
+         the pad on the scoring-only screen. A tab opens the real
+         scoreboard on that view (same rendering the viewers get),
+         and the scoreboard then carries a "Back to Scoring Pad"
+         bar (below) so the scorer returns to the pad with one tap.
+         "Scoring" is the pad itself, so it is shown active and
+         does not navigate. */
+      #scorerSbTabs{display:none}
+      #view-scorer.scoring-only #scorerSbTabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+      .ssb-tab{flex:1 1 auto;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:10px;padding:9px 6px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+      .ssb-tab:active{transform:scale(.97)}
+      .ssb-tab.active{background:var(--green);border-color:var(--green);color:#fff;cursor:default}
+      /* The pre-scoring hint ("Select Batters & Bowler") is a
+         tappable call to action: the whole banner opens the
+         Batter, Bowler Selection page. */
+      .mc-hint.clickable{cursor:pointer;text-align:center;font-size:16.5px;font-weight:800;padding:13px 12px}
+      .mc-hint.clickable:active{transform:scale(.99)}
+      /* Back-to-pad bar on the scoreboard when the scorer opened
+         it from the scoring screen (dark, to sit inside the
+         scoreboard's dark wrap). */
+      #sbScorerBar{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:#14532d;border-bottom:1px solid #333}
+      body.scorer-sb #sbScorerBar{display:flex}
+      #sbScorerBar .sb-scorer-note{color:#cdeeda;font-size:13.5px;font-weight:600}
+
       /* ---------- tournament ---------- */
       .ptable{font-size:13px}
       .ptable th,.ptable td{padding:6px 4px;text-align:center}
@@ -1429,6 +1456,15 @@
 
         <div id="scorerLive" hidden></div>
 
+        <nav id="scorerSbTabs" aria-label="Match views — scoring and scoreboard tabs">
+          <button type="button" class="ssb-tab active" aria-current="page">Scoring</button>
+          <button type="button" class="ssb-tab" onclick="openScorerSbTab('info')">Info</button>
+          <button type="button" class="ssb-tab" onclick="openScorerSbTab('live')">Live</button>
+          <button type="button" class="ssb-tab" onclick="openScorerSbTab('scorecard')">Scorecard</button>
+          <button type="button" class="ssb-tab" onclick="openScorerSbTab('squads')">Squads</button>
+          <button type="button" class="ssb-tab" onclick="openScorerSbTab('overs')">Overs</button>
+        </nav>
+
         <div class="mc" id="scorerCentre">
           <div class="mc-head">
             <div class="mc-team" id="mcTeam">—</div>
@@ -1531,6 +1567,7 @@
           <datalist id="dlBowl"></datalist>
           <datalist id="dlTeams"></datalist>
           <div class="rowflex" style="margin-top:12px">
+            <button class="btn" onclick="confirmBattersBowler()">OK</button>
             <button class="btn ghost sm" onclick="changeBowler()">🔄 Change Bowler Now</button>
           </div>
           </div>
@@ -1550,6 +1587,10 @@
         </div>
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
+          <div id="sbScorerBar">
+            <button type="button" class="btn sm" onclick="backToScoringPad()">🏏 Back to Scoring Pad</button>
+            <span class="sb-scorer-note">You are scoring this match — the tabs below stay live while you score.</span>
+          </div>
           <div class="cb-archivebar" id="cbArchiveBar" hidden></div>
           <div class="cb-top">
             <button type="button" class="cb-back" onclick="backToLiveMatches()" aria-label="Back to all live matches">←</button>
@@ -4070,6 +4111,65 @@
         if (matchFinishedGuard()) return;
         openFoldById('playersCard');
       }
+      /* The OK button on the Batter, Bowler Selection page (the
+         Batters & Bowler card). The three picks reach the state as
+         they are chosen in the dropdowns; OK is the confirmation
+         step: with all three picked and valid it closes the
+         selection page back to the scoring pad and the match
+         starts (mid-match, the same OK simply confirms a change of
+         batter / bowler). With a pick still missing — or an invalid
+         pair — the page stays open, the empty dropdowns are marked
+         and the reason is toasted, so OK can never "start" a match
+         that has no openers or no bowler. */
+      function confirmBattersBowler(){
+        if (!requireLiveOwner('change players')) return;
+        syncPlayersFromInputs();
+        var inn = S.current; if (!inn) return;
+        if (!inn.striker || !inn.nonStriker || !inn.bowler){
+          markMissingPlayerSlots();
+          toast('Select Batters & Bowler first — striker, non-striker and bowler are all required');
+          return;
+        }
+        if (!playersSelected()) return;
+        announceCurrentPlayers();
+        commit(null, true);
+        closeScorerPop();
+        if (S.status === 'finished') toast('✓ Batters & bowler set');
+        else if (inn.legalBalls === 0 && S.inningsNo === 1 && !S.prevInnings) toast('🏏 Match started — ' + inn.striker + ' & ' + inn.nonStriker + ' to bat, ' + inn.bowler + ' to bowl');
+        else if (inn.legalBalls === 0) toast('🏏 Innings started — ' + inn.striker + ' & ' + inn.nonStriker + ' to bat, ' + inn.bowler + ' to bowl');
+        else toast('✓ Batters & bowler set');
+        var pad = $('scorerCentre'); if (pad){ try { pad.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }
+      }
+      /* ---------- scorer's scoreboard tabs during scoring ----------
+         The tab strip above the pad (Info / Live / Scorecard /
+         Squads / Overs) opens the real Public Scoreboard on the
+         chosen tab — the same rendering viewers get — without
+         leaving the match: scorerSbReturn remembers that the
+         scorer came from the pad, so the scoreboard shows its
+         "Back to Scoring Pad" bar and its back arrow returns to
+         the pad instead of the Live Matches list. Any other
+         navigation clears the flag (see setView), so viewers and
+         archived matches never see the scorer's bar. */
+      var scorerSbReturn = false;
+      function openScorerSbTab(tab){
+        if (!liveMatchExists()){ toast('Start a match first — there is nothing to show yet'); return; }
+        scorerSbReturn = true;
+        setView('scoreboard');
+        setCbTab(tab || 'live');
+        updateScorerSbBar();
+      }
+      function backToScoringPad(){
+        scorerSbReturn = false;
+        document.body.classList.remove('scorer-sb');
+        var bar = $('sbScorerBar'); if (bar) bar.style.display = '';
+        setView('scorer');
+      }
+      function updateScorerSbBar(){
+        var show = !!scorerSbReturn && typeof currentViewName !== 'undefined' && currentViewName === 'scoreboard'
+          && !(typeof archiveView !== 'undefined' && archiveView)
+          && !document.body.classList.contains('viewer-mode');
+        document.body.classList.toggle('scorer-sb', show);
+      }
       function scrollToHistory(){
         var h = $('historyCard'); if (!h) return;
         var view = $('view-scorer');
@@ -4191,9 +4291,29 @@
           if (miss.length){ msg = 'Select the ' + miss.join(', ') + ' first — then scoring starts.'; showOpen = true; }
         }
         if (msg){
-          hint.innerHTML = esc(msg) + (showOpen ? ' <button type="button" onclick="openFoldById(\'playersCard\')">Open Batters &amp; Bowler</button>' : '');
+          if (showOpen){
+            /* After Start Scoring, while the batters / bowler are
+               still to be picked, the hint is one short tappable
+               message — "Select Batters & Bowler". Tapping anywhere
+               on it opens the Batter, Bowler Selection page (the
+               Batters & Bowler card, as a popup over the pad); the
+               OK button on that page confirms the three picks and
+               the match starts. */
+            hint.textContent = 'Select Batters & Bowler';
+            hint.classList.add('clickable');
+            hint.setAttribute('role', 'button');
+            hint.setAttribute('tabindex', '0');
+            hint.onclick = function(){ openFoldById('playersCard'); };
+            hint.onkeydown = function(ev){ if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openFoldById('playersCard'); } };
+          } else {
+            hint.innerHTML = esc(msg);
+            hint.classList.remove('clickable');
+            hint.removeAttribute('role');
+            hint.removeAttribute('tabindex');
+            hint.onclick = null; hint.onkeydown = null;
+          }
           hint.classList.add('show');
-        } else { hint.classList.remove('show'); hint.innerHTML = ''; }
+        } else { hint.classList.remove('show'); hint.classList.remove('clickable'); hint.removeAttribute('role'); hint.removeAttribute('tabindex'); hint.onclick = null; hint.onkeydown = null; hint.innerHTML = ''; }
         var ei = $('btnEndInnings');
         if (ei) ei.disabled = (S.status === 'inningsBreak' || S.status === 'finished');
         /* Player of the Match picker — finished matches only. */
@@ -6021,6 +6141,13 @@
         backToLiveMatches();
       }
       function backToLiveMatches(){
+        /* A scorer who opened this scoreboard from the scoring pad
+           (Info / Live / Scorecard / Squads / Overs tabs) goes back
+           to the pad, not to the Live Matches list. */
+        if (typeof scorerSbReturn !== 'undefined' && scorerSbReturn && !archiveView && !document.body.classList.contains('viewer-mode')){
+          backToScoringPad();
+          return;
+        }
         /* From an archived match opened out of History, Back returns
            to where it was opened from — not to the Live Matches list.
            The live scoreboard panels are then re-rendered from the
@@ -10143,6 +10270,13 @@
         else { setView('home'); }
       }
       function setView(v){
+        /* Leaving the scoreboard also ends the scorer's detour from
+           the scoring pad: the "Back to Scoring Pad" bar belongs
+           only to a scoreboard the scorer opened from the pad. */
+        if (v !== 'scoreboard' && typeof scorerSbReturn !== 'undefined' && scorerSbReturn){
+          scorerSbReturn = false;
+          document.body.classList.remove('scorer-sb');
+        }
         /* Leaving the scoreboard ends archive mode: the next visit to
            the scoreboard shows the live match again. (Opening an
            archived match sets archiveView BEFORE setView('scoreboard'),
@@ -10180,6 +10314,7 @@
           else history.replaceState(navStateFor(v), '', navUrlFor(v));
         } catch(e){}
         currentViewName = v;
+        try { updateScorerSbBar(); } catch(e){}
         if (v==='scoreboard'){ try { guardViewerScoreboard(); } catch(e){} }
         if (v==='scorer'){ try { updateScoringOnly(); } catch(e){} } else { try { closeScorerPop(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
