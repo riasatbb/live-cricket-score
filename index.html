@@ -549,6 +549,10 @@
          open these two screens, so nothing changes for them. */
       #view-resume .viewer-backbar{display:flex}
       #view-tournaments .viewer-backbar{display:flex}
+      /* The Scorer Console home keeps its back bar too: it is reached
+         from the mode chooser, and its top tab bar is hidden there,
+         so without this bar there was no in-app way back to All Modes. */
+      #view-console .viewer-backbar{display:flex}
       .sb-view-tour-card h2{border:none;text-align:center}
       .sb-view-tour-card .sub{max-width:520px;margin-left:auto;margin-right:auto}
       .sb-teams-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 12px;padding:6px 2px 2px}
@@ -811,6 +815,25 @@
       .prof-match{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;color:var(--ink);cursor:pointer}
       .prof-match .pm-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700}
       .prof-match .pm-line{font-size:13.5px;color:var(--muted);margin-top:3px}
+      /* ---------- editable player profile (name, role, jersey, photo) ---------- */
+      .prof-head{display:flex;gap:14px;align-items:center;margin:2px 0 12px}
+      .prof-ava{flex:none;width:84px;height:84px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;color:var(--green);overflow:hidden;text-align:center;line-height:1}
+      .prof-ava img{width:100%;height:100%;object-fit:cover;display:block}
+      .prof-head-main{flex:1;min-width:0}
+      .prof-head-name{font-size:21px;font-weight:800;line-height:1.2;word-break:break-word}
+      .prof-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+      .prof-chip{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--chip);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+      .prof-chip.jersey{background:var(--gold);border-color:var(--gold);color:#241a02}
+      .prof-edit{border:1px solid var(--line);border-radius:12px;background:var(--surface2);padding:13px 14px;margin:0 0 16px}
+      .prof-edit h3{margin:0 0 10px;font-size:16px}
+      .pf-photo-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+      .pf-photo-prev{flex:none;width:60px;height:60px;border-radius:50%;background:var(--surface);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;color:var(--green);overflow:hidden}
+      .pf-photo-prev img{width:100%;height:100%;object-fit:cover;display:block}
+      .pf-file{display:none}
+      body.viewer-mode .prof-edit,body.link-viewer .prof-edit{display:none !important}
+      .sq-ava{flex:none;width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--line);vertical-align:middle}
+      .sq-role{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
+      .sq-jersey{flex:none;background:var(--gold);border:1px solid var(--gold);color:#241a02;font-size:11.5px;font-weight:800;border-radius:999px;padding:1px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
       .hist-del{color:var(--red)}
       /* ---------- scorer console home: three options, nothing else ---------- */
       .console-home{display:grid;gap:12px;max-width:640px}
@@ -825,7 +848,18 @@
       .tn-pick .tp-badge{flex:none;font-size:11.5px;font-weight:700;background:var(--green);color:#fff;border-radius:999px;padding:4px 10px}
       .tn-pick .tp-open{flex:none;font-weight:700;color:var(--green)}
       /* ---------- Open Match (Start Single Match setup, per reference) ---------- */
-      #view-openmatch .viewer-backbar{display:flex}
+      /* Clean page top: a bare back icon at the left, the page title
+         centred — no header, no sign-in bar, no boxed back bar. */
+      .clean-top{position:relative;display:flex;align-items:center;justify-content:center;min-height:44px;margin:2px 0 14px}
+      .clean-top h2{margin:0;text-align:center;font-family:"Barlow Condensed",sans-serif;font-size:27px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.15;padding:0 52px}
+      .clean-back{position:absolute;left:0;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);padding:0}
+      .clean-back:active{transform:translateY(-50%) scale(.94)}
+      /* Open Match page: everything middle-aligned, like the reference —
+         field labels and typed values sit in the centre. */
+      #view-openmatch .om-card label{display:block;text-align:center}
+      #view-openmatch .om-card input{text-align:center}
+      #view-openmatch .om-field{justify-content:center;text-align:center}
+      #view-openmatch .om-field .om-chev{margin-left:6px}
       .om-card{max-width:640px;margin-left:auto;margin-right:auto}
       .om-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
       .om-slot{text-align:center;min-width:0}
@@ -918,13 +952,24 @@
       #view-live .ml-label{justify-content:center}
       #view-live .ml-line{justify-content:center}
       #view-live .ml-status{text-align:center}
+      /* ---------- Header only on the home pages ----------
+         The brand bar (app name, Firebase pill, mode / view tabs) shows
+         on the home pages only — mode chooser, Scorer Console home and
+         the Live Matches home. Every inner page (Open Match, My Teams,
+         scoring pad, tournaments, history…) opens clean, straight at
+         its own title. setView toggles body.home-chrome. */
+      body:not(.home-chrome) .topbar{display:none !important}
       /* ---------- My Teams (home-page team maintenance) ---------- */
-      #view-myteams{text-align:left}
-      #view-myteams .viewer-backbar{display:flex}
-      #view-myteams .mt-team-card{margin-bottom:12px}
-      #view-myteams .mt-team-card h3{font-size:19px}
+      #view-myteams{text-align:center}
+      #view-myteams .mt-entry{display:flex;gap:10px;max-width:640px;margin:0 auto;align-items:stretch}
+      #view-myteams .mt-entry input{flex:1;min-width:0;text-align:center}
+      #view-myteams .mt-entry .btn{flex:none;white-space:nowrap}
+      #view-myteams .mt-detail{max-width:640px;margin:16px auto 0;text-align:left}
+      #view-myteams .mt-detail .sb-detail-head{margin-bottom:8px}
+      #view-myteams .mt-detail .sb-detail-head > div{flex:1;min-width:0}
+      #view-myteams .mt-detail .sb-detail-head .sq-x{flex:none}
       body.viewer-mode #view-myteams .sq-x{display:none !important}
-      body.viewer-mode #view-myteams .names-row,body.viewer-mode #view-myteams .mt-addrow{display:none !important}
+      body.viewer-mode #view-myteams .names-row,body.viewer-mode #view-myteams .mt-entry{display:none !important}
       body.link-viewer #view-home .mode-card.myteams-entry,body.link-viewer #view-console .console-opt.myteams-entry{display:none !important}
     </style>
   </head>
@@ -995,6 +1040,9 @@
 
       <!-- ================= SCORER CONSOLE HOME ================= -->
       <section class="view" id="view-console">
+        <div class="viewer-backbar">
+          <button type="button" class="btn ghost sm" onclick="setView('home')">← All Modes</button>
+        </div>
         <div class="authbar-slot"></div>
         <div class="mode-intro">
           <h2>Scorer Console</h2>
@@ -1019,18 +1067,14 @@
 
       <!-- ================= MY TEAMS ================= -->
       <section class="view" id="view-myteams">
-        <div class="authbar-slot"></div>
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
-          <button type="button" class="btn ghost sm" onclick="setView('home')">← All Modes</button>
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
+          <h2>My Teams</h2>
         </div>
         <div class="card">
-          <h2>👥 My Teams</h2>
-          <p class="sub">Manage all your teams in one place. Teams and players added here are available everywhere — Single Match team picker, Match Setup and Tournament. Add a team below, then add or remove its players right under it.</p>
-          <label for="mtNewTeam">Add a team — one name per line for bulk entry</label>
-          <div class="rowflex names-row mt-addrow">
-            <textarea id="mtNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line"></textarea>
-            <button type="button" class="btn sm" onclick="addMyTeam()">Add Team</button>
+          <div class="mt-entry">
+            <input id="mtNewTeam" type="text" placeholder="Team name — type to search your teams" autocomplete="off" aria-label="Team name — type to search your teams, or enter a new team name" oninput="mtSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();addMyTeam();}" />
+            <button type="button" class="btn" onclick="addMyTeam()">Add Team</button>
           </div>
           <p class="note" id="mtSummary" style="margin-top:10px"></p>
         </div>
@@ -1039,12 +1083,11 @@
 
       <!-- ================= OPEN MATCH: START SINGLE MATCH SETUP ================= -->
       <section class="view" id="view-openmatch">
-        <div class="authbar-slot"></div>
-        <div class="viewer-backbar">
-          <button type="button" class="btn ghost sm" onclick="setView('console')">← Scorer Console</button>
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
+          <h2>Open Match</h2>
         </div>
         <div class="card om-card">
-          <h2 style="text-align:center">Open Match</h2>
           <div class="om-teams">
             <div class="om-slot">
               <div class="om-lab">Select Team</div>
@@ -1107,7 +1150,10 @@
 
       <!-- ================= SCORER ================= -->
       <section class="view" id="view-scorer">
-
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">←</button>
+          <h2>Scorer Console</h2>
+        </div>
         <div class="authbar-slot"></div>
         <div class="card">
           <h2>🔗 Your Two Links</h2>
@@ -1627,6 +1673,10 @@
 
       <!-- ================= OVERLAY ================= -->
       <section class="view" id="view-overlay">
+        <div class="clean-top" id="overlayBackTop">
+          <button type="button" class="clean-back" onclick="setView('scorer')" aria-label="Back to Scorer Console">←</button>
+          <h2>Broadcast Overlay</h2>
+        </div>
         <div class="card" id="overlayHelp">
           <h2>Broadcast Overlay</h2>
           <div class="rowflex">
@@ -1713,6 +1763,7 @@
           <input id="tpSearch" placeholder="Search teams…" autocomplete="off" oninput="renderTeamPickerList()" aria-label="Search teams" />
           <div class="tp-list" id="tpList"></div>
         </div>
+        <button type="button" class="btn ghost" style="width:100%;margin-top:16px" onclick="closeTeamPicker()">← Back</button>
       </div>
     </div>
 
@@ -1732,6 +1783,7 @@
         <h3 class="om-h">Ball Type*</h3>
         <div class="chip-row" id="fmBallChips"></div>
         <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="fmDone()">Done</button>
+        <button type="button" class="btn ghost" style="width:100%;margin-top:10px" onclick="closeFormatModal()">← Back</button>
       </div>
     </div>
 
@@ -1749,6 +1801,7 @@
           <button type="button" class="chip" id="tossChipBowl" onclick="tossDecide('bowl')">Bowl</button>
         </div>
         <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="omStartScoring()">Start Scoring</button>
+        <button type="button" class="btn ghost" style="width:100%;margin-top:10px" onclick="closeTossModal()">← Back</button>
       </div>
     </div>
 
@@ -1770,6 +1823,7 @@
           <button class="sq-x big" onclick="closeHistoryMatch()" aria-label="Close scorecard">×</button>
         </div>
         <div id="histModalBody"></div>
+        <div style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeHistoryMatch()">← Back</button></div>
       </div>
     </div>
 
@@ -2363,6 +2417,97 @@
         if (!p){ p = { id: id, name: name }; S.players.push(p); }
         return p;
       }
+      /* ---------- editable player profile data (role, jersey, photo) ----------
+         A person's playing role, jersey number and photo live on the
+         registry record itself (S.players), alongside the name — so
+         they sync through Firebase and the on-device backup with the
+         rest of the state, and every device shows the same profile.
+         The photo is a small compressed data URL (see pfPhotoChosen),
+         never the original file, so the state stays light. */
+      var PROFILE_ROLES = ['Batter','Bowler','All-rounder','Wicket-keeper','Wicket-keeper Batter'];
+      /* Snapshot of the registry for archived matches / tournament
+         results: identity + role + jersey travel with the match, but
+         photos do NOT — copying every photo into every archived
+         match would bloat the permanent history for no gain, since
+         the live registry (which keeps the photos) is never reset. */
+      function playersSnapshot(){
+        ensurePlayerArrays();
+        return S.players.map(function(p){ return { id: p.id, name: p.name, role: p.role || '', jersey: p.jersey || '' }; });
+      }
+      /* Find a person by Player ID wherever a record of them lives:
+         the live registry first, then the snapshots carried inside
+         archived history entries and saved tournament results. */
+      function personAnywhere(pid){
+        if (!pid) return null;
+        var p = findPerson(pid);
+        if (p) return p;
+        var found = null;
+        if (typeof HIST !== 'undefined' && HIST){
+          Object.keys(HIST).forEach(function(id){
+            if (found) return;
+            var e = HIST[id];
+            (Array.isArray(e && e.players) ? e.players : []).forEach(function(sp){ if (!found && sp && sp.id === pid) found = sp; });
+          });
+        }
+        if (!found && S.tournament && Array.isArray(S.tournament.matches)){
+          S.tournament.matches.forEach(function(m){
+            if (found || !m) return;
+            (Array.isArray(m.players) ? m.players : []).forEach(function(sp){ if (!found && sp && sp.id === pid) found = sp; });
+          });
+        }
+        return found;
+      }
+      function profileDataFor(team, name, pid){
+        var id = pid || lookupPlayerId(team || '', name) || '';
+        var p = id ? personAnywhere(id) : null;
+        if (!p && name){
+          /* No ID resolved (brand-new name): fall back to a unique
+             same-name registry record, mirroring lookupPlayerId. */
+          var cands = (S.players || []).filter(function(x){ return x && x.name === name; });
+          if (cands.length === 1){ p = cands[0]; id = p.id; }
+        }
+        return {
+          pid: id || (p ? p.id : ''),
+          name: (p && p.name) || name || '',
+          role: (p && p.role) || '',
+          jersey: (p && p.jersey) || '',
+          photo: (p && p.photo) || ''
+        };
+      }
+      function initialsOf(name){
+        var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '?';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+      }
+      /* Small profile extras shown beside the name in squad lists:
+         the photo (when one is set), the playing role and the jersey
+         number. Empty when the profile carries none of them, so
+         un-edited players render exactly as before. */
+      function playerMetaHTML(team, name){
+        if (!name) return '';
+        var d = profileDataFor(team, name, '');
+        var out = '';
+        if (d.photo) out += '<img class="sq-ava" src="' + esc(d.photo) + '" alt="" loading="lazy" />';
+        if (d.role) out += '<span class="sq-role">' + esc(d.role) + '</span>';
+        if (d.jersey) out += '<span class="sq-jersey">#' + esc(d.jersey) + '</span>';
+        return out;
+      }
+      /* Who may edit a player profile: a signed-in account on the
+         control side that is not locked out of both the tournament
+         and the live match. Viewers (shared viewer link, viewer
+         mode, viewer-remembered devices) and guests never edit —
+         for them the profile stays read-only, exactly like the rest
+         of the app. The save handler re-checks this, so hiding the
+         form is never the only protection. */
+      function canEditPlayerProfile(){
+        if (isViewerSession()) return false;
+        if (!currentUid()) return false;
+        var tnLocked = false, liveLocked = false;
+        try { tnLocked = tournamentLocked(); } catch(e){}
+        try { liveLocked = liveMatchLocked(); } catch(e){}
+        return !(tnLocked && liveLocked);
+      }
       function setPlayerMapping(team, name, id){
         if (!name || !id) return;
         ensurePlayerArrays();
@@ -2528,7 +2673,7 @@
           S.tournament.matches.forEach(function(m){
             if (!m) return;
             (m.innings || []).forEach(stampInningsPids);
-            if (!Array.isArray(m.players)) m.players = deep(S.players);
+            if (!Array.isArray(m.players)) m.players = playersSnapshot();
             if (!Array.isArray(m.playerIds)) m.playerIds = deep(S.playerIds);
           });
         }
@@ -2570,6 +2715,8 @@
             var e = S.nicknames[i];
             if (e && e.n === r.name && e.k){ r.nick = e.k; break; }
           }
+          var person = findPerson(r.id);
+          if (person){ r.role = person.role || ''; r.jersey = person.jersey || ''; }
         });
         list.sort(function(a, b){ return a.name.localeCompare(b.name); });
         return list;
@@ -2637,6 +2784,8 @@
           var p = it.person;
           var meta = p.teams.length ? p.teams.join(' • ') : 'Known player';
           if (p.nick) meta += ' • “' + p.nick + '”';
+          if (p.role) meta += ' • ' + p.role;
+          if (p.jersey) meta += ' • #' + p.jersey;
           return '<button type="button" class="ac-item' + (i === acIdx ? ' active' : '') + '" data-ac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">' + esc(p.name) + '</span><span class="ac-meta">' + esc(meta) + '</span></span><span class="ac-id">ID ' + esc(pidShort(p.id)) + '</span></button>';
         }).join('');
         wrap.appendChild(box);
@@ -2865,6 +3014,13 @@
           }
         });
         S.players = S.players.filter(function(e){ return e && typeof e === 'object' && e.id && e.name; });
+        /* Editable profile fields: plain strings, empty on records
+           saved before profiles could be edited. */
+        S.players.forEach(function(e){
+          if (typeof e.role !== 'string') e.role = '';
+          if (typeof e.jersey !== 'string') e.jersey = (typeof e.jersey === 'number') ? String(e.jersey) : '';
+          if (typeof e.photo !== 'string') e.photo = '';
+        });
         S.playerIds = S.playerIds.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; }).map(function(e){ if (typeof e.t !== 'string') e.t = ''; return e; });
         if (typeof S.potmName !== 'string') S.potmName = '';
         if (typeof S.potmTeam !== 'string') S.potmTeam = '';
@@ -3233,7 +3389,7 @@
              scoreboard. */
           var nk = nickOf(team, n);
           var pidL = lookupPlayerId(team, n);
-          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + plLink(team, n, n) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidL ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidL)) + '</span>' : '')
+          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + plLink(team, n, n) + '</span>' + playerMetaHTML(team, n) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidL ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidL)) + '</span>' : '')
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',-1)" aria-label="Move ' + esc(n) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
             + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',1)" aria-label="Move ' + esc(n) + ' down"' + (i === arr.length - 1 ? ' disabled' : '') + '>↓</button>'
             + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
@@ -3256,7 +3412,7 @@
           if (cBtn) cBtn.textContent = '✓ Squad Confirmed';
           if (cStatus) cStatus.textContent = '✓ Squad confirmed — the final squad for this match is shown below and in the scoreboard\'s Squads tab.';
           if (fsEl) fsEl.innerHTML = '<div class="grid2">' + [[S.teamA || 'Team 1', S.finalSquadA],[S.teamB || 'Team 2', S.finalSquadB]].map(function(pair){
-            var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(pair[0], n, n) + '</span></div>'; }).join('') : '<p class="note">No players.</p>';
+            var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(pair[0], n, n) + '</span>' + playerMetaHTML(pair[0], n) + '</div>'; }).join('') : '<p class="note">No players.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(pair[0]) + ' — Final Squad</h3><span class="note">' + pair[1].length + (pair[1].length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         } else {
@@ -4593,6 +4749,24 @@
          and Match Setup all read (S.tournament.teams / squads), so a
          team or player added here appears everywhere at once, and
          one removed here is removed everywhere. */
+      /* The team whose detail (logo, players, add-player) is open on
+         the My Teams page, and the live search text from the entry
+         bar. Both survive re-renders: the entry bar itself is static
+         HTML above the list, so typing never loses focus. */
+      var mtSelectedTeam = null;
+      var mtFilterText = '';
+      function mtSearchInput(){
+        var inp = $('mtNewTeam');
+        mtFilterText = inp ? inp.value.trim().toLowerCase() : '';
+        renderMyTeams();
+      }
+      function selectMyTeam(i){
+        try { normalizeTournament(); } catch(e){}
+        var name = S.tournament && S.tournament.teams ? S.tournament.teams[i] : null;
+        if (!name) return;
+        mtSelectedTeam = (mtSelectedTeam === name) ? null : name;
+        renderMyTeams();
+      }
       function renderMyTeams(){
         var list = $('mtList'); if (!list) return;
         try { normalizeTournament(); } catch(e){}
@@ -4605,26 +4779,53 @@
         var sumEl = $('mtSummary'); if (sumEl) sumEl.textContent = summary;
         var consoleSub = $('consoleMyTeamsSub');
         if (consoleSub) consoleSub.textContent = tn.teams.length ? summary + ' — tap to add teams or manage players.' : 'Add teams and manage their players.';
-        /* Keep text already typed into the add boxes across re-renders. */
-        var keptNew = ''; var nt = $('mtNewTeam'); if (nt && document.activeElement === nt) keptNew = nt.value;
-        var keptPlayer = {}, keptNick = {};
-        tn.teams.forEach(function(_, i){ var el = $('mtPlayer-' + i); if (el) keptPlayer[i] = el.value; var ne = $('mtNick-' + i); if (ne) keptNick[i] = ne.value; });
-        list.innerHTML = tn.teams.length
-          ? tn.teams.map(function(n, i){
-              var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
-              var rows = players.length
-                ? players.map(function(p, pi){ var nk = nickOf(n, p); var pid = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pid)) + '</span>' : '') + '<button type="button" class="sq-x" onclick="removeMyPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
-                : '<div class="tn-empty">No players yet for this team — add players below.</div>';
-              return '<div class="card mt-team-card">'
-                + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span><button type="button" class="sq-x" onclick="removeMyTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
-                + rows
-                + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="mtPlayer-' + i + '" data-ac="pick" data-ac-team="' + esc(n) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="addMyPlayer(' + i + ')">Add Players</button></div>'
-                + '<div class="rowflex" style="margin-top:8px"><input id="mtNick-' + i + '" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
-                + '</div>';
-            }).join('')
-          : '<div class="card"><p class="note" style="margin:0">No teams yet — add a team above, then add its players here. The same teams also appear in Tournament and in the team picker when you start a match.</p></div>';
-        tn.teams.forEach(function(_, i){ var el = $('mtPlayer-' + i); if (el && keptPlayer[i]) el.value = keptPlayer[i]; var ne = $('mtNick-' + i); if (ne && keptNick[i]) ne.value = keptNick[i]; });
-        var nt2 = $('mtNewTeam'); if (nt2 && keptNew) nt2.value = keptNew;
+        if (mtSelectedTeam && tn.teams.indexOf(mtSelectedTeam) === -1) mtSelectedTeam = null;
+        /* Keep text already typed into the open team's add boxes
+           across re-renders. */
+        var keptPlayer = ''; var pb0 = $('mtPlayerBox'); if (pb0) keptPlayer = pb0.value;
+        var keptNick = ''; var nb0 = $('mtNickBox'); if (nb0) keptNick = nb0.value;
+        /* Teams are listed alphabetically (like the reference Teams
+           page); each tile keeps its real index for the actions. While
+           the user types in the entry bar, the grid live-filters to the
+           already-added teams whose names match. */
+        var order = tn.teams.map(function(n, i){ return { name: n, idx: i }; });
+        order.sort(function(a, b){ var x = a.name.toLowerCase(), y = b.name.toLowerCase(); return x < y ? -1 : (x > y ? 1 : 0); });
+        var q = mtFilterText;
+        var shown = q ? order.filter(function(o){ return o.name.toLowerCase().indexOf(q) > -1; }) : order;
+        var html = '';
+        if (!tn.teams.length){
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. The same teams also appear in Tournament and in the team picker when you start a match.</p></div>';
+        } else if (!shown.length){
+          html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing — tap Add Team to add it as a new team.</p></div>';
+        } else {
+          html = '<div class="sb-teams-grid">' + shown.map(function(o){
+              var players = Array.isArray(tn.squads[o.name]) ? tn.squads[o.name] : [];
+              return '<button type="button" class="sb-team-tile' + (o.name === mtSelectedTeam ? ' active' : '') + '" onclick="selectMyTeam(' + o.idx + ')" aria-label="Open ' + esc(o.name) + '">'
+                + '<span class="sb-team-logo c' + (o.idx % 4) + '">' + esc(tnInitials(o.name)) + '</span>'
+                + '<span class="sb-team-name">' + esc(o.name) + '</span>'
+                + '<span class="sb-team-count" style="display:block">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span>'
+                + '</button>';
+            }).join('') + '</div>';
+        }
+        /* Tapping a team opens its detail under the grid: the team
+           logo, its players, and the add / remove player system. */
+        if (mtSelectedTeam && tn.teams.indexOf(mtSelectedTeam) > -1){
+          var ti = tn.teams.indexOf(mtSelectedTeam);
+          var team = mtSelectedTeam;
+          var tPlayers = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
+          var rows = tPlayers.length
+            ? tPlayers.map(function(p, pi){ var nk = nickOf(team, p); var pid = lookupPlayerId(team, p); return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pid)) + '</span>' : '') + '<button type="button" class="sq-x" onclick="removeMyPlayer(' + ti + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '">×</button></div>'; }).join('')
+            : '<div class="tn-empty">No players yet for this team — add players below.</div>';
+          html += '<div class="card mt-detail">'
+            + '<div class="sb-detail-head"><span class="sb-team-logo c' + (ti % 4) + '">' + esc(tnInitials(team)) + '</span><div><h3>' + esc(team) + '</h3><div class="note">' + tPlayers.length + (tPlayers.length === 1 ? ' player' : ' players') + '</div></div><button type="button" class="sq-x" onclick="removeMyTeam(' + ti + ')" aria-label="Remove team ' + esc(team) + '" title="Remove team">×</button></div>'
+            + rows
+            + '<div class="rowflex names-row" style="margin-top:10px"><div class="ac-wrap grow"><textarea id="mtPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="addMyPlayer(' + ti + ')">Add Players</button></div>'
+            + '<div class="rowflex" style="margin-top:8px"><input id="mtNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
+            + '</div>';
+        }
+        list.innerHTML = html;
+        var pb = $('mtPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
+        var nb = $('mtNickBox'); if (nb && keptNick) nb.value = keptNick;
       }
       function addMyTeam(){
         if (!requireTnOwner('edit My Teams')) return;
@@ -4632,12 +4833,17 @@
         var names = parseNameList(inp ? inp.value : '');
         if (!names.length){ toast('Type or paste team names first — one name per line'); return; }
         normalizeTournament();
-        var added = 0, skipped = 0;
+        var added = 0, skipped = 0, firstAdded = null;
         names.forEach(function(name){
           if (S.tournament.teams.indexOf(name) > -1) skipped++;
-          else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; }
+          else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; if (!firstAdded) firstAdded = name; }
         });
         if (inp) inp.value = '';
+        mtFilterText = '';
+        /* Open the team straight away so its players can be added —
+           the one just added, or the existing one that was typed. */
+        if (firstAdded) mtSelectedTeam = firstAdded;
+        else if (skipped && names.length === 1) mtSelectedTeam = names[0];
         commit('Team entered', true);
         if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to My Teams — now add its players below');
         else {
@@ -4660,10 +4866,10 @@
         normalizeTournament();
         var team = S.tournament.teams[teamIdx];
         if (!team) return;
-        var inp = $('mtPlayer-' + teamIdx);
+        var inp = $('mtPlayerBox');
         var entries = parseNameEntries(inp ? inp.value : '');
         if (!entries.length){ toast('Type or paste player names first — one name per line'); return; }
-        var nickInp = $('mtNick-' + teamIdx);
+        var nickInp = $('mtNickBox');
         var arr = tournamentSquad(team);
         var res = applyNameEntries(arr, team, entries, nickInp ? nickInp.value : '');
         if (inp) inp.value = '';
@@ -4677,7 +4883,7 @@
           if (res.nicks) pmsg += ' — nickname set for ' + res.nicks + (res.nicks === 1 ? ' player' : ' players');
           toast(pmsg);
         }
-        var again = $('mtPlayer-' + teamIdx); if (again) { try { again.focus(); } catch(e){} }
+        var again = $('mtPlayerBox'); if (again) { try { again.focus(); } catch(e){} }
       }
       function removeMyPlayer(teamIdx, playerIdx){
         if (!requireTnOwner('edit My Teams')) return;
@@ -4745,7 +4951,7 @@
           id: mid, at: Date.now(), manual: false,
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
           innings: inningsArr, resultText: S.resultText || '',
-          players: deep(S.players || []), playerIds: deep(S.playerIds || [])
+          players: playersSnapshot(), playerIds: deep(S.playerIds || [])
         };
         if (!match.resultText) match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
@@ -5007,7 +5213,7 @@
         var teamIdx = tn.teams.indexOf(team);
         var players = Array.isArray(tn.squads[team]) ? tn.squads[team] : [];
         var body = players.length
-          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('')
+          ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('')
           : '<p class="note">No players entered for this team yet.</p>';
         wrap.innerHTML = '<div class="tn-team-players">'
           + '<div class="tn-team-players-head"><span class="sb-team-logo c' + (teamIdx >= 0 ? (teamIdx % 4) : 0) + '">' + esc(tnInitials(team)) + '</span><div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</div></div></div>'
@@ -5424,7 +5630,7 @@
         var body = '';
         if (sbTeamDetailTab === 'players'){
           body = players.length
-            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('')
+            ? players.map(function(p, pi){ return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('')
             : '<p class="note">No players entered for this team yet.</p>';
         } else if (sbTeamDetailTab === 'matches'){
           var tm = sbTeamMatches(team);
@@ -5495,7 +5701,7 @@
           ? tn.teams.map(function(n,i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
               var playerRows = players.length
-                ? players.map(function(p,pi){ var nk = nickOf(n, p); var pidT = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidT ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidT)) + '</span>' : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
+                ? players.map(function(p,pi){ var nk = nickOf(n, p); var pidT = lookupPlayerId(n, p); return '<div class="sq-row"><span class="sq-num">' + (pi+1) + '</span><span class="sq-name">' + plLink(n, p, p) + '</span>' + playerMetaHTML(n, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidT ? '<span class="sq-pid" title="Unique Player ID — history and statistics follow this ID">ID ' + esc(pidShort(pidT)) + '</span>' : '') + '<button class="sq-x" onclick="removeTournamentPlayer(' + i + ',' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(n) + '">×</button></div>'; }).join('')
                 : '<div class="tn-empty">No players yet for this team — add players below.</div>';
               return '<div class="squad-box tn-team-box">'
                 + '<div class="tn-team-head"><h3>' + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span><button class="sq-x" onclick="removeTournamentTeam(' + i + ')" aria-label="Remove team ' + esc(n) + '" title="Remove team">×</button></div>'
@@ -6404,7 +6610,7 @@
           /* The Player ID snapshots travel with the archived match,
              so profiles and statistics resolve by ID on any device —
              even one whose live registry never saw this match. */
-          players: deep(S.players || []),
+          players: playersSnapshot(),
           playerIds: deep(S.playerIds || [])
         };
       }
@@ -6835,13 +7041,225 @@
       });
       /* ---------- player profile ---------- */
       var profileCtx = null;
+      /* Edit-form state: pfDirty marks unsaved typing so a background
+         re-render (Firebase echo, another tab) never wipes what the
+         scorer is typing; pfPhotoDraft is null while the photo is
+         untouched, '' when it is being removed, or the new compressed
+         data URL once a photo has been picked. */
+      var pfDirty = false;
+      var pfPhotoDraft = null;
       function openPlayerProfile(team, name, pid){
         if (!name) return;
         profileCtx = { team: team || '', name: name, pid: pid || lookupPlayerId(team || '', name) || '' };
-        renderPlayerProfile();
+        pfDirty = false; pfPhotoDraft = null;
+        renderPlayerProfile(true);
         var m = $('playerModal'); if (m) m.classList.add('show');
       }
-      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); profileCtx = null; }
+      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
+      function pfMarkDirty(){ pfDirty = true; }
+      /* Photo picking: the chosen image is drawn onto a small canvas
+         and stored as a compressed JPEG data URL (max 320px, smaller
+         still if the result is still big), so a profile photo stays
+         tiny inside the synced state instead of carrying the original
+         multi-megabyte file into Firebase and the device backup. */
+      function pfPhotoChosen(inp){
+        var file = inp && inp.files && inp.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type || '')){ toast('Please choose an image file for the photo'); return; }
+        var reader = new FileReader();
+        reader.onload = function(){
+          var img = new Image();
+          img.onload = function(){
+            try {
+              function encode(maxDim, quality){
+                var scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+                var w = Math.max(1, Math.round((img.width || 1) * scale));
+                var h = Math.max(1, Math.round((img.height || 1) * scale));
+                var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+                var cx = cv.getContext('2d'); cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, w, h); cx.drawImage(img, 0, 0, w, h);
+                return cv.toDataURL('image/jpeg', quality);
+              }
+              var url = encode(320, 0.85);
+              if (url.length > 200000) url = encode(192, 0.72);
+              pfPhotoDraft = url; pfDirty = true;
+              var prev = $('pfPhotoPrev');
+              if (prev) prev.innerHTML = '<img src="' + esc(url) + '" alt="" />';
+              var rm = $('pfPhotoRemove'); if (rm) rm.hidden = false;
+              toast('Photo ready — tap Save Profile to keep it');
+            } catch(e){ toast('⚠️ That photo could not be processed — try another image'); }
+          };
+          img.onerror = function(){ toast('⚠️ That photo could not be read — try a JPG or PNG'); };
+          img.src = reader.result;
+        };
+        reader.onerror = function(){ toast('⚠️ That photo could not be read — try again'); };
+        try { reader.readAsDataURL(file); } catch(e){ toast('⚠️ That photo could not be read — try again'); }
+      }
+      function pfPhotoRemoveTap(){
+        pfPhotoDraft = ''; pfDirty = true;
+        var prev = $('pfPhotoPrev');
+        if (prev && profileCtx) prev.innerHTML = esc(initialsOf(profileCtx.name));
+        var rm = $('pfPhotoRemove'); if (rm) rm.hidden = true;
+        toast('Photo will be removed — tap Save Profile to confirm');
+      }
+      /* ---------- renaming a player ----------
+         The Player ID is the identity; the name is a label carried in
+         many places (squads, playerIds mappings, nicknames, the live
+         innings' batter / bowler records, parked matches, archived
+         history). A rename rewrites the label everywhere THIS player
+         (this ID) appears, so the profile, the squads and the whole
+         record stay one consistent player — another player who
+         happens to share the name is a different ID and is never
+         touched: squad entries are renamed only where that team's
+         name resolves to this ID, and innings records only where
+         their stamped Player ID matches. Ball-by-ball commentary
+         text is a historical record of what was typed at the time
+         and is left as it was. */
+      function renameSquadArr(team, arr, oldName, newName, belongs){
+        if (!Array.isArray(arr)) return false;
+        if (!belongs || !belongs[team || '']) return false;
+        var changed = false;
+        for (var i = 0; i < arr.length; i++) if (arr[i] === oldName){ arr[i] = newName; changed = true; }
+        return changed;
+      }
+      function renameInningsRecords(inn, pid, oldName, newName){
+        if (!inn || typeof inn !== 'object') return false;
+        var changed = false, batRenamed = false, bowlRenamed = false;
+        (inn.batters || []).forEach(function(b){ if (b && b.pid === pid && b.name === oldName){ b.name = newName; changed = true; batRenamed = true; } });
+        (inn.bowlers || []).forEach(function(b){ if (b && b.pid === pid && b.name === oldName){ b.name = newName; changed = true; bowlRenamed = true; } });
+        if (batRenamed){
+          if (inn.striker === oldName) inn.striker = newName;
+          if (inn.nonStriker === oldName) inn.nonStriker = newName;
+        }
+        if (bowlRenamed && inn.bowler === oldName) inn.bowler = newName;
+        return changed;
+      }
+      function renameInMatchSlice(slice, pid, oldName, newName, belongs){
+        if (!slice || typeof slice !== 'object') return;
+        renameSquadArr(slice.teamA, slice.squadA, oldName, newName, belongs);
+        renameSquadArr(slice.teamB, slice.squadB, oldName, newName, belongs);
+        renameSquadArr(slice.teamA, slice.finalSquadA, oldName, newName, belongs);
+        renameSquadArr(slice.teamB, slice.finalSquadB, oldName, newName, belongs);
+        renameInningsRecords(slice.current, pid, oldName, newName);
+        renameInningsRecords(slice.prevInnings, pid, oldName, newName);
+        if (slice.potmPid === pid && slice.potmName === oldName) slice.potmName = newName;
+      }
+      function renamePlayerEverywhere(pid, oldName, newName, ctxTeam){
+        ensurePlayerArrays();
+        /* FIRST decide, for every team name in play, whether the
+           old name in that team is THIS player — while the registry
+           and mappings still carry the old name. The renames below
+           rewrite those very mappings, so resolving afterwards would
+           find nothing. A team counts when its mapping / hash ID for
+           the old name is this player's ID, or it is the team the
+           profile was opened from. */
+        var belongs = {};
+        function noteTeam(t){
+          if (t == null || (t in belongs)) return;
+          t = t || '';
+          belongs[t] = (mappedOrHashId(t, oldName) === pid) || (pidHash(t, oldName) === pid) || (t === (ctxTeam || ''));
+        }
+        if (S.tournament && S.tournament.squads) Object.keys(S.tournament.squads).forEach(noteTeam);
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){ if (tn && tn.squads) Object.keys(tn.squads).forEach(noteTeam); });
+        noteTeam(S.teamA); noteTeam(S.teamB);
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(sl){ if (sl){ noteTeam(sl.teamA); noteTeam(sl.teamB); } });
+        if (typeof HIST !== 'undefined' && HIST) Object.keys(HIST).forEach(function(id){ var e = HIST[id]; if (e){ noteTeam(e.teamA); noteTeam(e.teamB); } });
+        S.playerIds.forEach(function(e){ if (e && e.id === pid) e.n = newName; });
+        (S.nicknames || []).forEach(function(e){ if (e && e.n === oldName && (!ctxTeam || e.t === ctxTeam || !e.t)) e.n = newName; });
+        /* Tournament / My Teams squads (the shared team lists). */
+        if (S.tournament && S.tournament.squads){
+          Object.keys(S.tournament.squads).forEach(function(team){ renameSquadArr(team, S.tournament.squads[team], oldName, newName, belongs); });
+        }
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){
+          if (tn && tn.squads) Object.keys(tn.squads).forEach(function(team){ renameSquadArr(team, tn.squads[team], oldName, newName, belongs); });
+        });
+        /* The live match + parked matches. */
+        renameInMatchSlice(S, pid, oldName, newName, belongs);
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(slice){ renameInMatchSlice(slice, pid, oldName, newName, belongs); });
+        /* Saved tournament results carry their own innings + snapshots. */
+        if (S.tournament && Array.isArray(S.tournament.matches)){
+          S.tournament.matches.forEach(function(m){
+            if (!m) return;
+            (m.innings || []).forEach(function(inn){ renameInningsRecords(inn, pid, oldName, newName); });
+            (Array.isArray(m.players) ? m.players : []).forEach(function(p){ if (p && p.id === pid) p.name = newName; });
+            (Array.isArray(m.playerIds) ? m.playerIds : []).forEach(function(e){ if (e && e.id === pid) e.n = newName; });
+          });
+        }
+        /* Permanent history: rename inside each archived entry and
+           re-publish the changed ones (pushHistoryEntry itself
+           refuses entries this session may not write — those stay
+           renamed in this device's backup until their owner syncs). */
+        if (typeof HIST !== 'undefined' && HIST){
+          Object.keys(HIST).forEach(function(id){
+            var e = HIST[id]; if (!e) return;
+            var changed = false;
+            (e.innings || []).forEach(function(inn){ if (renameInningsRecords(inn, pid, oldName, newName)) changed = true; });
+            (Array.isArray(e.players) ? e.players : []).forEach(function(p){ if (p && p.id === pid && p.name !== newName){ p.name = newName; changed = true; } });
+            (Array.isArray(e.playerIds) ? e.playerIds : []).forEach(function(m){ if (m && m.id === pid && m.n !== newName){ m.n = newName; changed = true; } });
+            (Array.isArray(e.nicknames) ? e.nicknames : []).forEach(function(nk){ if (nk && nk.n === oldName && (!ctxTeam || nk.t === ctxTeam || !nk.t)){ nk.n = newName; changed = true; } });
+            ['squadA','squadB'].forEach(function(k){
+              if (Array.isArray(e[k])){
+                var team = k === 'squadA' ? e.teamA : e.teamB;
+                if (renameSquadArr(team || '', e[k], oldName, newName, belongs)) changed = true;
+              }
+            });
+            if (e.potmPid === pid && e.potmName === oldName){ e.potmName = newName; changed = true; }
+            if (changed){
+              /* The live finished match re-archives itself from S on
+                 the next render with its own signature check — keep
+                 that signature honest so the rename is what ships. */
+              if (e._sig) e._sig = JSON.stringify([e.innings, e.resultText, e.potmName, e.potmTeam, e.potmPid, e.abandoned]);
+              try { pushHistoryEntry(e); } catch(err){}
+            }
+          });
+          try { saveHistLocal(); } catch(err){}
+        }
+      }
+      function savePlayerProfile(){
+        if (!profileCtx) return;
+        if (!canEditPlayerProfile()){
+          toast(isViewerSession() ? '👀 View-only — profiles can be edited only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to edit this profile — only the owner/admin can change it.');
+          return;
+        }
+        var nameEl = $('pfName'), roleEl = $('pfRole'), jerseyEl = $('pfJersey');
+        var newName = nameEl ? nameEl.value.trim().replace(/\s+/g, ' ') : '';
+        if (!newName){ toast('Type the player\u2019s name first'); if (nameEl) nameEl.focus(); return; }
+        var newRole = roleEl ? roleEl.value : '';
+        var newJersey = jerseyEl ? jerseyEl.value.trim().replace(/[^0-9]/g, '').slice(0, 3) : '';
+        var team = profileCtx.team || '';
+        var pid = profileCtx.pid || lookupPlayerId(team, profileCtx.name) || pidHash(team, profileCtx.name);
+        var oldName = profileCtx.name;
+        if (newName !== oldName){
+          /* A rename may not collide with a DIFFERENT player already
+             carrying that name in the same team's squad — the two
+             would become indistinguishable in that squad list. */
+          var clash = false;
+          var checkArr = function(t, arr){
+            if (clash || !Array.isArray(arr) || arr.indexOf(newName) === -1) return;
+            var otherId = mappedOrHashId(t || '', newName);
+            if (otherId && otherId !== pid) clash = true;
+            else if (!otherId && t === team) clash = true;
+          };
+          if (S.tournament && S.tournament.squads) Object.keys(S.tournament.squads).forEach(function(t){ checkArr(t, S.tournament.squads[t]); });
+          checkArr(S.teamA, S.squadA); checkArr(S.teamB, S.squadB);
+          if (clash){ toast('⚠️ Another player named “' + newName + '” is already in the squad — pick a different name so the two stay separate'); return; }
+        }
+        var person = ensurePerson(pid, oldName);
+        if (!person){ toast('⚠️ This player could not be saved — try again'); return; }
+        /* Rename FIRST, while the registry and mappings still carry
+           the old name — the propagation resolves squads through
+           them. Only then is the registry record itself updated. */
+        if (newName !== oldName) renamePlayerEverywhere(pid, oldName, newName, team);
+        person.name = newName;
+        person.role = newRole;
+        person.jersey = newJersey;
+        if (pfPhotoDraft !== null) person.photo = pfPhotoDraft;
+        setPlayerMapping(team, newName, pid);
+        profileCtx = { team: team, name: newName, pid: pid };
+        pfDirty = false; pfPhotoDraft = null;
+        commit('Player profile updated', true);
+        renderPlayerProfile(true);
+        toast('✓ Profile saved — ' + newName + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : ''));
+      }
       /* Does this batter / bowler record belong to the profile's
          player? By Player ID whenever either side carries one (an
          unstamped record resolves through the match's own snapshot);
@@ -6868,8 +7286,12 @@
         });
         return out;
       }
-      function renderPlayerProfile(){
+      function renderPlayerProfile(force){
         if (!profileCtx) return;
+        /* While the scorer is mid-edit (typed something or picked a
+           photo), background re-renders leave the form exactly as it
+           is — the stats below it refresh on the next open / save. */
+        if (!force && pfDirty) return;
         var name = profileCtx.name, team = profileCtx.team, ctxPid = profileCtx.pid || '';
         /* The profile follows the Player ID: another player with the
            same name is a different profile and never appears here. */
@@ -6893,7 +7315,42 @@
         function prow(l, v){ return '<div class="prof-row"><span>' + l + '</span><b>' + v + '</b></div>'; }
         var teamsLine = (rec.teams && rec.teams.length) ? rec.teams.join(' • ') : (useTeam || '—');
         var sameNameCount = knownPlayers().filter(function(p){ return p.name === name; }).length;
-        var html = '<p class="sub" style="color:var(--muted);font-size:14px;margin:2px 0 12px">' + esc(teamsLine) + ' • Player ID <b>' + esc(pidShort(usePid)) + '</b> • Career across every recorded match, including the live one'
+        /* Profile header: photo (or initials), full name, team, role
+           and jersey — the editable identity of this player. */
+        var prof = profileDataFor(useTeam, name, usePid);
+        var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : prof.photo;
+        var chips = '';
+        if (prof.role) chips += '<span class="prof-chip">' + esc(prof.role) + '</span>';
+        if (prof.jersey) chips += '<span class="prof-chip jersey">Jersey #' + esc(prof.jersey) + '</span>';
+        chips += '<span class="prof-chip">ID ' + esc(pidShort(usePid)) + '</span>';
+        var html = '<div class="prof-head">'
+          + '<span class="prof-ava">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="Photo of ' + esc(name) + '" />' : esc(initialsOf(name))) + '</span>'
+          + '<div class="prof-head-main"><div class="prof-head-name">' + esc(name) + '</div>'
+          + '<div class="note" style="margin-top:2px">' + esc(teamsLine) + '</div>'
+          + '<div class="prof-chips">' + chips + '</div></div></div>';
+        /* Edit form — only for a signed-in owner/admin on the control
+           side (canEditPlayerProfile); everyone else gets the
+           read-only profile above and below, exactly as before. */
+        if (canEditPlayerProfile()){
+          var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === prof.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
+            + (prof.role && PROFILE_ROLES.indexOf(prof.role) === -1 ? '<option value="' + esc(prof.role) + '" selected>' + esc(prof.role) + '</option>' : '');
+          html += '<div class="prof-edit"><h3>✏️ Edit Profile</h3>'
+            + '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
+            + '<div class="grid2" style="margin-top:10px">'
+            + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
+            + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 7" value="' + esc(prof.jersey) + '" oninput="pfMarkDirty()" /></div>'
+            + '</div>'
+            + '<div style="margin-top:12px"><label>Photo</label><div class="pf-photo-row">'
+            + '<span class="pf-photo-prev" id="pfPhotoPrev">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="" />' : esc(initialsOf(name))) + '</span>'
+            + '<button type="button" class="btn ghost sm" onclick="document.getElementById(\'pfPhotoFile\').click()">' + (shownPhoto ? 'Change Photo' : 'Add Photo') + '</button>'
+            + '<button type="button" class="btn ghost sm" id="pfPhotoRemove" onclick="pfPhotoRemoveTap()"' + (shownPhoto ? '' : ' hidden') + '>Remove Photo</button>'
+            + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
+            + '</div><p class="note" style="margin:6px 0 0">The photo is shrunk to a small size before it is saved, so it syncs quickly.</p></div>'
+            + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
+            + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
+            + '</div>';
+        }
+        html += '<p class="sub" style="color:var(--muted);font-size:14px;margin:2px 0 12px">Career across every recorded match, including the live one'
           + (sameNameCount > 1 ? '<br>Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID ' + esc(pidShort(usePid)) + ' only, so their records never mix.' : '')
           + '</p>';
         html += '<h3 style="margin:0 0 4px">Batting</h3><div class="prof-grid">'
@@ -7572,8 +8029,9 @@
             pshipEl.style.display = '';
             if (S.potmName){
               var pFig = potmFigures(S.potmName, S.potmTeam);
+              var potmProf = profileDataFor(S.potmTeam, S.potmName, S.potmPid || '');
               pshipEl.innerHTML = '<div class="cb-potm-lab">Player of the Match</div><div class="cb-potm-row">'
-                + '<span class="cb-potm-ava"><svg width="34" height="34" viewBox="0 0 24 24" fill="#8a8a8a" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z"/></svg></span>'
+                + '<span class="cb-potm-ava">' + (potmProf.photo ? '<img src="' + esc(potmProf.photo) + '" alt="" style="width:100%;height:100%;object-fit:cover" />' : '<svg width="34" height="34" viewBox="0 0 24 24" fill="#8a8a8a" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z"/></svg>') + '</span>'
                 + '<div><div class="cb-potm-name">' + plLink(S.potmTeam, S.potmName) + '</div>'
                 + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
                 + '</div></div>';
@@ -7725,7 +8183,7 @@
             + '<div class="cb-squads-grid">' + [[S.teamA, 'Team 1'], [S.teamB, 'Team 2']].map(function(pair){
             var team = pair[0];
             var players = displaySquadForTeam(team);
-            var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span></div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
+            var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(team || pair[1]) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         }
@@ -8483,6 +8941,10 @@
       }
       function setView(v){
         document.body.classList.toggle('scoreboard-clean', v==='scoreboard');
+        /* The header (brand bar) belongs to the home pages only —
+           mode chooser, Scorer Console home, Live Matches home.
+           Every other page hides it (CSS: body:not(.home-chrome)). */
+        document.body.classList.toggle('home-chrome', v==='home' || v==='console' || v==='live');
         var isSingle = (v==='scorer' || v==='scoreboard' || v==='overlay');
         var isTournament = (v==='tournament');
         currentSegment = isSingle ? 'single' : (isTournament ? 'tournament' : null);
@@ -8512,7 +8974,7 @@
         var openModal = document.querySelector('.modal-back.show');
         if (openModal){
           openModal.classList.remove('show');
-          if (openModal.id === 'playerModal') profileCtx = null;
+          if (openModal.id === 'playerModal'){ profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
           try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
           return;
         }
@@ -8533,6 +8995,7 @@
         cleanMode=!cleanMode;
         $('overlayStage').classList.toggle('clean', cleanMode);
         $('overlayHelp').style.display = cleanMode ? 'none':'block';
+        var obt = $('overlayBackTop'); if (obt) obt.style.display = cleanMode ? 'none':'flex';
         document.querySelector('.topbar').style.display = cleanMode ? 'none':'block';
         $('btnClean').textContent = cleanMode ? 'Back to Normal View' : 'Enable Overlay Only (Transparent) Mode';
         if (cleanMode) toast('Transparent mode — only the score bar is visible. Reload the page to go back, or just use this link in OBS.');
