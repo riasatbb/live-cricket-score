@@ -689,6 +689,13 @@
       .cb-comm-row.evt{background:#22301f}
       .cb-comm-row.evt .cb-comm-over{color:#9ed3ae}
       .cb-comm-row.evt .cb-comm-text{color:#cfe8d4}
+      /* Permanent milestone banners inside the commentary feed: the
+         innings-completed / target line and the match-result line.
+         They are part of the feed forever, never cleared. */
+      .cb-comm-row.banner{background:#17334d;border-top:1px solid #2b587d;border-bottom:1px solid #2b587d}
+      .cb-comm-row.banner .cb-comm-text{color:#cfe6f7;font-size:16px}
+      .cb-comm-row.banner.result{background:#3d3413;border-top-color:#6b5a1e;border-bottom-color:#6b5a1e}
+      .cb-comm-row.banner.result .cb-comm-text{color:#f5e3ae}
       .req-missing{border-color:#e5484d !important;box-shadow:0 0 0 2px rgba(229,72,77,.35)}
       .cb-empty{padding:16px;font-size:14.5px;color:#a8a8a8}
       .cb-overcard{margin:12px;background:#141414;border:1px solid #2c2c2c;border-radius:13px;padding:16px 16px 12px;color:#e9e9e9}
@@ -4187,6 +4194,22 @@
         clearPlayerInputs();
         syncPlayersFromInputs();
         $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + S.oversLimit + ' overs';
+        /* The fixture this match was started from leaves the fixture
+           list in THIS commit: from the first synced state onward the
+           match exists exactly once — as the live match — and never
+           again as an "Upcoming" fixture underneath it. The team-pair
+           check guards against a stale marker: a fixture is only
+           consumed by a match between its own two teams. */
+        if (pendingFixtureStart){
+          var pfs = pendingFixtureStart; pendingFixtureStart = null;
+          var pfx = null;
+          var pList = (pfs.kind === 'tournament') ? S.tournament.fixtures : S.singleFixtures;
+          (pList || []).forEach(function(x){ if (x.id === pfs.id) pfx = x; });
+          if (pfx && ((pfx.teamA === newA && pfx.teamB === newB) || (pfx.teamA === newB && pfx.teamB === newA))){
+            if (pfs.kind === 'tournament') S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return x.id !== pfs.id; });
+            else S.singleFixtures = S.singleFixtures.filter(function(x){ return x.id !== pfs.id; });
+          }
+        }
         commit('Match started');
         try { syncScorerNode(scorerNodeEmail); } catch(e){}
       }
@@ -5024,6 +5047,7 @@
         var fx = null;
         S.tournament.fixtures.forEach(function(f){ if (f.id === id) fx = f; });
         if (!fx) return;
+        pendingFixtureStart = { kind: 'tournament', id: id }; /* doStartMatch removes this fixture as the match starts */
         pendingMatchKind = 'tournament'; /* a fixture's match belongs to the tournament */
         $('teamA').value = fx.teamA; $('teamB').value = fx.teamB;
         if (fx.label) $('venue').value = fx.label;
@@ -5449,8 +5473,23 @@
         if (results.length){
           html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){ return resultRowHTML(m, tnName); }).join('');
         }
-        var fixRows = tn.fixtures.map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
-        fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).map(function(f){ return singleFixtureRowHTML(f); }).join('');
+        /* A fixture whose match is already being scored (live now, or
+           parked for Resume Scoring) is NOT upcoming — never list it
+           here, or the same match shows twice on this page. Starting a
+           fixture now removes it from its list at the source (see
+           doStartMatch); this filter is the backstop for states saved
+           before that fix, where the fixture and its live match still
+           sit side by side in the data. */
+        var onPairs = [];
+        if (S.current && (S.status === 'live' || S.status === 'inningsBreak') && S.teamA && S.teamB) onPairs.push([S.teamA, S.teamB]);
+        parked.forEach(function(p){ if (p.teamA && p.teamB) onPairs.push([p.teamA, p.teamB]); });
+        function fixtureAlreadyOn(f){
+          return onPairs.some(function(pr){
+            return (pr[0] === f.teamA && pr[1] === f.teamB) || (pr[0] === f.teamB && pr[1] === f.teamA);
+          });
+        }
+        var fixRows = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
+        fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return singleFixtureRowHTML(f); }).join('');
         if (fixRows){
           html += '<div class="ml-group">Upcoming Fixtures</div>' + fixRows;
         }
@@ -8082,9 +8121,11 @@
            over — reading the feed top-down it still sits between the
            next over and its own over, and it stays there permanently. */
         /* Builds one innings' commentary feed (newest ball first, one
-           summary card per completed over). Used for the current
-           innings only — the LIVE feed never shows a finished
-           innings underneath the live one. */
+           summary card per completed over). The LIVE feed stacks these
+           per innings — current innings on top, then a permanent
+           innings-completed banner, then the finished innings in
+           full — so no commentary is ever lost at the change of
+           innings (see the render block below). */
         function feedHTMLFor(innX){
           if (!innX || !innX.balls || !innX.balls.length) return '';
           var snapsX = overSnapshots(innX);
@@ -8126,36 +8167,45 @@
         }
         var commEl = $('cbCommentary');
         if (commEl){
-          /* The LIVE feed belongs to the innings being played NOW —
-             only the current innings' balls, announcements and over
-             summary cards render here. Appending the previous innings'
-             feed underneath made the 2nd innings look haunted: its
-             header, pair and bowler were live, yet the feed below
-             rolled straight into the 1st innings' over cards and
-             balls (an "Over 2 | 33-1" card from innings 1 sitting
-             under a 2nd-innings 8-0), and whenever the current
-             innings' own record was missing the old innings was all
-             anyone saw. The 1st innings stays fully on the record —
-             its batting / bowling cards in the Scorecard tab and
-             every one of its overs, including the last-ball wicket,
-             in the Overs tab — but it never bleeds into this feed. */
-          var feedCur = feedHTMLFor(inn);
-          if (!feedCur){
-            commEl.innerHTML = (S.inningsNo === 2 && S.prevInnings)
-              ? '<p class="cb-empty">No balls bowled yet in the 2nd innings — commentary for this innings will appear here ball by ball. The 1st innings is in the Overs and Scorecard tabs.</p>'
-              : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
-          } else {
-            commEl.innerHTML = feedCur;
+          /* Commentary is APPEND-ONLY — it is never cleared, at the
+             innings break or ever. The feed reads top-down as the
+             story of the whole match: a finished match opens with its
+             result line; the innings being played now comes next,
+             ball by ball; and underneath a permanent banner —
+             "1st Innings Completed — <team> <runs>/<wkts> (<overs>
+             overs). <team> set a target of <target> runs in
+             <oversLimit> overs — <chasing team> need <target> runs
+             to win." — the ENTIRE 1st innings stays in the feed, over
+             cards, announcements and all. Everything is derived from
+             the stored ball records at render time, so a match whose
+             1st innings was scored before this rule existed gets its
+             full commentary back the moment the page renders. */
+          var feedAll = '';
+          if (S.status === 'finished' && S.resultText){
+            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">🏆 <b>' + esc(String(S.resultText).replace(/🏆/g, '').trim()) + '</b></span></div>';
           }
+          feedAll += feedHTMLFor(inn);
+          if (S.prevInnings){
+            var pv = S.prevInnings;
+            var natT = pv.runs + 1;
+            var effT = target();
+            var bannerTxt = '1st Innings Completed — <b>' + esc(pv.battingTeam) + '</b> ' + pv.runs + '/' + pv.wickets + ' (' + oversText(pv.legalBalls) + ' overs). <b>' + esc(pv.battingTeam) + '</b> set a target of <b>' + natT + (natT === 1 ? ' run</b>' : ' runs</b>') + ' in ' + S.oversLimit + (S.oversLimit === 1 ? ' over' : ' overs') + ' — <b>' + esc(pv.bowlingTeam) + '</b> need ' + natT + (natT === 1 ? ' run' : ' runs') + ' to win.';
+            if (effT && effT !== natT) bannerTxt += ' (Revised target: ' + effT + '.)';
+            feedAll += '<div class="cb-comm-row banner"><span class="cb-comm-over"></span><span class="cb-comm-text">' + bannerTxt + '</span></div>';
+            feedAll += feedHTMLFor(pv);
+          }
+          commEl.innerHTML = feedAll
+            ? feedAll
+            : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
         }
         /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
         if (sumEl) sumEl.innerHTML = '';
-        /* overs panel — every over grouped, per innings. The previous
-           innings lives here (and in the Scorecard tab), under its own
-           heading, instead of inside the LIVE feed: its overs —
-           including the over whose last ball ended the innings — stay
-           on the public record without haunting the live innings. */
+        /* overs panel — every over grouped, per innings, each innings
+           under its own heading. The previous innings lives here (and
+           in the Scorecard tab, and in full in the LIVE commentary
+           feed above): its overs — including the over whose last ball
+           ended the innings — stay permanently on the public record. */
         var ovEl = $('cbOversList');
         if (ovEl){
           function oversHTMLFor(innY){
@@ -8360,6 +8410,14 @@
          itself (S.matchKind), so the distinction survives parking,
          resuming, refresh and Firebase sync. */
       var pendingMatchKind = null;
+      /* The fixture (if any) whose "start" tap led to the match about
+         to begin: { kind:'single'|'tournament', id }. Set by
+         omStartFixture / startFixture and consumed by doStartMatch,
+         which REMOVES that fixture from its list in the same commit
+         that starts the match — a fixture that is being scored must
+         never also sit in Upcoming Fixtures, or viewers see the same
+         match twice. */
+      var pendingFixtureStart = null;
       /* One-shot extras handed from the Open Match screen to
          doStartMatch: the format details for the match about to
          start, and its wickets limit. Consumed (and cleared) there. */
@@ -8753,6 +8811,7 @@
         var f = null;
         singleFixtures().forEach(function(x){ if (x.id === id) f = x; });
         if (!f) return;
+        pendingFixtureStart = { kind: 'single', id: id }; /* doStartMatch removes this fixture as the match starts */
         om.teamA = f.teamA; om.teamB = f.teamB;
         om.overs = f.overs; om.format = f.format || ''; om.wickets = f.wickets || 10; om.ballType = f.ballType || '';
         if ($('omVenue')) $('omVenue').value = f.venue || '';
