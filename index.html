@@ -2479,7 +2479,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v102';
+      var APP_VERSION = 'v103';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7180,11 +7180,14 @@
          its own squad. The picks live in the owning store's
          leadership list — an ARRAY of {t, c, vc, wk} entries keyed
          by team name, values are player names from that squad (the
-         same name strings the squads themselves carry). One player
-         holds at most one of the three roles in a team: naming a
-         player Captain clears them as Vice-Captain / Wicket-keeper.
-         Removing a player from a squad clears their roles with it,
-         and a rename carries the roles to the new name. */
+         same name strings the squads themselves carry). Captain and
+         Vice-Captain are mutually exclusive for one player (naming
+         a player Captain clears them as Vice-Captain and vice
+         versa), but the Wicket-keeper role is independent: the
+         Captain or the Vice-Captain may ALSO be the Wicket-keeper,
+         shown beside the name as (C) (Wk) or (VC) (Wk). Removing a
+         player from a squad clears their roles with it, and a
+         rename carries the roles to the new name. */
       var LEAD_ROLES = [['c', 'Captain', 'C'], ['vc', 'Vice-Captain', 'VC'], ['wk', 'Wicket-keeper', 'WK']];
       function normLeadershipArr(raw){
         var arr = [];
@@ -7212,7 +7215,14 @@
         var entry = null;
         store.leadership.forEach(function(e){ if (e && e.t === team) entry = e; });
         if (!entry){ entry = { t: team, c: '', vc: '', wk: '' }; store.leadership.push(entry); }
-        if (name) LEAD_ROLES.forEach(function(r){ if (r[0] !== role && entry[r[0]] === name) entry[r[0]] = ''; });
+        /* Only the Captain / Vice-Captain pair excludes each other
+           for the same player; the Wicket-keeper pick never touches
+           the player's C / VC pick, and a C / VC pick never touches
+           their WK pick — one player may be C+WK or VC+WK. */
+        if (name){
+          var clash = role === 'c' ? 'vc' : (role === 'vc' ? 'c' : '');
+          if (clash && entry[clash] === name) entry[clash] = '';
+        }
         entry[role] = name || '';
         if (!entry.c && !entry.vc && !entry.wk) store.leadership = store.leadership.filter(function(e){ return e !== entry; });
       }
@@ -7350,7 +7360,7 @@
           var d = profileDataFor(team, p, '');
           var pid = d.pid || lookupPlayerId(team, p);
           var sfx = '';
-          LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx = ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
+          LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx += ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
           var open = editable && (tpOpenName === p);
           var row = '<div class="tp-prow' + (open ? ' open' : '') + '">'
             + '<span class="tp-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p))) + '</span>'
@@ -7446,9 +7456,10 @@
       }
       /* The round C / VC / Wk buttons in the panel: tapping assigns
          the role to this player (setLeadershipRole also takes it
-         off whoever held it and off this player's other roles, so
-         one player still holds only one role); tapping the role the
-         player already holds clears it. */
+         off whoever held it before; for this player it only clears
+         the clashing C / VC counterpart, so C+WK and VC+WK combos
+         stay possible); tapping the role the player already holds
+         clears it. */
       function tpToggleLead(role, pi){
         if (!teamPageCtx || teamPageCtx.src === 'sb') return;
         if (!requireTnOwner('set team leadership')){ renderTeamPage(); return; }
