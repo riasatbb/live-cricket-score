@@ -892,8 +892,8 @@
       body.viewer-mode .hist-edit-btn,body.link-viewer .hist-edit-btn{display:none !important}
       #view-history{text-align:center}
       #view-history .card{text-align:left}
-      .hist-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:640px;margin:0 auto 16px}
-      @media (max-width:380px){.hist-opts{grid-template-columns:1fr}}
+      .hist-opts{display:grid;grid-template-columns:1fr;gap:12px;max-width:640px;margin:0 auto}
+      #view-history [hidden]{display:none !important}
       .hist-opt{display:block;width:100%;text-align:center;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:18px 14px 15px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer}
       .hist-opt:active{transform:scale(.99)}
       .hist-opt .ho-icon{font-size:30px;line-height:1;display:block;margin-bottom:7px}
@@ -1127,7 +1127,7 @@
       <div class="topbar-in">
         <div class="brand">
           <span class="live-dot" aria-hidden="true"></span>
-          <h1>Live Cricket Score <small>1 Input → Public Scoreboard + Broadcast Overlay</small></h1>
+          <h1>Live Cricket Score</h1>
         </div>
         <span class="conn" id="connPill">● Local Mode — Live across tabs in this browser</span>
       </div>
@@ -1153,7 +1153,6 @@
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="setView('history')">📜 Match History &amp; Reports</button>
         <div class="scorer-entry">
-          <span>Scoring a match yourself?</span>
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
         </div>
       </section>
@@ -1202,18 +1201,15 @@
           </button>
           <button type="button" class="console-opt resume" id="consoleResume" onclick="setView('resume')" hidden>
             <span class="co-title">▶ Resume Scoring</span>
-            <span class="co-sub" id="consoleResumeSub">Matches in progress — pick one to continue scoring.</span>
           </button>
           <button type="button" class="console-opt myteams-entry co-teams" onclick="setView('myteams')">
             <span class="co-title">👥 My Teams</span>
-            <span class="co-sub" id="consoleMyTeamsSub">Add teams and manage their players.</span>
           </button>
           <button type="button" class="console-opt co-tournament" onclick="setView('tournaments')">
             <span class="co-title">🏆 Tournament</span>
           </button>
           <button type="button" class="console-opt co-history" onclick="setView('history')">
             <span class="co-title">📜 History &amp; Reports</span>
-            <span class="co-sub">Past matches — view, edit or delete — and reports you can generate, copy or download.</span>
           </button>
         </div>
       </section>
@@ -1614,30 +1610,27 @@
 
       <!-- ================= HISTORY & REPORTS ================= -->
       <section class="view" id="view-history">
-        <div class="clean-top">
+        <div class="clean-top" id="histTopHome">
           <button type="button" class="clean-back" id="histBackBtn" onclick="historyBack()" aria-label="Back">←</button>
           <h2>History &amp; Reports</h2>
         </div>
-        <div class="hist-quick">
-          <button type="button" class="btn ghost sm" onclick="setView('scoreboard')">📋 Scoreboard</button>
-          <button type="button" class="btn ghost sm scorer-entry-btn" onclick="enterControlMode()">🎙️ Scorer Console</button>
-        </div>
-        <div class="hist-opts" role="tablist" aria-label="History and Reports options">
-          <button type="button" class="hist-opt ho-matches active" id="histOptMatches" data-histtab="matches" role="tab" aria-selected="true" onclick="setHistTab('matches')">
+        <div class="hist-opts" id="histOpts" aria-label="History and Reports options">
+          <button type="button" class="hist-opt ho-matches" id="histOptMatches" onclick="setHistTab('matches')">
             <span class="ho-icon" aria-hidden="true">🏏</span>
             <span class="ho-title">Past Matches</span>
-            <span class="ho-sub">Every finished match — open it, edit its details, or delete it from here.</span>
           </button>
-          <button type="button" class="hist-opt ho-reports" id="histOptReports" data-histtab="reports" role="tab" aria-selected="false" onclick="setHistTab('reports')">
+          <button type="button" class="hist-opt ho-reports" id="histOptReports" onclick="setHistTab('reports')">
             <span class="ho-icon" aria-hidden="true">📊</span>
             <span class="ho-title">Reports</span>
-            <span class="ho-sub">Career leaderboards and reports you can generate, copy or download.</span>
           </button>
         </div>
 
-        <div class="hist-panel" id="histPanel-matches">
+        <div class="hist-panel" id="histPanel-matches" hidden>
+          <div class="clean-top">
+            <button type="button" class="clean-back" onclick="setHistTab('home')" aria-label="Back to History and Reports">←</button>
+            <h2>Past Matches</h2>
+          </div>
           <div class="card">
-            <h2>🏏 Past Matches</h2>
             <div id="histSyncStatus"></div>
             <input class="hist-search" id="histSearch" type="search" placeholder="Search past matches — team, venue, tournament or result" aria-label="Search past matches" oninput="histSearchInput(this)" />
             <div class="grid3" style="margin-top:12px">
@@ -1650,14 +1643,16 @@
         </div>
 
         <div class="hist-panel" id="histPanel-reports" hidden>
+          <div class="clean-top">
+            <button type="button" class="clean-back" onclick="setHistTab('home')" aria-label="Back to History and Reports">←</button>
+            <h2>Reports</h2>
+          </div>
           <div class="card">
             <h2>Career Leaderboards</h2>
-            <p class="sub">These follow the Tournament, Team and Player filters in the Past Matches panel.</p>
             <div id="repBoards"></div>
           </div>
           <div class="card">
             <h2>Generate a Report</h2>
-            <p class="sub">Built only from your recorded matches — the filters in Past Matches and the scope below decide what goes in. Nothing is invented: with no matches in scope, the report says so.</p>
             <div class="grid2">
               <div><label for="repGenType">Report type</label><select id="repGenType">
                 <option value="results">Match Results Summary</option>
@@ -5587,11 +5582,32 @@
         return '<div class="ml-label"><span class="ml-lab-text">' + esc(txt.join(' • ') || 'Match') + '</span>'
           + (live ? '<span class="ml-live"><i></i>Live</span>' : '') + '</div>';
       }
+      /* True when this match was deleted from History: its permanent
+         tombstone (histGone / histDeleted, mirrored in Firebase at
+         matchHistoryDeleted) means NO surface may present it as a
+         live match again — even while a finished copy of it still
+         sits in the liveMatch record, which a History delete used
+         to leave behind untouched. */
+      function liveMatchTombstoned(st){
+        try { return !!(st && st.matchId != null && typeof isHistGone === 'function' && isHistGone(String(st.matchId))); } catch(e){ return false; }
+      }
       function liveRowHTML(){
         var inn = S.current;
         var tn = S.tournament || {};
         var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
         var finished = S.status === 'finished';
+        /* A match deleted from History is GONE, full stop: even if
+           the finished state still sits in liveMatch (a History
+           delete used to clear only the history entry, its
+           tombstone and the tournament-result copy — never the
+           live record), the top row shows the plain empty state,
+           never the deleted match's teams, scores or result. */
+        if (liveMatchTombstoned(S)){
+          return '<div class="ml-row">'
+            + mlLabel([], false)
+            + '<div class="ml-status muted">No match is being scored right now</div>'
+            + '</div>';
+        }
         var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
         var t = target();
         var status = '', statusMuted = false;
@@ -5633,9 +5649,21 @@
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
         }
+        /* A finished or abandoned match is not a live match: its
+           final figures may show as a plain, inert row (no Live
+           pill, not tappable), but it never opens the live
+           scoreboard from here — the match is over, and its full
+           record lives in History & Reports → Past Matches. */
+        if (finished || S.abandoned){
+          return '<div class="ml-row">'
+            + mlLabel([S.venue, tnName], false)
+            + lines
+            + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
+            + '</div>';
+        }
         var aria = 'Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
         return '<div class="ml-row tap" role="button" tabindex="0" aria-label="' + esc(aria) + '" onclick="openLiveMatch()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openLiveMatch();}">'
-          + mlLabel([S.venue, tnName], !finished && started)
+          + mlLabel([S.venue, tnName], started)
           + lines
           + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
@@ -5694,7 +5722,7 @@
         /* Parked live matches (in progress, set aside for Resume
            Scoring) are listed too, so viewers can see every match
            that is on — not only the one being scored right now. */
-        var parked = pausedMatches().slice().reverse();
+        var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p); });
         if (parked.length){
           html += '<div class="ml-group">Also In Progress</div>' + parked.map(function(p){ return parkedRowHTML(p); }).join('');
         }
@@ -5801,6 +5829,16 @@
           try { renderLiveHome(); } catch(e){}
           return;
         }
+        /* A finished, abandoned or History-deleted match never
+           opens the live scoreboard, even if its finished state is
+           still the confirmed liveMatch record: there is no live
+           match to watch. Finished matches are watched from
+           History & Reports → Past Matches instead. */
+        if (ds.status === 'finished' || ds.abandoned || liveMatchTombstoned(ds)){
+          toast('No match is being scored right now');
+          try { renderLiveHome(); } catch(e){}
+          return;
+        }
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         setView('scoreboard');
@@ -5822,6 +5860,15 @@
         var viewer = document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer');
         if (!viewer) return;
         if (!fbServerSeen) return;
+        /* Deleted from History while a viewer is watching: the
+           tombstone wins over the finished copy still sitting in
+           liveMatch — the viewer leaves the scoreboard at once
+           instead of staying on a match that no longer exists. */
+        if (liveMatchTombstoned(fbConfirmedState)){
+          toast('No match is being scored right now');
+          backToLiveMatches();
+          return;
+        }
         if (fbConfirmedState && fbConfirmedState.teamA && fbConfirmedState.teamB) return;
         toast('No match is being scored right now');
         backToLiveMatches();
@@ -5833,8 +5880,10 @@
            confirmed live state, so no archived figures linger. */
         if (archiveView){
           var rv = archiveView.returnView || 'history';
+          var rht = archiveView.returnHistTab;
           archiveView = null; cbOversInnSel = -1;
           setView(rv);
+          if (rv === 'history' && rht){ try { setHistTab(rht); } catch(e){} }
           try { renderAll(); } catch(e){}
           return;
         }
@@ -5855,23 +5904,25 @@
         b.setAttribute('aria-label', label);
         b.title = label;
       }
-      /* ---------- History & Reports: Past Matches / Reports tabs ----------
-         The page opens on Past Matches every time it is entered
-         (setView resets the tab); Reports is reached only by tapping
-         its option card, or explicitly via openHistoryReports(). Only
-         the active panel is shown. */
-      var histTab = 'matches';
+      /* ---------- History & Reports: two stacked boxes, drill-in ----------
+         The page opens on its landing every time it is entered
+         (setView resets to it): just two boxes, one above the other —
+         Past Matches on top, Reports below — with no descriptive
+         text under or inside them. Tapping a box goes INSIDE it:
+         the landing (title + boxes) is replaced by that section
+         alone, under its own title and back button, and Back
+         returns to the landing. openHistoryReports() lands straight
+         inside Reports. */
+      var histTab = 'home';
       function setHistTab(tab){
-        histTab = (tab === 'reports') ? 'reports' : 'matches';
+        histTab = (tab === 'reports') ? 'reports' : (tab === 'matches' ? 'matches' : 'home');
         var pm = $('histPanel-matches'), pr = $('histPanel-reports');
         if (pm) pm.hidden = histTab !== 'matches';
         if (pr) pr.hidden = histTab !== 'reports';
-        document.querySelectorAll('.hist-opt').forEach(function(b){
-          var on = b.getAttribute('data-histtab') === histTab;
-          b.classList.toggle('active', on);
-          b.setAttribute('aria-selected', on ? 'true' : 'false');
-        });
+        var opts = $('histOpts'); if (opts) opts.hidden = histTab !== 'home';
+        var top = $('histTopHome'); if (top) top.hidden = histTab !== 'home';
         if (histTab === 'reports'){ try { renderRepScopeOptions(); } catch(e){} }
+        try { window.scrollTo({ top:0, behavior:'smooth' }); } catch(e){}
       }
       function openHistoryReports(){
         setView('history');
@@ -7244,6 +7295,60 @@
           + '. It will be removed from the permanent history in Firebase and from this device. If it was also saved as a tournament result, that result is removed too, so the points table and statistics stay correct. This cannot be undone.',
           function(){ doDeleteHistoryMatch(id); });
       }
+      /* When the match deleted from History IS the match still
+         sitting in liveMatch — the usual case for the match just
+         finished: a History delete used to clear only the history
+         entry, its tombstone and the tournament-result copy, so the
+         finished state stayed in Firebase and the Live Matches
+         landing kept showing it as its top card — the live record
+         is cleared too. The cleared state is the same owner-carrying
+         blank state the Delete Match flow publishes (the UID-based
+         Rules accept only that shape), built AFTER this match's
+         parked copy and its lastFinishedSingle viewer-home record
+         have been removed, so buildDeletedState carries the cleaned
+         copies. The local live state is swapped only once Firebase
+         accepts the cleared state; if the write cannot land now,
+         the delete is marked pending and published the moment
+         Firebase answers (publishReset / requestDeleteMatch rebuild
+         exactly this cleared state) — and the tombstone checks in
+         liveRowHTML / openLiveMatch / guardViewerScoreboard keep
+         the match off every viewer surface in the meantime. */
+      function clearLiveMatchForDeletedHistory(id){
+        id = String(id);
+        var changed = false;
+        if (Array.isArray(S.pausedMatches) && S.pausedMatches.length){
+          var keptPaused = S.pausedMatches.filter(function(p){ return !(p && String(p.matchId) === id); });
+          if (keptPaused.length !== S.pausedMatches.length){ S.pausedMatches = keptPaused; changed = true; }
+        }
+        if (S.lastFinishedSingle && String(S.lastFinishedSingle.id) === id){ S.lastFinishedSingle = null; changed = true; }
+        if (!S || String(S.matchId) !== id){
+          /* Not the live match itself — only its parked copy and /
+             or its viewer-home record needed removing; publish that
+             cleanup like any other state change. */
+          if (changed){ try { commit('Match deleted from history', true); } catch(e){} }
+          return;
+        }
+        var ns = buildDeletedState();
+        if (!fbRef || !currentUid()){
+          fbPendingDelete = true; fbPendingFreshPublish = true;
+          try { showResetRetry(); } catch(e){}
+          saveLocalBackup();
+          try { renderLiveHome(); } catch(e){}
+          return;
+        }
+        fbRef.set(ns).then(function(){
+          fbConfirmedState = deep(ns);
+          fbPendingDelete = false; fbPendingFreshPublish = false;
+          try { hideResetRetry(); } catch(e){}
+          applyDeletedState(ns);
+          try { renderLiveHome(); } catch(e){}
+        }).catch(function(err){
+          fbPendingDelete = true; fbPendingFreshPublish = true;
+          try { showResetRetry(); } catch(e){}
+          showFirebaseError(err, 'delete');
+          try { renderLiveHome(); } catch(e){}
+        });
+      }
       function doDeleteHistoryMatch(id){
         delete HIST[id];
         delete histConfirmed[id];
@@ -7313,6 +7418,13 @@
           try { setView(arv); } catch(e){}
           try { renderAll(); } catch(e){}
         }
+        /* Finally, the live record itself: if the deleted match is
+           the one still sitting in liveMatch (or parked for Resume
+           Scoring, or kept as the viewer home's last finished Single
+           Match), clear those too — otherwise Firebase keeps serving
+           the finished match and the Live Matches landing keeps
+           showing it as its top card after the delete. */
+        try { clearLiveMatchForDeletedHistory(id); } catch(e){}
         if (!fbHistRef && !deleteSettled){
           toast('🗑 Deleted on this device — Firebase is not connected, so it will be removed from Firebase automatically when it reconnects.');
           scheduleHistoryRetry();
@@ -7941,7 +8053,7 @@
         closePlayerProfile();
         closeHistoryMatch();
         var ret = (currentViewName && currentViewName !== 'scoreboard') ? currentViewName : (archiveView ? archiveView.returnView : 'history');
-        archiveView = { id: id, entry: e, returnView: ret, state: archiveDisplayState(e) };
+        archiveView = { id: id, entry: e, returnView: ret, returnHistTab: (ret === 'history' ? histTab : null), state: archiveDisplayState(e) };
         cbOversInnSel = -1;
         setView('scoreboard');
         setCbTab('live');
@@ -9846,7 +9958,7 @@
         document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('show'); });
         var target = $('view-'+v);
         if (target) target.classList.add('show');
-        if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('matches'); } catch(e){} try { renderHistory(); } catch(e){} }
+        if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('home'); } catch(e){} try { renderHistory(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
         /* Entering the Live Matches list always re-renders it from
            the server-confirmed state, so Back (in-page or browser)
