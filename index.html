@@ -5861,7 +5861,13 @@
       function liveRowHTML(){
         var inn = S.current;
         var tn = S.tournament || {};
-        var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
+        /* The tournament name labels this row ONLY when the live
+           match itself is a tournament match. A Single Match keeps
+           the tournament object in its state (it lives in the same
+           Firebase record), but it must never be presented as a
+           tournament match — so the label follows the match kind,
+           never the tournament's contents alone. */
+        var tnName = (S.matchKind === 'tournament' && tn.name && tn.name.trim()) ? tn.name.trim() : '';
         var finished = S.status === 'finished';
         /* A match deleted from History is GONE, full stop: even if
            the finished state still sits in liveMatch (a History
@@ -6010,7 +6016,19 @@
         }
         results = results.slice(0, 6);
         if (results.length){
-          html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){ return resultRowHTML(m, tnName); }).join('');
+          /* Per-row tournament label: tournament results (from
+             tn.matches) carry the tournament name, but the finished
+             Single Match (lastFinishedSingle) must never be labelled
+             with it — it is a Single Match, even though a tournament
+             exists in the same state. A row that carries its own
+             kind / tournament name is honoured as stored. */
+          html += '<div class="ml-group">Recent Results</div>' + results.map(function(m){
+            var rowTnName = tnName;
+            if (lastFin && String(m.id) === String(lastFin.id)) rowTnName = '';
+            if (m && m.matchKind === 'single') rowTnName = '';
+            if (m && typeof m.tournamentName === 'string') rowTnName = m.tournamentName;
+            return resultRowHTML(m, rowTnName);
+          }).join('');
         }
         /* A fixture whose match is already being scored (live now, or
            parked for Resume Scoring) is NOT upcoming — never list it
@@ -9509,7 +9527,7 @@
           if (S.tossInfo) rows.push(['Toss', S.tossInfo]);
           if (S.matchDate || S.matchTime) rows.push(['Scheduled', [S.matchDate ? fmtDateShort(S.matchDate) : '', S.matchTime || ''].filter(Boolean).join(' • ')]);
           if (S.matchFormat || S.ballType) rows.push(['Format', [S.matchFormat || '', S.ballType || ''].filter(Boolean).join(' • ')]);
-          if (S.tournament && S.tournament.name) rows.push(['Tournament', S.tournament.name]);
+          if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) rows.push(['Tournament', S.tournament.name]);
           rows.push(['Overs per innings', S.oversLimit ? String(S.oversLimit) : '—']);
           rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
           if (t) rows.push(['Target', String(t)]);
