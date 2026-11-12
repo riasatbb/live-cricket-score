@@ -95,8 +95,13 @@
       .topbar{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--line)}
       .topbar-in{max-width:1180px;margin:0 auto;padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
       .brand{display:flex;align-items:center;gap:10px;min-width:0}
-      .live-dot{width:11px;height:11px;border-radius:50%;background:#d33;flex:none;box-shadow:0 0 0 0 rgba(221,51,51,.5);animation:pulse 1.6s infinite}
-      @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(221,51,51,.45)}70%{box-shadow:0 0 0 9px rgba(221,51,51,0)}100%{box-shadow:0 0 0 0 rgba(221,51,51,0)}}
+      /* Header status dot beside the title: red and still in Local
+         Mode (and while connecting / on error); green and pulsing
+         only while Firebase is live. setConnStatus drives it via
+         the .on class, in step with the status pill beside it. */
+      .live-dot{width:11px;height:11px;border-radius:50%;background:#d33;flex:none}
+      .live-dot.on{background:#1faa55;box-shadow:0 0 0 0 rgba(31,170,85,.5);animation:pulse 1.6s infinite}
+      @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(31,170,85,.45)}70%{box-shadow:0 0 0 9px rgba(31,170,85,0)}100%{box-shadow:0 0 0 0 rgba(31,170,85,0)}}
       @media (prefers-reduced-motion: reduce){.live-dot{animation:none}}
       .brand h1{font-size:19px;margin:0;line-height:1.15}
       .brand small{display:block;font-size:12px;color:var(--muted);font-weight:500}
@@ -1164,6 +1169,12 @@
       .ins-box.ins-obs .ins-ic{background:#175d8a}
       .ins-box .ins-title{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
       .ins-box .ins-chev{margin-left:auto;color:var(--muted);font-size:22px;flex:none}
+      /* Instructions panels: each box's own content lives inside the
+         popup (moved off the Scorer Console page) — one panel per box */
+      .ins-list[hidden]{display:none}
+      .ins-panel{margin-top:14px}
+      .ins-panel[hidden]{display:none}
+      .ins-back{margin-bottom:14px}
       /* Sign-in popup reuses the shared auth bar; drop its outer margin */
       #signinModal .authbar{margin:12px 0 0}
     </style>
@@ -1172,7 +1183,7 @@
     <header class="topbar">
       <div class="topbar-in">
         <div class="brand">
-          <span class="live-dot" aria-hidden="true"></span>
+          <span class="live-dot" id="brandDot" aria-hidden="true"></span>
           <h1>Live Cricket Score</h1>
         </div>
         <span class="conn" id="connPill">● Local Mode — Live across tabs in this browser</span>
@@ -1356,23 +1367,6 @@
         </div>
         <div class="sc-popback" id="scPopBack" hidden onclick="closeScorerPop()"></div>
         <div class="authbar-slot"></div>
-        <div class="card" id="linksCard">
-          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
-          <h2>🔗 Your Two Links</h2>
-          <div class="link-row">
-            <div class="link-label"><span class="link-tag">Control — only for you</span> Scorer Console</div>
-            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=scorer</span></div>
-          </div>
-          <div class="link-row">
-            <div class="link-label"><span class="link-tag viewer">Viewer — share with everyone</span> Live Matches &amp; Scoreboard (watch only)</div>
-            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=live</span></div>
-          </div>
-          <div class="link-row">
-            <div class="link-label"><span class="link-tag overlay">Broadcast</span> OBS Overlay</div>
-            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div>
-          </div>
-        </div>
-
         <div class="card fold" id="setupCard">
           <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Match Setup</button>
@@ -1546,42 +1540,6 @@
           <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <h2>Ball-by-Ball History</h2>
           <div id="historyList"><p class="note">No balls bowled yet.</p></div>
-        </div>
-
-        <div class="card fold" id="fbSetupCard">
-          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
-          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">🌐 Firebase Setup — Internet Live</button>
-          <div class="fold-body" hidden>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). The live score syncs at <span class="mono">liveMatch</span>, every finished match is archived permanently under <span class="mono">matchHistory</span>, and history deletes are made final everywhere by tombstones under <span class="mono">matchHistoryDeleted</span>. All three paths stay publicly <b>readable</b> (guests and viewers can watch without logging in), but <b>writes require the owner</b>: publish these Rules in <b>Realtime Database → Rules</b> — see step 5 below for exactly what they enforce and when they take effect.</p></div></div>
-            <div class="step"><div class="step-n">2</div><div><h3>Turn on Google sign-in</h3><p>In the Firebase Console go to <b>Build → Authentication → Sign-in method</b> and enable <b>Google</b>. Then open <b>Authentication → Settings → Authorized domains</b> and make sure the domain this page is hosted on (e.g. <span class="mono">riasatbb.github.io</span>) is in the list — Google sign-in is refused from any domain that is not listed. The "Sign in with Google" button in the Scorer Console then works: whoever signs in and creates a match or tournament becomes its owner/admin, and only that account can score, edit or delete it. Everyone else — signed in or not — is read-only for it, and guests can watch everything without logging in.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
-            <div class="step"><div class="step-n">4</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
-            <div class="step"><div class="step-n">5</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
-            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — each history entry can be written or deleted only by its owner, and delete tombstones can be written by any signed-in account (the app only writes one while deleting its owner's match). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span></p></div></div>
-          </div>
-          <div class="warn" style="margin-top:12px"><b>⚠️ Honest security note:</b> ownership is enforced <b>in this app</b> right away — the scoring pad, editors and delete buttons lock for everyone except the signed-in owner, and guests are view-only. <b>Server-side</b> enforcement starts only when the step-6 Rules above are published in the Firebase Console: until then the database itself still accepts public writes, so someone writing to it directly (outside this app) could still change data. Once those Rules are published, keep scoring from the account that owns the match — writes from any other account, signed in or not, are rejected by Firebase itself.</div>
-          <div class="divider"></div>
-          <label for="fbConfig">Firebase config (paste JSON or the firebaseConfig object)</label>
-          <textarea id="fbConfig" placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"https://….firebaseio.com","projectId":"…"}'></textarea>
-          <div class="rowflex" style="margin-top:10px">
-            <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
-            <button class="btn ghost" onclick="disconnectFirebase()">Disconnect</button>
-            <span class="note" id="fbStatus"></span>
-          </div>
-          </div>
-        </div>
-
-        <div class="card fold" id="obsGuideCard">
-          <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
-          <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">📺 Adding the Overlay in OBS</button>
-          <div class="fold-body" hidden>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div></div></div>
-            <div class="step"><div class="step-n">2</div><div><h3>Set the size</h3><p>Set Width <b>1920</b> and Height <b>1080</b>. The overlay page background is transparent, so the score bar floats directly over the video — preview it below in “transparent background” mode.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div><h3>Score once, update in two places</h3><p>Now score a ball on the Scorer page from your phone or laptop and both the Public Scoreboard and the OBS score bar change instantly. No refresh needed.</p></div></div>
-          </div>
-          </div>
         </div>
       </section>
 
@@ -1951,7 +1909,7 @@
           <h2 id="instructionsTitle">Instructions</h2>
           <button class="sq-x big" onclick="closeInstructions()" aria-label="Close instructions">×</button>
         </div>
-        <div class="ins-list">
+        <div class="ins-list" id="insListView">
           <button type="button" class="ins-box ins-links" onclick="openInstruction('links')">
             <span class="ins-ic" aria-hidden="true">🔗</span>
             <span class="ins-title">Your Two Links</span>
@@ -1967,6 +1925,51 @@
             <span class="ins-title">Overlay in OBS</span>
             <span class="ins-chev" aria-hidden="true">›</span>
           </button>
+        </div>
+        <div class="ins-panel" id="insPanel-links" hidden>
+          <button type="button" class="btn ghost sm ins-back" onclick="insPanelBack()">← Back to Instructions</button>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag">Control — only for you</span> Scorer Console</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=scorer</span></div>
+          </div>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag viewer">Viewer — share with everyone</span> Live Matches &amp; Scoreboard (watch only)</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=live</span></div>
+          </div>
+          <div class="link-row">
+            <div class="link-label"><span class="link-tag overlay">Broadcast</span> OBS Overlay</div>
+            <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div>
+          </div>
+        </div>
+
+        <div class="ins-panel" id="insPanel-firebase" hidden>
+          <button type="button" class="btn ghost sm ins-back" onclick="insPanelBack()">← Back to Instructions</button>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). The live score syncs at <span class="mono">liveMatch</span>, every finished match is archived permanently under <span class="mono">matchHistory</span>, and history deletes are made final everywhere by tombstones under <span class="mono">matchHistoryDeleted</span>. All three paths stay publicly <b>readable</b> (guests and viewers can watch without logging in), but <b>writes require the owner</b>: publish these Rules in <b>Realtime Database → Rules</b> — see step 5 below for exactly what they enforce and when they take effect.</p></div></div>
+            <div class="step"><div class="step-n">2</div><div><h3>Turn on Google sign-in</h3><p>In the Firebase Console go to <b>Build → Authentication → Sign-in method</b> and enable <b>Google</b>. Then open <b>Authentication → Settings → Authorized domains</b> and make sure the domain this page is hosted on (e.g. <span class="mono">riasatbb.github.io</span>) is in the list — Google sign-in is refused from any domain that is not listed. The "Sign in with Google" button in the Scorer Console then works: whoever signs in and creates a match or tournament becomes its owner/admin, and only that account can score, edit or delete it. Everyone else — signed in or not — is read-only for it, and guests can watch everything without logging in.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
+            <div class="step"><div class="step-n">4</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
+            <div class="step"><div class="step-n">5</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
+            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — each history entry can be written or deleted only by its owner, and delete tombstones can be written by any signed-in account (the app only writes one while deleting its owner's match). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null" } } } }</span></p></div></div>
+          </div>
+          <div class="warn" style="margin-top:12px"><b>⚠️ Honest security note:</b> ownership is enforced <b>in this app</b> right away — the scoring pad, editors and delete buttons lock for everyone except the signed-in owner, and guests are view-only. <b>Server-side</b> enforcement starts only when the step-6 Rules above are published in the Firebase Console: until then the database itself still accepts public writes, so someone writing to it directly (outside this app) could still change data. Once those Rules are published, keep scoring from the account that owns the match — writes from any other account, signed in or not, are rejected by Firebase itself.</div>
+          <div class="divider"></div>
+          <label for="fbConfig">Firebase config (paste JSON or the firebaseConfig object)</label>
+          <textarea id="fbConfig" placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"https://….firebaseio.com","projectId":"…"}'></textarea>
+          <div class="rowflex" style="margin-top:10px">
+            <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
+            <button class="btn ghost" onclick="disconnectFirebase()">Disconnect</button>
+            <span class="note" id="fbStatus"></span>
+          </div>
+        </div>
+
+        <div class="ins-panel" id="insPanel-obs" hidden>
+          <button type="button" class="btn ghost sm ins-back" onclick="insPanelBack()">← Back to Instructions</button>
+          <div class="steps">
+            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div></div></div>
+            <div class="step"><div class="step-n">2</div><div><h3>Set the size</h3><p>Set Width <b>1920</b> and Height <b>1080</b>. The overlay page background is transparent, so the score bar floats directly over the video — preview it below in “transparent background” mode.</p></div></div>
+            <div class="step"><div class="step-n">3</div><div><h3>Score once, update in two places</h3><p>Now score a ball on the Scorer page from your phone or laptop and both the Public Scoreboard and the OBS score bar change instantly. No refresh needed.</p></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2341,6 +2344,10 @@
       /* ---------- connection status (always honest) ---------- */
       function setConnStatus(mode, detail){
         var pill = $('connPill'); if (!pill) return;
+        /* The dot beside the title mirrors this status: green and
+           pulsing only while Firebase is live; red and still in
+           Local Mode, while connecting, and on error. */
+        var dot = $('brandDot'); if (dot) dot.classList.toggle('on', mode === 'live');
         pill.classList.remove('on'); pill.classList.remove('err');
         if (mode === 'live'){ pill.textContent = '● Firebase Live — Everyone online is watching'; pill.classList.add('on'); }
         else if (mode === 'connecting'){ pill.textContent = '● Connecting to Firebase…'; }
@@ -6890,11 +6897,10 @@
          sign-in popup — it hosts a shared auth-bar slot, so it shows
          the same guest / signed-in state as every other auth bar and
          the Google button works from inside it. Instructions opens a
-         popup with three boxes; each box opens its own page on the
-         Scorer Console: Your Two Links lands on the links card, and
-         Firebase Setup / Overlay in OBS open their guide fold,
-         expanded and scrolled into view (as a popup over the pad
-         while a match is being scored, like the other setup cards). */
+         popup with three boxes; each box shows its own guide right
+         inside that popup — the Your Two Links, Firebase Setup and
+         Overlay in OBS content lives in the Instructions popup now,
+         not on the Scorer Console page. */
       function toggleDotsMenu(ev){
         if (ev) ev.stopPropagation();
         var m = $('homeDotsMenu'); if (!m) return;
@@ -6918,30 +6924,28 @@
       function closeSignIn(){ var m = $('signinModal'); if (m) m.classList.remove('show'); }
       function dotsInstructions(){
         closeDotsMenu();
+        insShowList();
         var m = $('instructionsModal'); if (m) m.classList.add('show');
       }
       function closeInstructions(){ var m = $('instructionsModal'); if (m) m.classList.remove('show'); }
-      function openInstruction(which){
-        closeInstructions();
-        /* From the viewer's Live Matches home, step out of viewer
-           mode first — the guides live on the Scorer Console. */
-        if (document.body.classList.contains('link-viewer')){ try { exitViewerMode(); } catch(e){} }
-        setView('scorer');
-        setTimeout(function(){
-          if (which === 'links') openScorerCardById('linksCard');
-          else if (which === 'firebase') openFoldById('fbSetupCard');
-          else if (which === 'obs') openFoldById('obsGuideCard');
-        }, 80);
+      /* Each Instructions box opens its own content right inside
+         this popup: the Your Two Links, Firebase Setup and Overlay
+         in OBS guides live here now — moved off the Scorer Console
+         page at the owner's request — one panel per box, with a
+         Back button returning to the box list. Nothing navigates
+         away to the console any more. */
+      var INS_TITLES = { links:'Your Two Links', firebase:'Firebase Setup', obs:'Overlay in OBS' };
+      function insShowList(){
+        var list = $('insListView'); if (list) list.hidden = false;
+        ['links','firebase','obs'].forEach(function(k){ var p = $('insPanel-' + k); if (p) p.hidden = true; });
+        var t = $('instructionsTitle'); if (t) t.textContent = 'Instructions';
       }
-      function openScorerCardById(id){
-        var card = $(id); if (!card) return;
-        var view = $('view-scorer');
-        if (view && view.classList.contains('scoring-only')){
-          card.classList.add('pop');
-          var b = $('scPopBack'); if (b) b.hidden = false;
-          return;
-        }
-        try { card.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+      function insPanelBack(){ insShowList(); }
+      function openInstruction(which){
+        var list = $('insListView'); if (list) list.hidden = true;
+        ['links','firebase','obs'].forEach(function(k){ var p = $('insPanel-' + k); if (p) p.hidden = (k !== which); });
+        var t = $('instructionsTitle'); if (t) t.textContent = INS_TITLES[which] || 'Instructions';
+        var m = $('instructionsModal'); if (m){ m.classList.add('show'); var body = m.querySelector('.modal'); if (body) body.scrollTop = 0; }
       }
       /* ---------- ownership ---------- */
       function liveMatchExists(){ return !!(S && S.teamA && S.teamB && S.current); }
