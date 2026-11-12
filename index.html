@@ -656,6 +656,29 @@
       body.viewer-mode #tnPanel-matches .card.fold{display:none !important}
       body.viewer-mode #tnPanel-matches .match-row .rowflex{display:none !important}
       body.viewer-mode #tnPanel-points .bk-actions{display:none !important}
+      body.viewer-mode #view-tournament .card.fold{display:none !important}
+      body.viewer-mode .tn-delbtn{display:none !important}
+      /* Ownership visibility — the user's rule: NOTHING that adds,
+         edits or deletes may be SHOWN to anyone who could not use
+         it. A viewer never sees such a control; on the control side
+         they appear only for the Google account that created the
+         tournament / match / team / player (its owner/admin) — when
+         that admin signs in, the controls come back. applyOwnerLocks()
+         sets .tn-locked / .live-locked on <body> from the very same
+         ownership checks the action handlers enforce, so a control
+         hidden here is one that would have refused anyway; hiding is
+         now the first line, the handler check stays as the second. */
+      body.tn-locked #view-tournament .card.fold{display:none !important}
+      body.tn-locked #view-tournament .sq-x{display:none !important}
+      body.tn-locked #view-tournament .logo-edit{display:none !important}
+      body.tn-locked #tnPanel-matches .match-row .rowflex{display:none !important}
+      body.tn-locked #tnPanel-points .bk-actions{display:none !important}
+      body.tn-locked .tn-delbtn{display:none !important}
+      body.tn-locked #view-myteams .mt-entry{display:none !important}
+      body.tn-locked #view-myteams .names-row{display:none !important}
+      body.tn-locked #view-myteams .sq-x{display:none !important}
+      body.live-locked #view-scorer .sq-x{display:none !important}
+      body.live-locked #view-scorer .names-row{display:none !important}
       .viewer-backbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
       body.viewer-inpage .viewer-backbar{display:flex}
       /* History & Reports, Resume Scoring and the Tournaments list
@@ -840,8 +863,9 @@
       .cb-livepill i{width:8px;height:8px;border-radius:50%;background:#e53935;flex:none;animation:blinkdot 1.6s infinite}
       .cb-iconbtn{flex:none;width:36px;height:36px;border:none;background:none;color:#f2f2f2;font-size:19px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;padding:0}
       .cb-iconbtn:active{background:#2c2c2c}
-      .cb-tabs{display:grid;grid-template-columns:repeat(5,1fr);background:#1d1d1d;border-bottom:1px solid #333}
-      .cb-tab{border:none;background:none;color:#a8a8a8;font-size:13.5px;font-weight:600;letter-spacing:.05em;padding:13px 2px 11px;text-transform:uppercase;border-bottom:2.5px solid transparent;cursor:pointer;min-width:0}
+      .cb-tabs{display:flex;background:#1d1d1d;border-bottom:1px solid #333}
+      .cb-tab{flex:1 1 0;border:none;background:none;color:#a8a8a8;font-size:13.5px;font-weight:600;letter-spacing:.05em;padding:13px 2px 11px;text-transform:uppercase;border-bottom:2.5px solid transparent;cursor:pointer;min-width:0}
+      .cb-tab[hidden]{display:none}
       .cb-tab.active{color:#fff;border-bottom-color:#fff}
       @media (max-width:400px){.cb-tab{font-size:11.5px;letter-spacing:.02em}.cb-title{font-size:18px}}
       .cb-panel{display:none}
@@ -993,6 +1017,26 @@
       .cb-potm-ava{flex:none;width:54px;height:54px;border-radius:50%;background:#e6e6e6;display:flex;align-items:center;justify-content:center;overflow:hidden}
       .cb-potm-name{font-size:18.5px;font-weight:600;color:#fff;line-height:1.25}
       .cb-potm-fig{font-size:15px;color:#bdbdbd;margin-top:2px;font-variant-numeric:tabular-nums}
+      /* ---------- Summary tab (completed matches) ----------
+         Stumps-style match summary: each team's score line, its top
+         three batters beside the innings' top three bowlers, then
+         the Winner line, Player of the Match, and the two download
+         buttons (Match Summary JPG / Match Report PDF). */
+      .sum-wrap{padding:6px 16px 18px}
+      .sum-team{display:flex;justify-content:space-between;align-items:baseline;gap:14px;border-bottom:1.5px solid #3d3d3d;padding:14px 0 7px}
+      .sum-tname{font-size:16.5px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.02em}
+      .sum-tscore{font-size:16.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .sum-tscore span{font-size:14px;color:#bdbdbd;font-weight:400}
+      .sum-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:20px;padding:7px 0 2px}
+      .sum-cell{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:3px 0;font-size:14.5px;min-width:0}
+      .sum-pname{color:#cfcfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .sum-pfig{font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .sum-winner{border-top:1px solid #3a3a3a;margin-top:12px;padding:13px 0 3px}
+      .sum-wlab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:5px}
+      .sum-wtext{font-size:17.5px;font-weight:700;color:#fff;line-height:1.3}
+      .sum-dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+      .sum-dl .btn{flex:1 1 150px}
+      @media (max-width:400px){.sum-grid{column-gap:12px}.sum-cell{font-size:13px}.sum-tname,.sum-tscore{font-size:15px}}
       /* nickname chip in the squad MANAGEMENT lists — the full name
          stays; the chip only shows the scorer that a nickname is set */
       .sq-nick{flex:none;background:var(--chip);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
@@ -1417,7 +1461,7 @@
           <h2>Live Matches</h2>
         </div>
         <div id="liveList"></div>
-        <button type="button" class="btn ghost hist-entry-btn" onclick="setView('history')">📜 Match History &amp; Reports</button>
+        <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
         </div>
@@ -1791,6 +1835,7 @@
             <button type="button" class="cb-iconbtn" onclick="setCbTab('info')" aria-label="Match info">⋮</button>
           </div>
           <nav class="cb-tabs" aria-label="Scoreboard views">
+            <button type="button" class="cb-tab" data-cbtab="summary" id="cbTabSummary" onclick="setCbTab('summary')" hidden>Summary</button>
             <button type="button" class="cb-tab" data-cbtab="info" onclick="setCbTab('info')">Info</button>
             <button type="button" class="cb-tab active" data-cbtab="live" onclick="setCbTab('live')">Live</button>
             <button type="button" class="cb-tab" data-cbtab="scorecard" onclick="setCbTab('scorecard')">Scorecard</button>
@@ -1808,6 +1853,12 @@
             <div class="cb-comm" id="cbCommentary"></div>
             <div id="cbOverSummary"></div>
             <div class="cb-sharebar"><button type="button" class="cb-sharebtn" onclick="shareMatchCardCurrent()">🖼 Share Match Card</button><button type="button" class="cb-pdfbtn" onclick="downloadScorecardPdfCurrent()">📄 Scorecard PDF</button></div>
+          </div>
+
+          <!-- SUMMARY (completed matches only — the tab itself is
+               hidden until the match on show is finished) -->
+          <div class="cb-panel" id="cbPanel-summary">
+            <div id="cbSummaryBody"></div>
           </div>
 
           <!-- INFO -->
@@ -1829,8 +1880,8 @@
               <button type="button" class="btn" id="btnViewTournamentInfo" onclick="openTournamentViewerInPage()">View Tournament</button>
             </div>
             <div class="card sb-view-tour-card">
-              <h2>📜 History &amp; Reports</h2>
-              <button type="button" class="btn" onclick="setView('history')">Open History &amp; Reports</button>
+              <h2 id="sbHistCardTitle">📜 History &amp; Reports</h2>
+              <button type="button" class="btn" id="sbHistCardBtn" onclick="openHistoryEntry()">Open History &amp; Reports</button>
             </div>
           </div>
 
@@ -1874,7 +1925,7 @@
 
         <div class="hist-panel" id="histPanel-matches" hidden>
           <div class="clean-top">
-            <button type="button" class="clean-back" onclick="setHistTab('home')" aria-label="Back to History and Reports">←</button>
+            <button type="button" class="clean-back" onclick="histMatchesBack()" aria-label="Back">←</button>
             <h2>Past Matches</h2>
           </div>
           <div class="card">
@@ -2221,7 +2272,7 @@
             <div class="step"><div class="step-n">3</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
             <div class="step"><div class="step-n">4</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
             <div class="step"><div class="step-n">5</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
-            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — a NEW history entry can be filed by any signed-in account (so a match finished while signed out, offline, or by the designated scorer still reaches Firebase and shows on every device — it keeps its recorded owner), while an entry already in Firebase can be rewritten or deleted only by its owner (or its designated scorer), and a delete tombstone can be written only by the account that owns that history entry (or its designated scorer, or anyone signed in when the entry has no owner or is already gone). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child('matchHistory').child($matchId).exists() || !root.child('matchHistory').child($matchId).child('ownerUid').exists() || root.child('matchHistory').child($matchId).child('ownerUid').val() == '' || root.child('matchHistory').child($matchId).child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } } } }</span></p></div></div>
+            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only, with no add, edit or delete controls shown to them at all; the controls appear only when the Google account that created the tournament, match, team or player is signed in. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — a NEW history entry can be filed by any signed-in account (so a match finished while signed out, offline, or by the designated scorer still reaches Firebase and shows on every device — it keeps its recorded owner), while an entry already in Firebase can be rewritten or deleted only by its owner (or its designated scorer), and a delete tombstone can be written only by the account that owns that history entry (or its designated scorer, or anyone signed in when the entry has no owner or is already gone). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child('matchHistory').child($matchId).exists() || !root.child('matchHistory').child($matchId).child('ownerUid').exists() || root.child('matchHistory').child($matchId).child('ownerUid').val() == '' || root.child('matchHistory').child($matchId).child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } } } }</span></p></div></div>
           </div>
           <div class="warn" style="margin-top:12px"><b>⚠️ Honest security note:</b> ownership is enforced <b>in this app</b> right away — the scoring pad, editors and delete buttons lock for everyone except the signed-in owner, and guests are view-only. <b>Server-side</b> enforcement starts only when the step-6 Rules above are published in the Firebase Console: until then the database itself still accepts public writes, so someone writing to it directly (outside this app) could still change data. Once those Rules are published, keep scoring from the account that owns the match — writes from any other account, signed in or not, are rejected by Firebase itself.</div>
           <div class="divider"></div>
@@ -2474,7 +2525,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v104';
+      var APP_VERSION = 'v106';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3235,7 +3286,18 @@
         var tnLocked = false, liveLocked = false;
         try { tnLocked = tournamentLocked(); } catch(e){}
         try { liveLocked = liveMatchLocked(); } catch(e){}
-        return !(tnLocked && liveLocked);
+        /* A profile belongs to whoever created the player: the
+           tournament / My Teams admin, or the owner (or designated
+           scorer) of the live match the player is in. Being merely
+           signed in with some other Google account is not enough —
+           if the tournament belongs to someone else AND there is no
+           live match of your own, the Edit form is not shown at
+           all. An owner-less tournament stays editable by a
+           signed-in account, which claims it (the established
+           first-sign-in rule). */
+        if (!tnLocked) return true;
+        if (!liveLocked && liveMatchExists()) return true;
+        return false;
       }
       function setPlayerMapping(team, name, id){
         if (!name || !id) return;
@@ -7242,6 +7304,18 @@
         if (!teamPageCtx || teamPageCtx.src === 'sb') return false;
         if (isViewerSession()) return false;
         if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
+        /* Ownership decides what is SHOWN, not just what works: the
+           add-players box, the logo badge control, the remove-team
+           ×, the per-player trash and the C / VC / Wk panel render
+           only for the account that owns this data — the admin who
+           created the tournament / teams, signed in with that same
+           Google account. A guest, or any other signed-in account,
+           gets the purely read-only page (name taps go straight to
+           the profile). tournamentLocked() is the same check the
+           edit handlers enforce via requireTnOwner: an owner-less
+           record is editable only by a signed-in account (which
+           then claims it), never by a guest. */
+        try { if (tournamentLocked()) return false; } catch(e){}
         return true;
       }
       function renderTeamPage(){
@@ -8064,6 +8138,39 @@
         document.body.classList.add('link-viewer');
         setView('history');
       }
+      /* True while this page is being used as a VIEWER surface (the
+         viewer link, an in-page viewer session, or a device
+         remembered as a viewer). Viewers get Past Matches only —
+         never the History & Reports landing, never Reports. */
+      function isViewerSurface(){
+        return document.body.classList.contains('viewer-inpage')
+          || document.body.classList.contains('viewer-mode')
+          || document.body.classList.contains('viewer-flow')
+          || document.body.classList.contains('link-viewer');
+      }
+      /* The viewer landing's Past Matches entry (and the scoreboard
+         Info tab's history entry for a viewer): straight into the
+         Past Matches page — search, month / tournament / team /
+         player filters and the archived list — with no History &
+         Reports landing in between and no sync-status message. */
+      function openViewerPastMatches(){
+        enterViewerHistory();
+        setHistTab('matches');
+      }
+      /* The scoreboard Info tab's history entry follows who is
+         looking: a viewer goes to Past Matches; the scorer keeps
+         the full History & Reports page. */
+      function openHistoryEntry(){
+        if (isViewerSurface()) openViewerPastMatches();
+        else setView('history');
+      }
+      /* Back from the Past Matches panel: a viewer returns to the
+         Live Matches list (there is no History & Reports landing
+         for them); the scorer returns to that landing. */
+      function histMatchesBack(){
+        if (isViewerSurface()) historyBack();
+        else setHistTab('home');
+      }
       /* Opened through the control link (?view=scorer / ?view=control):
          straight into the Scorer Console, no viewer landing in between. */
       /* The control link is the scorer's own door: any viewer flag
@@ -8191,6 +8298,10 @@
          inside Reports. */
       var histTab = 'home';
       function setHistTab(tab){
+        /* Viewers never see the History & Reports landing or the
+           Reports panel: for them every history destination resolves
+           to Past Matches, whichever route brought them here. */
+        if (isViewerSurface()) tab = 'matches';
         histTab = (tab === 'reports') ? 'reports' : (tab === 'matches' ? 'matches' : 'home');
         var pm = $('histPanel-matches'), pr = $('histPanel-reports');
         if (pm) pm.hidden = histTab !== 'matches';
@@ -8894,6 +9005,17 @@
             }
             try { applyOwnerLocks(); } catch(e){}
             try { renderHistory(); } catch(e){}
+            /* The account changed: re-render every surface whose
+               add / edit / delete controls are owner-gated at render
+               time, so the controls follow the account at once —
+               signing in as the creator brings them back; signing
+               out, or in as a different Google account, removes
+               them without waiting for the next data update. */
+            try { renderTeamPage(); } catch(e){}
+            try { renderTournament(); } catch(e){}
+            try { renderTournamentList(); } catch(e){}
+            try { renderMyTeams(); } catch(e){}
+            try { renderOmFixtures(); } catch(e){}
           }, function(err){ renderAuthBar(); });
           /* A redirect sign-in (the fallback when popups are blocked)
              completes here; a failure is reported, never hidden. */
@@ -9246,6 +9368,10 @@
         try { tnLocked = tournamentLocked(); } catch(e){}
         var inTnViewer = document.body.classList.contains('viewer-mode');
         document.body.classList.toggle('tn-locked', tnLocked && !inTnViewer);
+        /* Same visibility rule for the live match: while it is
+           locked for this account, the scorer view shows no add /
+           remove controls at all (CSS .live-locked). */
+        document.body.classList.toggle('live-locked', !!locked);
         var banner = $('tnLockBanner');
         if (banner){
           banner.classList.toggle('show', tnLocked && !inTnViewer);
@@ -10527,7 +10653,9 @@
         archiveView = { id: id, entry: e, returnView: ret, returnHistTab: (ret === 'history' ? histTab : null), state: archiveDisplayState(e) };
         cbOversInnSel = -1;
         setView('scoreboard');
-        setCbTab('live');
+        /* An archived match is a completed match: it opens on the
+           Summary tab, like the reference match centre. */
+        setCbTab('summary');
         renderArchiveScoreboard();
       }
       function closeHistoryMatch(){ var m = $('histModal'); if (m) m.classList.remove('show'); }
@@ -10985,6 +11113,523 @@
         var e = HIST[id];
         if (!e){ toast('That match is no longer in History'); return; }
         withCardState(archiveDisplayState(e), saveScorecardPdf);
+      }
+      /* ---------- Match Summary JPG & Match Report PDF ----------
+         The two downloads on a completed match's Summary tab, both
+         produced on the device (no server, no library): the Match
+         Summary is a JPG image card (drawSummaryImage below), and
+         the Match Report is a real PDF in the reference format:
+         header scores + result + POTM, a Match Information
+         table, a Match Summary section, the complete per-innings
+         scorecard (batting with dismissals / R / B / 4s / 6s / SR,
+         extras breakdown, total, run rate, Fall Of Wickets, and
+         bowling with O / M / R / W / Eco / 0s / 4s / 6s / Wd / NB),
+         and an Over Comparison of both innings.
+         Figures the app does not record directly are derived from
+         the stored ball-by-ball record: maidens (a complete over by
+         one bowler with no runs off it), dot balls, boundaries
+         conceded and wides / no-balls per bowler, the fall of
+         wickets, and the running score at each over's end. A field
+         the match never recorded (e.g. no scorer name on an old
+         entry) is left out of the table rather than invented.
+         The tables are laid out in a monospace face (Courier, a
+         standard PDF font) so the padded columns line up. */
+      function buildMatchPdf(text){
+        var MAXCH = 96, LEAD = 12, TOP = 792, PERPAGE = 58;
+        var lines = [];
+        pdfSafeText(text).split(/\r?\n/).forEach(function(l){
+          pdfWrapLine(l, MAXCH).forEach(function(w){ lines.push(w); });
+        });
+        if (!lines.length) lines = [''];
+        var pages = [];
+        for (var i = 0; i < lines.length; i += PERPAGE) pages.push(lines.slice(i, i + PERPAGE));
+        var FONT = 3, FONTB = 4, FIRSTPAGE = 5;
+        var objs = [];
+        objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+        var kids = pages.map(function(_, pi){ return (FIRSTPAGE + pi * 2) + ' 0 R'; }).join(' ');
+        objs[2] = '<< /Type /Pages /Kids [' + kids + '] /Count ' + pages.length + ' >>';
+        objs[FONT] = '<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>';
+        objs[FONTB] = '<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>';
+        pages.forEach(function(pageLines, pi){
+          var pageObj = FIRSTPAGE + pi * 2, contObj = pageObj + 1;
+          objs[pageObj] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ' + FONT + ' 0 R /F2 ' + FONTB + ' 0 R >> >> /Contents ' + contObj + ' 0 R >>';
+          var ops = ['BT', '/F1 8.5 Tf', LEAD + ' TL', '42 ' + TOP + ' Td'];
+          pageLines.forEach(function(line, li){
+            if (li > 0) ops.push('T*');
+            if (pi === 0 && li === 0 && line){
+              ops.push('/F2 13 Tf', '(' + pdfEscape(line) + ') Tj', '/F1 8.5 Tf');
+            } else if (/^[A-Z0-9][A-Z0-9 &.\-]+$/.test(line) && line.length > 2){
+              ops.push('/F2 8.5 Tf', '(' + pdfEscape(line) + ') Tj', '/F1 8.5 Tf');
+            } else {
+              ops.push('(' + pdfEscape(line) + ') Tj');
+            }
+          });
+          ops.push('ET');
+          ops.push('BT', '/F1 8 Tf', '42 26 Td', '(Page ' + (pi + 1) + ' of ' + pages.length + ') Tj', 'ET');
+          var stream = ops.join('\n');
+          objs[contObj] = '<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream';
+        });
+        var total = FIRSTPAGE + pages.length * 2 - 1;
+        var pdf = '%PDF-1.4\n';
+        var offsets = [0];
+        for (var n = 1; n <= total; n++){
+          offsets[n] = pdf.length;
+          pdf += n + ' 0 obj\n' + objs[n] + '\nendobj\n';
+        }
+        var xrefAt = pdf.length;
+        pdf += 'xref\n0 ' + (total + 1) + '\n0000000000 65535 f \n';
+        for (var m = 1; m <= total; m++){
+          var off = String(offsets[m]);
+          while (off.length < 10) off = '0' + off;
+          pdf += off + ' 00000 n \n';
+        }
+        pdf += 'trailer\n<< /Size ' + (total + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefAt + '\n%%EOF';
+        return pdf;
+      }
+      function mrPad(s, w){
+        s = String(s == null ? '' : s);
+        if (s.length > w) s = s.slice(0, w);
+        while (s.length < w) s += ' ';
+        return s;
+      }
+      function mrPadR(v, w){
+        var s = String(v == null ? '' : v);
+        while (s.length < w) s = ' ' + s;
+        return s;
+      }
+      /* Per-over reconstruction from the ball record: deliveries
+         grouped by counting legal balls (the same rule the Overs
+         tab uses), with the over's runs / wickets, its bowler(s),
+         and the innings score at the over's end. */
+      function mrOverAnalysis(inn){
+        var overs = [], cur = null, legalBefore = 0, cumRuns = 0, cumWkts = 0;
+        function groupFor(no){
+          if (!cur || cur.no !== no){ cur = { no: no, balls: [], runs: 0, wkts: 0, bowlers: {}, cumRuns: 0, cumWkts: 0 }; overs.push(cur); }
+          return cur;
+        }
+        (inn.balls || []).forEach(function(b){
+          if (b.evt) return;
+          var g = groupFor(Math.floor(legalBefore / 6) + 1);
+          var r = parseBallRuns(b.text);
+          g.balls.push(b); g.runs += r; cumRuns += r;
+          if (isWicketBall(b)){ g.wkts++; cumWkts++; }
+          if (b.bowler) g.bowlers[b.bowler] = 1;
+          g.cumRuns = cumRuns; g.cumWkts = cumWkts;
+          if (isLegalDelivery(b.text)) legalBefore++;
+        });
+        return overs;
+      }
+      function mrBowlerStats(inn){
+        var stats = {};
+        function st(name){
+          if (!stats[name]) stats[name] = { dots: 0, fours: 0, sixes: 0, wides: 0, noballs: 0, maidens: 0 };
+          return stats[name];
+        }
+        (inn.bowlers || []).forEach(function(b){ st(b.name); });
+        (inn.balls || []).forEach(function(b){
+          if (b.evt || !b.bowler) return;
+          var s = st(b.bowler), t = String(b.text || '');
+          if (/^Wd/.test(t)) s.wides++;
+          else if (/^Nb/.test(t)){
+            s.noballs++;
+            var br = batterRunsOnBall(t);
+            if (br === 4) s.fours++; else if (br === 6) s.sixes++;
+          } else {
+            if (isLegalDelivery(t) && parseBallRuns(t) === 0) s.dots++;
+            if (t === '4') s.fours++;
+            else if (t === '6') s.sixes++;
+          }
+        });
+        mrOverAnalysis(inn).forEach(function(g){
+          var names = Object.keys(g.bowlers);
+          var legal = g.balls.filter(function(b){ return isLegalDelivery(b.text); }).length;
+          if (legal === 6 && g.runs === 0 && names.length === 1) st(names[0]).maidens++;
+        });
+        return stats;
+      }
+      function mrFallOfWickets(inn){
+        var out = [], score = 0, n = 0;
+        (inn.balls || []).forEach(function(b){
+          if (b.evt) return;
+          score += parseBallRuns(b.text);
+          if (isWicketBall(b)){
+            n++;
+            out.push({ score: score, n: n, name: b.outName || '', over: b.over || '' });
+          }
+        });
+        return out;
+      }
+      function mrBattingLines(inn){
+        var L = [];
+        L.push(mrPad('Batter', 24) + mrPad('Dismissal', 30) + mrPadR('R', 4) + mrPadR('B', 4) + mrPadR('4s', 4) + mrPadR('6s', 4) + mrPadR('SR', 7));
+        (inn.batters || []).forEach(function(b){
+          var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
+          var dism = b.out ? (b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out');
+          var nm = dispName(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
+          L.push(mrPad(nm, 24) + mrPad(dism, 30) + mrPadR(b.runs, 4) + mrPadR(b.balls, 4) + mrPadR(b.fours || 0, 4) + mrPadR(b.sixes || 0, 4) + mrPadR(sr, 7));
+        });
+        if (!(inn.batters || []).length) L.push('  No batting recorded.');
+        var ytb = [];
+        try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
+        if (ytb.length) L.push('Yet to bat: ' + ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '));
+        var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
+        var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+        L.push('Extras: ' + exTot + ' (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')');
+        L.push('Overs: ' + oversText(inn.legalBalls || 0));
+        L.push('Total: ' + (inn.runs || 0) + '/' + (inn.wickets || 0));
+        L.push('Run Rate: ' + (inn.legalBalls > 0 ? (inn.runs / (inn.legalBalls / 6)).toFixed(2) : '0.00'));
+        var fow = mrFallOfWickets(inn);
+        if (fow.length){
+          L.push('Fall Of Wickets: ' + fow.map(function(f){
+            return f.score + '-' + f.n + (f.name ? ' (' + dispName(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
+          }).join(', '));
+        }
+        return L;
+      }
+      function mrBowlingLines(inn){
+        var L = [];
+        var stats = mrBowlerStats(inn);
+        L.push(mrPad('Bowler', 24) + mrPadR('O', 6) + mrPadR('M', 3) + mrPadR('R', 5) + mrPadR('W', 3) + mrPadR('Eco', 7) + mrPadR('0s', 4) + mrPadR('4s', 4) + mrPadR('6s', 4) + mrPadR('Wd', 4) + mrPadR('NB', 4));
+        (inn.bowlers || []).forEach(function(b){
+          var s = stats[b.name] || { dots: 0, fours: 0, sixes: 0, wides: 0, noballs: 0, maidens: 0 };
+          var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
+          L.push(mrPad(dispName(inn.bowlingTeam, b.name), 24) + mrPadR(oversText(b.balls || 0), 6) + mrPadR(s.maidens, 3) + mrPadR(b.runs, 5) + mrPadR(b.wickets, 3) + mrPadR(econ, 7) + mrPadR(s.dots, 4) + mrPadR(s.fours, 4) + mrPadR(s.sixes, 4) + mrPadR(s.wides, 4) + mrPadR(s.noballs, 4));
+        });
+        if (!(inn.bowlers || []).length) L.push('  No bowling recorded.');
+        return L;
+      }
+      function mrInfoLines(){
+        var L = [];
+        function row(k, v){ if (v) L.push(mrPad(k, 15) + ': ' + v); }
+        if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) row('Tournament', S.tournament.name);
+        row('Match Title', (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2'));
+        row('Match Format', [S.matchFormat || '', S.ballType || ''].filter(Boolean).join(', '));
+        row('Playing', ((typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10) + 1) + ' Per Side');
+        row('Overs', S.oversLimit ? String(S.oversLimit) : '');
+        row('Venue', S.venue || '');
+        var when = '';
+        if (S.matchDate){
+          var d = new Date(S.matchDate + 'T' + (S.matchTime || '00:00'));
+          if (!isNaN(d.getTime())) when = d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+        row('Date & Time', when);
+        row('Toss', S.tossInfo || '');
+        row('Scorer', S.ownerName || '');
+        row('Match ID', S.matchId ? String(S.matchId) : '');
+        return L;
+      }
+      function mrSummarySectionLines(inns){
+        var L = [];
+        inns.forEach(function(inn){
+          L.push((inn.battingTeam || 'Team') + ' — ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' overs)');
+          var bats = summaryTopBatters(inn), bowls = summaryTopBowlers(inn);
+          if (bats.length) L.push('  Batting: ' + bats.map(function(b){ return dispName(inn.battingTeam, b.name) + ' ' + b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')'; }).join(', '));
+          if (bowls.length) L.push('  Bowling: ' + bowls.map(function(w){ return dispName(inn.bowlingTeam, w.name) + ' ' + w.wickets + '-' + w.runs; }).join(', '));
+        });
+        return L;
+      }
+      function mrOverComparisonLines(inns){
+        var L = [];
+        var analyses = inns.map(mrOverAnalysis);
+        var maxOvers = 0;
+        analyses.forEach(function(a){ if (a.length > maxOvers) maxOvers = a.length; });
+        if (!maxOvers) return L;
+        function seg(a, idx){
+          var g = a[idx]; if (!g) return '-';
+          return g.balls.map(function(b){ return b.text; }).join(' ') + '  (' + g.cumRuns + '/' + g.cumWkts + ')';
+        }
+        var h1 = inns[0] ? teamShort(inns[0].battingTeam) : 'Inn 1';
+        var h2 = inns[1] ? teamShort(inns[1].battingTeam) : '';
+        L.push(mrPad('', 8) + mrPad(h1, 44) + h2);
+        for (var i = 0; i < maxOvers; i++){
+          var s1 = seg(analyses[0], i);
+          var s2 = inns[1] ? seg(analyses[1], i) : '';
+          if (s2 && (8 + Math.max(s1.length, 44) + s2.length) > 94){
+            L.push(mrPad('Over ' + (i + 1), 8) + s1);
+            L.push(mrPad('', 8) + mrPad('', 44) + s2);
+          } else {
+            L.push(mrPad('Over ' + (i + 1), 8) + mrPad(s1, 44) + s2);
+          }
+        }
+        return L;
+      }
+      /* ---------- Match Summary JPG ----------
+         The Summary tab's first download is an IMAGE, drawn on a
+         canvas on the device in the reference card's style: a dark
+         card headed "SUMMARY" with the tournament name and Match
+         ID under it and the app name top-right; per team, the name
+         in teal, its overs, the big score, and three rows of top
+         batters (runs*(balls)) beside the innings' top bowlers
+         (wickets-runs); a wide teal banner with the result; and a
+         footer — venue + date on the left, Player of the Match in
+         a teal wedge in the centre, the viewer site on the right.
+         Identity is this app's own (Live Cricket Score and its
+         published viewer address), never the reference app's. */
+      function drawSummaryImage(){
+        var inns = summaryInningsList();
+        var W = 1080, PAD = 56, CW = W - PAD * 2;
+        var COND = '"Barlow Condensed", system-ui, sans-serif';
+        var SANS = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+        var TEAL = '#2fb3a8', TEAL_LT = '#8fe0d7', INK = '#eef4f2', MUT = '#9fb3ab';
+        var result = summaryResultText(inns);
+        /* measure the result banner first (1-2 lines) */
+        var meas = document.createElement('canvas').getContext('2d');
+        meas.font = '700 46px ' + COND;
+        var resLines = mcWrap(meas, result.toUpperCase(), CW - 60, 2);
+        var bannerH = resLines.length * 54 + 40;
+        var soText = (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) ? '⚡ Super Over: ' + S.superOver.resultText : '';
+        var H = 186 + inns.length * 248 + bannerH + (soText ? 46 : 0) + 118 + 30;
+        var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        var c = cv.getContext('2d');
+        var grad = c.createLinearGradient(0, 0, W * 0.3, H);
+        grad.addColorStop(0, '#24363f'); grad.addColorStop(0.6, '#18262d'); grad.addColorStop(1, '#101a20');
+        c.fillStyle = grad; c.fillRect(0, 0, W, H);
+        /* subtle diagonal accents, echoing the reference card */
+        c.fillStyle = 'rgba(47,179,168,0.10)';
+        c.beginPath(); c.moveTo(W * 0.52, 0); c.lineTo(W, 0); c.lineTo(W, 120); c.lineTo(W * 0.72, 44); c.closePath(); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.05)';
+        c.beginPath(); c.moveTo(0, H - 150); c.lineTo(W * 0.3, H - 190); c.lineTo(W * 0.42, H); c.lineTo(0, H); c.closePath(); c.fill();
+        c.textBaseline = 'alphabetic';
+        /* header */
+        var y = 84;
+        c.fillStyle = '#d7e2de'; c.font = '700 74px ' + COND; c.textAlign = 'left';
+        c.fillText('SUMMARY', PAD, y);
+        c.fillStyle = MUT; c.font = '700 27px ' + SANS; c.textAlign = 'right';
+        c.fillText('LIVE CRICKET SCORE', W - PAD, 62);
+        c.textAlign = 'left';
+        y += 12;
+        var tnName = (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '';
+        if (tnName){
+          y += 34;
+          c.fillStyle = TEAL; c.font = '700 30px ' + COND;
+          c.fillText(mcWrap(c, tnName.toUpperCase(), CW, 1)[0] || '', PAD, y);
+        }
+        if (S.matchId){
+          y += 30;
+          c.fillStyle = '#6f9a92'; c.font = '600 25px ' + SANS;
+          c.fillText('#' + String(S.matchId), PAD, y);
+        }
+        y += 26;
+        c.strokeStyle = 'rgba(255,255,255,0.16)'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(PAD, y); c.lineTo(W - PAD, y); c.stroke();
+        y += 20;
+        /* per-team blocks */
+        inns.forEach(function(inn){
+          var bats = summaryTopBatters(inn), bowls = summaryTopBowlers(inn);
+          var scoreTxt = inn.runs + '-' + inn.wickets;
+          c.font = '700 56px ' + COND;
+          var scoreW = c.measureText(scoreTxt).width;
+          var overTxt = 'Overs  ' + oversText(inn.legalBalls);
+          c.font = '600 31px ' + COND;
+          var overW = c.measureText(overTxt).width;
+          var nameMax = CW - scoreW - overW - 56;
+          c.fillStyle = TEAL;
+          mcFitFont(c, (inn.battingTeam || 'Team').toUpperCase(), nameMax, 47, 30, '700', COND);
+          c.fillText(mcWrap(c, (inn.battingTeam || 'Team').toUpperCase(), nameMax, 1)[0] || '', PAD, y + 42);
+          c.fillStyle = TEAL; c.font = '600 31px ' + COND; c.textAlign = 'right';
+          c.fillText(overTxt, W - PAD - scoreW - 28, y + 42);
+          c.fillStyle = TEAL_LT; c.font = '700 56px ' + COND;
+          c.fillText(scoreTxt, W - PAD, y + 42);
+          c.textAlign = 'left';
+          y += 60;
+          /* performers panel: 3 rows, batters left / bowlers right */
+          var panelH = 3 * 48 + 22;
+          c.fillStyle = 'rgba(255,255,255,0.05)';
+          mcRR(c, PAD, y, CW, panelH, 10); c.fill();
+          var midX = PAD + CW / 2;
+          for (var i = 0; i < 3; i++){
+            var ry = y + 46 + i * 48;
+            var b = bats[i], w = bowls[i];
+            if (b){
+              var bFig = b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')';
+              c.font = '700 35px ' + COND;
+              var bfW = c.measureText(bFig).width;
+              c.fillStyle = INK;
+              mcFitFont(c, dispName(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 30, 21, '600', SANS);
+              c.fillText(mcWrap(c, dispName(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 1)[0] || '', PAD + 24, ry);
+              c.fillStyle = '#ffffff'; c.font = '700 35px ' + COND; c.textAlign = 'right';
+              c.fillText(bFig, midX - 24, ry);
+              c.textAlign = 'left';
+            }
+            if (w){
+              var wFig = w.wickets + ' - ' + w.runs;
+              c.font = '700 35px ' + COND;
+              var wfW = c.measureText(wFig).width;
+              c.fillStyle = INK;
+              mcFitFont(c, dispName(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 30, 21, '600', SANS);
+              c.fillText(mcWrap(c, dispName(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 1)[0] || '', midX + 24, ry);
+              c.fillStyle = '#ffffff'; c.font = '700 35px ' + COND; c.textAlign = 'right';
+              c.fillText(wFig, W - PAD - 24, ry);
+              c.textAlign = 'left';
+            }
+          }
+          y += panelH + 26;
+        });
+        /* result banner */
+        var bgrad = c.createLinearGradient(0, y, W, y + bannerH);
+        bgrad.addColorStop(0, '#1f8f84'); bgrad.addColorStop(0.5, '#35bcae'); bgrad.addColorStop(1, '#1f8f84');
+        c.fillStyle = bgrad; c.fillRect(0, y, W, bannerH);
+        c.fillStyle = '#0a2320'; c.font = '700 46px ' + COND; c.textAlign = 'center';
+        var by = y + 58;
+        resLines.forEach(function(ln){ c.fillText(ln, W / 2, by); by += 54; });
+        c.textAlign = 'left';
+        y += bannerH;
+        if (soText){
+          y += 36;
+          c.fillStyle = '#ffd98a'; c.font = '700 28px ' + SANS; c.textAlign = 'center';
+          c.fillText(mcWrap(c, soText, CW, 1)[0] || '', W / 2, y);
+          c.textAlign = 'left';
+          y += 10;
+        }
+        /* footer */
+        var fy = H - 84;
+        var leftLine = S.venue || tnName || ((S.teamA || '') + ' v ' + (S.teamB || ''));
+        c.fillStyle = INK; c.font = '700 29px ' + SANS;
+        c.fillText(mcWrap(c, leftLine, 320, 1)[0] || '', PAD, fy);
+        var dateText = '';
+        if (S.matchDate){ try { dateText = fmtDateShort(S.matchDate); } catch(e){} }
+        if (!dateText && S.updatedAt) dateText = new Date(S.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (dateText){
+          c.fillStyle = MUT; c.font = '500 24px ' + SANS;
+          c.fillText(dateText, PAD, fy + 32);
+        }
+        /* centre wedge: Player of the Match */
+        var wedgeW = 400, wx = W / 2 - wedgeW / 2;
+        c.fillStyle = TEAL;
+        c.beginPath();
+        c.moveTo(wx + 26, fy - 44); c.lineTo(wx + wedgeW - 26, fy - 44); c.lineTo(wx + wedgeW, fy + 44); c.lineTo(wx, fy + 44);
+        c.closePath(); c.fill();
+        c.fillStyle = '#0a2320'; c.textAlign = 'center';
+        var potmTxt = S.potmName ? dispName(S.potmTeam, S.potmName) : 'Not Decided Yet';
+        mcFitFont(c, potmTxt, wedgeW - 70, 36, 24, '700', COND);
+        c.fillText(mcWrap(c, potmTxt, wedgeW - 70, 1)[0] || '', W / 2, fy + 2);
+        c.font = '600 21px ' + SANS; c.fillStyle = 'rgba(10,35,32,0.75)';
+        c.fillText('Player of the match', W / 2, fy + 28);
+        c.textAlign = 'left';
+        /* right: the viewer site */
+        c.fillStyle = MUT; c.font = '600 24px ' + SANS; c.textAlign = 'right';
+        c.fillText('riasatbb.github.io', W - PAD, fy);
+        c.fillText('live-cricket-score', W - PAD, fy + 32);
+        c.textAlign = 'left';
+        return cv;
+      }
+      function saveMatchSummaryJpg(){
+        if (!S.teamA && !S.teamB){ toast('No match to download yet — start a match first'); return; }
+        var cv = null;
+        try { cv = drawSummaryImage(); } catch(e){ cv = null; }
+        if (!cv){ toast('Could not create the summary image in this browser'); return; }
+        var fname = matchPdfFileName('summary').replace(/\.pdf$/, '.jpg');
+        function done(){ toast('✓ Match Summary downloaded as JPG'); }
+        if (cv.toBlob){
+          cv.toBlob(function(blob){
+            if (!blob){ toast('Download failed in this browser'); return; }
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = fname;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
+            done();
+          }, 'image/jpeg', 0.92);
+        } else {
+          var a2 = document.createElement('a');
+          a2.href = cv.toDataURL('image/jpeg', 0.92); a2.download = fname;
+          document.body.appendChild(a2); a2.click(); document.body.removeChild(a2);
+          done();
+        }
+      }
+      function downloadMatchSummaryJpgCurrent(){
+        var st;
+        if (typeof archiveView !== 'undefined' && archiveView && archiveView.state) st = archiveView.state;
+        else if (scorerSbReturn || currentViewName === 'scorer') st = S;
+        else st = liveDisplayState();
+        var doneFlag = false;
+        function go(){
+          if (doneFlag) return; doneFlag = true;
+          try { withCardState(st, saveMatchSummaryJpg); } catch(e){ toast('Could not create the summary image in this browser'); }
+        }
+        /* Draw after the card font arrives (same pattern as the
+           Shareable Match Card) so the condensed face is used when
+           available, with a hard fallback so the download never
+           waits on the network. */
+        if (document.fonts && document.fonts.load){
+          try {
+            Promise.race([
+              document.fonts.load('700 100px "Barlow Condensed"'),
+              new Promise(function(res){ setTimeout(res, 800); })
+            ]).then(go, go);
+          } catch(e){ go(); }
+          setTimeout(go, 900);
+        } else go();
+      }
+      function matchReportTextFromState(){
+        var L = [];
+        var inns = summaryInningsList();
+        L.push('Match Report');
+        L.push((S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2'));
+        inns.forEach(function(inn){ L.push((inn.battingTeam || 'Team') + '  ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' overs)'); });
+        L.push('Result: ' + summaryResultText(inns));
+        if (S.potmName) L.push('Player Of The Match: ' + dispName(S.potmTeam, S.potmName) + (S.potmTeam ? ' (' + S.potmTeam + ')' : ''));
+        if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) L.push('Super Over: ' + S.superOver.resultText);
+        L.push('');
+        L.push('MATCH INFORMATION');
+        mrInfoLines().forEach(function(x){ L.push(x); });
+        L.push('');
+        L.push('MATCH SUMMARY');
+        mrSummarySectionLines(inns).forEach(function(x){ L.push(x); });
+        inns.forEach(function(inn, i){
+          L.push('');
+          L.push((i === 0 ? '1ST' : '2ND') + ' INNINGS — ' + (inn.battingTeam || 'Team'));
+          L.push('BATTING');
+          mrBattingLines(inn).forEach(function(x){ L.push(x); });
+          L.push('BOWLING');
+          mrBowlingLines(inn).forEach(function(x){ L.push(x); });
+        });
+        var so = S.superOver;
+        if (so && so.status === 'finished' && (so.innings || []).length){
+          so.innings.forEach(function(inn, i){
+            L.push('');
+            L.push('SUPER OVER — INNINGS ' + (i + 1) + ' — ' + (inn.battingTeam || 'Team'));
+            L.push('BATTING');
+            mrBattingLines(inn).forEach(function(x){ L.push(x); });
+            L.push('BOWLING');
+            mrBowlingLines(inn).forEach(function(x){ L.push(x); });
+          });
+        }
+        var oc = mrOverComparisonLines(inns);
+        if (oc.length){
+          L.push('');
+          L.push('OVER COMPARISON');
+          oc.forEach(function(x){ L.push(x); });
+        }
+        return L.join('\n');
+      }
+      function matchPdfFileName(kind){
+        function slug(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+        return 'match-' + kind + '-' + (slug(S.teamA) || 'team1') + '-v-' + (slug(S.teamB) || 'team2') + '.pdf';
+      }
+      function saveMatchPdf(){
+        if (!S.teamA && !S.teamB){ toast('No match to download yet — start a match first'); return; }
+        try {
+          var blob = new Blob([buildMatchPdf(matchReportTextFromState())], { type: 'application/pdf' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = matchPdfFileName('report');
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ try { URL.revokeObjectURL(url); } catch(e){} }, 800);
+          toast('✓ Match Report downloaded as PDF');
+        } catch(e){ toast('PDF download failed in this browser'); }
+      }
+      function downloadMatchReportPdfCurrent(){
+        if (typeof archiveView !== 'undefined' && archiveView && archiveView.state){
+          withCardState(archiveView.state, saveMatchPdf);
+        } else if (scorerSbReturn || currentViewName === 'scorer'){
+          saveMatchPdf();
+        } else {
+          withCardState(liveDisplayState(), saveMatchPdf);
+        }
       }
       /* ---------- Shareable Match Card (image) ----------
          A poster-style card image (1080 x 1350 PNG) drawn on a
@@ -11498,6 +12143,12 @@
       }
       function renderHistStatus(){
         var el = $('histSyncStatus'); if (!el) return;
+        /* Viewers see the Past Matches page with no sync-status
+           message at all — no "Synced with Firebase", no syncing or
+           held notices: sync is the scorer's concern, and a viewer
+           can act on none of it. The control side keeps the full
+           status exactly as before. */
+        if (isViewerSurface()){ el.innerHTML = ''; return; }
         var ids = Object.keys(HIST);
         var total = ids.length;
         var pending = histPendingIds().length;
@@ -11758,7 +12409,7 @@
       var currentCbTab = 'live';
       function setCbTab(tab){
         currentCbTab = tab;
-        ['info','live','scorecard','squads','overs'].forEach(function(t){
+        ['summary','info','live','scorecard','squads','overs'].forEach(function(t){
           var p = $('cbPanel-' + t); if (p) p.classList.toggle('show', t === tab);
         });
         document.querySelectorAll('.cb-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-cbtab') === tab); });
@@ -11769,6 +12420,74 @@
         }
         var wrap = document.querySelector('.cb-wrap');
         if (wrap){ try { wrap.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }
+      }
+      /* ---------- Summary tab (completed matches) ----------
+         Appears only once the match on show is finished: the tab
+         button is unhidden by renderScoreboardCB (via
+         renderSummaryPanel below) and an archived match opens
+         straight onto it. Layout follows the reference: each team's
+         score line, its top three batters beside the innings' top
+         three bowlers (wickets-runs), the Winner line, Player of
+         the Match, and the two downloads — the Match Summary JPG
+         image and the full Match Report PDF. Everything is read from the state
+         the scoreboard is currently showing (live-confirmed,
+         scorer's own, or an archived match's display state), so the
+         summary always matches the match on screen. */
+      function summaryTopBatters(inn){
+        return (inn.batters || []).slice().sort(function(a, b){ return (b.runs - a.runs) || (a.balls - b.balls); }).slice(0, 3);
+      }
+      function summaryTopBowlers(inn){
+        return (inn.bowlers || []).slice().sort(function(a, b){ return (b.wickets - a.wickets) || (a.runs - b.runs); }).slice(0, 3);
+      }
+      function summaryInningsList(){
+        var inns = [];
+        if (S.prevInnings) inns.push(S.prevInnings);
+        if (S.current) inns.push(S.current);
+        return inns;
+      }
+      function summaryResultText(inns){
+        var resTxt = String(S.resultText || '').replace(/ 🏆/g, '');
+        if (!resTxt && !S.abandoned){
+          try { resTxt = matchResultText({ innings: inns, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), resultText: '', superOver: S.superOver }); } catch(e){ resTxt = ''; }
+        }
+        if (!resTxt) resTxt = S.abandoned ? 'Match abandoned' : 'Match finished';
+        return resTxt;
+      }
+      function renderSummaryPanel(){
+        var tabBtn = $('cbTabSummary');
+        var body = $('cbSummaryBody');
+        var finished = S.status === 'finished' && !!(S.teamA || S.teamB);
+        if (tabBtn) tabBtn.hidden = !finished;
+        if (!finished){
+          if (currentCbTab === 'summary') setCbTab('live');
+          if (body) body.innerHTML = '';
+          return;
+        }
+        if (!body) return;
+        var inns = summaryInningsList();
+        var html = '<div class="sum-wrap">';
+        inns.forEach(function(inn){
+          html += '<div class="sum-team"><span class="sum-tname">' + esc(inn.battingTeam || '—') + '</span><span class="sum-tscore">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></span></div>';
+          var bats = summaryTopBatters(inn), bowls = summaryTopBowlers(inn);
+          html += '<div class="sum-grid">';
+          for (var i = 0; i < 3; i++){
+            var b = bats[i], w = bowls[i];
+            html += '<div class="sum-cell">' + (b ? '<span class="sum-pname">' + esc(dispName(inn.battingTeam, b.name)) + '</span><span class="sum-pfig">' + b.runs + (b.out ? '' : '*') + '(' + b.balls + ')</span>' : '<span></span>') + '</div>';
+            html += '<div class="sum-cell">' + (w ? '<span class="sum-pname">' + esc(dispName(inn.bowlingTeam, w.name)) + '</span><span class="sum-pfig">' + w.wickets + '-' + w.runs + '</span>' : '<span></span>') + '</div>';
+          }
+          html += '</div>';
+        });
+        html += '<div class="sum-winner"><div class="sum-wlab">' + (S.abandoned ? 'Result' : 'Winner') + '</div><div class="sum-wtext">' + esc(summaryResultText(inns)) + '</div></div>';
+        var pFig = '';
+        if (S.potmName){ try { pFig = potmFigures(S.potmName, S.potmTeam); } catch(e){ pFig = ''; } }
+        html += '<div style="margin-top:14px"><div class="cb-potm-lab">Player of the Match</div>'
+          + (S.potmName
+            ? '<div class="cb-potm-name">' + esc(dispName(S.potmTeam, S.potmName)) + '</div>' + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
+            : '<div class="cb-potm-name" style="color:#bdbdbd">Not Decided Yet</div>')
+          + '</div>';
+        html += '<div class="sum-dl"><button type="button" class="btn" onclick="downloadMatchSummaryJpgCurrent()">🖼 Match Summary</button><button type="button" class="btn gold" onclick="downloadMatchReportPdfCurrent()">📄 Match Report</button></div>';
+        html += '</div>';
+        body.innerHTML = html;
       }
       function projectedScore(){
         var inn = S.current;
@@ -12324,6 +13043,18 @@
           tourCardEl.hidden = !isTnMatch;
           tourCardEl.style.display = isTnMatch ? '' : 'none';
         }
+        /* Summary tab: shown only for a finished match, filled from
+           the same state as every other panel. */
+        try { renderSummaryPanel(); } catch(e){}
+        /* The Info tab's history entry follows who is looking: a
+           viewer gets Past Matches, the scorer History & Reports. */
+        var histTitleEl = $('sbHistCardTitle'), histBtnEl = $('sbHistCardBtn');
+        if (histTitleEl && histBtnEl){
+          var viewerLooking = false;
+          try { viewerLooking = isViewerSurface(); } catch(e){ viewerLooking = false; }
+          histTitleEl.textContent = viewerLooking ? '📜 Past Matches' : '📜 History & Reports';
+          histBtnEl.textContent = viewerLooking ? 'Open Past Matches' : 'Open History & Reports';
+        }
         /* The archived-match bar follows whichever match the
            scoreboard is showing: visible only in archive mode. */
         try { renderArchiveBar(); } catch(e){}
@@ -12869,7 +13600,12 @@
           return '<div class="om-fx-row"><div class="om-fx-teams">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>'
             + '<div class="om-fx-meta">' + esc(fixtureMetaLine(f)) + '</div>'
             + '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="omStartFixture(' + f.id + ')">Toss &amp; Start →</button>'
-            + '<button type="button" class="btn ghost sm" onclick="omRemoveFixture(' + f.id + ')">Remove</button></div></div>';
+            /* Remove is rendered only for the account that saved
+               this fixture (or, for one saved before ownership, a
+               signed-in account) — anyone else never sees it; the
+               handler re-checks the same rule. */
+            + ((currentUid() && (!f.ownerUid || f.ownerUid === currentUid())) ? '<button type="button" class="btn ghost sm" onclick="omRemoveFixture(' + f.id + ')">Remove</button>' : '')
+            + '</div></div>';
         }).join('');
       }
       function omRemoveFixture(id){
@@ -13082,6 +13818,21 @@
             toast('🗑 ' + label + ' deleted');
           });
       }
+      /* A tournament's Delete button is RENDERED only for the
+         account allowed to use it: the admin who created that
+         tournament, signed in with the same Google account — or,
+         for a tournament saved before ownership existed (no owner
+         recorded), any signed-in account on the control side.
+         Guests, other Google accounts and every viewer never see
+         a Delete button here at all; the delete handlers re-check
+         exactly the same rule before anything is removed. */
+      function tnDeleteVisible(ownerUid){
+        if (isViewerSession()) return false;
+        if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
+        var o = ownerUid || '';
+        if (!o) return !!currentUid();
+        return o === currentUid();
+      }
       function renderTournamentList(){
         var el = $('tnList'); if (!el) return;
         try { normalizeTournament(); } catch(e){}
@@ -13093,7 +13844,8 @@
           + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
           + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
           + '<span class="tp-badge">CURRENT</span></button>'
-          + '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button></div>';
+          + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
+          + '</div>';
         var arc = tournamentsArchive().slice().reverse();
         html += arc.map(function(a){
           var d = a.data || {};
@@ -13102,7 +13854,8 @@
             + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span>'
             + '<span class="tp-open">Open →</span></button>'
-            + '<button type="button" class="btn red sm tn-delbtn" onclick="deleteArchivedTournament(\'' + esc(a.id) + '\')" aria-label="Delete ' + esc(a.name || d.name || 'this tournament') + '">🗑 Delete</button></div>';
+            + (tnDeleteVisible(d.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteArchivedTournament(\'' + esc(a.id) + '\')" aria-label="Delete ' + esc(a.name || d.name || 'this tournament') + '">🗑 Delete</button>' : '')
+            + '</div>';
         }).join('');
         el.innerHTML = html;
       }
