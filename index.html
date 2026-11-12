@@ -756,6 +756,38 @@
       .lead-name{font-weight:700}
       .lead-line{margin-top:6px;font-size:13.5px;color:var(--muted)}
       .lead-line .pl-link{font-size:13.5px}
+      /* Team Page squad, grouped by playing role (reference layout):
+         a round photo / initials avatar, the player's name with its
+         (C) / (VC) / (Wk) suffix, and the jersey number at the right.
+         Tapping the name opens the player's maintenance panel inline
+         — career Matches / Runs / Wickets, the C · VC · Wk pickers
+         and View Profile — right under the row. */
+      .tp-group{margin-top:14px}
+      .tp-group:first-child{margin-top:2px}
+      .tp-group h5{margin:0 0 2px;font-size:16.5px;font-weight:800;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:7px}
+      .tp-prow{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line)}
+      .tp-prow.open{border-bottom:none;padding-bottom:2px}
+      .tp-ava{flex:none;width:42px;height:42px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;color:var(--green);overflow:hidden}
+      .tp-ava img{width:100%;height:100%;object-fit:cover;display:block}
+      .tp-pname{flex:1;min-width:0;background:none;border:none;padding:4px 0;margin:0;font:inherit;font-size:16.5px;font-weight:700;color:var(--ink);text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;word-break:break-word}
+      .tp-pname .tp-sfx{font-weight:700}
+      .tp-pname .tp-sfx.c{color:var(--green)}
+      .tp-pname .tp-sfx.vc{color:var(--blue)}
+      .tp-pname .tp-sfx.wk{color:var(--gold)}
+      .tp-pname:active{opacity:.65}
+      .tp-jersey{flex:none;font-size:16.5px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+      .tp-trash{flex:none;width:34px;height:34px;border:none;background:none;color:var(--muted);font-size:17px;line-height:1;padding:0;cursor:pointer;border-radius:8px}
+      .tp-trash:active{background:var(--surface2)}
+      .tp-panel{border-bottom:1px solid var(--line);padding:6px 2px 14px}
+      .tp-stats{display:flex;justify-content:space-around;text-align:center;margin:8px 0 14px}
+      .tp-stat span{display:block;font-size:13px;color:var(--muted);font-weight:600}
+      .tp-stat b{display:block;font-size:30px;font-weight:800;line-height:1.15;margin-top:3px;font-variant-numeric:tabular-nums}
+      .tp-panel-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .tp-rolebtn{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;padding:0}
+      .tp-rolebtn.on-c{background:#33424f;border-color:#33424f;color:#fff}
+      .tp-rolebtn.on-vc{background:var(--blue);border-color:var(--blue);color:#fff}
+      .tp-rolebtn.on-wk{background:var(--green);border-color:var(--green);color:#fff}
+      .tp-viewbtn{margin-left:auto}
 
       /* ---------- viewer landing: live matches list ---------- */
       body.viewer-mode .viewtabs{display:none !important}
@@ -2447,7 +2479,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v100';
+      var APP_VERSION = 'v102';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7218,16 +7250,20 @@
          Tapping a team ANYWHERE a teams section lists it (the My
          Teams grid, a tournament's Teams gallery, the scoreboard's
          tournament teams) opens that team's OWN page — header, Team
-         ID, leadership and full squad — instead of expanding the
-         team's details underneath the list. The page's Back button
-         returns to whichever list the tap came from. On the control
-         side the page is also where the team is managed: logo,
-         C / VC / WK pickers, add / remove players, remove team.
-         Viewers get the same page read-only (the scoreboard source
-         keeps its Players / Matches / Statistics tabs). */
+         ID and the full squad grouped by playing role — instead of
+         expanding the team's details underneath the list. The page's
+         Back button returns to whichever list the tap came from. On
+         the control side the page is also where the team is
+         managed: logo, add / remove players, remove team, and —
+         inside each player's inline panel, opened by tapping their
+         name — the C / VC / WK pickers. Viewers get the same page
+         read-only (the scoreboard source keeps its Players /
+         Matches / Statistics tabs). */
       var teamPageCtx = null; /* { src:'mt'|'tn'|'sb', team, back } */
+      var tpOpenName = null; /* squad player whose inline panel is open on the Team Page */
       function openTeamPage(src, team, back){
         if (!team) return;
+        tpOpenName = null;
         if (src === 'sb'){ sbSelectedTeam = team; sbTeamDetailTab = 'players'; }
         teamPageCtx = { src: src, team: team, back: back || (src === 'mt' ? 'myteams' : (src === 'sb' ? 'scoreboard' : 'tournament')) };
         setView('teampage');
@@ -7284,20 +7320,83 @@
         var players = Array.isArray(store.squads[team]) ? store.squads[team] : [];
         var editable = teamPageEditable();
         var L = leadershipFor(src, team);
-        var leadHTML = LEAD_ROLES.map(function(r){
-          var cur = L[r[0]] || '';
-          if (!editable){
-            return '<div class="lead-row"><span class="lead-chip ' + r[0] + '">' + r[2] + '</span><span class="lead-role">' + r[1] + '</span><span class="lead-name">' + (cur ? plLink(team, cur) : '<span class="note">Not selected</span>') + '</span></div>';
+        /* Squad in the reference layout: players grouped by their
+           profile playing role — Batters, Wicketkeeping Batters,
+           Wicket-keepers, All Rounders, Bowlers, then anyone whose
+           role is not set yet. Every row is the round photo (or
+           initials), the name with its (C) / (VC) / (Wk) suffix and
+           the jersey number at the right edge. What a name tap does
+           follows who is looking: on an EDITABLE page (the owner
+           maintaining the team from My Teams or the Tournament
+           editor) it opens that player's maintenance panel inline —
+           career Matches / Runs / Wickets, the C · VC · Wk pickers,
+           the Player ID chip and View Profile — so the whole team
+           is maintained from this one list. On a READ-ONLY page —
+           above all the team page a viewer reaches from the match
+           scoreboard (scoreboard → View Tournament → Teams) — there
+           is nothing to maintain, so the same tap opens the player's
+           profile DIRECTLY, exactly like a name tap on the
+           scoreboard itself. This holds for teams from BOTH places,
+           My Teams and Tournament: wherever a team page is shown
+           read-only, its player names go straight to the profile. */
+        var TP_GROUPS = [['Batter','Batters'],['Wicket-keeper Batter','Wicketkeeping Batters'],['Wicket-keeper','Wicket-keepers'],['All-rounder','All Rounders'],['Bowler','Bowlers'],['','Players']];
+        var tpCareer = null;
+        function tpCareerFor(pid, name){
+          if (!tpCareer) tpCareer = aggregatePlayers(allRecordMatches());
+          for (var ci = 0; ci < tpCareer.length; ci++) if (pid ? tpCareer[ci].pid === pid : tpCareer[ci].name === name) return tpCareer[ci];
+          return null;
+        }
+        function tpRowHTML(p, pi){
+          var d = profileDataFor(team, p, '');
+          var pid = d.pid || lookupPlayerId(team, p);
+          var sfx = '';
+          LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx = ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
+          var open = editable && (tpOpenName === p);
+          var row = '<div class="tp-prow' + (open ? ' open' : '') + '">'
+            + '<span class="tp-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p))) + '</span>'
+            + (editable
+              ? '<button type="button" class="tp-pname" onclick="tpTogglePlayer(' + pi + ')" aria-expanded="' + (open ? 'true' : 'false') + '">' + esc(p) + sfx + '</button>'
+              : '<button type="button" class="tp-pname" onclick="tpViewProfile(' + pi + ')" title="Open the profile of ' + esc(p) + '">' + esc(p) + sfx + '</button>')
+            + (d.jersey ? '<span class="tp-jersey">' + esc(d.jersey) + '</span>' : '')
+            + (open && editable ? '<button type="button" class="tp-trash" onclick="tpRemovePlayer(' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '" title="Remove player">🗑</button>' : '')
+            + '</div>';
+          if (open){
+            var rec = tpCareerFor(pid, p);
+            var nk = nickOf(team, p);
+            row += '<div class="tp-panel">'
+              + '<div class="tp-stats">'
+              + '<div class="tp-stat"><span>Matches</span><b>' + (rec ? rec.matches : 0) + '</b></div>'
+              + '<div class="tp-stat"><span>Runs</span><b>' + (rec ? rec.runs : 0) + '</b></div>'
+              + '<div class="tp-stat"><span>Wickets</span><b>' + (rec ? rec.wkts : 0) + '</b></div>'
+              + '</div>'
+              + '<div class="tp-panel-actions">'
+              + (editable ? LEAD_ROLES.map(function(r){
+                  var on = L[r[0]] === p;
+                  return '<button type="button" class="tp-rolebtn' + (on ? ' on-' + r[0] : '') + '" onclick="tpToggleLead(\'' + r[0] + '\',' + pi + ')" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? ('Remove ' + r[1] + ' from ' + esc(p)) : ('Make ' + esc(p) + ' the ' + r[1])) + '">' + (r[0] === 'wk' ? 'Wk' : r[2]) + '</button>';
+                }).join('') : '')
+              + '<button type="button" class="btn ghost sm tp-viewbtn" onclick="tpViewProfile(' + pi + ')">View Profile</button>'
+              + '</div>'
+              + ((nk || pid) ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + '</div>' : '')
+              + '</div>';
           }
-          var opts = '<option value="">— None —</option>' + players.map(function(p){ return '<option value="' + esc(p) + '"' + (p === cur ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('');
-          return '<div class="lead-pick"><label for="tpLead-' + r[0] + '">' + r[1] + ' (' + r[2] + ')</label><select id="tpLead-' + r[0] + '" class="tn-select" onchange="tpSetLeadership(\'' + r[0] + '\', this.value)">' + opts + '</select></div>';
-        }).join('');
-        var rows = players.length
-          ? players.map(function(p, pi){
-              var nk = nickOf(team, p); var pid = lookupPlayerId(team, p);
-              return '<div class="sq-row"><span class="sq-num">' + (pi + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + leadBadgesHTML(src, team, p) + playerMetaHTML(team, p) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + (editable ? '<button type="button" class="sq-x" onclick="tpRemovePlayer(' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '">×</button>' : '') + '</div>';
-            }).join('')
-          : '<div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div>';
+          return row;
+        }
+        var rows;
+        if (!players.length){
+          rows = '<div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div>';
+        } else {
+          var grouped = {};
+          players.forEach(function(p, pi){
+            var role = profileDataFor(team, p, '').role || '';
+            var key = '';
+            TP_GROUPS.forEach(function(g){ if (g[0] && g[0] === role) key = role; });
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push([p, pi]);
+          });
+          rows = TP_GROUPS.filter(function(g){ return grouped[g[0]] && grouped[g[0]].length; }).map(function(g){
+            return '<div class="tp-group"><h5>' + g[1] + '</h5>' + grouped[g[0]].map(function(pr){ return tpRowHTML(pr[0], pr[1]); }).join('') + '</div>';
+          }).join('');
+        }
         /* No separate Upload Logo option on the Team Page: the round
            badge in the head is itself the control — tapping it opens
            the image picker, exactly what the old Upload Logo button
@@ -7314,8 +7413,7 @@
           + '</div>'
           + (editable ? '<button type="button" class="sq-x" onclick="tpRemoveTeam()" aria-label="Remove team ' + esc(team) + '" title="Remove team">×</button>' : '')
           + '</div>'
-          + '<div class="tp-sec"><h4>Leadership</h4>' + (editable ? '<div class="lead-grid">' + leadHTML + '</div><p class="note" style="margin-top:8px">Pick the Captain, Vice-Captain and Wicket-keeper from the squad. One player can hold only one of the three roles.</p>' : '<div class="lead-rows">' + leadHTML + '</div>') + '</div>'
-          + '<div class="tp-sec"><h4>Squad</h4>' + rows + '</div>'
+          + '<div class="tp-sec">' + rows + '</div>'
           + (editable
             ? '<div class="rowflex names-row" style="margin-top:12px"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
             + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
@@ -7332,6 +7430,49 @@
         commit('Leadership updated', true);
         var label = role === 'c' ? 'Captain' : (role === 'vc' ? 'Vice-Captain' : 'Wicket-keeper');
         toast(val ? ('✓ ' + val + ' is now ' + label + ' of ' + team) : (label + ' cleared for ' + team));
+      }
+      /* Tapping a player's name on the Team Page opens / closes
+         that player's maintenance panel inline (it never jumps to
+         the profile from here — View Profile inside the panel does
+         that). One panel open at a time. */
+      function tpTogglePlayer(pi){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var arr = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+        var name = arr[pi];
+        if (!name) return;
+        tpOpenName = (tpOpenName === name) ? null : name;
+        renderTeamPage();
+      }
+      /* The round C / VC / Wk buttons in the panel: tapping assigns
+         the role to this player (setLeadershipRole also takes it
+         off whoever held it and off this player's other roles, so
+         one player still holds only one role); tapping the role the
+         player already holds clears it. */
+      function tpToggleLead(role, pi){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        if (!requireTnOwner('set team leadership')){ renderTeamPage(); return; }
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var arr = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+        var name = arr[pi];
+        if (!name) return;
+        var turnOn = leadershipFor(src, team)[role] !== name;
+        setLeadershipRole(src, team, role, turnOn ? name : '');
+        commit('Leadership updated', true);
+        var label = role === 'c' ? 'Captain' : (role === 'vc' ? 'Vice-Captain' : 'Wicket-keeper');
+        toast(turnOn ? ('✓ ' + name + ' is now ' + label + ' of ' + team) : (label + ' cleared for ' + team));
+      }
+      /* Opens the player's profile from the Team Page: from the
+         View Profile button inside the maintenance panel on an
+         editable page, and DIRECTLY from the player-name tap on a
+         read-only page (the scoreboard-side rule: a name tap there
+         never stops at a panel, it goes straight to the profile). */
+      function tpViewProfile(pi){
+        if (!teamPageCtx || teamPageCtx.src === 'sb') return;
+        var src = teamPageCtx.src, team = teamPageCtx.team;
+        var arr = src === 'mt' ? poolSquad(team) : tournamentSquad(team);
+        var name = arr[pi];
+        if (name) openPlayerProfile(team, name);
       }
       function tpAddPlayer(){
         if (!teamPageCtx || teamPageCtx.src === 'sb') return;
@@ -7370,6 +7511,7 @@
             var ix = a2.indexOf(name);
             if (ix < 0) return;
             a2.splice(ix, 1);
+            if (tpOpenName === name) tpOpenName = null;
             dropNicknamesFor(team, name);
             clearLeadershipPlayer(src, team, name);
             if (src === 'mt') syncPoolSquadToMatch(team); else syncTournamentSquadToMatch(team);
