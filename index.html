@@ -763,6 +763,66 @@
       .tn-info p:empty{display:none}
       .tn-info #tnIdLine{font-weight:600}
       .tn-info #tnMetaLine{font-size:13px;margin-top:8px}
+      /* ---------- tournament home: info row, Share / More, ball ----------
+         The Home tab's info block follows the reference layout: the
+         tournament's name, location, dates and Tour ID sit LEFT, and
+         the Share / More round buttons sit RIGHT with the ball-type
+         mark under them. Tournament information itself is maintained
+         from More → Edit Info (its own page) — never from a fold on
+         this tab. */
+      #view-tournament .tn-info{display:flex;gap:10px;align-items:flex-start;text-align:left}
+      .tn-info-main{flex:1;min-width:0}
+      .tn-info-side{flex:none;display:flex;flex-direction:column;align-items:center;gap:9px}
+      .tn-info-actions{display:flex;gap:16px}
+      .tn-act{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;padding:0;color:var(--ink);font-size:11px;font-weight:600;cursor:pointer}
+      .tn-act-ico{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--ink);display:flex;align-items:center;justify-content:center;background:var(--surface)}
+      .tn-act-ico svg{width:20px;height:20px;display:block}
+      .tn-act:active .tn-act-ico{transform:scale(.94)}
+      .tn-ball-ico{font-size:25px;line-height:1;display:none}
+      .tn-ball-ico.show{display:block}
+      .tn-ball-leather{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e8736a,#a02318 72%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.28),0 1px 3px rgba(0,0,0,.25);display:none}
+      .tn-ball-leather.show{display:block}
+      body.viewer-mode #view-tournament .tn-act-more{display:none !important}
+      /* ---------- "Choose one" sheet (More on the tournament Home) ---------- */
+      .tn-choose-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+      .tn-choose-tile{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 10px 22px;background:var(--surface);border:1.5px solid var(--line);border-radius:20px;color:var(--ink);font-size:16px;font-weight:700;cursor:pointer;width:100%}
+      .tn-choose-tile:active{transform:scale(.98)}
+      .tn-choose-ico{width:62px;height:62px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center}
+      .tn-choose-ico svg{width:30px;height:30px;display:block}
+      @media (prefers-color-scheme: dark){.tn-choose-ico{background:#f2f2f2;color:#111}}
+      /* ---------- Edit Tournament Info / Select Winner pages ----------
+         Their own full pages (the owner's no-accordion rule), headed
+         by the teal bar from the reference: ✕ left, title centred,
+         delete right on the Edit page. */
+      .tne-shell{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+      .tne-head{display:flex;align-items:center;gap:6px;background:#0d7a6f;color:#fff;padding:12px}
+      .tne-head h2{flex:1;min-width:0;text-align:center;margin:0;font-size:19px;font-weight:800;color:#fff;font-family:system-ui,sans-serif;text-transform:none;letter-spacing:0;border:none;padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tne-head-btn{flex:none;width:38px;height:38px;border-radius:50%;border:none;background:transparent;color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+      .tne-head-btn:active{background:rgba(255,255,255,.18)}
+      .tne-body{padding:0 16px 20px;text-align:left}
+      .tne-banner{margin:0 -16px;position:relative;background:var(--surface2)}
+      .tne-banner img{width:100%;height:clamp(150px,34vw,232px);object-fit:cover;display:block}
+      .tne-banner img[hidden]{display:none}
+      .tne-banner-art{display:flex;align-items:center;justify-content:center;padding:26px 10px}
+      .tne-banner-art[hidden]{display:none}
+      .tne-change-row{display:flex;justify-content:flex-end;gap:16px;align-items:center;margin-top:8px}
+      .tne-change{background:none;border:none;color:#0d7a6f;font-size:15px;font-weight:700;cursor:pointer;padding:4px 2px}
+      @media (prefers-color-scheme: dark){.tne-change{color:#4cc2b4}}
+      .tne-remove{background:none;border:none;color:var(--red);font-size:13.5px;font-weight:600;cursor:pointer;padding:4px 2px}
+      .tne-field{margin-top:20px}
+      .tne-field label{display:block;font-size:15.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
+      .tne-field input,.tne-field select{text-align:center;border:none;border-bottom:1.5px solid var(--line);border-radius:0;background:transparent;padding:10px 6px;font-size:15.5px}
+      .tne-field input:focus,.tne-field select:focus{outline:none;border-bottom-color:#0d7a6f}
+      .tne-field select{text-align:left;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);margin-top:6px}
+      .tne-dates{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+      .tne-dates .tne-field input{text-align:center}
+      .tne-ballrow{display:flex;justify-content:space-between;gap:12px;margin-top:12px}
+      .tne-ball{flex:0 1 auto;padding:9px 16px;border:1.5px solid var(--ink);border-radius:9px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+      .tne-ball.sel{background:#222;border-color:#222;color:#fff}
+      @media (prefers-color-scheme: dark){.tne-ball.sel{background:#f2f2f2;border-color:#f2f2f2;color:#111}}
+      .tne-save{display:block;width:min(340px,86%);margin:30px auto 4px;padding:15px;background:#0d9488;color:#fff;border:none;border-radius:11px;font-size:17px;font-weight:700;cursor:pointer}
+      .tne-save:active{transform:scale(.99)}
+      .tne-note{font-size:13px;color:var(--muted);line-height:1.5;margin-top:8px}
       .tn-podium{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:10px;align-items:end;padding:18px 14px 16px;border-bottom:1px solid var(--line);text-align:center}
       .tn-podium-col{min-width:0}
       .tn-pill{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);text-transform:uppercase}
@@ -2306,11 +2366,27 @@
               </div>
             </div>
             <div class="tn-info">
-              <h3 id="tnTitle">Tournament</h3>
-              <p id="tnVenueLine"></p>
-              <p id="tnDatesLine"></p>
-              <p id="tnIdLine"></p>
-              <p id="tnMetaLine">—</p>
+              <div class="tn-info-main">
+                <h3 id="tnTitle">Tournament</h3>
+                <p id="tnVenueLine"></p>
+                <p id="tnDatesLine"></p>
+                <p id="tnIdLine"></p>
+                <p id="tnMetaLine">—</p>
+              </div>
+              <div class="tn-info-side">
+                <div class="tn-info-actions">
+                  <button type="button" class="tn-act" onclick="tnShare()" aria-label="Share this tournament">
+                    <span class="tn-act-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+                    <span>Share</span>
+                  </button>
+                  <button type="button" class="tn-act tn-act-more" onclick="openTnMore()" aria-label="More options for this tournament">
+                    <span class="tn-act-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2.1"/><circle cx="12" cy="12" r="2.1"/><circle cx="12" cy="19" r="2.1"/></svg></span>
+                    <span>More</span>
+                  </button>
+                </div>
+                <span class="tn-ball-ico" id="tnBallTennis" aria-label="Tennis ball tournament" title="Tennis Ball">🎾</span>
+                <span class="tn-ball-leather" id="tnBallLeather" role="img" aria-label="Leather ball tournament" title="Leather Ball"></span>
+              </div>
             </div>
             <div class="tn-podium" aria-label="Winner, runner and top player">
               <div class="tn-podium-col">
@@ -2363,26 +2439,6 @@
                 <button class="btn sm" onclick="setTnTab('matches')">View Matches →</button>
                 <button class="btn ghost sm" onclick="setTnTab('points')">Points Table</button>
                 <button class="btn ghost sm" onclick="setTnTab('teams')">Teams &amp; Players</button>
-              </div>
-            </div>
-            <div style="padding:14px">
-              <div class="card fold" style="box-shadow:none;margin-bottom:0">
-                <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Tournament Details</button>
-                <div class="fold-body" hidden>
-                  <div><label for="tnName">Tournament name</label><input id="tnName" placeholder="Tournament name — e.g. BBEPL-3" oninput="onTournamentName()" /></div>
-                  <div class="grid2" style="margin-top:10px">
-                    <div><label for="tnVenue">Venue</label><input id="tnVenue" placeholder="e.g. Bangladesh Bank, Khulna." oninput="onTournamentName()" /></div>
-                    <div><label for="tnDates">Dates</label><input id="tnDates" placeholder="e.g. 03 Apr 2026 - 04 Apr 2026" oninput="onTournamentName()" /></div>
-                  </div>
-                  <div style="margin-top:12px"><label>Tournament Banner Image</label>
-                    <div class="logo-edit" style="margin-top:4px;border-top:none;padding-top:0">
-                      <span class="le-prev wide" id="tnBannerPrev">🏆</span>
-                      <button type="button" class="btn ghost sm" id="tnBannerPickBtn" onclick="pickTournamentBanner()">Upload Banner</button>
-                      <button type="button" class="btn ghost sm" id="tnBannerRemoveBtn" onclick="removeTournamentBanner()" hidden>Remove Banner</button>
-                      <p class="note">Shown as the wide banner at the top of this tournament's Home tab, for you and for viewers. A wide photo or artwork works best.</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -2482,6 +2538,103 @@
           <div class="tn-panel" id="tnPanel-stats">
             <div id="tnStats"></div>
           </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= EDIT TOURNAMENT INFO =================
+           Tournament information is maintained HERE (More → Edit Info
+           on the tournament's Home tab): banner, name, season, location,
+           start / end dates and ball type — saved with one Save tap and
+           synced to everyone, viewers included. -->
+      <section class="view" id="view-tnedit">
+        <div class="tne-shell">
+          <div class="tne-head">
+            <button type="button" class="tne-head-btn" onclick="closeTnEdit()" aria-label="Close — back to the tournament">✕</button>
+            <h2>Edit Tournament Info.</h2>
+            <button type="button" class="tne-head-btn" onclick="tnEditDelete()" aria-label="Delete this tournament">🗑</button>
+          </div>
+          <div class="tne-body">
+            <div class="tne-banner">
+              <img id="tneBannerImg" alt="Tournament banner" hidden />
+              <div class="tne-banner-art" id="tneBannerArt">
+                <svg class="tn-banner-art" viewBox="0 0 120 92" aria-hidden="true" focusable="false">
+                  <circle cx="63" cy="13" r="7" fill="#123f6e"/>
+                  <path d="M61 21 L49 43 L35 61" stroke="#e23b2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M61 21 L75 39 L86 48" stroke="#123f6e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M49 43 L67 57 L65 80" stroke="#123f6e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M49 43 L38 66 L28 82" stroke="#e23b2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="82" y="42" width="11" height="36" rx="4" transform="rotate(36 87 60)" fill="#123f6e"/>
+                  <circle cx="18" cy="66" r="6" fill="#e23b2e"/>
+                </svg>
+              </div>
+            </div>
+            <div class="tne-change-row">
+              <button type="button" class="tne-remove" id="tnBannerRemoveBtn" onclick="removeTournamentBanner()" hidden>Remove</button>
+              <button type="button" class="tne-change" onclick="pickTournamentBanner()">Change Image</button>
+            </div>
+            <div class="tne-field">
+              <label for="tneName">Tournament Name*</label>
+              <input id="tneName" placeholder="e.g. BBEPL-3" autocomplete="off" />
+            </div>
+            <div class="tne-field">
+              <label for="tneSeason">Season / Year *</label>
+              <input id="tneSeason" placeholder="e.g. 2026" inputmode="numeric" autocomplete="off" />
+            </div>
+            <div class="tne-field">
+              <label for="tneVenue">Location</label>
+              <input id="tneVenue" placeholder="e.g. Khulna" autocomplete="off" />
+            </div>
+            <div class="tne-dates">
+              <div class="tne-field">
+                <label for="tneStart">Start Date</label>
+                <input id="tneStart" type="date" />
+              </div>
+              <div class="tne-field">
+                <label for="tneEnd">End Date</label>
+                <input id="tneEnd" type="date" />
+              </div>
+            </div>
+            <div class="tne-field">
+              <label>Ball Type*</label>
+              <div class="tne-ballrow">
+                <button type="button" class="tne-ball" id="tneBallLeather" onclick="tnEditSetBall('Leather Ball')">Leather Ball</button>
+                <button type="button" class="tne-ball" id="tneBallTennis" onclick="tnEditSetBall('Tennis Ball')">Tennis Ball</button>
+              </div>
+            </div>
+            <button type="button" class="tne-save" onclick="saveTnEditInfo()">Save</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SELECT WINNER =================
+           More → Select Winner on the tournament's Home tab: the
+           admin picks the Winner, Runner and Player of the Tournament
+           shown on the podium. A field left on Automatic follows the
+           Final's result (Winner / Runner) and the tournament
+           statistics (Player), exactly as before. -->
+      <section class="view" id="view-tnwinner">
+        <div class="tne-shell">
+          <div class="tne-head">
+            <button type="button" class="tne-head-btn" onclick="closeTnWinner()" aria-label="Close — back to the tournament">✕</button>
+            <h2>Select Winner</h2>
+            <span class="tne-head-btn" aria-hidden="true"></span>
+          </div>
+          <div class="tne-body">
+            <div class="tne-field">
+              <label for="tnwWinner">Winner</label>
+              <select id="tnwWinner"></select>
+            </div>
+            <div class="tne-field">
+              <label for="tnwRunner">Runner</label>
+              <select id="tnwRunner"></select>
+            </div>
+            <div class="tne-field">
+              <label for="tnwPlayer">Player of the Tournament</label>
+              <select id="tnwPlayer"></select>
+            </div>
+            <p class="tne-note">Your picks are shown on the tournament Home podium for everyone. Leave a field on Automatic to let it follow the Final's result and the tournament statistics instead.</p>
+            <button type="button" class="tne-save" onclick="saveTnWinner()">Save</button>
           </div>
         </div>
       </section>
@@ -2797,6 +2950,26 @@
       </div>
     </div>
 
+    <!-- Tournament Home → More: "Choose one" — Edit Info / Select Winner -->
+    <div class="modal-back" id="tnMoreModal" onclick="if(event.target===this)closeTnMore()">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tnMoreTitle">
+        <div class="modal-head">
+          <h2 id="tnMoreTitle" style="font-family:system-ui,sans-serif;text-transform:none;letter-spacing:0;font-size:21px">Choose one</h2>
+          <button class="sq-x big" onclick="closeTnMore()" aria-label="Close">×</button>
+        </div>
+        <div class="tn-choose-grid">
+          <button type="button" class="tn-choose-tile" onclick="openTnEditInfo()">
+            <span class="tn-choose-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></span>
+            <span>Edit Info</span>
+          </button>
+          <button type="button" class="tn-choose-tile" onclick="openTnWinner()">
+            <span class="tn-choose-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 5h-2V3H7v2H5c-.6 0-1 .4-1 1v1c0 2.6 2 4.7 4.6 5 .5 1.3 1.4 2.3 2.4 2.8V17H8v2h8v-2h-3v-2.2c1-.5 1.9-1.5 2.4-2.8C18 11.7 20 9.6 20 7V6c0-.6-.4-1-1-1zM6.2 10C5.5 9.4 5 8.5 5 7.5V7h2v.5c0 1 .2 2 .6 2.9-.5-.1-1-.2-1.4-.4zm11.6 0c-.4.2-.9.3-1.4.4.4-.9.6-1.9.6-2.9V7h2v.5c0 1-.5 1.9-1.2 2.5z"/></svg></span>
+            <span>Select Winner</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <input type="file" id="teamLogoFile" class="pf-file" accept="image/*" onchange="teamLogoChosen(this)" aria-label="Choose a team logo image" />
     <input type="file" id="tnBannerFile" class="pf-file" accept="image/*" onchange="tnBannerChosen(this)" aria-label="Choose a tournament banner image" />
     <div class="toast" id="toast" role="status"></div>
@@ -2825,7 +2998,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v135';
+      var APP_VERSION = 'v137';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -2960,7 +3133,7 @@
              when the stores split (see normalizeMyTeams), so no team
              or player is lost by the split. */
           myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
-          tournament: { name: '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
+          tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
         };
       }
@@ -4399,6 +4572,15 @@
             else S[k] = [];
           }
         });
+        /* Team registry backfill — runs AFTER the coercions above,
+           so it can also see the parked matches, set-aside
+           tournaments and saved fixtures it folds into the registry
+           (plus the history, fixtures and results inside them).
+           Without this, a team removed before the registry existed
+           — or one that survives only in history — never got a
+           registry entry, so its name typed again found no
+           suggestion and minted a second Team ID. */
+        try { migrateTeamIds(); } catch(e){}
       }
       function syncPlayersFromInputs(){
         /* The dropdowns start empty on purpose: no batter or bowler is
@@ -6676,6 +6858,25 @@
         if (typeof S.tournament.name !== 'string') S.tournament.name = '';
         if (typeof S.tournament.venue !== 'string') S.tournament.venue = '';
         if (typeof S.tournament.dates !== 'string') S.tournament.dates = '';
+        /* Tournament information maintained from More → Edit Info:
+           season / year, the structured start & end dates (ISO
+           yyyy-mm-dd; the free-text `dates` line is still composed
+           from them on save, so every older surface keeps working)
+           and the ball type shown as a mark on the Home tab. States
+           saved before these fields existed simply carry blanks. */
+        if (typeof S.tournament.season !== 'string') S.tournament.season = '';
+        if (typeof S.tournament.startDate !== 'string') S.tournament.startDate = '';
+        if (typeof S.tournament.endDate !== 'string') S.tournament.endDate = '';
+        if (S.tournament.ballType !== 'Leather Ball' && S.tournament.ballType !== 'Tennis Ball') S.tournament.ballType = '';
+        /* Manual honours from More → Select Winner: the admin's own
+           Winner / Runner / Player of the Tournament for the Home
+           podium. Blank fields stay automatic — Winner and Runner
+           follow the Final's result, Player follows the tournament
+           statistics. */
+        if (!S.tournament.honours || typeof S.tournament.honours !== 'object' || Array.isArray(S.tournament.honours)) S.tournament.honours = {};
+        ['winner','runner','player','playerTeam'].forEach(function(k){
+          if (typeof S.tournament.honours[k] !== 'string') S.tournament.honours[k] = '';
+        });
         /* Tournament banner image + per-team logos. The banner is one
            compressed data URL on the tournament itself; the logos are
            an ARRAY of {t: team name, logo: data URL} entries — never
@@ -6823,28 +7024,11 @@
         if (S.tournament.teams.indexOf(name) === -1) S.tournament.teams.push(name);
         if (!Array.isArray(S.tournament.squads[name])) S.tournament.squads[name] = [];
       }
-      function onTournamentName(){
-        /* A locked tournament's details cannot be edited — the inputs
-           are put back to the saved values so nothing half-typed can
-           leak into the state on a later render. */
-        if (tournamentLocked()){
-          var nEl = $('tnName'); if (nEl) nEl.value = S.tournament.name || '';
-          var vEl = $('tnVenue'); if (vEl) vEl.value = S.tournament.venue || '';
-          var dEl = $('tnDates'); if (dEl) dEl.value = S.tournament.dates || '';
-          return;
-        }
-        normalizeTournament();
-        S.tournament.name = $('tnName').value;
-        var vn = $('tnVenue'); if (vn) S.tournament.venue = vn.value;
-        var dt = $('tnDates'); if (dt) S.tournament.dates = dt.value;
-        try { renderTournamentHome(); } catch(e){}
-        /* save silently without a toast on every keystroke */
-        S.updatedAt = Date.now();
-        if (!fbReady) fbLocalDirty = true;
-        saveLocalBackup();
-        if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
-        pushToFirebase();
-      }
+      /* Tournament name / venue / dates used to be typed into a
+         "Tournament Details" fold on the Home tab, saved on every
+         keystroke. That fold is gone: tournament information is now
+         maintained on the Edit Tournament Info page (More → Edit
+         Info) and written by saveTnEditInfo() in one save. */
       function addTournamentTeam(){
         if (!requireTnOwner('edit this tournament')) return;
         var inp = $('tnNewTeam');
@@ -9755,9 +9939,14 @@
            reference app — it updates the moment the name does. */
         var headTitle = $('tnHeadTitle'); if (headTitle) headTitle.textContent = displayName;
         var venueLine = $('tnVenueLine'); if (venueLine) venueLine.textContent = (tn.venue && tn.venue.trim()) ? tn.venue.trim() : '';
-        var datesLine = $('tnDatesLine'); if (datesLine) datesLine.textContent = (tn.dates && tn.dates.trim()) ? tn.dates.trim() : '';
+        var datesLine = $('tnDatesLine'); if (datesLine) datesLine.textContent = tnDatesText(tn);
         var meta = $('tnMetaLine');
-        if (meta) meta.textContent = tn.teams.length + (tn.teams.length===1 ? ' Team' : ' Teams') + '  •  ' + tn.matches.length + (tn.matches.length===1 ? ' Match' : ' Matches') + ' completed  •  ' + tn.fixtures.length + (tn.fixtures.length===1 ? ' Fixture' : ' Fixtures') + ' upcoming';
+        if (meta) meta.textContent = (tn.season ? 'Season ' + tn.season + '  •  ' : '') + tn.teams.length + (tn.teams.length===1 ? ' Team' : ' Teams') + '  •  ' + tn.matches.length + (tn.matches.length===1 ? ' Match' : ' Matches') + ' completed  •  ' + tn.fixtures.length + (tn.fixtures.length===1 ? ' Fixture' : ' Fixtures') + ' upcoming';
+        /* The ball-type mark under the Share / More buttons: the
+           tennis ball for a Tennis Ball tournament, a red leather
+           ball for a Leather Ball one, nothing while unset. */
+        var bT = $('tnBallTennis'); if (bT) bT.classList.toggle('show', tn.ballType === 'Tennis Ball');
+        var bL = $('tnBallLeather'); if (bL) bL.classList.toggle('show', tn.ballType === 'Leather Ball');
         var idLine = $('tnIdLine');
         if (idLine){ var tidNow = tourIdFor(displayName); idLine.innerHTML = 'Tour ID : <span class="id-tap" title="Tap to copy the full Tournament ID" onclick="copyIdTap(event,' + fxIdArg(tidNow) + ',\'Tournament ID\')">' + esc(tidNow) + '</span>'; }
         var sub = $('tnBannerSub');
@@ -9773,9 +9962,16 @@
           if (bUrl){ if (bImg.getAttribute('src') !== bUrl) bImg.src = bUrl; bImg.alt = displayName + ' banner'; }
           else bImg.removeAttribute('src');
         }
-        var bPrev = $('tnBannerPrev');
-        if (bPrev) bPrev.innerHTML = tn.banner ? '<img src="' + esc(tn.banner) + '" alt="" />' : '🏆';
-        var bPick = $('tnBannerPickBtn'); if (bPick) bPick.textContent = tn.banner ? 'Change Banner' : 'Upload Banner';
+        /* The Edit Info page's banner preview follows the saved
+           banner too (its Change Image / Remove controls live there
+           now, not in a Home-tab fold). */
+        var eImg = $('tneBannerImg');
+        if (eImg){
+          eImg.hidden = !tn.banner;
+          if (tn.banner){ if (eImg.getAttribute('src') !== tn.banner) eImg.src = tn.banner; eImg.alt = displayName + ' banner'; }
+          else eImg.removeAttribute('src');
+        }
+        var eArt = $('tneBannerArt'); if (eArt) eArt.hidden = !!tn.banner;
         var bRm = $('tnBannerRemoveBtn'); if (bRm) bRm.hidden = !tn.banner;
         /* The podium is the tournament's honours board, and it
            fills itself ONLY when the Final is decided: Winner and
@@ -9786,27 +9982,44 @@
            same moment. Until the Final is saved, all three stay
            open. */
         var fin = tournamentFinalResult();
+        /* Manual honours (More → Select Winner) take the podium when
+           the admin has picked them; every field left blank keeps the
+           automatic behaviour described above. */
+        var hon = tn.honours || {};
+        var effWinner = hon.winner || (fin ? fin.winner : '');
+        var effRunner = hon.runner || (fin ? (fin.loser || '') : '');
         var wName = $('tnWinnerName'), wAv = $('tnWinnerAvatar'), rName = $('tnRunnerName'), rAv = $('tnRunnerAvatar');
-        if (wName) wName.textContent = fin ? fin.winner : 'Yet to decide';
+        if (wName) wName.textContent = effWinner || 'Yet to decide';
         if (wAv){
-          var wLogo = fin ? teamLogoFor(fin.winner) : '';
+          var wLogo = effWinner ? teamLogoFor(effWinner) : '';
           wAv.classList.toggle('has-logo', !!wLogo);
-          wAv.innerHTML = fin ? (wLogo ? '<img src="' + esc(wLogo) + '" alt="Logo of ' + esc(fin.winner) + '" loading="lazy" />' : esc(tnInitials(fin.winner))) : '—';
+          wAv.innerHTML = effWinner ? (wLogo ? '<img src="' + esc(wLogo) + '" alt="Logo of ' + esc(effWinner) + '" loading="lazy" />' : esc(tnInitials(effWinner))) : '—';
         }
-        if (rName) rName.textContent = fin ? (fin.loser || '—') : '—';
+        if (rName) rName.textContent = effRunner || '—';
         if (rAv){
-          var rLogo = (fin && fin.loser) ? teamLogoFor(fin.loser) : '';
+          var rLogo = effRunner ? teamLogoFor(effRunner) : '';
           rAv.classList.toggle('has-logo', !!rLogo);
-          rAv.innerHTML = (fin && fin.loser) ? (rLogo ? '<img src="' + esc(rLogo) + '" alt="Logo of ' + esc(fin.loser) + '" loading="lazy" />' : esc(tnInitials(fin.loser))) : '—';
+          rAv.innerHTML = effRunner ? (rLogo ? '<img src="' + esc(rLogo) + '" alt="Logo of ' + esc(effRunner) + '" loading="lazy" />' : esc(tnInitials(effRunner))) : '—';
         }
         var st = computePlayerStats();
         var topBat = st.batting.length ? st.batting[0] : null;
         var topBowl = st.bowling.length ? st.bowling[0] : null;
         var pot = fin ? playerOfTournament() : null;
+        if (hon.player){
+          /* The admin's own Player of the Tournament: his figures
+             come from the same statistics when he has any. */
+          var hp = { team: hon.playerTeam || '', name: hon.player, runs: 0, wickets: 0 };
+          st.batting.forEach(function(s){ if (s.name === hp.name && (!hp.team || s.team === hp.team)){ hp.runs = s.runs; if (!hp.team) hp.team = s.team; } });
+          st.bowling.forEach(function(s){ if (s.name === hp.name && (!hp.team || s.team === hp.team)){ hp.wickets = s.wickets; if (!hp.team) hp.team = s.team; } });
+          pot = hp;
+        }
         var potName = $('tnPotName'), potTeam = $('tnPotTeam'), potAv = $('tnPotAvatar');
         if (potName) potName.innerHTML = pot ? plLink(pot.team, pot.name, dispName(pot.team, pot.name).toUpperCase()) : '—';
-        if (potTeam) potTeam.textContent = pot ? (pot.team + ' • ' + pot.runs + (pot.runs === 1 ? ' run' : ' runs') + (pot.wickets ? ' • ' + pot.wickets + (pot.wickets === 1 ? ' wkt' : ' wkts') : '')) : '';
-        if (potAv) potAv.textContent = pot ? tnInitials(dispName(pot.team, pot.name)) : '—';
+        if (potTeam) potTeam.textContent = pot ? (pot.team + (pot.runs ? ' • ' + pot.runs + (pot.runs === 1 ? ' run' : ' runs') : '') + (pot.wickets ? ' • ' + pot.wickets + (pot.wickets === 1 ? ' wkt' : ' wkts') : '')) : '';
+        if (potAv){
+          var potPhoto = pot ? profileDataFor(pot.team, pot.name).photo : '';
+          potAv.innerHTML = pot ? (potPhoto ? '<img src="' + esc(potPhoto) + '" alt="Photo of ' + esc(dispName(pot.team, pot.name)) + '" loading="lazy" style="object-fit:cover;padding:0" />' : esc(tnInitials(dispName(pot.team, pot.name)))) : '—';
+        }
         var trN = $('tnTopRunsNum'), trName = $('tnTopRunsName'), trTeam = $('tnTopRunsTeam');
         if (trN) trN.textContent = topBat ? topBat.runs : 0;
         if (trName) trName.innerHTML = topBat ? plLink(topBat.team, topBat.name) : '—';
@@ -9820,6 +10033,214 @@
         var e6 = $('tnTotalSixes'); if (e6) e6.textContent = tot6;
         var e4 = $('tnTotalFours'); if (e4) e4.textContent = tot4;
       }
+      /* ---------- tournament information: dates, Share, More ----------
+         The Home tab's info block follows the reference layout, and
+         tournament information is maintained from the two pages the
+         More button leads to: Edit Info (name, season, location,
+         dates, ball type, banner) and Select Winner (the podium's
+         Winner / Runner / Player). Both are admin-only, like every
+         other tournament edit. */
+      var TN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      function fmtTnDate(iso){
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        if (!m) return '';
+        var mo = parseInt(m[2], 10);
+        if (mo < 1 || mo > 12) return '';
+        return m[3] + ' ' + TN_MONTHS[mo - 1] + ' ' + m[1];
+      }
+      /* The dates line for the Home tab: the structured start / end
+         dates when they are set ("03 Apr 2026 - 04 Apr 2026"), else
+         the older free-text dates line, else nothing. Saving Edit
+         Info composes the free-text line from the structured dates
+         too, so surfaces that read `dates` keep showing the range. */
+      function tnDatesText(tn){
+        var s = fmtTnDate(tn.startDate), e = fmtTnDate(tn.endDate);
+        if (s && e) return s === e ? s : (s + ' - ' + e);
+        if (s || e) return s || e;
+        return (tn.dates || '').trim();
+      }
+      function parseTnDateText(txt){
+        var out = [];
+        /* The common local range form first: "03-04 April 2027". */
+        var rm = /(?:^|[^\d])(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})(?!\d)/.exec(String(txt || ''));
+        if (rm){
+          var rmo = -1;
+          for (var ri = 0; ri < 12; ri++){ if (TN_MONTHS[ri].toLowerCase() === rm[3].slice(0, 3).toLowerCase()){ rmo = ri; break; } }
+          if (rmo >= 0){
+            var mm = ('0' + (rmo + 1)).slice(-2);
+            out.push(rm[4] + '-' + mm + '-' + ('0' + parseInt(rm[1], 10)).slice(-2));
+            out.push(rm[4] + '-' + mm + '-' + ('0' + parseInt(rm[2], 10)).slice(-2));
+            return out;
+          }
+        }
+        var re = /(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})/g, m;
+        while ((m = re.exec(String(txt || ''))) !== null){
+          var mo = -1;
+          for (var i = 0; i < 12; i++){ if (TN_MONTHS[i].toLowerCase() === m[2].slice(0, 3).toLowerCase()){ mo = i; break; } }
+          if (mo < 0) continue;
+          var d = parseInt(m[1], 10);
+          out.push(m[3] + '-' + ('0' + (mo + 1)).slice(-2) + '-' + ('0' + d).slice(-2));
+        }
+        return out;
+      }
+      function tnShare(){
+        normalizeTournament();
+        var tn = S.tournament;
+        var name = (tn.name || '').trim() || 'Tournament';
+        var lines = ['🏆 ' + name];
+        if ((tn.venue || '').trim()) lines.push(tn.venue.trim());
+        var d = tnDatesText(tn); if (d) lines.push(d);
+        lines.push('Tour ID : ' + tourIdFor(name));
+        var hon = tn.honours || {};
+        var fin = tournamentFinalResult();
+        var w = hon.winner || (fin ? fin.winner : '');
+        var r = hon.runner || (fin ? (fin.loser || '') : '');
+        if (w) lines.push('Winner: ' + w);
+        if (r) lines.push('Runner: ' + r);
+        var text = lines.join('\n');
+        if (navigator.share){
+          try { var p = navigator.share({ title: name, text: text }); if (p && p.catch) p.catch(function(){}); } catch(e){}
+          return;
+        }
+        function done(){ toast('✓ Tournament summary copied — paste it anywhere to share'); }
+        function fallback(){
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (ok) done(); else toast('Sharing is not available here');
+          } catch(e){ toast('Sharing is not available here'); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+        else fallback();
+      }
+      function openTnMore(){
+        if (!requireTnOwner('edit this tournament')) return;
+        var m = $('tnMoreModal'); if (m) m.classList.add('show');
+      }
+      function closeTnMore(){
+        var m = $('tnMoreModal'); if (m) m.classList.remove('show');
+      }
+      /* ----- Edit Tournament Info page ----- */
+      var tneBallSel = '';
+      function tnEditSetBall(v){
+        tneBallSel = (v === 'Leather Ball' || v === 'Tennis Ball') ? v : '';
+        var lb = $('tneBallLeather'); if (lb) lb.classList.toggle('sel', tneBallSel === 'Leather Ball');
+        var tb = $('tneBallTennis'); if (tb) tb.classList.toggle('sel', tneBallSel === 'Tennis Ball');
+      }
+      function openTnEditInfo(){
+        closeTnMore();
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        var parsed = (tn.startDate || tn.endDate) ? [] : parseTnDateText(tn.dates);
+        var set = function(id, val){ var el = $(id); if (el) el.value = val || ''; };
+        set('tneName', tn.name);
+        var yr = /((?:19|20)\d{2})/.exec(tn.dates || '');
+        set('tneSeason', tn.season || (tn.startDate ? tn.startDate.slice(0, 4) : (yr ? yr[1] : '')));
+        set('tneVenue', tn.venue);
+        set('tneStart', tn.startDate || parsed[0] || '');
+        set('tneEnd', tn.endDate || parsed[1] || parsed[0] || '');
+        tnEditSetBall(tn.ballType);
+        try { renderTournamentHome(); } catch(e){}
+        setView('tnedit');
+      }
+      function closeTnEdit(){
+        setView('tournament');
+        setTnTab('home');
+      }
+      function saveTnEditInfo(){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        var name = ($('tneName') ? $('tneName').value : '').trim();
+        if (!name){ toast('Type the Tournament Name first'); var nEl = $('tneName'); if (nEl) nEl.focus(); return; }
+        var season = ($('tneSeason') ? $('tneSeason').value : '').trim();
+        if (!season){ toast('Type the Season / Year — e.g. ' + new Date().getFullYear()); var sEl = $('tneSeason'); if (sEl) sEl.focus(); return; }
+        if (!tneBallSel){ toast('Pick the Ball Type — Leather Ball or Tennis Ball'); return; }
+        var start = $('tneStart') ? $('tneStart').value : '';
+        var end = $('tneEnd') ? $('tneEnd').value : '';
+        if (start && end && end < start){ toast('The End Date is before the Start Date — check the dates'); return; }
+        tn.name = name;
+        tn.season = season;
+        tn.venue = ($('tneVenue') ? $('tneVenue').value : '').trim();
+        tn.startDate = start || '';
+        tn.endDate = end || '';
+        tn.ballType = tneBallSel;
+        tn.dates = tnDatesText(tn);
+        commit('Tournament info saved', true);
+        toast('✓ Tournament info saved — the Home tab now shows it for everyone');
+        closeTnEdit();
+      }
+      function tnEditDelete(){
+        /* The shared delete flow (owner check + name confirmation);
+           it returns here to the Tournaments list when it runs from
+           this page — see deleteCurrentTournament. */
+        deleteCurrentTournament();
+      }
+      /* ----- Select Winner page ----- */
+      var tnWinnerPlayerList = [];
+      function openTnWinner(){
+        closeTnMore();
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var tn = S.tournament;
+        var hon = tn.honours || {};
+        function teamOpts(autoLabel, current){
+          var h = '<option value="">' + esc(autoLabel) + '</option>';
+          tn.teams.forEach(function(t){
+            h += '<option value="' + esc(t) + '"' + (t === current ? ' selected' : '') + '>' + esc(t) + '</option>';
+          });
+          return h;
+        }
+        var wEl = $('tnwWinner'); if (wEl) wEl.innerHTML = teamOpts('Automatic — from the Final', hon.winner || '');
+        var rEl = $('tnwRunner'); if (rEl) rEl.innerHTML = teamOpts('Automatic — from the Final', hon.runner || '');
+        var pEl = $('tnwPlayer');
+        if (pEl){
+          /* Options carry an index into tnWinnerPlayerList, never a
+             name baked into the value — team and player names stay
+             exact, whatever characters they contain. */
+          tnWinnerPlayerList = [];
+          var ph = '<option value="">Automatic — from the statistics</option>';
+          tn.teams.forEach(function(t){
+            var squad = Array.isArray(tn.squads[t]) ? tn.squads[t] : [];
+            squad.forEach(function(p){
+              var nm = (typeof p === 'string') ? p : (p && p.name) || '';
+              if (!nm) return;
+              var idx = tnWinnerPlayerList.length;
+              tnWinnerPlayerList.push({ team: t, name: nm });
+              var sel = (hon.player === nm && (hon.playerTeam || '') === t) ? ' selected' : '';
+              ph += '<option value="' + idx + '"' + sel + '>' + esc(dispName(t, nm)) + ' (' + esc(t) + ')</option>';
+            });
+          });
+          pEl.innerHTML = ph;
+        }
+        setView('tnwinner');
+      }
+      function closeTnWinner(){
+        setView('tournament');
+        setTnTab('home');
+      }
+      function saveTnWinner(){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var w = $('tnwWinner') ? $('tnwWinner').value : '';
+        var r = $('tnwRunner') ? $('tnwRunner').value : '';
+        if (w && r && w === r){ toast('The Winner and the Runner cannot be the same team'); return; }
+        var pv = $('tnwPlayer') ? $('tnwPlayer').value : '';
+        var pTeam = '', pName = '';
+        if (pv !== '' && tnWinnerPlayerList[Number(pv)]){
+          pTeam = tnWinnerPlayerList[Number(pv)].team;
+          pName = tnWinnerPlayerList[Number(pv)].name;
+        }
+        S.tournament.honours = { winner: w || '', runner: r || '', player: pName, playerTeam: pTeam };
+        commit('Tournament honours saved', true);
+        toast('✓ Saved — the Home podium now shows your picks');
+        closeTnWinner();
+      }
+
       /* ---------- public scoreboard: View Tournament (in-page viewer) ---------- */
       function openTournamentViewerInPage(){
         document.body.classList.add('viewer-mode');
@@ -10743,9 +11164,6 @@
       function renderTournament(){
         normalizeTournament();
         var tn = S.tournament;
-        if (document.activeElement !== $('tnName') && $('tnName').value !== tn.name) $('tnName').value = tn.name;
-        var tnV = $('tnVenue'); if (tnV && document.activeElement !== tnV && tnV.value !== (tn.venue || '')) tnV.value = tn.venue || '';
-        var tnD = $('tnDates'); if (tnD && document.activeElement !== tnD && tnD.value !== (tn.dates || '')) tnD.value = tn.dates || '';
         $('tnTitle').textContent = tn.name.trim() || 'Tournament';
         /* The Public Scoreboard's tournament sections (sb*) follow
            the confirmed-only rule: they are built here from the last
@@ -12006,6 +12424,11 @@
         /* Archived matches that predate Player IDs get stable IDs
            stamped in (once per entry — see stampHistEntryPids). */
         try { migratePlayerIds(); } catch(e){}
+        /* The same backfill for teams: a team that now lives only
+           in this history enters the permanent team registry the
+           moment the history arrives, so typing its name offers it
+           in the suggestions with its original Team ID. */
+        try { migrateTeamIds(); } catch(e){}
         try { renderHistory(); } catch(e){}
         scheduleHistoryRetry();
       }
@@ -16657,10 +17080,18 @@
       /* The raw Team ID computation (name-derived). On its own it
          could hand the same ID to two different names whose letters
          and hash collide — the registry below exists so that never
-         happens to a team that has actually been entered. */
+         happens to a team that has actually been entered.
+         The hash runs over the TRIMMED, LOWER-CASED name — exactly
+         like pidHash does for players — so the same team typed in
+         different capitalisation ("BB LIONS" vs "Bb Lions") derives
+         the SAME base ID instead of minting a second one. Teams
+         already in the registry are never affected by this: every
+         lookup (findTeamReg / registerTeam / teamIdFor) checks the
+         registry FIRST, case-insensitively, and returns the stored
+         ID, so an ID issued earlier keeps its exact value forever. */
       function teamIdBase(name){
-        var s = String(name || '');
-        var base = s.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) || 'team';
+        var s = String(name || '').trim().toLowerCase();
+        var base = s.replace(/[^a-z]/g, '').slice(0, 4) || 'team';
         var h = 0;
         for (var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) % 9973; }
         return base + (1000 + (h % 9000));
@@ -16710,6 +17141,103 @@
         var out = [];
         S.teamRegistry.forEach(function(e){ if (e && e.n && out.indexOf(e.n) === -1) out.push(e.n); });
         return out;
+      }
+      /* ---------- team registry backfill (migration) ----------
+         The mirror of migratePlayerIds() for teams. The registry
+         used to be fed ONLY by the teams currently listed (My Teams
+         pool, the current tournament, the live match's two sides),
+         so a team that was removed BEFORE the registry existed — or
+         one that now lives only in the match history, an archived
+         (set-aside) tournament, a parked match or a saved fixture —
+         never entered it: typing its name again offered no
+         suggestion and silently minted a SECOND Team ID for the
+         same team (the player side never had this gap, because
+         players are backfilled from history). This migration folds
+         EVERY team name the state still remembers, from every one
+         of those places, into the registry. A name already known
+         (in any capitalisation) keeps its stored ID untouched —
+         registerTeam resolves through findTeamReg first — so the
+         backfill can never change an existing team's ID; it only
+         locks in the ones that were missing. Idempotent and cheap
+         once everything is registered, so it is safe to run from
+         normalizeStateShape() on every load, adopt and commit, and
+         again whenever the history arrives from Firebase. */
+      function migrateTeamIds(){
+        if (!S || typeof S !== 'object') return;
+        if (!Array.isArray(S.teamRegistry)) S.teamRegistry = [];
+        var seen = {};
+        function add(n){
+          if (typeof n !== 'string') return;
+          n = n.trim();
+          if (!n) return;
+          var k = n.toLowerCase();
+          if (seen[k]) return;
+          seen[k] = 1;
+          try { registerTeam(n); } catch(e){}
+        }
+        /* Firebase can hand an "array" back as an object with
+           numeric keys — walk either shape. */
+        function each(list, fn){
+          if (!list) return;
+          if (Array.isArray(list)) list.forEach(fn);
+          else if (typeof list === 'object') Object.keys(list).sort().forEach(function(key){ fn(list[key]); });
+        }
+        function addInnings(inn){
+          if (!inn || typeof inn !== 'object') return;
+          add(inn.battingTeam); add(inn.bowlingTeam);
+        }
+        function addInningsList(list){ each(list, addInnings); }
+        function addMatchLike(m){
+          if (!m || typeof m !== 'object') return;
+          add(m.teamA); add(m.teamB);
+          add(m.potmTeam);
+          addInnings(m.current); addInnings(m.prevInnings);
+          addInningsList(m.innings);
+          if (m.superOver && typeof m.superOver === 'object'){
+            addInningsList(m.superOver.innings);
+            addInnings(m.superOver.mainPrev); addInnings(m.superOver.mainCurr);
+          }
+        }
+        function addTournament(tn){
+          if (!tn || typeof tn !== 'object') return;
+          each(tn.teams, add);
+          if (tn.squads && typeof tn.squads === 'object') Object.keys(tn.squads).forEach(add);
+          each(tn.fixtures, function(f){ if (f){ add(f.teamA); add(f.teamB); } });
+          each(tn.matches, addMatchLike);
+          each(tn.groups, function(g){ if (g) each(g.teams, add); });
+          if (tn.bracket && typeof tn.bracket === 'object') each(tn.bracket.matches, function(bm){ if (bm){ add(bm.teamA); add(bm.teamB); } });
+          if (tn.honours && typeof tn.honours === 'object'){ add(tn.honours.winner); add(tn.honours.runner); add(tn.honours.playerTeam); }
+          each(tn.teamLogos, function(e){ if (e) add(e.t); });
+          each(tn.leadership, function(e){ if (e) add(e.t); });
+        }
+        /* The live match and the stores that sit beside it. */
+        add(S.teamA); add(S.teamB);
+        addInnings(S.current); addInnings(S.prevInnings);
+        add(S.potmTeam);
+        if (S.superOver && typeof S.superOver === 'object'){
+          addInningsList(S.superOver.innings);
+          addInnings(S.superOver.mainPrev); addInnings(S.superOver.mainCurr);
+        }
+        if (S.myTeams && typeof S.myTeams === 'object'){
+          each(S.myTeams.teams, add);
+          if (S.myTeams.squads && typeof S.myTeams.squads === 'object') Object.keys(S.myTeams.squads).forEach(add);
+          each(S.myTeams.leadership, function(e){ if (e) add(e.t); });
+        }
+        addTournament(S.tournament);
+        each(S.pausedMatches, addMatchLike);
+        each(S.singleFixtures, function(f){ if (f){ add(f.teamA); add(f.teamB); } });
+        if (S.lastFinishedSingle) addMatchLike(S.lastFinishedSingle);
+        each(S.tournamentsArchive, function(a){ if (a) addTournament(a.data || a); });
+        /* Team names also ride inside the player-ID mappings: a
+           team whose squad was entered once left its name there
+           even when everything else about it was removed. */
+        each(S.playerIds, function(m){ if (m) add(m.t); });
+        /* Permanent match history: entries carry their two teams
+           directly, plus every innings' batting / bowling side and
+           the Player of the Match's team. */
+        if (typeof HIST !== 'undefined' && HIST){
+          Object.keys(HIST).forEach(function(id){ addMatchLike(HIST[id]); });
+        }
       }
       function pad2(n){ return (n < 10 ? '0' : '') + n; }
       function fmtDateShort(iso){
@@ -16815,7 +17343,13 @@
         var raw = (($('tpId') && $('tpId').value) || '').trim().toLowerCase().replace(/\s+/g, '');
         if (!raw){ toast('Type a Team ID first'); return; }
         var found = null;
-        allKnownTeams().forEach(function(n){ if (teamIdFor(n) === raw) found = n; });
+        /* Search the registry as well as the current lists: a team
+           that was removed earlier still owns its Team ID there,
+           and finding it by ID must offer it for picking exactly
+           like a listed team. */
+        var pool = allKnownTeams();
+        try { teamRegistryNames().forEach(function(n){ if (pool.indexOf(n) === -1) pool.push(n); }); } catch(e){}
+        pool.forEach(function(n){ if (!found && String(teamIdFor(n)).toLowerCase() === raw) found = n; });
         if (!found){ toast('⚠️ No team with ID “' + raw + '” — check the ID under the team names below'); return; }
         pickTeam(found);
       }
@@ -17081,7 +17615,7 @@
           S.tournament = fresh;
           commit('New tournament created', true);
           setView('tournament');
-          toast('🏆 New tournament created — set its name, venue and dates in Tournament Details, then add teams.');
+          toast('🏆 New tournament created — tap More → Edit Info on its Home tab to set its name, season, venue, dates and ball type, then add teams.');
         };
         if (tournamentHasContent(S.tournament)){
           askVerify('Create a new tournament?',
@@ -17131,6 +17665,10 @@
             commit('Tournament deleted', true);
             renderTournamentList();
             toast('🗑 ' + label + ' deleted');
+            /* Deleted from the Edit Info / Select Winner page: leave
+               that page for the Tournaments list, since the
+               tournament it belonged to no longer exists. */
+            if (currentViewName === 'tnedit' || currentViewName === 'tnwinner') setView('tournaments');
           });
       }
       function deleteArchivedTournament(id){
@@ -17367,7 +17905,7 @@
            past matches are on the record even before Firebase answers.
            (Both loads are skipped entirely for viewer sessions — see
            the server-only rule above.) */
-        if (!pureViewerSession){ try { loadHistLocal(); } catch(e){} }
+        if (!pureViewerSession){ try { loadHistLocal(); } catch(e){} try { migrateTeamIds(); } catch(e){} }
         var backup = pureViewerSession ? null : loadLocalBackup();
         if (backup){
           S = backup;
