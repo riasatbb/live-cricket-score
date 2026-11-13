@@ -329,6 +329,18 @@
       .sq-x{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--red);font-size:16px;line-height:1;padding:0;cursor:pointer}
       .sq-mv{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:14px;line-height:1;padding:0;cursor:pointer}
       .sq-mv:disabled{opacity:.3;cursor:default}
+      /* Team Squads editor rows: serial number on the left, the name
+         on ONE line (regular weight, never bold) with the playing
+         role in small text under it, and the remove icon on the
+         right. The number is the drag handle — press and slide to
+         drop the player into their position before confirming. */
+      .sq-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+      .sq-nm{flex:none;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .sq-nm .pl-link{font-weight:400;white-space:nowrap}
+      .sq-role-line{font-size:11.5px;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .sq-drag .sq-num{cursor:grab;touch-action:none}
+      .sq-drag.dragging{background:var(--surface);box-shadow:var(--shadow);border-radius:10px;position:relative;z-index:5;user-select:none;-webkit-user-select:none}
+      .sq-drag.dragging .sq-num{cursor:grabbing}
       .sq-x.big{width:34px;height:34px;font-size:20px}
       .rowflex input.grow{width:auto;min-width:110px}
 
@@ -812,6 +824,15 @@
       .fxg-team{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:600;cursor:pointer}
       .fxg-team.sel{border-color:var(--green);background:var(--green);color:#fff}
       .bk-idchip.fx{margin-left:0}
+
+      /* ---------- tournament groups (Matches tab) ---------- */
+      .grp-chip{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--green);border:1px solid var(--line);border-radius:999px;padding:1px 8px;background:var(--surface);white-space:nowrap}
+      .grp-teamrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line)}
+      .grp-teamrow:last-child{border-bottom:none}
+      .grp-teamname{flex:1;min-width:0;font-size:15.5px;word-break:break-word}
+      body.viewer-mode .grp-actions{display:none !important}
+      body.tn-locked .grp-actions{display:none !important}
+      .ac-idline{font-variant-numeric:tabular-nums;letter-spacing:.01em}
 
       /* ---------- public scoreboard: View Tournament & team explorer ---------- */
       .sb-view-tour-card{text-align:center;padding:20px 16px}
@@ -1796,7 +1817,7 @@
         </div>
         <div class="card">
           <div class="mt-entry">
-            <input id="mtNewTeam" type="text" placeholder="Team name — type to search your teams" autocomplete="off" aria-label="Team name — type to search your teams, or enter a new team name" oninput="mtSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();addMyTeam();}" />
+            <div class="ac-wrap grow"><input id="mtNewTeam" data-tac type="text" placeholder="Team name — type to search your teams" autocomplete="off" aria-label="Team name — type to search your teams, or enter a new team name" oninput="mtSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();addMyTeam();}" /></div>
             <button type="button" class="btn" onclick="addMyTeam()">Add Team</button>
           </div>
           <p class="note" id="mtSummary" style="margin-top:10px"></p>
@@ -1919,6 +1940,7 @@
           <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Team Squads</button>
           <div class="fold-body" hidden>
+          <p class="note" style="margin:0 0 10px">Drag a player by their number to drop them into position — the first 11 in the order are the Playing XI — then tap Confirm Squad.</p>
           <div class="grid2">
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
@@ -2370,7 +2392,7 @@
             <div class="card">
               <h2>Teams</h2>
               <div class="rowflex names-row" style="margin-bottom:14px">
-                <textarea id="tnNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line"></textarea>
+                <div class="ac-wrap grow"><textarea id="tnNewTeam" data-tac class="namebox" rows="1" placeholder="Team names — one per line"></textarea></div>
                 <button class="btn sm" onclick="addTournamentTeam()">Add Team</button>
               </div>
               <div id="tnTeamsGrid"></div>
@@ -2379,6 +2401,15 @@
 
           <!-- MATCHES -->
           <div class="tn-panel" id="tnPanel-matches">
+            <div class="card" id="tnGroupsCard">
+              <h2>Groups</h2>
+              <p class="note">Create the groups first — Group A, Group B, Group C… — then open a group and add its teams. Group teams are picked only from the teams added on the Teams tab, and a team can be in one group only. Each group gets its own points table on the Points tab.</p>
+              <div class="grp-actions" style="margin-top:12px">
+                <label for="grpNewName">New group name</label>
+                <div class="rowflex"><input id="grpNewName" placeholder="e.g. Group A" style="flex:1;min-width:0" /><button class="btn sm" onclick="createGroup()">Create Group</button></div>
+              </div>
+              <div id="tnGroups" style="margin-top:12px"></div>
+            </div>
             <div class="card"><h2>Matches</h2><div id="tnFixtures"></div></div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Add Fixture</button>
@@ -2388,6 +2419,7 @@
                 <div><label for="fxTeamB">Team 2</label><input id="fxTeamB" list="dlTeams" placeholder="Team 2" /></div>
               </div>
               <div style="margin-top:10px"><label for="fxLabel">Date / Venue (optional)</label><input id="fxLabel" placeholder="e.g. Sat 14 Nov • Sheikh Abu Naser Stadium" /></div>
+              <div style="margin-top:10px"><label for="fxGroup">Group (optional)</label><select id="fxGroup" class="tn-select"><option value="">No group</option></select></div>
               <div class="rowflex" style="margin-top:12px"><button class="btn sm" onclick="addFixture()">Add Fixture</button></div>
               </div>
             </div>
@@ -2395,6 +2427,7 @@
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Auto Fixture Generator</button>
               <div class="fold-body" hidden>
               <p class="note">Round-robin league: pick the teams and one tap creates every fixture — each team plays each other team once (4 teams = 6 matches). Every generated fixture gets its own unique ID; tap the ID on any fixture to copy it.</p>
+              <div style="margin-top:10px"><label for="fxgGroup">Group</label><select id="fxgGroup" class="tn-select" onchange="fxGenGroupChange()"><option value="">All teams — one league</option></select><p class="note" style="margin-top:6px">Pick a group to generate that group's fixtures only — the teams below become that group's teams, and every fixture is stamped with the group.</p></div>
               <div style="margin-top:10px"><label>Teams</label><div class="fxg-teams" id="fxgTeams"></div>
               <div class="rowflex" style="margin-top:8px"><button type="button" class="btn ghost sm" onclick="fxGenSelectAll()">Select All</button><button type="button" class="btn ghost sm" onclick="fxGenClearSel()">Clear</button><span class="note" id="fxgCount"></span></div></div>
               <div class="grid2" style="margin-top:12px">
@@ -2427,6 +2460,7 @@
                 </div>
               </div>
               <div style="margin-top:10px"><label for="mrStage">Match stage</label><select id="mrStage"><option value="">League match</option><option value="F">Final — the winner takes the tournament</option></select></div>
+              <div style="margin-top:10px"><label for="mrGroup">Group (optional)</label><select id="mrGroup" class="tn-select"><option value="">No group</option></select></div>
               <div class="rowflex" style="margin-top:12px"><button class="btn sm" onclick="addManualResult()">Save Result &amp; Update Table</button></div>
               </div>
             </div>
@@ -2641,7 +2675,7 @@
           <div id="tpCreate" hidden style="margin-top:12px">
             <label for="tpNewName">New team name</label>
             <div class="rowflex">
-              <input id="tpNewName" class="grow" placeholder="Team name" autocomplete="off" />
+              <div class="ac-wrap grow"><input id="tpNewName" data-tac placeholder="Team name" autocomplete="off" /></div>
               <button type="button" class="btn sm" onclick="tpCreateTeam()">Add &amp; Select</button>
             </div>
           </div>
@@ -2791,7 +2825,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v133';
+      var APP_VERSION = 'v135';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -2872,6 +2906,16 @@
              and sync with the rest of the state like nicknames do. */
           players: [],
           playerIds: [],
+          /* Team registry — every team ever entered, with the ONE
+             Team ID it was first given: [{n: name, id}]. Like the
+             player registry it is permanent and syncs with the state
+             to the server: removing a team from My Teams or from a
+             tournament never removes its registry entry, so typing
+             that name again later offers the team in the suggestions
+             with its original Team ID — the same team never gets a
+             second ID. A name typed without picking a suggestion is
+             a NEW team and is registered with a NEW unique ID. */
+          teamRegistry: [],
           /* Player of the Match — chosen BY THE SCORER after the match
              finishes (never auto-picked). Empty until chosen; the
              scoreboard then shows "Not Decided Yet". */
@@ -2916,7 +2960,7 @@
              when the stores split (see normalizeMyTeams), so no team
              or player is lost by the split. */
           myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
-          tournament: { name: '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
+          tournament: { name: '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
         };
       }
@@ -3217,6 +3261,7 @@
         ns.nicknames = deep(S.nicknames || []);
         ns.players = deep(S.players || []);
         ns.playerIds = deep(S.playerIds || []);
+        ns.teamRegistry = deep(S.teamRegistry || []); /* deleting the match never deletes a Team ID — the registry stays on the server */
         ns.pausedMatches = deep(S.pausedMatches || []);
         ns.tournamentsArchive = deep(S.tournamentsArchive || []);
         ns.lastFinishedSingle = deep(S.lastFinishedSingle || null);
@@ -3877,7 +3922,7 @@
         var box = document.createElement('div');
         box.className = 'ac-list' + (el.id === 'pickerCustom' ? ' ac-up' : ''); box.setAttribute('role', 'listbox');
         box.innerHTML = items.map(function(it, i){
-          if (it.isNew) return '<button type="button" class="ac-item ac-new' + (i === acIdx ? ' active' : '') + '" data-ac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">➕ New player: “' + esc(it.name) + '”</span><span class="ac-meta">Not in the player history — added as a new player with a new unique Player ID</span></span></button>';
+          if (it.isNew) return '<button type="button" class="ac-item ac-new' + (i === acIdx ? ' active' : '') + '" data-ac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">➕ New player: “' + esc(it.name) + '”</span></span></button>';
           var p = it.person;
           var meta = p.teams.length ? p.teams.join(' • ') : 'Known player';
           if (p.nick) meta += ' • “' + p.nick + '”';
@@ -3956,6 +4001,113 @@
         }
         if (e.key === 'Enter' && el.id === 'pickerCustom'){ e.preventDefault(); pickCustom(); }
       });
+      /* ---------- team-name autocomplete ----------
+         The team twin of the player autocomplete above: while a team
+         name is being typed — in the My Teams entry box, the
+         tournament Teams entry box and the Open Match picker's
+         create box — a suggestion list appears with every team the
+         system remembers: the current pool / tournament teams AND
+         teams that were removed earlier, which stay in the
+         permanent team registry with their Team IDs. Tapping a
+         suggestion fills in that team and its original Team ID is
+         reused (teamIdFor resolves through the registry). Typing a
+         name without picking a suggestion still works — the list's
+         last row says so explicitly — and that team is registered
+         with a NEW unique Team ID when it is added. For the
+         multi-line tournament box, suggestions follow the line
+         currently being typed. */
+      var tacEl = null, tacBox = null, tacItems = [], tacIdx = -1;
+      function tacClose(){
+        if (tacBox && tacBox.parentNode) tacBox.parentNode.removeChild(tacBox);
+        tacBox = null; tacEl = null; tacItems = []; tacIdx = -1;
+      }
+      function tacKnown(){
+        var cur = {};
+        try { allKnownTeams().forEach(function(n){ cur[n.toLowerCase()] = 1; }); } catch(e){}
+        var map = {}, list = [];
+        function add(n, id){
+          if (!n) return;
+          var key = n.toLowerCase();
+          if (map[key]){ if (id && !map[key].id) map[key].id = id; return; }
+          var r = { name: n, id: id || teamIdFor(n), current: !!cur[key] };
+          map[key] = r; list.push(r);
+        }
+        (Array.isArray(S.teamRegistry) ? S.teamRegistry : []).forEach(function(e){ if (e) add(e.n, e.id); });
+        try { allKnownTeams().forEach(function(n){ add(n, ''); }); } catch(e){}
+        return list;
+      }
+      function tacShow(el){
+        var f = acFragment(el);
+        if (f.frag.length < 2){ tacClose(); return; }
+        var q = f.frag.toLowerCase();
+        var hits = tacKnown().filter(function(t){ return t.name.toLowerCase().indexOf(q) > -1; });
+        hits.sort(function(a, b){
+          var as = a.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          var bs = b.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          return (as - bs) || a.name.localeCompare(b.name);
+        });
+        var items = hits.slice(0, 8).map(function(t){ return { team: t }; });
+        var exact = hits.some(function(t){ return t.name.toLowerCase() === q; });
+        if (!exact) items.push({ isNew: true, name: f.frag });
+        if (!items.length){ tacClose(); return; }
+        tacClose();
+        tacEl = el; tacItems = items; tacIdx = 0;
+        var wrap = el.closest('.ac-wrap') || el.parentNode;
+        var box = document.createElement('div');
+        box.className = 'ac-list'; box.setAttribute('role', 'listbox');
+        box.innerHTML = items.map(function(it, i){
+          if (it.isNew) return '<button type="button" class="ac-item ac-new' + (i === tacIdx ? ' active' : '') + '" data-tac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">➕ New team: “' + esc(it.name) + '”</span></span></button>';
+          var t = it.team;
+          return '<button type="button" class="ac-item' + (i === tacIdx ? ' active' : '') + '" data-tac-i="' + i + '" role="option"><span class="ac-main"><span class="ac-name">' + esc(t.name) + '</span><span class="ac-meta ac-idline">ID ' + esc(t.id) + '</span></span></button>';
+        }).join('');
+        wrap.appendChild(box);
+        tacBox = box;
+      }
+      function tacHighlight(){
+        if (!tacBox) return;
+        tacBox.querySelectorAll('.ac-item').forEach(function(b, i){ b.classList.toggle('active', i === tacIdx); });
+      }
+      function tacChoose(i){
+        var el = tacEl, it = tacItems[i];
+        if (!el || !it) return;
+        var f = acFragment(el);
+        if (it.team){
+          acFill(el, f, it.team.name);
+          tacClose();
+          toast('✓ ' + it.team.name + ' — Team ID ' + it.team.id + ' kept');
+        } else if (it.isNew){
+          acFill(el, f, it.name);
+          tacClose();
+        }
+        if (el.id === 'mtNewTeam'){ try { mtSearchInput(); } catch(e){} }
+      }
+      document.addEventListener('input', function(e){
+        var el = e.target;
+        if (!el || !el.getAttribute || !el.getAttribute('data-tac')) return;
+        tacShow(el);
+      });
+      document.addEventListener('mousedown', function(e){
+        var t = e.target;
+        var item = (t && t.closest) ? t.closest('[data-tac-i]') : null;
+        if (item && tacBox && tacBox.contains(item)){
+          e.preventDefault();
+          tacChoose(parseInt(item.getAttribute('data-tac-i'), 10));
+          return;
+        }
+        if (tacBox && t !== tacEl && !tacBox.contains(t)) tacClose();
+      });
+      /* Capture phase, so a highlighted suggestion wins the Enter
+         key over My Teams' inline Enter-to-add handler. */
+      document.addEventListener('keydown', function(e){
+        var el = e.target;
+        if (!el || !el.getAttribute || !el.getAttribute('data-tac')) return;
+        if (tacBox && tacEl === el){
+          if (e.key === 'ArrowDown'){ e.preventDefault(); e.stopPropagation(); tacIdx = Math.min(tacItems.length - 1, tacIdx + 1); tacHighlight(); return; }
+          if (e.key === 'ArrowUp'){ e.preventDefault(); e.stopPropagation(); tacIdx = Math.max(0, tacIdx - 1); tacHighlight(); return; }
+          if (e.key === 'Enter' && tacIdx > -1){ e.preventDefault(); e.stopPropagation(); tacChoose(tacIdx); return; }
+          if (e.key === 'Escape'){ tacClose(); return; }
+        }
+      }, true);
       /* Apply parsed name entries (with their nicknames) to a squad
          array. The separate Nickname field applies when exactly one
          player is being entered. Returns the add / skip counts and how
@@ -4155,6 +4307,25 @@
           if (typeof e.photo !== 'string') e.photo = '';
         });
         S.playerIds = S.playerIds.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; }).map(function(e){ if (typeof e.t !== 'string') e.t = ''; return e; });
+        /* Team registry: same coercion as the player registry.
+           Every team currently in use (My Teams pool, the current
+           tournament, the live match's two sides) is folded into it,
+           so its Team ID is locked in permanently — removing the
+           team later can never lose the ID or let a second one be
+           issued for the same team. */
+        if (!Array.isArray(S.teamRegistry)){
+          if (S.teamRegistry && typeof S.teamRegistry === 'object') S.teamRegistry = Object.keys(S.teamRegistry).sort().map(function(key){ return S.teamRegistry[key]; });
+          else S.teamRegistry = [];
+        }
+        S.teamRegistry = S.teamRegistry.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; });
+        try {
+          var teamSeed = {};
+          if (S.myTeams && Array.isArray(S.myTeams.teams)) S.myTeams.teams.forEach(function(n){ if (n) teamSeed[n] = 1; });
+          if (S.tournament && Array.isArray(S.tournament.teams)) S.tournament.teams.forEach(function(n){ if (n) teamSeed[n] = 1; });
+          if (S.teamA) teamSeed[S.teamA] = 1;
+          if (S.teamB) teamSeed[S.teamB] = 1;
+          Object.keys(teamSeed).forEach(function(n){ registerTeam(n); });
+        } catch(e){}
         if (typeof S.potmName !== 'string') S.potmName = '';
         if (typeof S.potmTeam !== 'string') S.potmTeam = '';
         if (typeof S.potmPid !== 'string') S.potmPid = '';
@@ -4207,6 +4378,11 @@
            onto the saved result as bracketId, which is how the
            bracket finds its own result again. */
         if (typeof S.bracketMatchId !== 'string') S.bracketMatchId = '';
+        /* The group the live match belongs to ('' when it is not a
+           group match): stamped from the fixture it was started
+           from, copied onto the saved tournament result as its
+           group, exactly like bracketMatchId above. */
+        if (typeof S.matchGroup !== 'string') S.matchGroup = '';
         /* Anything not explicitly a tournament match is a Single
            Match — the safe default, so an older state can never leak
            a single match into a tournament. */
@@ -4543,16 +4719,19 @@
         if (!arr.length) return '<p class="note">No players yet — add the squad below.</p>';
         var team = which === 'A' ? S.teamA : S.teamB;
         return arr.map(function(n,i){
-          /* ↑ / ↓ set the player's position (batting order) before the
-             squad is confirmed; the first row cannot move up and the
-             last cannot move down. The full name always stays here —
-             the chip only shows that a nickname is set for the
-             scoreboard. */
-          var nk = nickOf(team, n);
-          var pidL = lookupPlayerId(team, n);
-          return '<div class="sq-row"><span class="sq-num">' + (i+1) + '</span><span class="sq-name">' + plLink(team, n, n) + '</span>' + playerMetaHTML(team, n) + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pidL ? pidChipHTML(pidL) : '')
-            + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',-1)" aria-label="Move ' + esc(n) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
-            + '<button class="sq-mv" onclick="movePlayer(\'' + which + '\',' + i + ',1)" aria-label="Move ' + esc(n) + ' down"' + (i === arr.length - 1 ? ' disabled' : '') + '>↓</button>'
+          /* One row per player, built for setting the order before
+             the squad is confirmed: serial number on the left (it is
+             the drag handle — drag the player into their position),
+             the name on ONE line in regular weight with the playing
+             role in small text under it when the player has one, and
+             the remove icon on the right. The profile link on the
+             name still opens the player profile on a plain tap. */
+          var role = '';
+          try { role = profileDataFor(team, n, '').role || ''; } catch(e){}
+          return '<div class="sq-row sq-drag"><span class="sq-num" title="Drag to reorder">' + (i+1) + '</span>'
+            + '<span class="sq-main"><span class="sq-name sq-nm">' + plLink(team, n, n) + '</span>'
+            + (role ? '<span class="sq-role-line">' + esc(role) + '</span>' : '')
+            + '</span>'
             + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
         }).join('');
       }
@@ -4623,21 +4802,95 @@
             commit('Squad updated', true); toast(name + ' removed from the squad');
           });
       }
-      /* Move a player one position up / down in the squad order while
-         the squad is being prepared for confirmation. Like adding or
-         removing a player, reordering un-confirms the squad — the new
-         order becomes final only when Confirm Squad is tapped again —
-         and the order is kept in the team's tournament squad too. */
-      function movePlayer(which, i, dir){
-        if (!requireLiveOwner('edit the squads')) return;
-        var arr = which==='A' ? S.squadA : S.squadB;
-        var j = i + dir;
-        if (j < 0 || j >= arr.length) return;
-        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+      /* ---------- drag to reorder the squad ----------
+         In the Team Squads editor each player row can be dragged
+         into its position before the squad is confirmed: press the
+         row's serial number (on touch) or drag the row itself (with
+         a mouse) and slide — the other rows make room live, and on
+         release the new order is written back. Like adding or
+         removing a player, reordering un-confirms the squad — the
+         new order becomes final only when Confirm Squad is tapped
+         again — and the order is kept in the team's tournament
+         squad too. A plain tap is untouched: the name still opens
+         the profile and × still removes (the click that follows a
+         real drag is swallowed once, below). */
+      var sqDragState = null, sqDragJustEnded = 0;
+      function sqDragRenumber(list){
+        var rows = list.querySelectorAll('.sq-drag');
+        for (var i = 0; i < rows.length; i++){
+          var num = rows[i].querySelector('.sq-num');
+          if (num) num.textContent = i + 1;
+        }
+      }
+      function sqDragStart(e, which, row){
+        if (sqDragState) return;
+        if (e.target.closest && e.target.closest('.sq-x')) return;
+        /* On touch, only the number handle starts a drag, so the
+           list still scrolls normally from the name area. */
+        if (e.pointerType && e.pointerType !== 'mouse' && !(e.target.closest && e.target.closest('.sq-num'))) return;
+        var list = row.parentNode;
+        var rows = Array.prototype.slice.call(list.querySelectorAll('.sq-drag'));
+        if (rows.indexOf(row) < 0) return;
+        rows.forEach(function(r, i){ r._sqIdx = i; });
+        var arr = which === 'A' ? S.squadA : S.squadB;
+        sqDragState = { which: which, row: row, list: list, startY: e.clientY, active: false, names: arr.slice() };
+        try { row.setPointerCapture(e.pointerId); } catch(err){}
+      }
+      function sqDragMove(e){
+        var d = sqDragState; if (!d) return;
+        if (!d.active){
+          if (Math.abs(e.clientY - d.startY) < 8) return;
+          /* Ownership is checked only once a real drag begins, so a
+             plain tap on a row never raises the owner toast. */
+          if (!requireLiveOwner('edit the squads')){ sqDragState = null; return; }
+          d.active = true;
+          d.row.classList.add('dragging');
+        }
+        e.preventDefault();
+        var rows = Array.prototype.slice.call(d.list.querySelectorAll('.sq-drag'));
+        var before = null;
+        for (var i = 0; i < rows.length; i++){
+          var r = rows[i];
+          if (r === d.row) continue;
+          var rect = r.getBoundingClientRect();
+          if (e.clientY < rect.top + rect.height / 2){ before = r; break; }
+        }
+        if (before) d.list.insertBefore(d.row, before);
+        else d.list.appendChild(d.row);
+        sqDragRenumber(d.list);
+      }
+      function sqDragEnd(){
+        var d = sqDragState; if (!d) return;
+        sqDragState = null;
+        d.row.classList.remove('dragging');
+        if (!d.active) return;
+        sqDragJustEnded = Date.now();
+        var rows = Array.prototype.slice.call(d.list.querySelectorAll('.sq-drag'));
+        var order = rows.map(function(r){ return d.names[r._sqIdx]; }).filter(function(n){ return typeof n === 'string'; });
+        if (order.length !== d.names.length){ renderSquads(); return; }
+        if (d.which === 'A') S.squadA = order; else S.squadB = order;
         S.squadConfirmed = false;
-        syncMatchSquadToTournament(which);
+        syncMatchSquadToTournament(d.which);
         commit('Squad updated', true);
       }
+      [['squadAList', 'A'], ['squadBList', 'B']].forEach(function(pair){
+        var el = $(pair[0]); if (!el || el._sqDragBound) return;
+        el._sqDragBound = true;
+        el.addEventListener('pointerdown', function(e){
+          var row = (e.target && e.target.closest) ? e.target.closest('.sq-drag') : null;
+          if (row && el.contains(row)) sqDragStart(e, pair[1], row);
+        });
+      });
+      window.addEventListener('pointermove', sqDragMove, { passive: false });
+      window.addEventListener('pointerup', sqDragEnd);
+      window.addEventListener('pointercancel', sqDragEnd);
+      /* The click a drag ends with must not open the profile or hit
+         any other row control — swallow exactly that one click. */
+      document.addEventListener('click', function(e){
+        if (Date.now() - sqDragJustEnded > 400) return;
+        var t = e.target;
+        if (t && t.closest && t.closest('#squadAList, #squadBList')){ e.preventDefault(); e.stopPropagation(); sqDragJustEnded = 0; }
+      }, true);
       function yetToBatNames(inn){
         var squad = squadForTeam(inn.battingTeam);
         if (!squad || !squad.length) return [];
@@ -5526,6 +5779,7 @@
         var keepNick = deep(S.nicknames || []);
         var keepPlayers = deep(S.players || []);
         var keepPlayerIds = deep(S.playerIds || []);
+        var keepTeamReg = deep(S.teamRegistry || []);
         var keepPaused = deep(S.pausedMatches || []);
         var keepLastFin = deep(S.lastFinishedSingle || null);
         var keepTnArc = deep(S.tournamentsArchive || []);
@@ -5538,6 +5792,7 @@
         S.myTeams = keepMyTeams; /* the My Teams pool is the user's own — it survives every match start, like the tournament data */
         S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
         S.players = keepPlayers; S.playerIds = keepPlayerIds; /* the player registry is permanent — Player IDs never reset with a match */
+        S.teamRegistry = keepTeamReg; /* the team registry is permanent too — Team IDs never reset with a match */
         S.pausedMatches = keepPaused; /* parked live matches survive a new match starting */
         S.lastFinishedSingle = keepLastFin; /* the last finished Single Match stays on the viewer home */
         S.tournamentsArchive = keepTnArc;
@@ -5545,6 +5800,7 @@
         S.matchId = Date.now(); S.archivedMatchId = null;
         S.teamA = newA;
         S.teamB = newB;
+        try { registerTeam(newA); registerTeam(newB); } catch(e){} /* both sides are remembered with their Team IDs, even if this match is later deleted */
         S.squadA = squadForMatch(newA, tnSquads, prevTeamA, keepA);
         S.squadB = squadForMatch(newB, tnSquads, prevTeamB, keepB);
         S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
@@ -5610,6 +5866,7 @@
           var pList = (pfs.kind === 'tournament') ? S.tournament.fixtures : S.singleFixtures;
           (pList || []).forEach(function(x){ if (x.id === pfs.id) pfx = x; });
           if (pfx && ((pfx.teamA === newA && pfx.teamB === newB) || (pfx.teamA === newB && pfx.teamB === newA))){
+            if (pfs.kind === 'tournament') S.matchGroup = (typeof pfx.group === 'string') ? pfx.group : '';
             if (pfs.kind === 'tournament') S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return x.id !== pfs.id; });
             else S.singleFixtures = S.singleFixtures.filter(function(x){ return x.id !== pfs.id; });
           }
@@ -6401,7 +6658,7 @@
         if (teamName === S.teamB){ S.squadB = deep(arr); S.squadConfirmed = false; }
       }
       function normalizeTournament(){
-        if (!S.tournament || typeof S.tournament !== 'object') S.tournament = { name:'', teams:[], matches:[], fixtures:[], squads:{} };
+        if (!S.tournament || typeof S.tournament !== 'object') S.tournament = { name:'', teams:[], matches:[], fixtures:[], groups:[], squads:{} };
         if (!Array.isArray(S.tournament.teams)) S.tournament.teams = [];
         if (!Array.isArray(S.tournament.matches)) S.tournament.matches = [];
         if (!Array.isArray(S.tournament.fixtures)) S.tournament.fixtures = [];
@@ -6444,6 +6701,42 @@
            pick belongs to the store it was made in — the pool and a
            tournament each keep their own. */
         S.tournament.leadership = normLeadershipArr(S.tournament.leadership);
+        /* Groups: [{id, name, teams:[team names]}]. NO group exists
+           until the controller creates one on the Matches tab —
+           nothing is pre-made or seeded. A group only holds teams
+           that are in the tournament (teams enter on the Teams tab
+           first), and a team sits in at most one group — the first
+           group that claims it keeps it. States saved before groups
+           existed carry no field and stay one single group, exactly
+           as before. Firebase can hand the array back as an object
+           with numeric keys — coerce it like the other arrays. */
+        if (!Array.isArray(S.tournament.groups)){
+          if (S.tournament.groups && typeof S.tournament.groups === 'object') S.tournament.groups = Object.keys(S.tournament.groups).sort().map(function(k){ return S.tournament.groups[k]; });
+          else S.tournament.groups = [];
+        }
+        var grpIdsSeen = {}, grpNamesSeen = {}, grpTeamSeen = {};
+        S.tournament.groups = S.tournament.groups.filter(function(g){
+          if (!g || typeof g !== 'object' || Array.isArray(g)) return false;
+          if (typeof g.name !== 'string' || !g.name.trim()) return false;
+          g.name = g.name.trim();
+          var nk = g.name.toLowerCase();
+          if (grpNamesSeen[nk]) return false;
+          grpNamesSeen[nk] = 1;
+          if (typeof g.id !== 'string' || !g.id || grpIdsSeen[g.id]) g.id = newGroupId();
+          grpIdsSeen[g.id] = 1;
+          if (!Array.isArray(g.teams)){
+            if (g.teams && typeof g.teams === 'object') g.teams = Object.keys(g.teams).sort().map(function(k){ return g.teams[k]; });
+            else g.teams = [];
+          }
+          g.teams = g.teams.filter(function(n){
+            if (typeof n !== 'string' || !n) return false;
+            if (S.tournament.teams.indexOf(n) === -1) return false;
+            if (grpTeamSeen[n]) return false;
+            grpTeamSeen[n] = 1;
+            return true;
+          });
+          return true;
+        });
         if (typeof S.tournament.ownerUid !== 'string') S.tournament.ownerUid = '';
         if (typeof S.tournament.ownerName !== 'string') S.tournament.ownerName = '';
         /* Knockout bracket: { createdAt, matches:[{id, stage, label,
@@ -6560,6 +6853,7 @@
         normalizeTournament();
         var added = 0, skipped = 0;
         names.forEach(function(name){
+          registerTeam(name); /* first entry assigns the team's one permanent Team ID */
           if (S.tournament.teams.indexOf(name) > -1) skipped++;
           else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; }
         });
@@ -6586,6 +6880,9 @@
             if (idx < 0) return;
             S.tournament.teams.splice(idx, 1);
             if (S.tournament.squads) delete S.tournament.squads[name];
+            /* The team leaves every group with it — a group only
+               ever holds teams that are in the tournament. */
+            if (Array.isArray(S.tournament.groups)) S.tournament.groups.forEach(function(g){ if (g && Array.isArray(g.teams)) g.teams = g.teams.filter(function(n){ return n !== name; }); });
             dropLeadershipTeam('tn', name);
             /* Logo / nicknames are shared by team name — drop them
                only when the team is gone from My Teams too. */
@@ -6595,6 +6892,302 @@
             commit('Team removed', true); toast(name + ' removed');
           });
       }
+      /* ---------- tournament groups ----------
+         A tournament no longer has to run as one single group.
+         The controller creates groups on the Fixtures (Matches)
+         tab — NO group exists beforehand, and a group can be
+         named anything (Group A, Group B, Pool 1…). Only after a
+         group exists are teams put into it, and the teams offered
+         come ONLY from the tournament's own Teams tab (via a
+         dropdown) — a team is first entered on the Teams tab,
+         then placed into a group here. A team sits in at most one
+         group. Each group gets its own points table (Points tab),
+         fixtures can be generated per group, and the knockout
+         bracket seeds from the group standings (group winners
+         first, then runners-up…). A tournament with no groups
+         behaves exactly as it always did: one table, one league. */
+      var tnGroupOpenId = null; /* the group whose own page is open inside the Matches tab */
+      var grpPickValue = '';    /* the team picked in the open group's add-team dropdown */
+      var fxGenGroup = '';      /* the Auto Fixture Generator's group ('' = all teams) */
+      function rawGroups(){
+        return (S.tournament && Array.isArray(S.tournament.groups)) ? S.tournament.groups : [];
+      }
+      function newGroupId(){
+        var existing = {};
+        rawGroups().forEach(function(g){ if (g) existing[String(g.id)] = 1; });
+        var id = '';
+        do {
+          id = 'GRP-' + Date.now().toString(36).toUpperCase() + '-' + ('0000' + Math.floor(Math.random() * 1679616).toString(36).toUpperCase()).slice(-4);
+        } while (existing[id]);
+        return id;
+      }
+      function groupById(id){
+        var found = null;
+        rawGroups().forEach(function(g){ if (g && g.id === id) found = g; });
+        return found;
+      }
+      function groupByName(name){
+        var found = null;
+        rawGroups().forEach(function(g){ if (g && g.name === name) found = g; });
+        return found;
+      }
+      function groupOfTeam(name){
+        if (!name) return null;
+        var found = null;
+        rawGroups().forEach(function(g){ if (g && Array.isArray(g.teams) && g.teams.indexOf(name) > -1) found = g; });
+        return found;
+      }
+      function ungroupedTeams(){
+        var grouped = {};
+        rawGroups().forEach(function(g){ (g.teams || []).forEach(function(n){ grouped[n] = 1; }); });
+        return ((S.tournament && S.tournament.teams) || []).filter(function(n){ return !grouped[n]; });
+      }
+      function nextGroupName(){
+        var used = {};
+        rawGroups().forEach(function(g){ used[String(g.name || '').toLowerCase()] = 1; });
+        var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (var i = 0; i < letters.length; i++){
+          var nm = 'Group ' + letters.charAt(i);
+          if (!used[nm.toLowerCase()]) return nm;
+        }
+        return 'Group ' + (rawGroups().length + 1);
+      }
+      /* The group one match belongs to: the group stamped on it
+         when it was fixtured / saved, else the group both of its
+         teams are in together. Null when it is not a group match
+         (cross-group, knockout, or no groups at all). */
+      function matchGroupName(m){
+        if (!m) return null;
+        if (typeof m.group === 'string' && m.group && groupByName(m.group)) return m.group;
+        var a = null, b = null;
+        if (m.innings && m.innings.length){ a = m.innings[0].battingTeam; b = m.innings[0].bowlingTeam; }
+        else if (m.teamA && m.teamB){ a = m.teamA; b = m.teamB; }
+        if (a && b){
+          var ga = groupOfTeam(a), gb = groupOfTeam(b);
+          if (ga && gb && ga.id === gb.id) return ga.name;
+        }
+        return null;
+      }
+      function createGroup(){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var inp = $('grpNewName');
+        var name = inp ? inp.value.trim() : '';
+        if (!name) name = nextGroupName();
+        var clash = rawGroups().some(function(g){ return g.name.toLowerCase() === name.toLowerCase(); });
+        if (clash){ toast('A group named “' + name + '” already exists in this tournament'); return; }
+        var g = { id: newGroupId(), name: name, teams: [] };
+        S.tournament.groups.push(g);
+        if (inp) inp.value = '';
+        commit('Group created', true);
+        openGroupPage(g.id);
+        toast('✓ ' + name + ' created — now add its teams from the dropdown');
+      }
+      function openGroupPage(id){
+        tnGroupOpenId = id;
+        grpPickValue = '';
+        try { renderTnGroups(); } catch(e){}
+        var tb = $('tnBody'); if (tb) tb.scrollTop = 0;
+      }
+      function closeGroupPage(){
+        tnGroupOpenId = null;
+        grpPickValue = '';
+        try { renderTnGroups(); } catch(e){}
+      }
+      function grpPickChange(v){ grpPickValue = v || ''; }
+      function addTeamToGroup(){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var g = groupById(tnGroupOpenId);
+        if (!g) return;
+        var sel = $('grpAddTeamSel');
+        var name = sel ? sel.value : grpPickValue;
+        if (!name){ toast('Pick a team from the dropdown first'); return; }
+        if (S.tournament.teams.indexOf(name) === -1){ toast(name + ' is not in this tournament — add it on the Teams tab first'); return; }
+        var other = groupOfTeam(name);
+        if (other){ toast(name + ' is already in ' + other.name + ' — a team can be in one group only'); return; }
+        g.teams.push(name);
+        grpPickValue = '';
+        commit('Team added to group', true);
+        toast('✓ ' + name + ' added to ' + g.name);
+      }
+      function removeTeamFromGroup(gid, name){
+        if (!requireTnOwner('edit this tournament')) return;
+        var g = groupById(gid);
+        if (!g) return;
+        askVerify('Remove this team from ' + g.name + '?',
+          name + ' will be removed from ' + g.name + ' only — it stays in the tournament (Teams tab) and can be added to any group again. This cannot be undone.',
+          function(){
+            var gg = groupById(gid);
+            if (!gg) return;
+            gg.teams = gg.teams.filter(function(n){ return n !== name; });
+            commit('Team removed from group', true);
+            toast(name + ' removed from ' + gg.name);
+          });
+      }
+      function renameGroup(gid){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var g = groupById(gid);
+        if (!g) return;
+        var inp = $('grpRenameInput');
+        var name = inp ? inp.value.trim() : '';
+        if (!name){ toast('Type the new group name first'); return; }
+        if (name === g.name){ toast('That is already the group name'); return; }
+        var clash = rawGroups().some(function(x){ return x.id !== gid && x.name.toLowerCase() === name.toLowerCase(); });
+        if (clash){ toast('A group named “' + name + '” already exists in this tournament'); return; }
+        var old = g.name;
+        g.name = name;
+        /* Fixtures and saved results carry the group name — the
+           rename carries through to them, and to a live match
+           stamped with the old name. */
+        S.tournament.fixtures.forEach(function(f){ if (f && f.group === old) f.group = name; });
+        S.tournament.matches.forEach(function(m){ if (m && m.group === old) m.group = name; });
+        if (typeof S.matchGroup === 'string' && S.matchGroup === old) S.matchGroup = name;
+        commit('Group renamed', true);
+        toast('✓ ' + old + ' renamed to ' + name);
+      }
+      function deleteGroup(gid){
+        if (!requireTnOwner('edit this tournament')) return;
+        var g = groupById(gid);
+        if (!g) return;
+        askVerify('Delete ' + g.name + '?',
+          g.name + ' will be deleted and its ' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + ' will be left without a group — the teams stay in the tournament, and matches already played stay in the Matches list. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            var gg = groupById(gid);
+            var nm = gg ? gg.name : 'The group';
+            S.tournament.groups = S.tournament.groups.filter(function(x){ return x.id !== gid; });
+            if (tnGroupOpenId === gid) tnGroupOpenId = null;
+            commit('Group deleted', true);
+            toast(nm + ' deleted — its teams are ungrouped now');
+          });
+      }
+      /* The Matches tab's Groups card: the list of groups, or —
+         when one is opened — that group's own page (its teams,
+         the add-team dropdown, its points table, rename & delete).
+         Tapping a group goes INTO its page (🔙 at the top of the
+         tournament page comes back), never an expanding box. */
+      function renderTnGroups(){
+        var box = $('tnGroups');
+        if (!box) return;
+        var ae = document.activeElement;
+        if (ae && ae.id === 'grpRenameInput') return; /* never wipe a rename being typed */
+        normalizeTournament();
+        var tn = S.tournament;
+        var groups = tn.groups;
+        if (tnGroupOpenId){
+          var g = groupById(tnGroupOpenId);
+          if (!g) tnGroupOpenId = null;
+          else {
+            var avail = ungroupedTeams();
+            var teamRows = g.teams.length ? g.teams.map(function(n){
+              var lg = '';
+              try { lg = teamLogoFor(n); } catch(e){}
+              return '<div class="grp-teamrow">'
+                + (lg ? '<img class="pt-logo" src="' + esc(lg) + '" alt="" loading="lazy" />' : '')
+                + '<span class="grp-teamname">' + esc(n) + '</span>'
+                + '<button type="button" class="sq-x grp-actions" title="Remove ' + esc(n) + ' from ' + esc(g.name) + '" aria-label="Remove ' + esc(n) + ' from ' + esc(g.name) + '" onclick="removeTeamFromGroup(' + fxIdArg(g.id) + ',' + fxIdArg(n) + ')">×</button></div>';
+            }).join('') : '<p class="note">No teams in ' + esc(g.name) + ' yet — add them from the dropdown below.</p>';
+            var addHTML;
+            if (!tn.teams.length){
+              addHTML = '<p class="note">No teams in this tournament yet — add teams on the Teams tab first, then add them to this group here.</p>';
+            } else if (!avail.length){
+              addHTML = '<p class="note">Every team in this tournament is already in a group.</p>';
+            } else {
+              addHTML = '<div class="rowflex"><select id="grpAddTeamSel" class="tn-select" style="flex:1;min-width:0" onchange="grpPickChange(this.value)"><option value="">— Pick a team —</option>'
+                + avail.map(function(n){ return '<option value="' + esc(n) + '"' + (grpPickValue === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('')
+                + '</select><button class="btn sm" onclick="addTeamToGroup()">Add Team</button></div>'
+                + '<p class="note" style="margin-top:6px">Only teams not already in a group are listed — a team can be in one group only.</p>';
+            }
+            box.innerHTML = '<div class="bk-stage">' + esc(g.name) + ' — ' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + '</div>'
+              + teamRows
+              + '<div class="grp-actions" style="margin-top:12px"><label for="grpAddTeamSel">Add a team to ' + esc(g.name) + '</label>' + addHTML + '</div>'
+              + '<div style="margin-top:16px"><div class="bk-stage">' + esc(g.name) + ' — Points Table</div>' + pointsTableHTML({ teams: g.teams, group: g.name }) + '</div>'
+              + '<div class="grp-actions" style="margin-top:16px"><label for="grpRenameInput">Rename this group</label><div class="rowflex"><input id="grpRenameInput" style="flex:1;min-width:0" value="' + esc(g.name) + '" /><button class="btn ghost sm" onclick="renameGroup(' + fxIdArg(g.id) + ')">Rename</button></div></div>'
+              + '<div class="rowflex grp-actions" style="margin-top:12px"><button class="btn ghost sm" onclick="deleteGroup(' + fxIdArg(g.id) + ')">Delete ' + esc(g.name) + '</button></div>';
+            return;
+          }
+        }
+        if (!groups.length){
+          box.innerHTML = '<p class="note">No groups yet — this tournament runs as one single group, with one points table. Create a group above to split the teams into groups.</p>';
+          return;
+        }
+        var html = groups.map(function(g){
+          return '<button type="button" class="tns-row" onclick="openGroupPage(' + fxIdArg(g.id) + ')">'
+            + '<span style="flex:1;min-width:0"><span style="display:block">' + esc(g.name) + '</span>'
+            + '<span class="note" style="display:block;font-weight:400">' + (g.teams.length ? esc(g.teams.join(' • ')) : 'No teams yet') + '</span></span>'
+            + '<span class="note" style="flex:none">' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + '</span>'
+            + '<span class="tns-chev" aria-hidden="true">›</span></button>';
+        }).join('');
+        var ung = ungroupedTeams();
+        if (ung.length) html += '<p class="note" style="margin-top:10px">Not in any group yet: ' + esc(ung.join(' • ')) + '</p>';
+        box.innerHTML = html;
+      }
+      /* The group dropdowns on the fixture forms (Add Fixture,
+         Auto Fixture Generator, Manual Result) follow the groups
+         as they are created / renamed / deleted, keeping the
+         current pick whenever it still exists. */
+      function renderGroupSelects(){
+        normalizeTournament();
+        var names = rawGroups().map(function(g){ return g.name; });
+        var sig = names.join('|');
+        function fill(id, firstLabel){
+          var el = $(id);
+          if (!el) return;
+          var cur = el.value;
+          if (el.getAttribute('data-grp') !== sig){
+            el.innerHTML = '<option value="">' + firstLabel + '</option>' + names.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+            el.setAttribute('data-grp', sig);
+          }
+          el.value = (names.indexOf(cur) > -1) ? cur : '';
+        }
+        fill('fxGroup', 'No group');
+        fill('fxgGroup', 'All teams — one league');
+        fill('mrGroup', 'No group');
+        var fxg = $('fxgGroup');
+        if (fxg) fxGenGroup = fxg.value || '';
+      }
+      /* Every points table the Points tab (and the scoreboard's
+         tournament section) shows: with no groups, the one table
+         there has always been. With groups, one table per group,
+         then the ungrouped teams (if any), then the overall table. */
+      function pointsTablesHTML(){
+        normalizeTournament();
+        var groups = rawGroups();
+        if (!groups.length) return pointsTableHTML();
+        var html = groups.map(function(g){
+          return '<div class="bk-stage">' + esc(g.name) + '</div>' + pointsTableHTML({ teams: g.teams, group: g.name });
+        }).join('');
+        var ung = ungroupedTeams();
+        if (ung.length) html += '<div class="bk-stage">Teams Not in a Group</div>' + pointsTableHTML({ teams: ung, group: null });
+        html += '<div class="bk-stage">Overall — All Teams</div>' + pointsTableHTML();
+        return html;
+      }
+      /* The order the knockout bracket seeds from. With no groups
+         it is the points-table order, as always. With groups it
+         follows the group standings — every group's 1st team
+         first (ordered by points, then NRR), then every 2nd team,
+         and so on; teams in no group seed after the grouped ones,
+         in overall points order. */
+      function bkSeedOrder(){
+        normalizeTournament();
+        var groups = rawGroups();
+        if (!groups.length) return computePoints().map(function(r){ return r.team; });
+        var tables = groups.map(function(g){ return computePoints({ teams: g.teams, group: g.name }); });
+        var maxLen = 0;
+        tables.forEach(function(t){ if (t.length > maxLen) maxLen = t.length; });
+        var out = [], placed = {};
+        for (var rank = 0; rank < maxLen; rank++){
+          var slice = [];
+          tables.forEach(function(t){ if (t[rank]) slice.push(t[rank]); });
+          slice.sort(function(x, y){ return (y.pts - x.pts) || (y.nrr - x.nrr) || (y.w - x.w) || x.team.localeCompare(y.team); });
+          slice.forEach(function(r){ out.push(r.team); placed[r.team] = 1; });
+        }
+        computePoints().forEach(function(r){ if (!placed[r.team]) out.push(r.team); });
+        return out;
+      }
+
       /* ---------- My Teams: team maintenance from the home page ----------
          My Teams edits the user's OWN team pool (S.myTeams) — its
          teams and squads live apart from every tournament, so a team
@@ -6665,6 +7258,7 @@
         normalizeMyTeams();
         var added = 0, skipped = 0, firstAdded = null;
         names.forEach(function(name){
+          registerTeam(name); /* first entry assigns the team's one permanent Team ID */
           if (S.myTeams.teams.indexOf(name) > -1) skipped++;
           else { S.myTeams.teams.push(name); S.myTeams.squads[name] = []; added++; if (!firstAdded) firstAdded = name; }
         });
@@ -6815,6 +7409,9 @@
              bracket can claim this result as its own even if the
              same two teams also met in the league stage. */
           bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
+          /* The group this match belongs to, stamped from the
+             fixture it was started from (see S.matchGroup). */
+          group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
           /* The Super Over that settled this match (if any) rides
              with the tournament result, so the bracket and podium
              read its winner through matchWinner. */
@@ -6839,6 +7436,7 @@
         /* A re-save keeps the record's Final designation, so
            correcting the Final's score never opens the podium. */
         if (replaced && S.tournament.matches[existingIdx].stage) match.stage = S.tournament.matches[existingIdx].stage;
+        if (replaced && !match.group && S.tournament.matches[existingIdx].group) match.group = S.tournament.matches[existingIdx].group;
         if (replaced) S.tournament.matches[existingIdx] = match;
         else S.tournament.matches.push(match);
         S.archivedMatchId = mid;
@@ -6905,7 +7503,14 @@
         var innB = blankInnings(tB, tA); innB.runs = rB; innB.wickets = wB; innB.legalBalls = bB;
         var stageEl = $('mrStage');
         var stage = stageEl ? stageEl.value : '';
-        var match = { id: Date.now(), at: Date.now(), manual: true, oversLimit: lim, wicketsLimit: wkLim, venue:'', innings:[innA, innB], resultText:'', stage: stage || '' };
+        var mrGrpEl = $('mrGroup');
+        var mrGrp = mrGrpEl ? mrGrpEl.value : '';
+        if (mrGrp){
+          var mgg = groupByName(mrGrp);
+          if (!mgg){ toast('That group no longer exists'); return; }
+          if (mgg.teams.indexOf(tA) === -1 || mgg.teams.indexOf(tB) === -1){ toast('Both teams must be in ' + mrGrp + ' for a ' + mrGrp + ' result — add them to the group first'); return; }
+        }
+        var match = { id: Date.now(), at: Date.now(), manual: true, oversLimit: lim, wicketsLimit: wkLim, venue:'', innings:[innA, innB], resultText:'', stage: stage || '', group: mrGrp || '' };
         match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
         ensureTournamentTeam(tA); ensureTournamentTeam(tB);
@@ -6959,7 +7564,14 @@
         var a = $('fxTeamA').value.trim(), b = $('fxTeamB').value.trim();
         if (!a || !b){ toast('Enter both teams for the fixture'); return; }
         if (a === b){ toast('Pick two different teams'); return; }
-        var fxNew = { id: Date.now(), teamA:a, teamB:b, label: $('fxLabel').value.trim() };
+        var grpSel = $('fxGroup');
+        var grpName = grpSel ? grpSel.value : '';
+        if (grpName){
+          var gg = groupByName(grpName);
+          if (!gg){ toast('That group no longer exists'); return; }
+          if (gg.teams.indexOf(a) === -1 || gg.teams.indexOf(b) === -1){ toast('Both teams must be in ' + grpName + ' for a ' + grpName + ' fixture — add them to the group first'); return; }
+        }
+        var fxNew = { id: Date.now(), teamA:a, teamB:b, label: $('fxLabel').value.trim(), group: grpName || '' };
         var seed = fixtureFormatSeed();
         if (seed){ fxNew.overs = seed.overs; fxNew.format = seed.format; fxNew.wickets = seed.wickets; fxNew.ballType = seed.ballType; }
         S.tournament.fixtures.push(fxNew);
@@ -7051,17 +7663,34 @@
       function fxGenIsSel(name){ return !fxGenSel || fxGenSel[name] !== false; }
       function fxGenSelectedTeams(){
         normalizeTournament();
-        return S.tournament.teams.filter(function(n){ return fxGenIsSel(n); });
+        return fxGenCandidateTeams().filter(function(n){ return fxGenIsSel(n); });
+      }
+      /* The teams the generator offers: the picked group's teams
+         when a group is chosen on the form, else every team in
+         the tournament. Switching the group re-renders the picker
+         with that group's teams only. */
+      function fxGenCandidateTeams(){
+        normalizeTournament();
+        if (fxGenGroup){
+          var g = groupByName(fxGenGroup);
+          if (g) return g.teams.slice();
+        }
+        return S.tournament.teams.slice();
+      }
+      function fxGenGroupChange(){
+        var el = $('fxgGroup');
+        fxGenGroup = el ? (el.value || '') : '';
+        renderFxGen();
       }
       function renderFxGen(){
         var box = $('fxgTeams'); if (!box) return;
         normalizeTournament();
-        var teams = S.tournament.teams;
+        var teams = fxGenCandidateTeams();
         fxGenList = teams.slice();
         box.innerHTML = teams.length ? teams.map(function(n, i){
           var sel = fxGenIsSel(n);
           return '<button type="button" class="fxg-team' + (sel ? ' sel' : '') + '" aria-pressed="' + (sel ? 'true' : 'false') + '" onclick="fxGenToggleIdx(' + i + ')">' + (sel ? '✓ ' : '') + esc(n) + '</button>';
-        }).join('') : '<p class="note">No teams yet — add teams under Teams &amp; Players first.</p>';
+        }).join('') : '<p class="note">' + (fxGenGroup ? 'No teams in ' + esc(fxGenGroup) + ' yet — add teams to the group first (open the group above).' : 'No teams yet — add teams under Teams &amp; Players first.') + '</p>';
         var selTeams = fxGenSelectedTeams();
         var matchCount = selTeams.length * (selTeams.length - 1) / 2;
         var cnt = $('fxgCount');
@@ -7111,6 +7740,7 @@
         if (teams.length < 2){ toast('Pick at least 2 teams — tap the team names to pick them'); return; }
         var venue = (($('fxgVenue') && $('fxgVenue').value) || '').trim() || (S.tournament.venue || '').trim();
         var startIso = (($('fxgDate') && $('fxgDate').value) || '').trim();
+        var fxGrp = fxGenGroup || '';
         var pairSeen = {};
         S.tournament.fixtures.forEach(function(f){
           if (f && f.teamA && f.teamB) pairSeen[fxPairKey(f.teamA, f.teamB)] = 1;
@@ -7126,10 +7756,12 @@
             var key = fxPairKey(a, b);
             if (pairSeen[key]){ skipped++; continue; }
             pairSeen[key] = 1;
-            var parts = ['Round ' + (r + 1)];
+            var parts = [];
+            if (fxGrp) parts.push(fxGrp);
+            parts.push('Round ' + (r + 1));
             if (dateIso) parts.push(fmtDateShort(dateIso));
             if (venue) parts.push(venue);
-            var fxGen = { id: newFixtureId(), teamA: a, teamB: b, label: parts.join(' • '), round: r + 1, date: dateIso, venue: venue, generated: true };
+            var fxGen = { id: newFixtureId(), teamA: a, teamB: b, label: parts.join(' • '), round: r + 1, date: dateIso, venue: venue, generated: true, group: fxGrp };
             var fxSeed = fixtureFormatSeed();
             if (fxSeed){ fxGen.overs = fxSeed.overs; fxGen.format = fxSeed.format; fxGen.wickets = fxSeed.wickets; fxGen.ballType = fxSeed.ballType; }
             S.tournament.fixtures.push(fxGen);
@@ -7139,7 +7771,7 @@
         }
         if (!added){ toast('All ' + (teams.length * (teams.length - 1) / 2) + ' round-robin fixtures for these teams are already in the list — nothing new to add'); return; }
         commit('Round-robin fixtures generated', true);
-        toast('⚡ ' + added + ' fixture' + (added === 1 ? '' : 's') + ' generated — ' + teams.length + ' teams, every team plays every other once' + (skipped ? ' (' + skipped + ' already in the list, skipped)' : ''));
+        toast('⚡ ' + added + ' fixture' + (added === 1 ? '' : 's') + ' generated' + (fxGrp ? ' for ' + fxGrp : '') + ' — ' + teams.length + ' teams, every team plays every other once' + (skipped ? ' (' + skipped + ' already in the list, skipped)' : ''));
       }
       /* ---------- knockout bracket ----------
          The bracket follows the tournament's OWN format — it is no
@@ -7428,8 +8060,7 @@
         normalizeTournament();
         if (bracketHasResults()){ toast('🏆 Knockout matches have already been played in this bracket — remove the bracket first if you really want a new draw'); return; }
         var fmt = bkFormatById(bkSelFormat) || bkFormatById('sf');
-        var pts = computePoints();
-        var seedTeams = pts.map(function(r){ return r.team; });
+        var seedTeams = bkSeedOrder();
         var built = null, formatLabel = fmt.name;
         if (fmt.id === 'custom'){
           built = bkBuildCustomMatches(seedTeams);
@@ -7621,7 +8252,7 @@
         }
         html += '<p class="note">' + (changing
           ? 'Pick a new format for this bracket — no knockout match has been played yet, so the draw can be replaced. Opening matches are seeded from the points table as it stands now.'
-          : 'No bracket yet. Pick the format that matches this tournament\'s rules — opening matches are seeded from the points table as it stands now, and the draw is then fixed.') + '</p>';
+          : 'No bracket yet. Pick the format that matches this tournament\'s rules — opening matches are seeded from the points table as it stands now, and the draw is then fixed.') + (tn.groups && tn.groups.length ? ' With groups, the seeds come from the group standings — group winners first, then runners-up, then the rest.' : '') + '</p>';
         html += '<div class="bk-actions" style="margin-top:10px">';
         BK_FORMATS.forEach(function(f){
           html += '<button type="button" class="bk-fmt' + (bkSelFormat === f.id ? ' sel' : '') + '" onclick="bkPickFormat(\'' + f.id + '\')">'
@@ -7635,11 +8266,11 @@
         if (fmt.id === 'custom'){
           html += '<div class="bk-actions">' + bkCustomHTML() + '</div>';
         } else {
-          var pts = computePoints();
-          var qual = pts.slice(0, fmt.need).map(function(r, i){ return (i + 1) + '. ' + r.team; });
-          html += '<p class="note" style="margin-top:6px">' + (pts.length >= fmt.need
+          var seedNames = bkSeedOrder();
+          var qual = seedNames.slice(0, fmt.need).map(function(n, i){ return (i + 1) + '. ' + n; });
+          html += '<p class="note" style="margin-top:6px">' + (seedNames.length >= fmt.need
             ? 'Qualifiers right now: ' + esc(qual.join(' · '))
-            : 'This format needs the top ' + fmt.need + ' teams — only ' + pts.length + (pts.length === 1 ? ' team is' : ' teams are') + ' in the points table so far.') + '</p>'
+            : 'This format needs the top ' + fmt.need + ' teams — only ' + seedNames.length + (seedNames.length === 1 ? ' team is' : ' teams are') + ' in the points table so far.') + '</p>'
             + '<div class="rowflex bk-actions" style="margin-top:10px"><button class="btn sm" onclick="generateBracket()">🏆 Generate Bracket</button>'
             + (changing ? '<button class="btn ghost sm" onclick="bkCancelPicker()">Keep Current Bracket</button>' : '')
             + '</div>';
@@ -7815,6 +8446,7 @@
           oversLimit: S.oversLimit, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10),
           venue: S.venue || '', innings: inns, resultText: '',
           bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
+          group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
           players: playersSnapshot(), playerIds: deep(S.playerIds || [])
         };
       }
@@ -7843,16 +8475,29 @@
         if (lv) arr.push(lv);
         return arr;
       }
-      function computePoints(){
+      /* Points for the whole tournament — or, with a filter
+         {teams, group}, for one group's table: rows only for the
+         filter's teams, counting only matches that belong to that
+         group (group: a group name) or to no group at all
+         (group: null, the ungrouped teams' table). No filter keeps
+         the original behaviour exactly. */
+      function computePoints(filter){
         normalizeTournament();
         var rows = {};
+        var subset = (filter && Array.isArray(filter.teams)) ? filter.teams : null;
         function rowFor(name){
+          if (subset && subset.indexOf(name) === -1) return null;
           if (!rows[name]) rows[name] = { team:name, p:0, w:0, l:0, t:0, pts:0, rf:0, of:0, ra:0, oa:0 };
           return rows[name];
         }
         S.tournament.teams.forEach(function(n){ rowFor(n); });
         tournamentStatMatches().forEach(function(m){
           if (!m.innings || m.innings.length < 2) return;
+          if (filter){
+            var mg = matchGroupName(m);
+            if (filter.group){ if (mg !== filter.group) return; }
+            else if (mg) return;
+          }
           /* A live match joins the points table only once its
              result is actually decided (liveRecordDecided). Until
              then its figures drive the player statistics, never
@@ -7860,17 +8505,23 @@
           if (m.live && !liveRecordDecided(m)) return;
           var a = m.innings[0], b = m.innings[1];
           var ra = rowFor(a.battingTeam), rb = rowFor(b.battingTeam);
-          ra.p++; rb.p++;
+          if (!ra && !rb) return;
+          /* Each side counts independently: in a filtered (group)
+             table a team keeps its group matches even if its
+             opponent has since left the group. Without a filter
+             both rows always exist and this is the old behaviour. */
+          if (ra) ra.p++;
+          if (rb) rb.p++;
           var win = matchWinner(m);
-          if (win === 'Tie'){ ra.t++; rb.t++; ra.pts += 1; rb.pts += 1; }
-          else if (win === a.battingTeam){ ra.w++; rb.l++; ra.pts += 2; }
-          else if (win === b.battingTeam){ rb.w++; ra.l++; rb.pts += 2; }
+          if (win === 'Tie'){ if (ra){ ra.t++; ra.pts += 1; } if (rb){ rb.t++; rb.pts += 1; } }
+          else if (win === a.battingTeam){ if (ra){ ra.w++; ra.pts += 2; } if (rb) rb.l++; }
+          else if (win === b.battingTeam){ if (rb){ rb.w++; rb.pts += 2; } if (ra) ra.l++; }
           var limBalls = (m.oversLimit || 20) * 6;
           m.innings.forEach(function(inn){
             var bat = rowFor(inn.battingTeam), bowl = rowFor(inn.bowlingTeam);
             var adj = inn.wickets >= (typeof m.wicketsLimit === 'number' ? m.wicketsLimit : 10) ? limBalls : inn.legalBalls;
-            bat.rf += inn.runs; bat.of += adj;
-            bowl.ra += inn.runs; bowl.oa += adj;
+            if (bat){ bat.rf += inn.runs; bat.of += adj; }
+            if (bowl){ bowl.ra += inn.runs; bowl.oa += adj; }
           });
         });
         var arr = Object.keys(rows).map(function(k){ var r = rows[k];
@@ -7880,9 +8531,9 @@
         arr.sort(function(x,y){ return (y.pts - x.pts) || (y.nrr - x.nrr) || (y.w - x.w) || x.team.localeCompare(y.team); });
         return arr;
       }
-      function pointsTableHTML(){
-        var arr = computePoints();
-        if (!arr.length) return '<p class="note">No teams entered yet — add teams in Team Entry above.</p>';
+      function pointsTableHTML(filter){
+        var arr = computePoints(filter || undefined);
+        if (!arr.length) return filter ? '<p class="note">No teams in this group yet.</p>' : '<p class="note">No teams entered yet — add teams in Team Entry above.</p>';
         var body = arr.map(function(r,i){
           var ptLogo = teamLogoFor(r.team);
           return '<tr class="' + (i < 2 ? 'toprow' : '') + '"><td class="teamcell">' + (i < 2 ? '<span class="qdot"></span>' : '') + (ptLogo ? '<img class="pt-logo" src="' + esc(ptLogo) + '" alt="" loading="lazy" />' : '') + esc(r.team) + '</td>'
@@ -8475,6 +9126,10 @@
         });
         document.querySelectorAll('.tn-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tntab') === tab); });
         if (tab === 'teams'){ try { renderTnTeamsGallery(); } catch(e){} }
+        /* Leaving the Matches tab also leaves any open group page;
+           coming back to Matches re-renders the Groups card. */
+        if (tab !== 'matches' && tnGroupOpenId){ tnGroupOpenId = null; grpPickValue = ''; }
+        if (tab === 'matches'){ try { renderTnGroups(); } catch(e){} }
         /* A tab switch is a screen change too: push it, so system
            Back returns to the previous tournament tab. */
         if (navInitDone && !navFromPop && currentViewName === 'tournament'){
@@ -8883,6 +9538,7 @@
                 + teamBadgeHTML(n, i)
                 + '<span class="sb-team-name">' + esc(n) + '</span>'
                 + '<span class="sb-team-count" style="display:block">' + players.length + (players.length===1 ? ' player' : ' players') + '</span>'
+                + (groupOfTeam(n) ? '<span class="sb-team-count" style="display:block">' + esc(groupOfTeam(n).name) + '</span>' : '')
                 + '</button>';
             }).join('') + '</div>'
           : '<p class="note">No teams in this tournament yet.</p>';
@@ -9185,6 +9841,9 @@
          anyone else goes back to the Tournaments list. There is no
          "Back to …" text bar on this page any more. */
       function tnBack(){
+        /* Inside an open group page (Matches tab), 🔙 steps back
+           to the group list instead of leaving the tournament. */
+        if (currentTnTab === 'matches' && tnGroupOpenId){ closeGroupPage(); return; }
         /* Inside a drilled-in Statistics view, 🔙 steps back one
            level (category → section → the three boxes) instead of
            leaving the tournament page. */
@@ -9377,6 +10036,7 @@
         var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
         return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', aria) + '>'
           + mlPill('up') + mlLabel([f.label, tnName], false)
+          + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '')
           + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
           + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
           + '</div>';
@@ -9874,6 +10534,7 @@
                 + teamBadgeHTML(n, i)
                 + '<span class="sb-team-name">' + esc(n) + '</span>'
                 + '<span class="sb-team-count" style="display:block">' + players.length + (players.length===1 ? ' player' : ' players') + '</span>'
+                + (groupOfTeam(n) ? '<span class="sb-team-count" style="display:block">' + esc(groupOfTeam(n).name) + '</span>' : '')
                 + '</button>';
             }).join('') + '</div>'
           : '<p class="note">No teams in this tournament yet.</p>';
@@ -10054,18 +10715,24 @@
           var finBtn = tn.bracket ? '' : (m.stage === 'F'
             ? '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',false)">Unmark Final</button>'
             : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
+          var mGrp = null;
+          try { mGrp = matchGroupName(m); } catch(e){}
           out.push('<div class="match-row tap"' + mlTapAttrs('tnResultRowTap(' + fxIdArg(String(m.id)) + ',event)', 'Open match result') + '>'
             + mlPill('done')
             + title
+            + (mGrp ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(mGrp) + '</span></div>' : '')
             + tnInnLinesHTML(m)
             + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === finMatchId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div>'
             + '<div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>');
         });
         /* Upcoming fixtures. */
         tn.fixtures.forEach(function(f){
+          var fGrp = null;
+          try { fGrp = matchGroupName(f); } catch(e){}
           out.push('<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '>'
             + mlPill('up')
             + tnVsTitleHTML(f.teamA, f.teamB)
+            + (fGrp ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(fGrp) + '</span></div>' : '')
             + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '')
             + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
             + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>');
@@ -10096,13 +10763,13 @@
                 return '<div class="squad-box"><div class="squad-head"><h3>' + (sqLogo ? '<img class="sq-logo" src="' + esc(sqLogo) + '" alt="" loading="lazy" />' : '') + esc(n) + '</h3><span class="note">' + players.length + (players.length===1 ? ' player' : ' players') + '</span></div><div class="sb-squad-names">' + names + '</div></div>';
               }).join('') + '</div>'
             : '<p class="note">No teams entered yet.</p>';
-          sbPtsHtml = pointsTableHTML();
+          sbPtsHtml = pointsTablesHTML();
           sbTnLabel = dtn.name.trim() ? ('🏆 ' + dtn.name.trim() + ' — Points Table') : '🏆 Points Table';
           sbBatHtml = battingStatsHTML();
           sbBowlHtml = bowlingStatsHTML();
           sbExtraHtml = extraStatsHTML();
           sbFixHtml = dtn.fixtures.length
-            ? dtn.fixtures.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
+            ? dtn.fixtures.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
             : '<p class="note">No fixtures yet.</p>';
           var dFin = tournamentFinalResult();
           var dFinId = dFin ? dFin.match.id : null;
@@ -10114,8 +10781,13 @@
             : '<p class="note">No results yet.</p>';
         });
         if ($('sbSquads')) $('sbSquads').innerHTML = sbSquadsHtml;
-        $('dlTeams').innerHTML = allKnownTeams().map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
-        var pts = pointsTableHTML();
+        /* The team datalist also offers teams that were removed
+           earlier: they live on in the team registry with their
+           Team IDs, and picking one reuses that same ID. */
+        var dlNames = allKnownTeams();
+        try { teamRegistryNames().forEach(function(n){ if (dlNames.indexOf(n) === -1) dlNames.push(n); }); } catch(e){}
+        $('dlTeams').innerHTML = dlNames.map(function(n){ return '<option value="' + esc(n) + '"></option>'; }).join('');
+        var pts = pointsTablesHTML();
         $('tnPoints').innerHTML = pts;
         var bkEl = $('tnBracket'); if (bkEl) bkEl.innerHTML = bracketHTML();
         var sbPts = $('sbPoints'); if (sbPts) sbPts.innerHTML = sbPtsHtml;
@@ -10127,6 +10799,8 @@
         try { renderTnStats(); } catch(e){}
         $('tnFixtures').innerHTML = tnMatchesListHTML();
         if ($('sbFixtures')) $('sbFixtures').innerHTML = sbFixHtml;
+        try { renderGroupSelects(); } catch(e){}
+        try { renderTnGroups(); } catch(e){}
         try { renderFxGen(); } catch(e){}
         /* (The old separate Match Results list is gone: saved
            results render inside the one Matches list above, built
@@ -12112,7 +12786,7 @@
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
-        base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
         base.status = 'finished'; base.inningsNo = innNo;
         base.current = cur; base.prevInnings = prev;
         base.squadA = deep(e.squadA || []); base.squadB = deep(e.squadB || []);
@@ -15776,7 +16450,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
@@ -15980,12 +16654,62 @@
       var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '' };
       var OM_FORMATS = ['T10','T20','Club','L-4i','100','One Day','Test Match'];
       var OM_FORMAT_OVERS = { 'T10': 10, 'T20': 20, 'One Day': 50 };
-      function teamIdFor(name){
+      /* The raw Team ID computation (name-derived). On its own it
+         could hand the same ID to two different names whose letters
+         and hash collide — the registry below exists so that never
+         happens to a team that has actually been entered. */
+      function teamIdBase(name){
         var s = String(name || '');
         var base = s.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) || 'team';
         var h = 0;
         for (var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) % 9973; }
         return base + (1000 + (h % 9000));
+      }
+      /* ---------- permanent team registry ----------
+         A team's ID is assigned ONCE, the first time the team is
+         entered, and stored in S.teamRegistry, which syncs to the
+         server with the rest of the state and is carried over match
+         resets and match deletes — so a team that is removed or
+         deleted keeps its ID forever. Registry entries are never
+         removed by any delete path. */
+      function findTeamReg(name){
+        if (!name || !Array.isArray(S.teamRegistry)) return null;
+        var lower = String(name).toLowerCase(), ci = null;
+        for (var i = 0; i < S.teamRegistry.length; i++){
+          var e = S.teamRegistry[i];
+          if (!e || !e.n) continue;
+          if (e.n === name) return e;
+          if (!ci && e.n.toLowerCase() === lower) ci = e;
+        }
+        return ci;
+      }
+      /* Resolve AND register a team name: the stored ID when this
+         team is known (typed in full, or picked from the team
+         suggestions), otherwise the team is registered now with a
+         NEW unique ID — if the plain computed ID is already another
+         team's, a suffix is added until it is unique. */
+      function registerTeam(name){
+        if (!name) return '';
+        if (!Array.isArray(S.teamRegistry)) S.teamRegistry = [];
+        var reg = findTeamReg(name);
+        if (reg) return reg.id;
+        var id = teamIdBase(name), k = 2;
+        while (S.teamRegistry.some(function(e){ return e && e.id === id; })){ id = teamIdBase(name) + 'x' + k; k++; }
+        S.teamRegistry.push({ n: name, id: id });
+        return id;
+      }
+      /* The Team ID shown everywhere: the registry's stored ID for
+         a known team (so a removed team's ID is still its ID), the
+         plain computation for a name never entered. */
+      function teamIdFor(name){
+        var reg = findTeamReg(name);
+        return reg ? reg.id : teamIdBase(name);
+      }
+      function teamRegistryNames(){
+        if (!Array.isArray(S.teamRegistry)) return [];
+        var out = [];
+        S.teamRegistry.forEach(function(e){ if (e && e.n && out.indexOf(e.n) === -1) out.push(e.n); });
+        return out;
       }
       function pad2(n){ return (n < 10 ? '0' : '') + n; }
       function fmtDateShort(iso){
@@ -16061,10 +16785,16 @@
         var other = om.slot === 'A' ? om.teamB : om.teamA;
         /* The picker offers every team the user keeps — the My Teams
            pool plus the current tournament's teams — never one list
-           silently standing in for the other. */
-        var teams = allKnownTeams().filter(function(n){ return !q || n.toLowerCase().indexOf(q) > -1; });
-        tpCurrentList = teams;
-        el.innerHTML = teams.length ? teams.map(function(n, i){
+           silently standing in for the other. Teams removed earlier
+           are offered too, marked as such: they live on in the team
+           registry, and picking one reuses its original Team ID. */
+        var knownNow = allKnownTeams();
+        var entries = knownNow.map(function(n){ return { n: n, old: false }; });
+        try { teamRegistryNames().forEach(function(n){ if (knownNow.indexOf(n) === -1) entries.push({ n: n, old: true }); }); } catch(e){}
+        var teams = entries.filter(function(en){ return !q || en.n.toLowerCase().indexOf(q) > -1; });
+        tpCurrentList = teams.map(function(en){ return en.n; });
+        el.innerHTML = teams.length ? teams.map(function(en, i){
+          var n = en.n;
           var taken = other && n === other;
           return '<button type="button" class="tp-row" ' + (taken ? 'disabled' : '') + ' onclick="pickTeamIdx(' + i + ')">'
             + tpBadgeHTML(n, i)
@@ -16100,6 +16830,7 @@
         var name = inp ? inp.value.trim() : '';
         if (!name){ toast('Type the new team name first'); return; }
         var exists = allKnownTeams().some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
+        registerTeam(name); /* a name picked from the suggestions reuses its stored Team ID; a new name is registered with a new one */
         /* A team created from the match picker joins the My Teams
            pool — never a tournament it was not entered into. */
         ensurePoolTeam(name);
@@ -16325,7 +17056,7 @@
         return S.tournamentsArchive;
       }
       function tournamentHasContent(tn){
-        return !!(tn && ((tn.name || '').trim() || (tn.matches || []).length || (tn.fixtures || []).length));
+        return !!(tn && ((tn.name || '').trim() || (tn.matches || []).length || (tn.fixtures || []).length || (tn.groups || []).length));
       }
       function archiveCurrentTournament(){
         var tn = S.tournament;
