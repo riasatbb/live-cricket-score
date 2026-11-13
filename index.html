@@ -1324,14 +1324,42 @@
       @media (min-width:700px){body.scoreboard-clean main{padding:14px 12px 28px}body.scoreboard-clean .cb-wrap{border-radius:16px;border:1px solid #333}}
       .cb-tab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       @media (max-width:480px){.cb-tab{font-size:11px;letter-spacing:0;padding-left:1px;padding-right:1px}}
-      /* squads: the two teams always side by side, never stacked */
-      .cb-squads-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
-      .cb-squads-grid .squad-box{margin-bottom:0 !important;min-width:0;padding:10px}
-      .cb-squads-grid .squad-head{flex-wrap:wrap}
-      .cb-squads-grid .squad-head h3{font-size:14.5px;word-break:break-word}
-      .cb-squads-grid .sq-row{gap:6px}
-      .cb-squads-grid .sq-name{font-size:13px;line-height:1.35;word-break:break-word}
-      @media (max-width:380px){.cb-squads-grid{gap:8px}.cb-squads-grid .sq-name{font-size:12.5px}.cb-squads-grid .squad-box{padding:8px}}
+      /* squads: Cricbuzz-style two-column layout (per reference) —
+         a team header bar (Team A left, Team B mirrored right),
+         then a centred "Playing XI" bar and the two XI columns
+         side by side, then a "Bench" bar and columns when a squad
+         runs past eleven. Each player row carries the round photo
+         (initials when no photo is set), the name with its (c) /
+         (vc) / (wk) suffix on ONE line in regular weight — a long
+         name auto-shrinks to fit (see fitCbxNames) instead of
+         wrapping — and the playing role in small type underneath.
+         No jersey number and no ↑ / ↓ markers here. A player who
+         has batted or bowled in this match is tinted green; in a
+         finished match a Playing XI player who never got to bat
+         or bowl is tinted red. */
+      #cbPanel-squads{background:#212121}
+      .cbx-note{margin:0;padding:10px 14px 2px;font-size:13px;color:#a8a8a8}
+      .cbx-head{display:grid;grid-template-columns:1fr 1fr;background:#2e2e2e;border-bottom:1px solid #3a3a3a}
+      .cbx-th{display:flex;align-items:center;gap:9px;padding:11px 12px;min-width:0}
+      .cbx-th.right{flex-direction:row-reverse;text-align:right}
+      .cbx-tname{font-size:15.5px;font-weight:700;color:#fff;line-height:1.25;word-break:break-word}
+      .cbx-tlogo{flex:none;width:34px;height:34px;border-radius:8px;object-fit:cover;background:#3a3a3a}
+      .cbx-tini{flex:none;width:34px;height:34px;border-radius:8px;background:#3a3a3a;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:700;letter-spacing:.03em}
+      .cbx-sec{text-align:center;font-size:14.5px;font-weight:600;color:#e9e9e9;background:#262626;padding:9px 10px;border-bottom:1px solid #333}
+      .cbx-grid{display:grid;grid-template-columns:1fr 1fr}
+      .cbx-col{min-width:0}
+      .cbx-col.left{border-right:1px solid #333}
+      .cbx-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:62px;border-bottom:1px solid #2c2c2c;background:#2b2b2b}
+      .cbx-col.right .cbx-row{flex-direction:row-reverse;text-align:right}
+      .cbx-row.played{background:#1d3328}
+      .cbx-row.dnb{background:#382622}
+      .cbx-ava{flex:none;width:44px;height:44px;border-radius:50%;background:#4a4a4a;color:#e9e9e9;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;overflow:hidden}
+      .cbx-ava img{width:100%;height:100%;object-fit:cover;display:block}
+      .cbx-txt{flex:1;min-width:0}
+      .cbx-name{display:block;font-size:15px;font-weight:400;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cbx-role{display:block;font-size:11.5px;color:#a8a8a8;line-height:1.35;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cbx-empty{padding:14px 12px;font-size:13.5px;color:#a8a8a8;background:#2b2b2b;border-bottom:1px solid #2c2c2c}
+      @media (max-width:400px){.cbx-row{gap:8px;padding:8px}.cbx-ava{width:38px;height:38px;font-size:13.5px}.cbx-name{font-size:13.5px}.cbx-role{font-size:11px}.cbx-tname{font-size:13.5px}}
       /* ---------- tappable player names (open the career profile) ---------- */
       .pl-link{background:none;border:none;padding:0;margin:0;font:inherit;color:inherit;font-weight:inherit;letter-spacing:inherit;cursor:pointer;text-align:left}
       .pl-link:hover,.pl-link:focus-visible{text-decoration:underline}
@@ -2122,7 +2150,7 @@
 
           <!-- SQUADS -->
           <div class="cb-panel" id="cbPanel-squads">
-            <div class="card" style="margin-bottom:0"><h2>Squads</h2><div id="cbSquads"></div></div>
+            <div id="cbSquads"></div>
           </div>
 
           <!-- OVERS -->
@@ -2763,7 +2791,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v130';
+      var APP_VERSION = 'v132';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14845,6 +14873,10 @@
         }
         var wrap = document.querySelector('.cb-wrap');
         if (wrap){ try { wrap.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){} }
+        /* The Squads panel may have been rendered while hidden
+           (unmeasurable then) — fit its one-line names now that
+           the panel is on screen. */
+        if (tab === 'squads') scheduleFitCbxNames();
       }
       /* ---------- Summary tab (completed matches) ----------
          Appears only once the match on show is finished: the tab
@@ -15148,6 +15180,129 @@
           + (showFoot ? '<div class="cb-overcard-foot"><button type="button" onclick="setCbTab(\'scorecard\')">Full Scorecard ›</button><button type="button" onclick="setCbTab(\'overs\')">View all overs ›</button></div>' : '')
           + '</div>';
       }
+      /* ---------- squads panel helpers (Cricbuzz-style layout) ----------
+         The match Squads tab shows the two teams side by side as in
+         the reference: a header bar with both team names, a Playing
+         XI section (the first eleven of each squad, in squad order)
+         and a Bench section for everyone past eleven. A player's
+         (c) / (vc) / (wk) suffix comes from the team's leadership
+         picks (tournament store first, then the My Teams pool), and
+         the (wk) suffix also follows a Wicket-keeper profile role.
+         The role line uses the reference labels (WK-Batter /
+         Allrounder) for the stored profile roles, in small type,
+         with no jersey number. Row tints are read from THIS match
+         only: a green tint marks a player who has batted or bowled
+         in it; once the match is finished, a red tint marks a
+         Playing XI player who never got to bat or bowl. No arrow
+         markers are drawn. Names stay on one line (fitCbxNames). */
+      function cbxLeadership(team){
+        var out = { c: '', vc: '', wk: '' };
+        ['tn', 'mt'].forEach(function(src){
+          var L = leadershipFor(src, team);
+          ['c', 'vc', 'wk'].forEach(function(k){ if (!out[k] && L[k]) out[k] = L[k]; });
+        });
+        return out;
+      }
+      function cbxRoleLabel(role, isWk){
+        if (role === 'Wicket-keeper Batter') return 'WK-Batter';
+        if (role === 'Wicket-keeper') return 'Wicket-keeper';
+        if (role === 'All-rounder') return 'Allrounder';
+        if (role) return role;
+        return isWk ? 'Wicket-keeper' : '';
+      }
+      function cbxPlayedSet(){
+        var set = {};
+        function scan(inn){
+          if (!inn) return;
+          (inn.batters || []).forEach(function(b){ if (b && b.name && !isPlaceholderName(b.name)) set[b.name] = 1; });
+          (inn.bowlers || []).forEach(function(b){ if (b && b.name && !isPlaceholderName(b.name)) set[b.name] = 1; });
+        }
+        scan(S.prevInnings); scan(S.current);
+        if (S.superOver && Array.isArray(S.superOver.innings)) S.superOver.innings.forEach(scan);
+        return set;
+      }
+      function cbxRowHTML(team, name, side, L, played, isXI, started, matchDone){
+        var d = profileDataFor(team, name, '');
+        var isWk = (L.wk === name) || d.role === 'Wicket-keeper' || d.role === 'Wicket-keeper Batter';
+        var sfx = '';
+        if (L.c === name) sfx += ' (c)';
+        if (L.vc === name) sfx += ' (vc)';
+        if (isWk) sfx += ' (wk)';
+        var hasPlayed = !!played[name];
+        var cls = 'cbx-row';
+        if (hasPlayed) cls += ' played';
+        else if (isXI && started && matchDone) cls += ' dnb';
+        var sub = cbxRoleLabel(d.role, isWk);
+        return '<div class="' + cls + '">'
+          + '<span class="cbx-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(name))) + '</span>'
+          + '<span class="cbx-txt"><span class="cbx-name">' + plLink(team, name, name + sfx) + '</span>'
+          + (sub ? '<span class="cbx-role">' + esc(sub) + '</span>' : '')
+          + '</span></div>';
+      }
+      function cbSquadsHTML(){
+        var played = cbxPlayedSet();
+        var started = Object.keys(played).length > 0;
+        var matchDone = S.status === 'finished';
+        var sides = [[S.teamA, 'Team 1', 'left'], [S.teamB, 'Team 2', 'right']].map(function(cfg){
+          var players = displaySquadForTeam(cfg[0]) || [];
+          return { team: cfg[0], fb: cfg[1], side: cfg[2], L: cbxLeadership(cfg[0]), xi: players.slice(0, 11), bench: players.slice(11) };
+        });
+        var html = '<div class="cbx-head">' + sides.map(function(sd){
+          var logo = teamLogoFor(sd.team);
+          var badge = logo
+            ? '<img class="cbx-tlogo" src="' + esc(logo) + '" alt="" loading="lazy" />'
+            : '<span class="cbx-tini">' + esc(tnInitials(sd.team || sd.fb)) + '</span>';
+          return '<div class="cbx-th ' + sd.side + '">' + badge + '<span class="cbx-tname">' + esc(sd.team || sd.fb) + '</span></div>';
+        }).join('') + '</div>';
+        function section(title, isXI){
+          return '<div class="cbx-sec">' + title + '</div><div class="cbx-grid">' + sides.map(function(sd){
+            var list = isXI ? sd.xi : sd.bench;
+            var inner = list.length
+              ? list.map(function(p){ return cbxRowHTML(sd.team, p, sd.side, sd.L, played, isXI, started, matchDone); }).join('')
+              : '<div class="cbx-empty">' + (isXI ? 'No squad entered for this team.' : '—') + '</div>';
+            return '<div class="cbx-col ' + sd.side + '">' + inner + '</div>';
+          }).join('') + '</div>';
+        }
+        html += section('Playing XI', true);
+        if (sides.some(function(sd){ return sd.bench.length; })) html += section('Bench', false);
+        return html;
+      }
+      /* ---------- squad player names: one line, auto-fit ----------
+         A .cbx-name never wraps to a second line: when a name is
+         too long for its half-width column at the CSS size, its
+         font shrinks until the whole name fits (same approach as
+         the .tn-vs match titles, 11px floor). Runs after every
+         scoreboard render, on resize / rotation and when the
+         webfont arrives. A name inside a hidden panel cannot be
+         measured (clientWidth 0) and is skipped — opening the
+         Squads tab re-renders, which re-runs the fit. */
+      var fitCbxQueued = false;
+      function fitCbxNames(){
+        fitCbxQueued = false;
+        var els = document.querySelectorAll('.cbx-name');
+        for (var i = 0; i < els.length; i++){
+          var el = els[i];
+          if (!el.clientWidth) continue;
+          el.style.fontSize = '';
+          if (el.scrollWidth <= el.clientWidth) continue;
+          var base = parseFloat(window.getComputedStyle(el).fontSize) || 15;
+          var size = Math.max(11, Math.floor(base * el.clientWidth / el.scrollWidth * 2) / 2);
+          el.style.fontSize = size + 'px';
+          var guard = 0;
+          while (el.scrollWidth > el.clientWidth && size > 11 && guard++ < 24){
+            size = Math.max(11, size - 0.5);
+            el.style.fontSize = size + 'px';
+          }
+        }
+      }
+      function scheduleFitCbxNames(){
+        if (fitCbxQueued) return;
+        fitCbxQueued = true;
+        if (window.requestAnimationFrame) requestAnimationFrame(fitCbxNames);
+        else setTimeout(fitCbxNames, 30);
+      }
+      window.addEventListener('resize', scheduleFitCbxNames);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ scheduleFitCbxNames(); });
       function renderScoreboardCB(){
         var inn = S.current;
         var titleEl = $('cbMatchTitle');
@@ -15414,18 +15569,16 @@
           ovEl.innerHTML = '<div class="ov-head"><span>Over</span><span>Balls</span><span>Runs</span></div>'
             + (rowsHtml || '<p class="ov-empty">No overs bowled yet in this innings.</p>');
         }
-        /* squads panel — two teams side by side. Once the scorer has
-           confirmed the squad, viewers see the FINAL squad frozen for
-           this match; before that they see the loaded squads. */
+        /* squads panel — Cricbuzz-style two-column layout (see
+           cbSquadsHTML): team header bar, Playing XI, then Bench.
+           Once the scorer has confirmed the squad, viewers see the
+           FINAL squad frozen for this match; before that they see
+           the loaded squads. */
         var sqEl = $('cbSquads');
         if (sqEl){
-          sqEl.innerHTML = (S.squadConfirmed ? '<p class="note" style="margin:0 2px 10px">✓ Final squads — confirmed for this match.</p>' : '')
-            + '<div class="cb-squads-grid">' + [[S.teamA, 'Team 1'], [S.teamB, 'Team 2']].map(function(pair){
-            var team = pair[0];
-            var players = displaySquadForTeam(team);
-            var rows = players.length ? players.map(function(p, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(team, p, p) + '</span>' + playerMetaHTML(team, p) + '</div>'; }).join('') : '<p class="note">No squad entered for this team.</p>';
-            return '<div class="squad-box"><div class="squad-head"><h3>' + esc(team || pair[1]) + '</h3><span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
-          }).join('') + '</div>';
+          sqEl.innerHTML = (S.squadConfirmed ? '<p class="cbx-note">✓ Final squads — confirmed for this match.</p>' : '')
+            + cbSquadsHTML();
+          scheduleFitCbxNames();
         }
         /* info panel */
         var infoEl = $('cbInfoBody');
