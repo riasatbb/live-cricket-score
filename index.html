@@ -1345,21 +1345,21 @@
       .cbx-tname{font-size:15.5px;font-weight:700;color:#fff;line-height:1.25;word-break:break-word}
       .cbx-tlogo{flex:none;width:34px;height:34px;border-radius:8px;object-fit:cover;background:#3a3a3a}
       .cbx-tini{flex:none;width:34px;height:34px;border-radius:8px;background:#3a3a3a;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:700;letter-spacing:.03em}
-      .cbx-sec{text-align:center;font-size:14.5px;font-weight:600;color:#e9e9e9;background:#262626;padding:9px 10px;border-bottom:1px solid #333}
+      .cbx-sec{text-align:center;font-size:14.5px;font-weight:600;color:#e9e9e9;background:#262626;padding:7px 10px;border-bottom:1px solid #333}
       .cbx-grid{display:grid;grid-template-columns:1fr 1fr}
       .cbx-col{min-width:0}
       .cbx-col.left{border-right:1px solid #333}
-      .cbx-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:62px;border-bottom:1px solid #2c2c2c;background:#2b2b2b}
+      .cbx-row{display:flex;align-items:center;gap:8px;padding:5px 10px;min-height:48px;border-bottom:1px solid #2c2c2c;background:#2b2b2b}
       .cbx-col.right .cbx-row{flex-direction:row-reverse;text-align:right}
       .cbx-row.played{background:#1d3328}
       .cbx-row.dnb{background:#382622}
-      .cbx-ava{flex:none;width:44px;height:44px;border-radius:50%;background:#4a4a4a;color:#e9e9e9;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;overflow:hidden}
+      .cbx-ava{flex:none;width:36px;height:36px;border-radius:50%;background:#4a4a4a;color:#e9e9e9;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:13.5px;font-weight:700;overflow:hidden}
       .cbx-ava img{width:100%;height:100%;object-fit:cover;display:block}
       .cbx-txt{flex:1;min-width:0}
-      .cbx-name{display:block;font-size:15px;font-weight:400;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .cbx-role{display:block;font-size:11.5px;color:#a8a8a8;line-height:1.35;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .cbx-empty{padding:14px 12px;font-size:13.5px;color:#a8a8a8;background:#2b2b2b;border-bottom:1px solid #2c2c2c}
-      @media (max-width:400px){.cbx-row{gap:8px;padding:8px}.cbx-ava{width:38px;height:38px;font-size:13.5px}.cbx-name{font-size:13.5px}.cbx-role{font-size:11px}.cbx-tname{font-size:13.5px}}
+      .cbx-name{display:block;font-size:15px;font-weight:400;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cbx-role{display:block;font-size:11.5px;color:#a8a8a8;line-height:1.2;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cbx-empty{padding:10px 12px;font-size:13.5px;color:#a8a8a8;background:#2b2b2b;border-bottom:1px solid #2c2c2c}
+      @media (max-width:400px){.cbx-row{gap:7px;padding:5px 8px;min-height:44px}.cbx-ava{width:32px;height:32px;font-size:12.5px}.cbx-name{font-size:13.5px}.cbx-role{font-size:11px}.cbx-tname{font-size:13.5px}}
       /* ---------- tappable player names (open the career profile) ---------- */
       .pl-link{background:none;border:none;padding:0;margin:0;font:inherit;color:inherit;font-weight:inherit;letter-spacing:inherit;cursor:pointer;text-align:left}
       .pl-link:hover,.pl-link:focus-visible{text-decoration:underline}
@@ -2791,7 +2791,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v132';
+      var APP_VERSION = 'v133';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
