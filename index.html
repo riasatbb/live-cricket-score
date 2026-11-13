@@ -1641,11 +1641,11 @@
       /* ---------- Header only on the home pages ----------
          The brand bar (app name, Firebase pill, mode / view tabs) shows
          on the home pages only — mode chooser, Scorer Console home and
-         the Live Matches home. Every inner page (Open Match, My Teams,
+         the Live Matches home. Every inner page (Open Match, All Teams,
          scoring pad, tournaments, history…) opens clean, straight at
          its own title. setView toggles body.home-chrome. */
       body:not(.home-chrome) .topbar{display:none !important}
-      /* ---------- My Teams (home-page team maintenance) ---------- */
+      /* ---------- All Teams (home-page team maintenance) ---------- */
       #view-myteams{text-align:center}
       #view-myteams .mt-entry{display:flex;gap:10px;max-width:640px;margin:0 auto;align-items:stretch}
       #view-myteams .mt-entry input{flex:1;min-width:0;text-align:center}
@@ -1829,7 +1829,7 @@
           </button>
           <button type="button" class="mode-card myteams-entry mc-teams" onclick="setView('myteams')">
             <span class="mode-icon" aria-hidden="true">👥</span>
-            <h3>My Teams</h3>
+            <h3>All Teams</h3>
             <span class="mode-cta">Manage Teams →</span>
           </button>
           <button type="button" class="mode-card tournament" onclick="setSegment('tournament')">
@@ -1859,7 +1859,7 @@
             <span class="co-title">▶ Resume Scoring</span>
           </button>
           <button type="button" class="console-opt myteams-entry co-teams" onclick="setView('myteams')">
-            <span class="co-title">👥 My Teams</span>
+            <span class="co-title">👥 All Teams</span>
           </button>
           <button type="button" class="console-opt co-tournament" onclick="setView('tournaments')">
             <span class="co-title">🏆 Tournament</span>
@@ -1870,11 +1870,11 @@
         </div>
       </section>
 
-      <!-- ================= MY TEAMS ================= -->
+      <!-- ================= ALL TEAMS ================= -->
       <section class="view" id="view-myteams">
         <div class="clean-top">
           <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">🔙</button>
-          <h2>My Teams</h2>
+          <h2>All Teams</h2>
         </div>
         <div class="card">
           <div class="mt-entry">
@@ -2994,7 +2994,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v138';
+      var APP_VERSION = 'v140';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3078,7 +3078,7 @@
           /* Team registry — every team ever entered, with the ONE
              Team ID it was first given: [{n: name, id}]. Like the
              player registry it is permanent and syncs with the state
-             to the server: removing a team from My Teams or from a
+             to the server: removing a team from All Teams or from a
              tournament never removes its registry entry, so typing
              that name again later offers the team in the suggestions
              with its original Team ID — the same team never gets a
@@ -3121,13 +3121,16 @@
           /* Tournaments set aside by Create Tournament / opening another
              one — the full list behind the Tournaments screen. */
           tournamentsArchive: [],
-          /* My Teams: the user's own team pool, kept APART from every
-             tournament. Teams added in My Teams live only here — they
-             never enter a tournament on their own; a tournament's
-             teams are added from inside that tournament (its Teams
-             tab). Seeded once from the teams the user already had
-             when the stores split (see normalizeMyTeams), so no team
-             or player is lost by the split. */
+          /* All Teams: the user's master team pool. Teams added in
+             All Teams never enter a tournament on their own — a
+             tournament's teams are added from inside that tournament
+             (its Teams tab) — but the flow runs the other way too
+             (v140): a team added from inside Open Match or a
+             tournament ALSO lands here (see mirrorTeamToPool), so
+             All Teams lists every team the user keeps. Seeded once
+             from the teams the user already had when the stores
+             split (see normalizeMyTeams), so no team or player is
+             lost by the split. */
           myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
           tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
@@ -3804,7 +3807,7 @@
         try { tnLocked = tournamentLocked(); } catch(e){}
         try { liveLocked = liveMatchLocked(); } catch(e){}
         /* A profile belongs to whoever created the player: the
-           tournament / My Teams admin, or the owner (or designated
+           tournament / All Teams admin, or the owner (or designated
            scorer) of the live match the player is in. Being merely
            signed in with some other Google account is not enough —
            if the tournament belongs to someone else AND there is no
@@ -4172,7 +4175,7 @@
       });
       /* ---------- team-name autocomplete ----------
          The team twin of the player autocomplete above: while a team
-         name is being typed — in the My Teams entry box, the
+         name is being typed — in the All Teams entry box, the
          tournament Teams entry box and the Open Match picker's
          create box — a suggestion list appears with every team the
          system remembers: the current pool / tournament teams AND
@@ -4205,14 +4208,50 @@
         try { allKnownTeams().forEach(function(n){ add(n, ''); }); } catch(e){}
         return list;
       }
+      /* True once the server team registry can be trusted in this
+         session: Firebase has answered (ready / a snapshot seen), or
+         the registry already holds entries (restored with the state).
+         Until then a typed name must NOT be offered as a brand-new
+         team — it might be a registry team whose ID has simply not
+         arrived yet, and minting a second ID for it is the one thing
+         the permanent-ID rule forbids. */
+      function teamRegLoaded(){
+        if (typeof fbReady !== 'undefined' && fbReady) return true;
+        if (typeof fbServerSeen !== 'undefined' && fbServerSeen) return true;
+        return Array.isArray(S.teamRegistry) && S.teamRegistry.length > 0;
+      }
+      /* Resolve typed text to a registry entry: an exact
+         case-insensitive NAME match, or an exact Team ID match
+         (spaces ignored) — so typing "bbli7637" in a team box finds
+         BB LIONS just as typing its name does. */
+      function resolveRegistryTeam(text){
+        var raw = String(text == null ? '' : text).trim();
+        if (!raw || !Array.isArray(S.teamRegistry)) return null;
+        var q = raw.toLowerCase(), qid = q.replace(/\s+/g, '');
+        var byId = null;
+        for (var i = 0; i < S.teamRegistry.length; i++){
+          var e = S.teamRegistry[i];
+          if (!e || !e.n) continue;
+          if (e.n.toLowerCase() === q) return e;
+          if (!byId && e.id && String(e.id).toLowerCase().replace(/\s+/g, '') === qid) byId = e;
+        }
+        return byId;
+      }
       function tacShow(el){
         var f = acFragment(el);
         if (f.frag.length < 2){ tacClose(); return; }
         var q = f.frag.toLowerCase();
-        var hits = tacKnown().filter(function(t){ return t.name.toLowerCase().indexOf(q) > -1; });
+        var qid = q.replace(/\s+/g, '');
+        /* Match on the name OR the Team ID, case-insensitively —
+           registry teams with empty squads are in tacKnown() like
+           any other, so a removed team (e.g. BB LIONS, 0 players)
+           surfaces here with its original ID. */
+        var hits = tacKnown().filter(function(t){
+          return t.name.toLowerCase().indexOf(q) > -1 || (t.id && String(t.id).toLowerCase().indexOf(qid) > -1);
+        });
         hits.sort(function(a, b){
-          var as = a.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-          var bs = b.name.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+          var as = a.name.toLowerCase().indexOf(q) === 0 ? 0 : (a.id && String(a.id).toLowerCase() === qid ? 0 : 1);
+          var bs = b.name.toLowerCase().indexOf(q) === 0 ? 0 : (b.id && String(b.id).toLowerCase() === qid ? 0 : 1);
           return (as - bs) || a.name.localeCompare(b.name);
         });
         var items = hits.slice(0, 8).map(function(t){ return { team: t }; });
@@ -4241,6 +4280,16 @@
         if (!el || !it) return;
         var f = acFragment(el);
         if (it.team){
+          /* In the All Teams entry box, picking a suggestion RE-ADDS
+             that exact team to the pool with its original Team ID
+             (and its squad, where one is still known) — it never
+             just fills the box and leaves Add Team to mint a
+             duplicate. */
+          if (el.id === 'mtNewTeam'){
+            tacClose();
+            try { mtReaddRegistryTeam(it.team.name); } catch(e){}
+            return;
+          }
           acFill(el, f, it.team.name);
           tacClose();
           toast('✓ ' + it.team.name + ' — Team ID ' + it.team.id + ' kept');
@@ -4252,7 +4301,13 @@
       }
       document.addEventListener('input', function(e){
         var el = e.target;
-        if (!el || !el.getAttribute || !el.getAttribute('data-tac')) return;
+        /* data-tac is a BARE attribute (no value) on every team entry
+           box, so getAttribute('data-tac') returns '' — falsy — and a
+           truthiness check here silently disabled the team
+           autocomplete everywhere (v139 fix: this is why typing
+           "BB LIONS" in All Teams never showed its registry
+           suggestion). Presence is the test, not the value. */
+        if (!el || !el.hasAttribute || !el.hasAttribute('data-tac')) return;
         tacShow(el);
       });
       document.addEventListener('mousedown', function(e){
@@ -4266,10 +4321,10 @@
         if (tacBox && t !== tacEl && !tacBox.contains(t)) tacClose();
       });
       /* Capture phase, so a highlighted suggestion wins the Enter
-         key over My Teams' inline Enter-to-add handler. */
+         key over All Teams' inline Enter-to-add handler. */
       document.addEventListener('keydown', function(e){
         var el = e.target;
-        if (!el || !el.getAttribute || !el.getAttribute('data-tac')) return;
+        if (!el || !el.hasAttribute || !el.hasAttribute('data-tac')) return;
         if (tacBox && tacEl === el){
           if (e.key === 'ArrowDown'){ e.preventDefault(); e.stopPropagation(); tacIdx = Math.min(tacItems.length - 1, tacIdx + 1); tacHighlight(); return; }
           if (e.key === 'ArrowUp'){ e.preventDefault(); e.stopPropagation(); tacIdx = Math.max(0, tacIdx - 1); tacHighlight(); return; }
@@ -4477,7 +4532,7 @@
         });
         S.playerIds = S.playerIds.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; }).map(function(e){ if (typeof e.t !== 'string') e.t = ''; return e; });
         /* Team registry: same coercion as the player registry.
-           Every team currently in use (My Teams pool, the current
+           Every team currently in use (All Teams pool, the current
            tournament, the live match's two sides) is folded into it,
            so its Team ID is locked in permanently — removing the
            team later can never lose the ID or let a second one be
@@ -4556,7 +4611,7 @@
            Match — the safe default, so an older state can never leak
            a single match into a tournament. */
         if (S.matchKind !== 'tournament') S.matchKind = 'single';
-        /* The My Teams pool: shape-healed (and seeded, the first
+        /* The All Teams pool: shape-healed (and seeded, the first
            time) on every load / adopt / commit, like the tournament. */
         try { normalizeMyTeams(); } catch(e){}
         try { migratePlayerIds(); } catch(e){}
@@ -4734,7 +4789,7 @@
       function squadForMatch(teamName, tnSquads, prevTeam, prevSquad){
         var tn = tnSquads ? tnSquads[teamName] : null;
         if (Array.isArray(tn) && tn.length) return deep(tn);
-        /* A team kept only in the My Teams pool brings its pool squad
+        /* A team kept only in the All Teams pool brings its pool squad
            into the match the same way — the pool is READ here, never
            written, so starting a match cannot leak a team or a squad
            into any tournament. */
@@ -5967,7 +6022,7 @@
         var tnSquads = (keepTn && keepTn.squads && typeof keepTn.squads === 'object') ? keepTn.squads : {};
         S = freshState();
         S.tournament = keepTn;
-        S.myTeams = keepMyTeams; /* the My Teams pool is the user's own — it survives every match start, like the tournament data */
+        S.myTeams = keepMyTeams; /* the All Teams pool is the user's own — it survives every match start, like the tournament data */
         S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
         S.players = keepPlayers; S.playerIds = keepPlayerIds; /* the player registry is permanent — Player IDs never reset with a match */
         S.teamRegistry = keepTeamReg; /* the team registry is permanent too — Team IDs never reset with a match */
@@ -5979,6 +6034,7 @@
         S.teamA = newA;
         S.teamB = newB;
         try { registerTeam(newA); registerTeam(newB); } catch(e){} /* both sides are remembered with their Team IDs, even if this match is later deleted */
+        try { ensurePoolTeam(newA); ensurePoolTeam(newB); } catch(e){} /* both sides also land in All Teams — a team picked or created in Open Match is kept in the master pool (v140) */
         S.squadA = squadForMatch(newA, tnSquads, prevTeamA, keepA);
         S.squadB = squadForMatch(newB, tnSquads, prevTeamB, keepB);
         S.oversLimit = Math.max(1, parseInt($('oversLimit').value,10) || 20);
@@ -6764,15 +6820,18 @@
       }
 
       /* ---------- tournament ---------- */
-      /* ---------- My Teams pool: the user's own teams, apart from
-         every tournament. Until the split, My Teams edited the
-         tournament's team list directly, so a team added at home
-         turned up inside the tournament uninvited. The pool is its
-         own store now: My Teams reads and writes ONLY the pool, a
-         tournament's teams change only from inside that tournament
-         (its Teams tab), and the pickers that legitimately span both
-         (Open Match, the team datalist) read the union through
-         allKnownTeams(). ---------- */
+      /* ---------- All Teams pool: the user's master team pool.
+         Until the split, All Teams edited the tournament's team
+         list directly, so a team added at home turned up inside the
+         tournament uninvited. The pool is its own store: All Teams
+         reads and writes the pool, a tournament's teams change only
+         from inside that tournament (its Teams tab) — adding a team
+         in All Teams never puts it inside a tournament — and the
+         pickers that legitimately span both (Open Match, the team
+         datalist) read the union through allKnownTeams(). Since
+         v140 the mirror runs one way into the pool: a team added
+         from inside Open Match or a tournament also lands in All
+         Teams (see mirrorTeamToPool). ---------- */
       function normalizeMyTeams(){
         if (!S.myTeams || typeof S.myTeams !== 'object' || Array.isArray(S.myTeams)) S.myTeams = { teams: [], squads: {}, seeded: false };
         if (!Array.isArray(S.myTeams.teams)) S.myTeams.teams = [];
@@ -6786,7 +6845,7 @@
         S.myTeams.leadership = normLeadershipArr(S.myTeams.leadership);
         /* One-time seed: the pool starts as a copy of the teams the
            user already has — until now they all lived in the
-           tournament store — so nothing disappears from My Teams
+           tournament store — so nothing disappears from All Teams
            when the stores split. The tournament keeps its own copy;
            from here on the two lists lead separate lives. */
         if (!S.myTeams.seeded){
@@ -6815,7 +6874,27 @@
         if (S.myTeams.teams.indexOf(name) === -1) S.myTeams.teams.push(name);
         if (!Array.isArray(S.myTeams.squads[name])) S.myTeams.squads[name] = [];
       }
-      /* Every team the user can pick anywhere: the My Teams pool
+      /* All Teams is the one master pool (v140): a team entered
+         from inside Open Match or from inside a tournament ALSO
+         lands in All Teams, so every team the user keeps is listed
+         there. Mirroring never mints a new Team ID (the registry
+         owns IDs) and never duplicates a team already in the pool;
+         when the pool has no squad for the team yet but the
+         tournament does, that squad comes with it so the team does
+         not show up in All Teams with 0 players. The reverse is NOT
+         true: adding a team in All Teams does not put it inside any
+         tournament — a tournament's own list still changes only
+         from inside that tournament. */
+      function mirrorTeamToPool(name){
+        if (!name) return;
+        try {
+          ensurePoolTeam(name);
+          try { normalizeTournament(); } catch(e){}
+          var ts = (S.tournament && S.tournament.squads) ? S.tournament.squads[name] : null;
+          if (Array.isArray(ts) && ts.length && Array.isArray(S.myTeams.squads[name]) && !S.myTeams.squads[name].length) S.myTeams.squads[name] = deep(ts);
+        } catch(e){}
+      }
+      /* Every team the user can pick anywhere: the All Teams pool
          first, then any team that exists only inside the current
          tournament. Names are de-duplicated (a team kept in both
          places is still one pickable team). */
@@ -6894,7 +6973,7 @@
         /* Team leadership (Captain / Vice-Captain / Wicket-keeper)
            for THIS tournament's teams: an ARRAY of {t, c, vc, wk}
            entries keyed by team name, normalised exactly like the
-           My Teams pool's list (see normLeadershipArr). A leadership
+           All Teams pool's list (see normLeadershipArr). A leadership
            pick belongs to the store it was made in — the pool and a
            tournament each keep their own. */
         S.tournament.leadership = normLeadershipArr(S.tournament.leadership);
@@ -7019,6 +7098,9 @@
         if (!name) return;
         if (S.tournament.teams.indexOf(name) === -1) S.tournament.teams.push(name);
         if (!Array.isArray(S.tournament.squads[name])) S.tournament.squads[name] = [];
+        /* A team that enters a tournament also lands in All Teams
+           (the master pool) — see mirrorTeamToPool. */
+        mirrorTeamToPool(name);
       }
       /* Tournament name / venue / dates used to be typed into a
          "Tournament Details" fold on the Home tab, saved on every
@@ -7036,6 +7118,9 @@
           registerTeam(name); /* first entry assigns the team's one permanent Team ID */
           if (S.tournament.teams.indexOf(name) > -1) skipped++;
           else { S.tournament.teams.push(name); S.tournament.squads[name] = []; added++; }
+          /* Entered inside a tournament — the team also lands in
+             All Teams, the master pool (v140). */
+          mirrorTeamToPool(name);
         });
         inp.value = '';
         commit('Team entered', true);
@@ -7065,7 +7150,7 @@
             if (Array.isArray(S.tournament.groups)) S.tournament.groups.forEach(function(g){ if (g && Array.isArray(g.teams)) g.teams = g.teams.filter(function(n){ return n !== name; }); });
             dropLeadershipTeam('tn', name);
             /* Logo / nicknames are shared by team name — drop them
-               only when the team is gone from My Teams too. */
+               only when the team is gone from All Teams too. */
             var inPool = false;
             try { normalizeMyTeams(); inPool = S.myTeams.teams.indexOf(name) > -1; } catch(e){}
             if (!inPool){ dropTeamLogo(name); dropNicknamesFor(name, null); }
@@ -7368,16 +7453,17 @@
         return out;
       }
 
-      /* ---------- My Teams: team maintenance from the home page ----------
-         My Teams edits the user's OWN team pool (S.myTeams) — its
-         teams and squads live apart from every tournament, so a team
-         added here never appears inside a tournament on its own. A
-         tournament's teams are added from inside that tournament,
-         on its Teams tab. The Open Match picker and the Match Setup
+      /* ---------- All Teams: team maintenance from the home page ----------
+         All Teams edits the user's master team pool (S.myTeams).
+         A team added here never appears inside a tournament on its
+         own — a tournament's teams are added from inside that
+         tournament, on its Teams tab — but a team added there, or
+         from inside Open Match, also lands in this pool (v140, see
+         mirrorTeamToPool). The Open Match picker and the Match Setup
          team list read the union of the pool and the current
          tournament's teams (allKnownTeams), so any team the user
          keeps can be picked for a match. */
-      /* The live search text from the My Teams entry bar. It
+      /* The live search text from the All Teams entry bar. It
          survives re-renders: the entry bar itself is static HTML
          above the list, so typing never loses focus. (A tapped team
          opens on its own page now — see the team page block.) */
@@ -7388,10 +7474,55 @@
         mtFilterText = inp ? inp.value.trim().toLowerCase() : '';
         renderMyTeams();
       }
-      /* Tapping a My Teams tile opens that team's own page — the
+      /* Tapping a All Teams tile opens that team's own page — the
          list itself no longer expands a detail underneath it. */
       function selectMyTeam(i){
         openTeamPageIdx('mt', i);
+      }
+      /* Registry teams offered under the entry bar while typing
+         (renderMyTeams fills this; the rows call back by index so a
+         team name never has to be escaped into an onclick). */
+      var mtRegHits = [];
+      function mtReaddRegistryIdx(i){
+        var t = mtRegHits[i];
+        if (t) mtReaddRegistryTeam(t.name);
+      }
+      /* Re-add a team that lives in the server registry but is not
+         in the All Teams pool right now (it was removed earlier, or
+         never added on this device). The team returns under its
+         CANONICAL registry name with its ORIGINAL Team ID —
+         registerTeam resolves through the registry first, so no new
+         ID is ever minted for it — and with its squad where one is
+         still known (the current tournament's squad for that team),
+         otherwise an empty squad, exactly as a 0-player registry
+         team like BB LIONS should come back. */
+      function mtReaddRegistryTeam(name){
+        if (!requireTnOwner('edit All Teams')) return;
+        var reg = null;
+        try { reg = resolveRegistryTeam(name) || findTeamReg(name); } catch(e){}
+        var canonical = reg ? reg.n : name;
+        var id = registerTeam(canonical);
+        normalizeMyTeams();
+        var inp = $('mtNewTeam');
+        if (inp) inp.value = '';
+        mtFilterText = '';
+        if (S.myTeams.teams.indexOf(canonical) > -1){
+          renderMyTeams();
+          toast('✓ ' + canonical + ' is already in All Teams — Team ID ' + id);
+          openTeamPage('mt', canonical);
+          return;
+        }
+        var restored = [];
+        try {
+          normalizeTournament();
+          if (S.tournament && S.tournament.squads && Array.isArray(S.tournament.squads[canonical])) restored = deep(S.tournament.squads[canonical]);
+        } catch(e){}
+        S.myTeams.teams.push(canonical);
+        S.myTeams.squads[canonical] = restored;
+        commit('Team re-added', true);
+        renderMyTeams();
+        toast('✓ ' + canonical + ' re-added to All Teams — Team ID ' + id + ' kept');
+        openTeamPage('mt', canonical);
       }
       function renderMyTeams(){
         var list = $('mtList'); if (!list) return;
@@ -7412,12 +7543,39 @@
         var order = tn.teams.map(function(n, i){ return { name: n, idx: i }; });
         order.sort(function(a, b){ var x = a.name.toLowerCase(), y = b.name.toLowerCase(); return x < y ? -1 : (x > y ? 1 : 0); });
         var q = mtFilterText;
-        var shown = q ? order.filter(function(o){ return o.name.toLowerCase().indexOf(q) > -1; }) : order;
+        var qid = q.replace(/\s+/g, '');
+        var shown = q ? order.filter(function(o){ return o.name.toLowerCase().indexOf(q) > -1 || teamIdFor(o.name).toLowerCase().indexOf(qid) > -1; }) : order;
         var html = '';
-        if (!tn.teams.length){
-          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. These are your own teams for matches — a tournament keeps its own team list, added from inside the tournament.</p></div>';
+        mtRegHits = [];
+        if (!tn.teams.length && !q){
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. Every team you add — here, in Open Match or inside a tournament — collects in All Teams.</p></div>';
+        } else if (!shown.length && q){
+          /* Nothing in the pool matches — but the team may still be
+             in the SERVER REGISTRY (removed earlier, or only ever in
+             a tournament / history). Those teams are offered here as
+             tappable rows that re-add them with their ORIGINAL Team
+             ID; they are never described as "a new team". */
+          var poolLow = {};
+          tn.teams.forEach(function(n){ poolLow[n.toLowerCase()] = 1; });
+          try {
+            mtRegHits = tacKnown().filter(function(t){
+              return !poolLow[t.name.toLowerCase()] && (t.name.toLowerCase().indexOf(q) > -1 || (t.id && String(t.id).toLowerCase().indexOf(qid) > -1));
+            }).slice(0, 8);
+          } catch(e){ mtRegHits = []; }
+          if (mtRegHits.length){
+            html = '<div class="card"><p class="note" style="margin:0 0 10px">This team is in the server registry — tap it to re-add it to All Teams with its original Team ID:</p>'
+              + mtRegHits.map(function(t, i){
+                  return '<button type="button" class="tp-row" style="width:100%;margin-bottom:6px" onclick="mtReaddRegistryIdx(' + i + ')">'
+                    + '<span class="tp-main"><span class="tp-name">' + esc(t.name) + '</span>'
+                    + '<span class="tp-id">Team ID: ' + esc(t.id) + ' • Tap to re-add</span></span></button>';
+                }).join('') + '</div>';
+          } else if (!teamRegLoaded()){
+            html = '<div class="card"><p class="note" style="margin:0">⏳ The team registry has not loaded from the server yet — wait until the app is connected, then type again. Your team may already be registered; it is not shown as a new team until the registry arrives, so its Team ID is never duplicated.</p></div>';
+          } else {
+            html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing — tap Add Team to add it as a new team.</p></div>';
+          }
         } else if (!shown.length){
-          html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing — tap Add Team to add it as a new team.</p></div>';
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. Every team you add — here, in Open Match or inside a tournament — collects in All Teams.</p></div>';
         } else {
           html = '<div class="sb-teams-grid">' + shown.map(function(o){
               var players = Array.isArray(tn.squads[o.name]) ? tn.squads[o.name] : [];
@@ -7431,10 +7589,30 @@
         list.innerHTML = html;
       }
       function addMyTeam(){
-        if (!requireTnOwner('edit My Teams')) return;
+        if (!requireTnOwner('edit All Teams')) return;
         var inp = $('mtNewTeam');
         var names = parseNameList(inp ? inp.value : '');
         if (!names.length){ toast('Type or paste team names first — one name per line'); return; }
+        /* Registry guard: while the server registry has not loaded
+           (Firebase still connecting), a typed name could be an
+           existing registry team whose ID has not arrived yet —
+           adding it now could mint a duplicate Team ID. Wait for the
+           registry instead. (With no Firebase connection in play at
+           all there is nothing to wait for, so entry proceeds.) */
+        if (!teamRegLoaded() && (fbConnecting || fbRef)){
+          toast('⏳ Team registry has not loaded from the server yet — wait until the app is connected, then tap Add Team again.');
+          return;
+        }
+        /* A name that exactly matches a registry team — by name in
+           any capitalisation, or by its Team ID typed in full — is
+           re-added under the registry's canonical name, so its
+           original Team ID is reused and no second BB LIONS can ever
+           be created from this box. */
+        names = names.map(function(name){
+          var reg = null;
+          try { reg = resolveRegistryTeam(name); } catch(e){}
+          return reg ? reg.n : name;
+        });
         normalizeMyTeams();
         var added = 0, skipped = 0, firstAdded = null;
         names.forEach(function(name){
@@ -7450,7 +7628,7 @@
            that was typed. */
         if (firstAdded) openTeamPage('mt', firstAdded);
         else if (skipped && names.length === 1) openTeamPage('mt', names[0]);
-        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to My Teams — now add its players');
+        if (added === 1 && skipped === 0) toast('✓ ' + names[0] + ' added to All Teams — now add its players');
         else {
           var msg = '✓ ' + added + (added === 1 ? ' team' : ' teams') + ' added';
           if (skipped) msg += ' — ' + skipped + ' already added, skipped';
@@ -7458,12 +7636,12 @@
         }
       }
       function removeMyTeam(i){
-        if (!requireTnOwner('edit My Teams')) return;
+        if (!requireTnOwner('edit All Teams')) return;
         normalizeMyTeams();
         var name = S.myTeams.teams[i]; if (!name) return;
         var count = Array.isArray(S.myTeams.squads[name]) ? S.myTeams.squads[name].length : 0;
         askVerify('Remove this team?',
-          name + ' and its ' + count + (count === 1 ? ' player' : ' players') + ' will be removed from My Teams. Tournaments keep their own team lists — a tournament that has this team keeps it. This cannot be undone.',
+          name + ' and its ' + count + (count === 1 ? ' player' : ' players') + ' will be removed from All Teams. Tournaments keep their own team lists — a tournament that has this team keeps it. This cannot be undone.',
           function(){
             normalizeMyTeams();
             var idx = S.myTeams.teams.indexOf(name);
@@ -7478,11 +7656,11 @@
             try { normalizeTournament(); inTn = S.tournament.teams.indexOf(name) > -1; } catch(e){}
             if (!inTn){ dropTeamLogo(name); dropNicknamesFor(name, null); }
             if (mtSelectedTeam === name) mtSelectedTeam = null;
-            commit('Team removed', true); toast(name + ' removed from My Teams');
+            commit('Team removed', true); toast(name + ' removed from All Teams');
           });
       }
       function addMyPlayer(teamIdx){
-        if (!requireTnOwner('edit My Teams')) return;
+        if (!requireTnOwner('edit All Teams')) return;
         normalizeMyTeams();
         var team = S.myTeams.teams[teamIdx];
         if (!team) return;
@@ -7506,7 +7684,7 @@
         var again = $('mtPlayerBox'); if (again) { try { again.focus(); } catch(e){} }
       }
       function removeMyPlayer(teamIdx, playerIdx){
-        if (!requireTnOwner('edit My Teams')) return;
+        if (!requireTnOwner('edit All Teams')) return;
         normalizeMyTeams();
         var team = S.myTeams.teams[teamIdx];
         if (!team) return;
@@ -7514,7 +7692,7 @@
         var name = arr[playerIdx];
         if (!name) return;
         askVerify('Remove this player?',
-          name + ' will be removed from ' + team + ' in My Teams. This cannot be undone.',
+          name + ' will be removed from ' + team + ' in All Teams. This cannot be undone.',
           function(){
             normalizeMyTeams();
             var a2 = poolSquad(team);
@@ -9325,7 +9503,7 @@
         window.scrollTo({ top:0, behavior:'smooth' });
       }
       /* ---------- team leadership: Captain / Vice-Captain / Wicket-keeper ----------
-         Every team (in the My Teams pool and in a tournament alike)
+         Every team (in the All Teams pool and in a tournament alike)
          may name a Captain, a Vice-Captain and a Wicket-keeper from
          its own squad. The picks live in the owning store's
          leadership list — an ARRAY of {t, c, vc, wk} entries keyed
@@ -9463,7 +9641,7 @@
         var title = $('tpTitle');
         if (!teamPageCtx || !teamPageCtx.team){
           if (title) title.textContent = 'Team';
-          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Pick a team from My Teams or a tournament\u2019s Teams tab to open its page.</p></div>';
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Pick a team from All Teams or a tournament\u2019s Teams tab to open its page.</p></div>';
           return;
         }
         var team = teamPageCtx.team;
@@ -9499,7 +9677,7 @@
            initials), the name with its (C) / (VC) / (Wk) suffix and
            the jersey number at the right edge. What a name tap does
            follows who is looking: on an EDITABLE page (the owner
-           maintaining the team from My Teams or the Tournament
+           maintaining the team from All Teams or the Tournament
            editor) it opens that player's maintenance panel inline —
            career Matches / Runs / Wickets, the C · VC · Wk pickers,
            the Player ID chip and View Profile — so the whole team
@@ -9509,7 +9687,7 @@
            is nothing to maintain, so the same tap opens the player's
            profile DIRECTLY, exactly like a name tap on the
            scoreboard itself. This holds for teams from BOTH places,
-           My Teams and Tournament: wherever a team page is shown
+           All Teams and Tournament: wherever a team page is shown
            read-only, its player names go straight to the profile. */
         var TP_GROUPS = [['Batter','Batters'],['Wicket-keeper Batter','Wicketkeeping Batters'],['Wicket-keeper','Wicket-keepers'],['All-rounder','All Rounders'],['Bowler','Bowlers'],['','Players']];
         var tpCareer = null;
@@ -9834,7 +10012,7 @@
       }
       /* Logos are stored by team NAME, so one logo serves the team
          wherever it appears; the edit controls sit on two different
-         lists though — src 'mt' indexes the My Teams pool, anything
+         lists though — src 'mt' indexes the All Teams pool, anything
          else indexes the current tournament's teams. */
       function logoTeamName(teamIdx, src){
         if (src === 'mt'){ normalizeMyTeams(); return S.myTeams.teams[teamIdx] || null; }
@@ -12007,7 +12185,7 @@
             else if (el.getAttribute('data-ownlock') === '1'){ el.disabled = false; el.removeAttribute('data-ownlock'); }
           });
         }
-        /* My Teams edits are gated by the same admin account
+        /* All Teams edits are gated by the same admin account
            (requireTnOwner), so its inputs follow the same lock. */
         var mv = $('view-myteams');
         if (mv && !inTnViewer){
@@ -12878,7 +13056,7 @@
         renameLeadershipIn(S.myTeams);
         renameLeadershipIn(S.tournament);
         (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){ renameLeadershipIn(a && a.data); });
-        /* Tournament / My Teams squads (the shared team lists). */
+        /* Tournament / All Teams squads (the shared team lists). */
         if (S.tournament && S.tournament.squads){
           Object.keys(S.tournament.squads).forEach(function(team){ renameSquadArr(team, S.tournament.squads[team], oldName, newName, belongs); });
         }
@@ -16286,7 +16464,7 @@
          XI section (the first eleven of each squad, in squad order)
          and a Bench section for everyone past eleven. A player's
          (c) / (vc) / (wk) suffix comes from the team's leadership
-         picks (tournament store first, then the My Teams pool), and
+         picks (tournament store first, then the All Teams pool), and
          the (wk) suffix also follows a Wicket-keeper profile role.
          The role line uses the reference labels (WK-Batter /
          Allrounder) for the stored profile roles, in small type,
@@ -17147,7 +17325,7 @@
       }
       /* ---------- team registry backfill (migration) ----------
          The mirror of migratePlayerIds() for teams. The registry
-         used to be fed ONLY by the teams currently listed (My Teams
+         used to be fed ONLY by the teams currently listed (All Teams
          pool, the current tournament, the live match's two sides),
          so a team that was removed BEFORE the registry existed — or
          one that now lives only in the match history, an archived
@@ -17314,7 +17492,7 @@
         var el = $('tpList'); if (!el) return;
         var q = (($('tpSearch') && $('tpSearch').value) || '').trim().toLowerCase();
         var other = om.slot === 'A' ? om.teamB : om.teamA;
-        /* The picker offers every team the user keeps — the My Teams
+        /* The picker offers every team the user keeps — the All Teams
            pool plus the current tournament's teams — never one list
            silently standing in for the other. Teams removed earlier
            are offered too, marked as such: they live on in the team
@@ -17368,7 +17546,7 @@
         if (!name){ toast('Type the new team name first'); return; }
         var exists = allKnownTeams().some(function(n){ return n.toLowerCase() === name.toLowerCase(); });
         registerTeam(name); /* a name picked from the suggestions reuses its stored Team ID; a new name is registered with a new one */
-        /* A team created from the match picker joins the My Teams
+        /* A team created from the match picker joins the All Teams
            pool — never a tournament it was not entered into. */
         ensurePoolTeam(name);
         commit('Team entered', true);
@@ -17650,7 +17828,7 @@
       /* Deleting a tournament is permanent and always confirmed
          first. Only the tournament's admin can delete it (an
          unowned tournament can be deleted by a signed-in account,
-         which claims it the same way edits do). My Teams is a
+         which claims it the same way edits do). All Teams is a
          separate pool and is never touched by a tournament delete. */
       function deleteCurrentTournament(){
         if (!requireTnOwner('delete this tournament')) return;
@@ -17658,7 +17836,7 @@
         var tn = S.tournament;
         var label = tn.name || 'Current Tournament';
         askVerify('Delete this tournament?',
-          '“' + label + '” will be permanently deleted — its teams, fixtures, results, points table and statistics go with it. Your My Teams pool is separate and is not touched. This cannot be undone.',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results, points table and statistics go with it. Your All Teams pool is separate and is not touched. This cannot be undone.',
           function(){
             if (tn.id) S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== tn.id; });
             var fresh = deep(freshState().tournament);
@@ -17691,7 +17869,7 @@
         }
         var label = entry.name || d.name || 'Tournament';
         askVerify('Delete this tournament?',
-          '“' + label + '” will be permanently deleted — its teams, fixtures, results and statistics go with it. Your My Teams pool is separate and is not touched. This cannot be undone.',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results and statistics go with it. Your All Teams pool is separate and is not touched. This cannot be undone.',
           function(){
             S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== id; });
             commit('Tournament deleted', true);
