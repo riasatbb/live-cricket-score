@@ -593,6 +593,76 @@
       .tn-panel{display:none;padding:14px}
       .tn-panel.show{display:block}
       .tn-panel .card{box-shadow:none;margin-bottom:12px}
+      /* ---------- tournament tabs: content in the middle ----------
+         Every tab's content is centre-aligned (owner's request):
+         card headings, notes, rows, tables and button rows all sit
+         in the middle of the card instead of hugging the left edge.
+         Structured rows that carry their own layout (points-table
+         team cells, bracket team rows, form inputs) keep just
+         enough of it to stay readable. */
+      #view-tournament .tn-panel .card{text-align:center}
+      #view-tournament .tn-panel .card h2{text-align:center}
+      #view-tournament .tn-panel .note{text-align:center}
+      #view-tournament .tn-panel table{margin-left:auto;margin-right:auto}
+      #view-tournament .tn-panel .rowflex{justify-content:center}
+      #view-tournament .tn-panel .hist-item{flex-direction:column;align-items:center;gap:1px;text-align:center}
+      #view-tournament .tn-panel .match-row{text-align:center}
+      #view-tournament .tn-panel .match-row .rowflex{justify-content:center}
+      #view-tournament .tn-panel .bk-head{justify-content:center}
+      #view-tournament .tn-panel .bk-result,#view-tournament .tn-panel .bk-wait{text-align:center}
+      #view-tournament .tn-panel .fxg-teams{justify-content:center}
+      #view-tournament #tnPanel-home .tn-section h4{text-align:center}
+      #view-tournament .tn-info{text-align:center}
+      #view-tournament .tn-info #tnIdLine .idchip{margin-left:auto;margin-right:auto}
+      /* A match's "TEAM A vs TEAM B" line NEVER wraps: however long
+         the two names are, the fixture / result title stays on one
+         line (it ellipsises rather than spilling to a second line). */
+      .tn-vs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+      .tn-vs .vs{color:var(--muted);font-size:.8em;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 2px}
+      .tn-match-lines{font-size:14.5px;line-height:1.5;margin-top:2px}
+      /* ---------- tournament STATISTICS: Batting / Bowling / Fielding ----------
+         Three coloured sections; tapping one opens its stat
+         categories, tapping a category shows its leaderboard. */
+      .tns-sec{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:var(--surface);overflow:hidden;text-align:left;box-shadow:none}
+      .tns-head{width:100%;display:flex;align-items:center;gap:12px;background:none;border:none;padding:13px 14px;cursor:pointer;color:var(--ink);text-align:left;font:inherit}
+      .tns-head:active{background:var(--surface2)}
+      .tns-ic{flex:none;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1}
+      .tns-sec.bat .tns-ic{background:#e3f4e9}
+      .tns-sec.bowl .tns-ic{background:#e8eff8}
+      .tns-sec.field .tns-ic{background:#fdf0d5}
+      @media (prefers-color-scheme: dark){
+        .tns-sec.bat .tns-ic{background:#173527}
+        .tns-sec.bowl .tns-ic{background:#16283a}
+        .tns-sec.field .tns-ic{background:#3a2c10}
+      }
+      .tns-title{display:block;font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.05}
+      .tns-sec.bat .tns-title{color:#0e6b4f}
+      .tns-sec.bowl .tns-title{color:#175d8f}
+      .tns-sec.field .tns-title{color:#8a6d1a}
+      @media (prefers-color-scheme: dark){
+        .tns-sec.bat .tns-title{color:#7fd6a8}
+        .tns-sec.bowl .tns-title{color:#a8cdf0}
+        .tns-sec.field .tns-title{color:#f2cd6b}
+      }
+      .tns-sub{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+      .tns-chev{margin-left:auto;flex:none;font-size:19px;color:var(--muted);transition:transform .18s ease}
+      .tns-sec.open .tns-chev{transform:rotate(180deg)}
+      .tns-body{border-top:1px solid var(--line);padding:10px 12px 12px}
+      .tns-cats{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:4px}
+      .tns-cat{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:999px;padding:6px 13px;font-size:13.5px;font-weight:700;cursor:pointer;font:inherit;font-size:13.5px}
+      .tns-sec.bat .tns-cat.on{border-color:#0e6b4f;background:#0e6b4f;color:#fff}
+      .tns-sec.bowl .tns-cat.on{border-color:#175d8f;background:#175d8f;color:#fff}
+      .tns-sec.field .tns-cat.on{border-color:#b8860b;background:#b8860b;color:#fff}
+      .tns-tablewrap{margin-top:8px}
+      .tns-table{width:100%;border-collapse:collapse;font-size:14px}
+      .tns-table th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;padding:6px 5px;border-bottom:2px solid var(--line);text-align:center}
+      .tns-table th:first-child,.tns-table td:first-child{text-align:center;width:30px}
+      .tns-table th:nth-child(2),.tns-table td:nth-child(2){text-align:left}
+      .tns-table td{padding:7px 5px;border-bottom:1px solid var(--line);text-align:center;font-variant-numeric:tabular-nums}
+      .tns-table tr:last-child td{border-bottom:none}
+      .tns-table td.val{font-weight:800}
+      .tns-table .howout{display:block}
+      .tns-empty{color:var(--muted);font-size:14px;text-align:center;padding:10px 4px;margin:0}
       .tn-banner{margin:0;padding:0;background:#ffffff;color:#122f57;position:relative;overflow:hidden;display:block;border-bottom:1px solid var(--line)}
       @media (prefers-color-scheme: dark){.tn-banner{background:#10161d;color:#dcebfb}}
       .tn-banner-row{display:flex;align-items:center;gap:16px;padding:18px 16px 16px}
@@ -2179,17 +2249,17 @@
           <div class="tn-panel" id="tnPanel-teams">
             <div class="card">
               <h2>Teams</h2>
-              <div id="tnTeamsGrid"></div>
-              <div class="rowflex names-row" style="margin-top:12px">
+              <div class="rowflex names-row" style="margin-bottom:14px">
                 <textarea id="tnNewTeam" class="grow namebox" rows="1" placeholder="Team names — one per line"></textarea>
                 <button class="btn sm" onclick="addTournamentTeam()">Add Team</button>
               </div>
+              <div id="tnTeamsGrid"></div>
             </div>
           </div>
 
           <!-- MATCHES -->
           <div class="tn-panel" id="tnPanel-matches">
-            <div class="card"><h2>Fixtures</h2><div id="tnFixtures"></div></div>
+            <div class="card"><h2>Matches</h2><div id="tnFixtures"></div></div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Add Fixture</button>
               <div class="fold-body" hidden>
@@ -2215,7 +2285,6 @@
               <div class="rowflex" style="margin-top:12px"><button class="btn gold" onclick="generateRoundRobin()">Generate Fixtures</button></div>
               </div>
             </div>
-            <div class="card"><h2>Match Results</h2><div id="tnMatches"></div></div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Enter a Result Manually</button>
               <div class="fold-body" hidden>
@@ -2258,11 +2327,7 @@
           <!-- STATISTICS -->
           <div class="tn-panel" id="tnPanel-stats">
             <div class="card"><h2>🏆 Tournament Records</h2><div id="tnRecords"></div></div>
-            <div class="grid2">
-              <div class="card"><h2>Most Runs</h2><div id="tnStatBat"></div></div>
-              <div class="card"><h2>Most Wickets</h2><div id="tnStatBowl"></div></div>
-            </div>
-            <div class="card"><h2>More Statistics</h2><div id="tnStatExtra"></div></div>
+            <div id="tnStats"></div>
           </div>
         </div>
       </section>
@@ -2606,7 +2671,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v120';
+      var APP_VERSION = 'v121';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7087,12 +7152,12 @@
         if (!requireTnOwner('remove the knockout bracket')) return;
         normalizeTournament();
         askVerify('Remove the knockout bracket?',
-          'The semi-finals, final and 3rd-place fixtures in the bracket will be removed. Results already saved stay in Match Results. This cannot be undone.',
+          'The semi-finals, final and 3rd-place fixtures in the bracket will be removed. Results already saved stay in the Matches list. This cannot be undone.',
           function(){
             normalizeTournament();
             S.tournament.bracket = null;
             commit('Knockout bracket removed', true);
-            toast('Knockout bracket removed — results already saved stay in Match Results');
+            toast('Knockout bracket removed — results already saved stay in the Matches list');
           });
       }
       function startBracketMatch(id){
@@ -7450,6 +7515,196 @@
         if (bySR) items.push('<div class="hist-item"><span>Best strike rate (30+ balls)</span><b>' + plLink(bySR.team, bySR.name, null, bySR.pid) + ' — ' + (bySR.runs/bySR.balls*100).toFixed(1) + '</b></div>');
         if (byEcon) items.push('<div class="hist-item"><span>Best economy (2+ overs)</span><b>' + plLink(byEcon.team, byEcon.name, null, byEcon.pid) + ' — ' + (byEcon.runs/(byEcon.balls/6)).toFixed(2) + '</b></div>');
         return items.join('');
+      }
+      /* ---------- tournament STATISTICS sections ----------
+         Batting / Bowling / Fielding: three sections. Tapping a
+         section opens its stat categories (Most Runs, Highest
+         Score, Best Batting Average, …); tapping a category shows
+         its leaderboard underneath the chips. Every figure is
+         worked out live from the same matches the other statistics
+         use (saved results plus the match being scored right now),
+         so the tables move ball by ball. Fielding figures are read
+         from the dismissal text recorded on each wicket
+         ("c X b Y", "run out (X)", "st X b Y", "c & b Y") — the
+         only place fielding was ever written down. */
+      var tnStatOpen = '';
+      var tnStatCats = { bat:'runs', bowl:'wkts', field:'total' };
+      function tnSetStatSection(sec){
+        tnStatOpen = (tnStatOpen === sec) ? '' : sec;
+        try { renderTnStats(); } catch(e){}
+      }
+      function tnSetStatCat(sec, cat){
+        tnStatCats[sec] = cat;
+        tnStatOpen = sec;
+        try { renderTnStats(); } catch(e){}
+      }
+      function tnFieldingCredit(map, m, team, name, kind){
+        var nm = String(name || '').trim();
+        if (!nm || nm.indexOf('not recorded') > -1) return;
+        var pid = '';
+        try { pid = entryPlayerId(m, team, nm); } catch(e){}
+        var key = pid || ('nm:' + nm.toLowerCase());
+        if (!map[key]) map[key] = { pid:pid, name:nm, team:team, teams:[team], catches:0, runouts:0, stumpings:0 };
+        var s = map[key];
+        if (s.teams.indexOf(team) === -1) s.teams.push(team);
+        s[kind]++;
+      }
+      function tnStatData(){
+        var bat = {}, bowl = {}, field = {};
+        tournamentStatMatches().forEach(function(m){
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){
+              var bk = b.pid || entryPlayerId(m, inn.battingTeam, b.name);
+              if (!bat[bk]) bat[bk] = { pid:bk, name:b.name, team:inn.battingTeam, teams:[inn.battingTeam], runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, best:0, bestBalls:0, fifties:0, hundreds:0 };
+              var s = bat[bk];
+              if (s.teams.indexOf(inn.battingTeam) === -1) s.teams.push(inn.battingTeam);
+              s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; s.inns++;
+              if (b.out) s.outs++;
+              if (b.runs > s.best){ s.best = b.runs; s.bestBalls = b.balls || 0; }
+              if (b.runs >= 100) s.hundreds++; else if (b.runs >= 50) s.fifties++;
+              var ho = String(b.howOut || ''), mm = null;
+              if ((mm = /^c & b (.+)$/.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
+              else if ((mm = /^c (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
+              else if ((mm = /^run out \((.+)\)$/.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'runouts');
+              else if ((mm = /^st (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'stumpings');
+            });
+            (inn.bowlers || []).forEach(function(b){
+              var wk = b.pid || entryPlayerId(m, inn.bowlingTeam, b.name);
+              if (!bowl[wk]) bowl[wk] = { pid:wk, name:b.name, team:inn.bowlingTeam, teams:[inn.bowlingTeam], balls:0, runs:0, wickets:0, inns:0, bestW:-1, bestR:0, bestBalls:0 };
+              var s = bowl[wk];
+              if (s.teams.indexOf(inn.bowlingTeam) === -1) s.teams.push(inn.bowlingTeam);
+              s.balls += b.balls; s.runs += b.runs; s.wickets += b.wickets; s.inns++;
+              if (b.wickets > s.bestW || (b.wickets === s.bestW && b.runs < s.bestR)){ s.bestW = b.wickets; s.bestR = b.runs; s.bestBalls = b.balls || 0; }
+            });
+          });
+        });
+        function toArr(map){ return Object.keys(map).map(function(k){ return map[k]; }); }
+        var fieldArr = toArr(field);
+        fieldArr.forEach(function(s){ s.total = s.catches + s.runouts + s.stumpings; });
+        return { batting: toArr(bat), bowling: toArr(bowl), fielding: fieldArr };
+      }
+      function tnStatCategories(){
+        function bAve(s){ return s.outs > 0 ? s.runs / s.outs : null; }
+        function bSR(s){ return s.balls > 0 ? s.runs / s.balls * 100 : null; }
+        function econ(s){ return s.balls > 0 ? s.runs / (s.balls / 6) : null; }
+        function f1(v){ return v === null ? '—' : v.toFixed(1); }
+        function f2(v){ return v === null ? '—' : v.toFixed(2); }
+        return {
+          bat: [
+            { id:'runs', label:'Most Runs',
+              list:function(d){ return d.batting.filter(function(s){ return s.inns > 0; }).sort(function(a,b){ return (b.runs - a.runs) || (a.balls - b.balls); }); },
+              head:['Runs','Inn','HS','Ave','SR'],
+              cells:function(s){ return ['<b>' + s.runs + '</b>', s.inns, s.best, f1(bAve(s)), f1(bSR(s))]; } },
+            { id:'hs', label:'Highest Score',
+              list:function(d){ return d.batting.filter(function(s){ return s.inns > 0; }).sort(function(a,b){ return (b.best - a.best) || (a.bestBalls - b.bestBalls); }); },
+              head:['Score','Balls','SR'],
+              cells:function(s){ return ['<b>' + s.best + '</b>', s.bestBalls, s.bestBalls > 0 ? (s.best / s.bestBalls * 100).toFixed(1) : '—']; } },
+            { id:'ave', label:'Best Batting Average',
+              list:function(d){ return d.batting.filter(function(s){ return s.outs > 0; }).sort(function(a,b){ return (bAve(b) - bAve(a)) || (b.runs - a.runs); }); },
+              head:['Ave','Runs','Inn','Out'],
+              cells:function(s){ return ['<b>' + f1(bAve(s)) + '</b>', s.runs, s.inns, s.outs]; } },
+            { id:'sr', label:'Best Strike Rate',
+              list:function(d){ return d.batting.filter(function(s){ return s.balls >= 10; }).sort(function(a,b){ return (bSR(b) - bSR(a)) || (b.runs - a.runs); }); },
+              head:['SR','Runs','Balls'],
+              cells:function(s){ return ['<b>' + f1(bSR(s)) + '</b>', s.runs, s.balls]; } },
+            { id:'fifties', label:'Most Fifties',
+              list:function(d){ return d.batting.filter(function(s){ return s.fifties > 0; }).sort(function(a,b){ return (b.fifties - a.fifties) || (b.hundreds - a.hundreds) || (b.runs - a.runs); }); },
+              head:['50s','100s','Runs'],
+              cells:function(s){ return ['<b>' + s.fifties + '</b>', s.hundreds, s.runs]; } },
+            { id:'hundreds', label:'Most Hundreds',
+              list:function(d){ return d.batting.filter(function(s){ return s.hundreds > 0; }).sort(function(a,b){ return (b.hundreds - a.hundreds) || (b.runs - a.runs); }); },
+              head:['100s','50s','Runs'],
+              cells:function(s){ return ['<b>' + s.hundreds + '</b>', s.fifties, s.runs]; } },
+            { id:'fours', label:'Most Fours',
+              list:function(d){ return d.batting.filter(function(s){ return s.fours > 0; }).sort(function(a,b){ return (b.fours - a.fours) || (b.runs - a.runs); }); },
+              head:['4s','Runs','6s'],
+              cells:function(s){ return ['<b>' + s.fours + '</b>', s.runs, s.sixes]; } },
+            { id:'sixes', label:'Most Sixes',
+              list:function(d){ return d.batting.filter(function(s){ return s.sixes > 0; }).sort(function(a,b){ return (b.sixes - a.sixes) || (b.runs - a.runs); }); },
+              head:['6s','Runs','4s'],
+              cells:function(s){ return ['<b>' + s.sixes + '</b>', s.runs, s.fours]; } }
+          ],
+          bowl: [
+            { id:'wkts', label:'Most Wickets',
+              list:function(d){ return d.bowling.filter(function(s){ return s.inns > 0; }).sort(function(a,b){ return (b.wickets - a.wickets) || (a.runs - b.runs); }); },
+              head:['Wkts','Overs','Runs','Econ'],
+              cells:function(s){ return ['<b>' + s.wickets + '</b>', oversText(s.balls), s.runs, f2(econ(s))]; } },
+            { id:'fig', label:'Best Bowling Figures',
+              list:function(d){ return d.bowling.filter(function(s){ return s.inns > 0 && s.bestW > 0; }).sort(function(a,b){ return (b.bestW - a.bestW) || (a.bestR - b.bestR); }); },
+              head:['Figures','Overs'],
+              cells:function(s){ return ['<b>' + s.bestW + '/' + s.bestR + '</b>', oversText(s.bestBalls)]; } },
+            { id:'bave', label:'Best Bowling Average',
+              list:function(d){ return d.bowling.filter(function(s){ return s.wickets > 0; }).sort(function(a,b){ return (a.runs / a.wickets) - (b.runs / b.wickets) || (b.wickets - a.wickets); }); },
+              head:['Ave','Wkts','Runs'],
+              cells:function(s){ return ['<b>' + (s.runs / s.wickets).toFixed(2) + '</b>', s.wickets, s.runs]; } },
+            { id:'econ', label:'Best Economy',
+              list:function(d){ return d.bowling.filter(function(s){ return s.balls >= 6; }).sort(function(a,b){ return (econ(a) - econ(b)) || (b.balls - a.balls); }); },
+              head:['Econ','Overs','Runs'],
+              cells:function(s){ return ['<b>' + f2(econ(s)) + '</b>', oversText(s.balls), s.runs]; } },
+            { id:'bsr', label:'Best Bowling Strike Rate',
+              list:function(d){ return d.bowling.filter(function(s){ return s.wickets > 0; }).sort(function(a,b){ return (a.balls / a.wickets) - (b.balls / b.wickets) || (b.wickets - a.wickets); }); },
+              head:['SR','Wkts','Overs'],
+              cells:function(s){ return ['<b>' + (s.balls / s.wickets).toFixed(1) + '</b>', s.wickets, oversText(s.balls)]; } }
+          ],
+          field: [
+            { id:'total', label:'Most Dismissals',
+              list:function(d){ return d.fielding.filter(function(s){ return s.total > 0; }).sort(function(a,b){ return (b.total - a.total) || (b.catches - a.catches); }); },
+              head:['Dism','Ct','RO','St'],
+              cells:function(s){ return ['<b>' + s.total + '</b>', s.catches, s.runouts, s.stumpings]; } },
+            { id:'catches', label:'Most Catches',
+              list:function(d){ return d.fielding.filter(function(s){ return s.catches > 0; }).sort(function(a,b){ return (b.catches - a.catches) || (b.total - a.total); }); },
+              head:['Catches','Dism'],
+              cells:function(s){ return ['<b>' + s.catches + '</b>', s.total]; } },
+            { id:'runouts', label:'Most Run Outs',
+              list:function(d){ return d.fielding.filter(function(s){ return s.runouts > 0; }).sort(function(a,b){ return (b.runouts - a.runouts) || (b.total - a.total); }); },
+              head:['Run Outs','Dism'],
+              cells:function(s){ return ['<b>' + s.runouts + '</b>', s.total]; } },
+            { id:'stumpings', label:'Most Stumpings',
+              list:function(d){ return d.fielding.filter(function(s){ return s.stumpings > 0; }).sort(function(a,b){ return (b.stumpings - a.stumpings) || (b.total - a.total); }); },
+              head:['Stumpings','Dism'],
+              cells:function(s){ return ['<b>' + s.stumpings + '</b>', s.total]; } }
+          ]
+        };
+      }
+      function tnStatTableHTML(cat, data){
+        var list = cat.list(data).slice(0, 10);
+        if (!list.length) return '<p class="tns-empty">No figures in this category yet — they build up ball by ball as tournament matches are scored.</p>';
+        var rows = list.map(function(s, i){
+          var cells = cat.cells(s).map(function(c, ci){ return '<td' + (ci === 0 ? ' class="val"' : '') + '>' + c + '</td>'; }).join('');
+          return '<tr><td>' + (i + 1) + '</td><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b><span class="howout">' + esc(s.teams.join(' / ')) + '</span></td>' + cells + '</tr>';
+        }).join('');
+        var head = cat.head.map(function(h){ return '<th>' + h + '</th>'; }).join('');
+        return '<table class="tns-table"><thead><tr><th>#</th><th>Player</th>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      function renderTnStats(){
+        var el = $('tnStats');
+        if (!el) return;
+        var data = tnStatData();
+        var cats = tnStatCategories();
+        var secs = [
+          { id:'bat', icon:'🏏', title:'Batting', sub:'Runs, scores, averages and more' },
+          { id:'bowl', icon:'🎯', title:'Bowling', sub:'Wickets, figures, economy and more' },
+          { id:'field', icon:'🧤', title:'Fielding', sub:'Catches, run outs and stumpings' }
+        ];
+        el.innerHTML = secs.map(function(sec){
+          var open = (tnStatOpen === sec.id);
+          var body = '';
+          if (open){
+            var list = cats[sec.id];
+            var active = null;
+            list.forEach(function(c){ if (c.id === tnStatCats[sec.id]) active = c; });
+            if (!active) active = list[0];
+            body = '<div class="tns-body"><div class="tns-cats">'
+              + list.map(function(c){ return '<button type="button" class="tns-cat' + (c === active ? ' on' : '') + '" onclick="tnSetStatCat(\'' + sec.id + '\',\'' + c.id + '\')">' + esc(c.label) + '</button>'; }).join('')
+              + '</div><div class="tns-tablewrap">' + tnStatTableHTML(active, data) + '</div></div>';
+          }
+          return '<div class="tns-sec ' + sec.id + (open ? ' open' : '') + '">'
+            + '<button type="button" class="tns-head" onclick="tnSetStatSection(\'' + sec.id + '\')" aria-expanded="' + (open ? 'true' : 'false') + '">'
+            + '<span class="tns-ic" aria-hidden="true">' + sec.icon + '</span>'
+            + '<span><span class="tns-title">' + sec.title + '</span><span class="tns-sub">' + esc(sec.sub) + '</span></span>'
+            + '<span class="tns-chev" aria-hidden="true">▾</span></button>'
+            + body + '</div>';
+        }).join('');
       }
       /* ---------- Tournament Records ----------
          The tournament's honours board, worked out from the same
@@ -8949,6 +9204,75 @@
         }
       });
 
+      /* ---------- tournament MATCHES tab: ONE list for every match ----------
+         There is no separate Match Results section any more: the
+         match being scored, the saved results and the fixtures all
+         live in this one list — the live match first, then the
+         completed matches (newest first), then the upcoming
+         fixtures. Every row carries the same status pill the
+         Recent Matches list uses (red In Progress / Completed /
+         Upcoming), and every row's "TEAM A vs TEAM B" title stays
+         on ONE line however long the names are (.tn-vs). */
+      function tnVsTitleHTML(a, b){
+        return '<div class="tn-vs">' + esc(a) + '<span class="vs">vs</span>' + esc(b) + '</div>';
+      }
+      function tnInnLinesHTML(m){
+        return '<div class="tn-match-lines">' + (m.innings || []).map(function(inn){
+          return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>';
+        }).join('') + '</div>';
+      }
+      function tnMatchesListHTML(){
+        var tn = S.tournament;
+        var out = [];
+        /* The match being scored right now. Once its result is
+           filed, the saved result below replaces this row —
+           liveTournamentRecord steps aside for it, so a match
+           never appears twice. */
+        var lv = null;
+        try { lv = liveTournamentRecord(); } catch(e){}
+        if (lv && lv.innings && lv.innings.length){
+          var l0 = lv.innings[0];
+          var liveDone = (S.status === 'finished');
+          out.push('<div class="match-row tap"' + mlTapAttrs('setView(\'scoreboard\')', 'Open the live match') + '>'
+            + mlPill(liveDone ? 'done' : 'live')
+            + tnVsTitleHTML(l0.battingTeam, l0.bowlingTeam)
+            + tnInnLinesHTML(lv)
+            + ((liveDone && lv.innings.length >= 2) ? '<div class="mr-result">' + esc(matchResultText(lv)) + '</div>' : '')
+            + '</div>');
+        }
+        /* Completed matches — the saved results, newest first. */
+        var finResNow = tournamentFinalResult();
+        var finMatchId = finResNow ? finResNow.match.id : null;
+        tn.matches.slice().reverse().forEach(function(m){
+          var inns = m.innings || [];
+          var title = inns.length ? tnVsTitleHTML(inns[0].battingTeam, inns[0].bowlingTeam || ((inns[1] || {}).battingTeam || '')) : '';
+          /* The deciding Final carries its badge; in a
+             bracket-less tournament any saved result can be
+             designated the Final (or un-designated) here, which
+             is what fills the podium on the Home tab. With a
+             bracket, its own Final decides — no marking. */
+          var finBtn = tn.bracket ? '' : (m.stage === 'F'
+            ? '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',false)">Unmark Final</button>'
+            : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
+          out.push('<div class="match-row tap"' + mlTapAttrs('tnResultRowTap(' + fxIdArg(String(m.id)) + ',event)', 'Open match result') + '>'
+            + mlPill('done')
+            + title
+            + tnInnLinesHTML(m)
+            + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === finMatchId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div>'
+            + '<div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>');
+        });
+        /* Upcoming fixtures. */
+        tn.fixtures.forEach(function(f){
+          out.push('<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '>'
+            + mlPill('up')
+            + tnVsTitleHTML(f.teamA, f.teamB)
+            + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '')
+            + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
+            + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>');
+        });
+        return out.length ? out.join('') : '<p class="note">No matches yet — add a fixture and it appears here; finished matches join the same list with their result.</p>';
+      }
+
       function renderTournament(){
         normalizeTournament();
         var tn = S.tournament;
@@ -8997,37 +9321,17 @@
         var sbPts = $('sbPoints'); if (sbPts) sbPts.innerHTML = sbPtsHtml;
         var sbTn = $('sbTournamentName');
         if (sbTn) sbTn.textContent = sbTnLabel;
-        var batStats = battingStatsHTML();
-        var bowlStats = bowlingStatsHTML();
-        var extraStats = extraStatsHTML();
-        $('tnStatBat').innerHTML = batStats;
         if ($('sbStatBat')) $('sbStatBat').innerHTML = sbBatHtml;
-        $('tnStatBowl').innerHTML = bowlStats;
         if ($('sbStatBowl')) $('sbStatBowl').innerHTML = sbBowlHtml;
-        $('tnStatExtra').innerHTML = extraStats;
         if ($('sbStatExtra')) $('sbStatExtra').innerHTML = sbExtraHtml;
+        try { renderTnStats(); } catch(e){}
         var recEl = $('tnRecords'); if (recEl) recEl.innerHTML = tournamentRecordsHTML();
-        $('tnFixtures').innerHTML = tn.fixtures.length
-          ? tn.fixtures.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>'; }).join('')
-          : '<p class="note">No fixtures yet.</p>';
+        $('tnFixtures').innerHTML = tnMatchesListHTML();
         if ($('sbFixtures')) $('sbFixtures').innerHTML = sbFixHtml;
         try { renderFxGen(); } catch(e){}
-        var finResNow = tournamentFinalResult();
-        var finMatchId = finResNow ? finResNow.match.id : null;
-        $('tnMatches').innerHTML = tn.matches.length
-          ? tn.matches.slice().reverse().map(function(m){
-              var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
-              /* The deciding Final carries its badge; in a
-                 bracket-less tournament any saved result can be
-                 designated the Final (or un-designated) here, which
-                 is what fills the podium on the Home tab. With a
-                 bracket, its own Final decides — no marking. */
-              var finBtn = tn.bracket ? '' : (m.stage === 'F'
-                ? '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',false)">Unmark Final</button>'
-                : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
-              return '<div class="match-row tap"' + mlTapAttrs('tnResultRowTap(' + fxIdArg(String(m.id)) + ',event)', 'Open match result') + '>' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === finMatchId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div><div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>';
-            }).join('')
-          : '<p class="note">No results yet — finish a tournament match and its result is added here automatically, or enter a result manually.</p>';
+        /* (The old separate Match Results list is gone: saved
+           results render inside the one Matches list above, built
+           by tnMatchesListHTML.) */
         if ($('sbMatches')) $('sbMatches').innerHTML = sbMatchHtml;
         try { renderSbTeams(); } catch(e){}
         try { renderTnTeamsGallery(); } catch(e){}
