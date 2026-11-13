@@ -581,10 +581,24 @@
       .names-row{align-items:center}
 
       /* ---------- tournament interface (tabbed, like reference) ---------- */
-      .tn-shell{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+      /* Locked tournament header (owner's request): the whole
+         tournament page is a full-height column — the head block
+         (🔙 + the tournament's name + the HOME / TEAMS / MATCHES /
+         POINTS / STATISTICS tab row) never moves, and ONLY the tab
+         panels scroll, inside .tn-body. Same freeze pattern as the
+         viewer Recent Matches page (a fixed column with an inner
+         scroll area), because position:sticky did not hold on the
+         owner's phone. The app's own top bar is hidden on this page
+         in both modes, and main's padding (10px top + 34px bottom)
+         is the 44px taken off the viewport height. */
+      #view-tournament.show{display:flex;flex-direction:column;height:calc(100vh - 44px);height:calc(100dvh - 44px)}
+      #view-tournament .tn-lock-banner{flex:none}
+      .tn-shell{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+      .tn-head{flex:none;background:var(--surface)}
+      .tn-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
       .tn-top{display:flex;align-items:center;gap:10px;padding:12px 14px 6px}
       .tn-back{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center}
-      .tn-top h2{flex:1;text-align:center;margin:0;font-size:20px;font-weight:800;letter-spacing:.01em;border:none;padding:0;text-transform:none;font-family:system-ui,sans-serif}
+      .tn-top h2{flex:1;min-width:0;text-align:center;margin:0;font-size:20px;font-weight:800;letter-spacing:.01em;border:none;padding:0;text-transform:none;font-family:system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .tn-top-spacer{flex:none;width:38px}
       .tn-tabs{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line);margin-top:6px}
       .tn-tab{border:none;background:none;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.06em;padding:12px 2px 10px;text-transform:uppercase;border-bottom:2.5px solid transparent;white-space:nowrap}
@@ -621,8 +635,12 @@
       .tn-vs .vs{color:var(--muted);font-size:.8em;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 2px}
       .tn-match-lines{font-size:14.5px;line-height:1.5;margin-top:2px}
       /* ---------- tournament STATISTICS: Batting / Bowling / Fielding ----------
-         Three coloured sections; tapping one opens its stat
-         categories, tapping a category shows its leaderboard. */
+         Three coloured sections that DRILL IN (owner's rule: a box
+         never expands underneath itself — tapping it goes INTO a
+         new view). Level 1: the three section boxes. Level 2: the
+         tapped section's categories as full-width rows. Level 3:
+         the tapped category's leaderboard on its own. The page's
+         🔙 steps back one level at a time. */
       .tns-sec{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:var(--surface);overflow:hidden;text-align:left;box-shadow:none}
       .tns-head{width:100%;display:flex;align-items:center;gap:12px;background:none;border:none;padding:13px 14px;cursor:pointer;color:var(--ink);text-align:left;font:inherit}
       .tns-head:active{background:var(--surface2)}
@@ -645,15 +663,40 @@
         .tns-sec.field .tns-title{color:#f2cd6b}
       }
       .tns-sub{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
-      .tns-chev{margin-left:auto;flex:none;font-size:19px;color:var(--muted);transition:transform .18s ease}
-      .tns-sec.open .tns-chev{transform:rotate(180deg)}
-      .tns-body{border-top:1px solid var(--line);padding:10px 12px 12px}
-      .tns-cats{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:4px}
-      .tns-cat{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:999px;padding:6px 13px;font-size:13.5px;font-weight:700;cursor:pointer;font:inherit;font-size:13.5px}
-      .tns-sec.bat .tns-cat.on{border-color:#0e6b4f;background:#0e6b4f;color:#fff}
-      .tns-sec.bowl .tns-cat.on{border-color:#175d8f;background:#175d8f;color:#fff}
-      .tns-sec.field .tns-cat.on{border-color:#b8860b;background:#b8860b;color:#fff}
-      .tns-tablewrap{margin-top:8px}
+      .tns-chev{margin-left:auto;flex:none;font-size:22px;line-height:1;color:var(--muted)}
+      /* Level 2 — one section's categories as full-width rows,
+         like the reference app: the section name as a small
+         coloured header, then one tappable row per category. */
+      .tns-list{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;text-align:left;box-shadow:none}
+      .tns-list-head{padding:13px 16px 11px;font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+      .tns-list.bat .tns-list-head{color:#0e6b4f}
+      .tns-list.bowl .tns-list-head{color:#175d8f}
+      .tns-list.field .tns-list-head{color:#8a6d1a}
+      @media (prefers-color-scheme: dark){
+        .tns-list.bat .tns-list-head{color:#7fd6a8}
+        .tns-list.bowl .tns-list-head{color:#a8cdf0}
+        .tns-list.field .tns-list-head{color:#f2cd6b}
+      }
+      .tns-row{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;border-bottom:1px solid var(--line);padding:15px 16px;font:inherit;font-size:16.5px;font-weight:600;color:var(--ink);text-align:left;cursor:pointer}
+      .tns-row:last-child{border-bottom:none}
+      .tns-row:active{background:var(--surface2)}
+      /* Level 3 — one category's leaderboard on its own view:
+         the category name as the heading, its section named small
+         above it, then the table and nothing else. */
+      .tns-detail{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;text-align:left;box-shadow:none;padding:0 0 6px}
+      .tns-detail-head{padding:13px 16px 11px;border-bottom:1px solid var(--line)}
+      .tns-detail-sec{display:block;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+      .tns-detail.bat .tns-detail-sec{color:#0e6b4f}
+      .tns-detail.bowl .tns-detail-sec{color:#175d8f}
+      .tns-detail.field .tns-detail-sec{color:#8a6d1a}
+      @media (prefers-color-scheme: dark){
+        .tns-detail.bat .tns-detail-sec{color:#7fd6a8}
+        .tns-detail.bowl .tns-detail-sec{color:#a8cdf0}
+        .tns-detail.field .tns-detail-sec{color:#f2cd6b}
+      }
+      .tns-detail-name{display:block;font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:700;letter-spacing:.04em;line-height:1.1;margin-top:1px}
+      .tns-detail .tns-table th:first-child,.tns-detail .tns-table td:first-child{padding-left:12px}
+      .tns-detail .tns-table th:last-child,.tns-detail .tns-table td:last-child{padding-right:12px}
       .tns-table{width:100%;border-collapse:collapse;font-size:14px}
       .tns-table th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:800;padding:6px 5px;border-bottom:2px solid var(--line);text-align:center}
       .tns-table th:first-child,.tns-table td:first-child{text-align:center;width:30px}
@@ -2129,9 +2172,13 @@
       <section class="view" id="view-tournament">
         <div class="tn-lock-banner" id="tnLockBanner" role="status"></div>
         <div class="tn-shell">
+          <!-- Locked head: back icon, the tournament's own name and
+               the tab row. It sits outside .tn-body, so it stays on
+               screen for every tab while only the panels scroll. -->
+          <div class="tn-head">
           <div class="tn-top">
             <button type="button" class="tn-back" onclick="tnBack()" aria-label="Back">🔙</button>
-            <h2>Tournament</h2>
+            <h2 id="tnHeadTitle">Tournament</h2>
             <span class="tn-top-spacer" aria-hidden="true"></span>
           </div>
           <nav class="tn-tabs" aria-label="Tournament menu">
@@ -2141,6 +2188,8 @@
             <button type="button" class="tn-tab" data-tntab="points" onclick="setTnTab('points')">Points</button>
             <button type="button" class="tn-tab" data-tntab="stats" onclick="setTnTab('stats')">Statistics</button>
           </nav>
+          </div>
+          <div class="tn-body" id="tnBody">
 
           <!-- HOME -->
           <div class="tn-panel show" id="tnPanel-home" style="padding:0">
@@ -2326,8 +2375,8 @@
 
           <!-- STATISTICS -->
           <div class="tn-panel" id="tnPanel-stats">
-            <div class="card"><h2>🏆 Tournament Records</h2><div id="tnRecords"></div></div>
             <div id="tnStats"></div>
+          </div>
           </div>
         </div>
       </section>
@@ -2671,7 +2720,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v121';
+      var APP_VERSION = 'v122';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7517,26 +7566,47 @@
         return items.join('');
       }
       /* ---------- tournament STATISTICS sections ----------
-         Batting / Bowling / Fielding: three sections. Tapping a
-         section opens its stat categories (Most Runs, Highest
-         Score, Best Batting Average, …); tapping a category shows
-         its leaderboard underneath the chips. Every figure is
-         worked out live from the same matches the other statistics
-         use (saved results plus the match being scored right now),
-         so the tables move ball by ball. Fielding figures are read
-         from the dismissal text recorded on each wicket
-         ("c X b Y", "run out (X)", "st X b Y", "c & b Y") — the
-         only place fielding was ever written down. */
-      var tnStatOpen = '';
-      var tnStatCats = { bat:'runs', bowl:'wkts', field:'total' };
-      function tnSetStatSection(sec){
-        tnStatOpen = (tnStatOpen === sec) ? '' : sec;
+         Batting / Bowling / Fielding: three sections that DRILL
+         IN — the owner's standing rule is that a box never expands
+         underneath itself; tapping it goes INTO a new view.
+         Level 1: the three section boxes. Tapping Batting (say)
+         replaces them with that section's categories as full-width
+         rows (Most Runs, Highest Score, Best Batting Average, …);
+         tapping a category replaces those with that category's
+         leaderboard alone. The tournament page's 🔙 steps back one
+         level at a time (tnBack). Every figure is worked out live
+         from the same matches the other statistics use (saved
+         results plus the match being scored right now), so the
+         tables move ball by ball, and a re-render keeps the level
+         the reader is on. Fielding figures are read from the
+         dismissal text recorded on each wicket ("c X b Y",
+         "run out (X)", "st X b Y", "c & b Y") — the only place
+         fielding was ever written down. */
+      var tnStatView = { sec:'', cat:'' };
+      function tnStatsToTop(){
+        var tb = $('tnBody'); if (tb) tb.scrollTop = 0;
+      }
+      function tnOpenStatSection(sec){
+        tnStatView = { sec: sec, cat: '' };
+        tnStatsToTop();
         try { renderTnStats(); } catch(e){}
       }
-      function tnSetStatCat(sec, cat){
-        tnStatCats[sec] = cat;
-        tnStatOpen = sec;
+      function tnOpenStatCat(sec, cat){
+        tnStatView = { sec: sec, cat: cat };
+        tnStatsToTop();
         try { renderTnStats(); } catch(e){}
+      }
+      /* One step back inside Statistics: category → its section's
+         category rows → the three section boxes. Returns false at
+         the top level, where 🔙 leaves the tournament page as
+         usual. */
+      function tnStatBackStep(){
+        if (tnStatView.cat) tnStatView = { sec: tnStatView.sec, cat: '' };
+        else if (tnStatView.sec) tnStatView = { sec: '', cat: '' };
+        else return false;
+        tnStatsToTop();
+        try { renderTnStats(); } catch(e){}
+        return true;
       }
       function tnFieldingCredit(map, m, team, name, kind){
         var nm = String(name || '').trim();
@@ -7679,87 +7749,64 @@
       function renderTnStats(){
         var el = $('tnStats');
         if (!el) return;
-        var data = tnStatData();
         var cats = tnStatCategories();
         var secs = [
           { id:'bat', icon:'🏏', title:'Batting', sub:'Runs, scores, averages and more' },
           { id:'bowl', icon:'🎯', title:'Bowling', sub:'Wickets, figures, economy and more' },
           { id:'field', icon:'🧤', title:'Fielding', sub:'Catches, run outs and stumpings' }
         ];
-        el.innerHTML = secs.map(function(sec){
-          var open = (tnStatOpen === sec.id);
-          var body = '';
-          if (open){
-            var list = cats[sec.id];
-            var active = null;
-            list.forEach(function(c){ if (c.id === tnStatCats[sec.id]) active = c; });
-            if (!active) active = list[0];
-            body = '<div class="tns-body"><div class="tns-cats">'
-              + list.map(function(c){ return '<button type="button" class="tns-cat' + (c === active ? ' on' : '') + '" onclick="tnSetStatCat(\'' + sec.id + '\',\'' + c.id + '\')">' + esc(c.label) + '</button>'; }).join('')
-              + '</div><div class="tns-tablewrap">' + tnStatTableHTML(active, data) + '</div></div>';
+        function secMeta(id){
+          for (var i = 0; i < secs.length; i++) if (secs[i].id === id) return secs[i];
+          return null;
+        }
+        /* Level 3 — inside one category: its leaderboard alone. */
+        if (tnStatView.sec && tnStatView.cat){
+          var sec3 = secMeta(tnStatView.sec);
+          var cat3 = null;
+          (cats[tnStatView.sec] || []).forEach(function(c){ if (c.id === tnStatView.cat) cat3 = c; });
+          if (sec3 && cat3){
+            el.innerHTML = '<div class="tns-detail ' + sec3.id + '">'
+              + '<div class="tns-detail-head"><span class="tns-detail-sec">' + sec3.title + '</span>'
+              + '<span class="tns-detail-name">' + esc(cat3.label) + '</span></div>'
+              + tnStatTableHTML(cat3, tnStatData())
+              + '</div>';
+            return;
           }
-          return '<div class="tns-sec ' + sec.id + (open ? ' open' : '') + '">'
-            + '<button type="button" class="tns-head" onclick="tnSetStatSection(\'' + sec.id + '\')" aria-expanded="' + (open ? 'true' : 'false') + '">'
+          tnStatView = { sec:'', cat:'' };
+        }
+        /* Level 2 — inside one section: its categories as
+           full-width rows, like the reference app's stats list. */
+        if (tnStatView.sec){
+          var sec2 = secMeta(tnStatView.sec);
+          if (sec2){
+            el.innerHTML = '<div class="tns-list ' + sec2.id + '">'
+              + '<div class="tns-list-head">' + sec2.title + '</div>'
+              + (cats[sec2.id] || []).map(function(c){
+                  return '<button type="button" class="tns-row" onclick="tnOpenStatCat(\'' + sec2.id + '\',\'' + c.id + '\')">' + esc(c.label) + '<span class="tns-chev" aria-hidden="true">›</span></button>';
+                }).join('')
+              + '</div>';
+            return;
+          }
+          tnStatView = { sec:'', cat:'' };
+        }
+        /* Level 1 — the three section boxes. */
+        el.innerHTML = secs.map(function(sec){
+          return '<div class="tns-sec ' + sec.id + '">'
+            + '<button type="button" class="tns-head" onclick="tnOpenStatSection(\'' + sec.id + '\')">'
             + '<span class="tns-ic" aria-hidden="true">' + sec.icon + '</span>'
             + '<span><span class="tns-title">' + sec.title + '</span><span class="tns-sub">' + esc(sec.sub) + '</span></span>'
-            + '<span class="tns-chev" aria-hidden="true">▾</span></button>'
-            + body + '</div>';
+            + '<span class="tns-chev" aria-hidden="true">›</span></button>'
+            + '</div>';
         }).join('');
-      }
-      /* ---------- Tournament Records ----------
-         The tournament's honours board, worked out from the same
-         saved results the statistics use — nothing is stored
-         separately, so a corrected or removed result re-derives
-         every record on the next render. Single-match honours
-         (highest individual score, highest team total, best bowling
-         figures) are read innings by innings; the career honours
-         (most runs / wickets / sixes) come from computePlayerStats,
-         keyed by Player ID exactly like the tables. Manual results
-         carry team scores only, so they can hold the team-total
-         record but never an individual one. */
-      function tournamentRecordsHTML(){
-        normalizeTournament();
-        var hs = null, teamTotal = null, bbf = null;
-        /* Saved results plus the live match (tournamentStatMatches):
-           a record being set right now shows here ball by ball. */
-        tournamentStatMatches().forEach(function(m){
-          (m.innings || []).forEach(function(inn){
-            if (!teamTotal || inn.runs > teamTotal.runs || (inn.runs === teamTotal.runs && inn.wickets < teamTotal.wickets)){
-              teamTotal = { team: inn.battingTeam, vs: inn.bowlingTeam, runs: inn.runs, wickets: inn.wickets, balls: inn.legalBalls || 0 };
-            }
-            (inn.batters || []).forEach(function(b){
-              if (!(b.balls > 0 || b.runs > 0)) return;
-              var better = !hs || b.runs > hs.runs
-                || (b.runs === hs.runs && !b.out && hs.out)
-                || (b.runs === hs.runs && !!b.out === hs.out && b.balls < hs.balls);
-              if (better) hs = { pid: b.pid || entryPlayerId(m, inn.battingTeam, b.name), name: b.name, team: inn.battingTeam, vs: inn.bowlingTeam, runs: b.runs, balls: b.balls || 0, fours: b.fours || 0, sixes: b.sixes || 0, out: !!b.out };
-            });
-            (inn.bowlers || []).forEach(function(b){
-              if (!(b.wickets > 0) || !(b.balls > 0)) return;
-              var better = !bbf || b.wickets > bbf.wickets
-                || (b.wickets === bbf.wickets && (b.runs < bbf.runs || (b.runs === bbf.runs && b.balls < bbf.balls)));
-              if (better) bbf = { pid: b.pid || entryPlayerId(m, inn.bowlingTeam, b.name), name: b.name, team: inn.bowlingTeam, vs: inn.battingTeam, wickets: b.wickets, runs: b.runs, balls: b.balls || 0 };
-            });
-          });
-        });
-        var st = computePlayerStats();
-        var mostRuns = st.batting.length ? st.batting[0] : null;
-        var mostWkts = st.bowling.length ? st.bowling[0] : null;
-        var mostSixes = st.batting.slice().sort(function(a,b){ return (b.sixes - a.sixes) || (b.runs - a.runs); })[0] || null;
-        if (!hs && !teamTotal && !bbf && !mostRuns && !mostWkts) return '<p class="note">No records yet — records appear here as tournament matches are scored.</p>';
-        function ctx(main, extra){ return '<span class="rec-ctx">' + esc(main) + (extra ? ' · ' + esc(extra) : '') + '</span>'; }
-        var items = [];
-        if (hs) items.push('<div class="hist-item"><span>Highest score in a match' + ctx(hs.team + ' vs ' + hs.vs, hs.balls + (hs.balls === 1 ? ' ball' : ' balls') + ' · ' + hs.fours + '×4 · ' + hs.sixes + '×6') + '</span><b>' + plLink(hs.team, hs.name, null, hs.pid) + ' — ' + hs.runs + (hs.out ? '' : '*') + '</b></div>');
-        if (teamTotal) items.push('<div class="hist-item"><span>Highest team total' + ctx('vs ' + teamTotal.vs, oversText(teamTotal.balls) + ' overs') + '</span><b>' + esc(teamTotal.team) + ' — ' + teamTotal.runs + '/' + teamTotal.wickets + '</b></div>');
-        if (bbf) items.push('<div class="hist-item"><span>Best bowling figures' + ctx(bbf.team + ' vs ' + bbf.vs, oversText(bbf.balls) + ' overs') + '</span><b>' + plLink(bbf.team, bbf.name, null, bbf.pid) + ' — ' + bbf.wickets + '/' + bbf.runs + '</b></div>');
-        if (mostRuns && mostRuns.runs > 0) items.push('<div class="hist-item"><span>Most runs' + ctx(mostRuns.teams.join(' / '), mostRuns.inns + (mostRuns.inns === 1 ? ' innings' : ' innings')) + '</span><b>' + plLink(mostRuns.team, mostRuns.name, null, mostRuns.pid) + ' — ' + mostRuns.runs + '</b></div>');
-        if (mostWkts && mostWkts.wickets > 0) items.push('<div class="hist-item"><span>Most wickets' + ctx(mostWkts.teams.join(' / '), mostWkts.inns + (mostWkts.inns === 1 ? ' innings' : ' innings')) + '</span><b>' + plLink(mostWkts.team, mostWkts.name, null, mostWkts.pid) + ' — ' + mostWkts.wickets + '</b></div>');
-        if (mostSixes && mostSixes.sixes > 0) items.push('<div class="hist-item"><span>Most sixes' + ctx(mostSixes.teams.join(' / ')) + '</span><b>' + plLink(mostSixes.team, mostSixes.name, null, mostSixes.pid) + ' — ' + mostSixes.sixes + '</b></div>');
-        return items.length ? items.join('') : '<p class="note">No records yet — records appear here as tournament matches are scored.</p>';
       }
       var currentTnTab = 'home';
       function setTnTab(tab){
+        var prevTab = currentTnTab;
         currentTnTab = tab;
+        /* Leaving Statistics for another tab also leaves any
+           drilled-in stat view: coming back to Statistics starts
+           at the three section boxes again. */
+        if (tab !== prevTab && prevTab === 'stats'){ tnStatView = { sec:'', cat:'' }; try { renderTnStats(); } catch(e){} }
         ['home','teams','matches','points','stats'].forEach(function(t){
           var p = $('tnPanel-' + t); if (p) p.classList.toggle('show', t === tab);
         });
@@ -7770,6 +7817,9 @@
         if (navInitDone && !navFromPop && currentViewName === 'tournament'){
           try { history.pushState(navStateFor('tournament'), '', '#tournament'); } catch(e){}
         }
+        /* The head is locked and only .tn-body scrolls, so a tab
+           switch starts the new tab at its top there. */
+        var tb = $('tnBody'); if (tb) tb.scrollTop = 0;
         window.scrollTo({ top:0, behavior:'smooth' });
       }
       /* ---------- team leadership: Captain / Vice-Captain / Wicket-keeper ----------
@@ -8377,6 +8427,10 @@
         var displayName = (tn.name && tn.name.trim()) ? tn.name.trim() : 'Tournament';
         var banner = $('tnBannerTitle'); if (banner) banner.innerHTML = bannerTitleHTML(displayName);
         var title = $('tnTitle'); if (title) title.textContent = displayName;
+        /* The locked page head carries the tournament's own name
+           (not the word "Tournament") on every tab, like the
+           reference app — it updates the moment the name does. */
+        var headTitle = $('tnHeadTitle'); if (headTitle) headTitle.textContent = displayName;
         var venueLine = $('tnVenueLine'); if (venueLine) venueLine.textContent = (tn.venue && tn.venue.trim()) ? tn.venue.trim() : '';
         var datesLine = $('tnDatesLine'); if (datesLine) datesLine.textContent = (tn.dates && tn.dates.trim()) ? tn.dates.trim() : '';
         var meta = $('tnMetaLine');
@@ -8464,6 +8518,10 @@
          anyone else goes back to the Tournaments list. There is no
          "Back to …" text bar on this page any more. */
       function tnBack(){
+        /* Inside a drilled-in Statistics view, 🔙 steps back one
+           level (category → section → the three boxes) instead of
+           leaving the tournament page. */
+        if (currentTnTab === 'stats' && tnStatBackStep()) return;
         if (document.body.classList.contains('viewer-inpage') || document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')){
           closeTournamentViewerInPage();
         } else {
@@ -9325,7 +9383,6 @@
         if ($('sbStatBowl')) $('sbStatBowl').innerHTML = sbBowlHtml;
         if ($('sbStatExtra')) $('sbStatExtra').innerHTML = sbExtraHtml;
         try { renderTnStats(); } catch(e){}
-        var recEl = $('tnRecords'); if (recEl) recEl.innerHTML = tournamentRecordsHTML();
         $('tnFixtures').innerHTML = tnMatchesListHTML();
         if ($('sbFixtures')) $('sbFixtures').innerHTML = sbFixHtml;
         try { renderFxGen(); } catch(e){}
