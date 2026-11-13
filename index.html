@@ -2763,7 +2763,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v127';
+      var APP_VERSION = 'v130';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3283,6 +3283,35 @@
       /* ---------- helpers ---------- */
       function $(id){ return document.getElementById(id); }
       function oversText(balls){ return Math.floor(balls/6) + '.' + (balls%6); }
+      /* Shared singular / plural + sentence helpers (owner's rule,
+         maintained EVERYWHERE — app, PDFs and the share JPG):
+         1 run / 2 runs, 1 wkt / 3 wkts, 1 wicket / 2 wickets,
+         1 ball / 2 balls, 1 over / 2 overs — and a full sentence
+         always ends with a '.'. Every result / status / figure
+         string is built with these, never a hardcoded plural.
+         fixPlurals also repairs result text recorded before this
+         rule existed (e.g. a stored "won by 1 runs"), and
+         fixResultText additionally closes the sentence. */
+      function plural(n, one, many){ var v = Number(n); return n + ' ' + (v === 1 ? one : many); }
+      function runW(n){ return plural(n, 'run', 'runs'); }
+      function wktW(n){ return plural(n, 'wkt', 'wkts'); }
+      function wicketW(n){ return plural(n, 'wicket', 'wickets'); }
+      function ballW(n){ return plural(n, 'ball', 'balls'); }
+      function overW(n){ return plural(n, 'over', 'overs'); }
+      function asSentence(s){
+        s = String(s == null ? '' : s).trim();
+        if (!s) return s;
+        if (/[.!?]$/.test(s)) return s;
+        if (s.slice(-2) === '🏆'){ var base = s.slice(0, -2).replace(/\s+$/, ''); return /[.!?]$/.test(base) ? s : base + '. 🏆'; }
+        return s + '.';
+      }
+      function fixPlurals(s){
+        return String(s == null ? '' : s)
+          .replace(/\b1 runs\b/g, '1 run').replace(/\b1 wickets\b/g, '1 wicket')
+          .replace(/\b1 wkts\b/g, '1 wkt').replace(/\b1 balls\b/g, '1 ball')
+          .replace(/\b1 overs\b/g, '1 over');
+      }
+      function fixResultText(s){ return asSentence(fixPlurals(s)); }
       function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
       function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2400); }
 
@@ -4597,7 +4626,7 @@
         });
       }
       function bowlerDetail(inn, name){
-        for (var i=0;i<inn.bowlers.length;i++){ var b=inn.bowlers[i]; if (b.name===name) return b.balls>0 ? (oversText(b.balls)+' ov • '+b.runs+' runs • '+b.wickets+' wkt') : 'Yet to bowl'; }
+        for (var i=0;i<inn.bowlers.length;i++){ var b=inn.bowlers[i]; if (b.name===name) return b.balls>0 ? (oversText(b.balls)+' ov • '+runW(b.runs)+' • '+wktW(b.wickets)) : 'Yet to bowl'; }
         return 'Yet to bowl';
       }
       function batterDetail(inn, name){
@@ -4849,7 +4878,7 @@
         if (!bowl || !bowl.name || isPlaceholderName(bowl.name)) return;
         if (wktsBefore < 5 && bowl.wickets >= 5){
           pushMilestone(inn, 'fivefor', bowl.name, inn.bowlingTeam,
-            bowl.name + ' completes a FIVE-WICKET HAUL! ' + bowl.wickets + ' wickets in the innings. 🎉',
+            bowl.name + ' completes a FIVE-WICKET HAUL! ' + wicketW(bowl.wickets) + ' in the innings. 🎉',
             legalBall);
         }
         /* Hat-trick: this bowler's last three balls that count —
@@ -5066,8 +5095,8 @@
           + (S.status === 'inningsBreak' ? ' — Innings Break' : (S.status === 'finished' ? ' — Match Finished' : ''));
         $('mcScore').textContent = inn.runs + '-' + inn.wickets;
         var status = '';
-        if (S.status === 'finished' && S.resultText) status = S.resultText;
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — Target ' + target();
+        if (S.status === 'finished' && S.resultText) status = fixResultText(S.resultText);
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — Target ' + target() + '.';
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, bl = effMaxBalls() - inn.legalBalls;
           if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(bl) ? ' in ' + bl + (bl === 1 ? ' ball' : ' balls') : '') + '.';
@@ -5540,7 +5569,7 @@
            dropdowns, and only then does the innings-start line appear. */
         clearPlayerInputs();
         syncPlayersFromInputs();
-        $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + S.oversLimit + ' overs';
+        $('matchStatusText').textContent = 'Match live — ' + S.teamA + ' vs ' + S.teamB + ' • ' + overW(S.oversLimit);
         /* The fixture this match was started from leaves the fixture
            list in THIS commit: from the first synced state onward the
            match exists exactly once — as the live match — and never
@@ -5694,10 +5723,10 @@
         S.status='finished';
         var inn=S.current, t=target(), txt='';
         if (S.inningsNo===2 && t){
-          if (inn.runs >= t){ var wk=wicketsLimit()-inn.wickets; txt = inn.battingTeam + ' won by ' + wk + ' wickets 🏆'; }
-          else if (inn.runs === t-1){ txt = 'Match drawn / tied'; }
-          else { txt = S.prevInnings.battingTeam + ' won by ' + ((t-1)-inn.runs) + ' runs 🏆'; }
-        } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets; }
+          if (inn.runs >= t){ var wk=wicketsLimit()-inn.wickets; txt = inn.battingTeam + ' won by ' + wicketW(wk) + '. 🏆'; }
+          else if (inn.runs === t-1){ txt = 'Match drawn / tied.'; }
+          else { txt = S.prevInnings.battingTeam + ' won by ' + runW((t-1)-inn.runs) + '. 🏆'; }
+        } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets + '.'; }
         S.resultText = txt;
         if (auto){
           /* The last ball ended the play — but the match is NOT
@@ -5835,9 +5864,9 @@
           var margin = (winner === so2.battingTeam)
             ? ((2 - so2.wickets) + ((2 - so2.wickets) === 1 ? ' wicket' : ' wickets'))
             : ((so1.runs - so2.runs) + ((so1.runs - so2.runs) === 1 ? ' run' : ' runs'));
-          so.resultText = winner + ' won the Super Over by ' + margin + ' (' + scoreStr + ')';
+          so.resultText = winner + ' won the Super Over by ' + margin + ' (' + scoreStr + ').';
         } else {
-          so.resultText = 'Super Over tied (' + scoreStr + ')';
+          so.resultText = 'Super Over tied (' + scoreStr + ').';
         }
         so.winner = winner;
         so.status = 'finished';
@@ -5855,7 +5884,7 @@
         S.awaitingFinish = false;
         S.resultText = winner
           ? ('Match tied — ' + so.resultText + ' 🏆')
-          : 'Match tied — the Super Over was tied too';
+          : 'Match tied — the Super Over was tied too.';
         commit(auto ? 'Super Over finished: ' + so.resultText : so.resultText);
         try { archiveFinishedMatch(); } catch(e){}
         /* Settling the tie completes a tournament match too: its
@@ -5873,7 +5902,7 @@
           S.current = deep(so.mainCurr);
           S.inningsNo = 2;
           S.status = 'finished';
-          S.resultText = 'Match drawn / tied';
+          S.resultText = 'Match drawn / tied.';
           if (so.attempts && so.attempts.length){
             var last = so.attempts[so.attempts.length - 1];
             S.superOver = { id: last.id, active: false, status: 'finished', batFirst: so.batFirst || '', innings: deep(last.innings || []), winner: '', resultText: last.resultText || '', attempts: so.attempts.slice(0, -1) };
@@ -5905,7 +5934,7 @@
           }).join('');
           wrap.innerHTML = '<label>⚡ Super Over</label>'
             + '<div class="so-lines">' + lines + '</div>'
-            + (so.resultText ? '<p class="note">' + esc(so.resultText) + '</p>' : '')
+            + (so.resultText ? '<p class="note">' + esc(fixResultText(so.resultText)) + '</p>' : '')
             + '<div class="rowflex" style="margin-top:8px">' + superOverIdChipHTML(so)
             + (!so.winner && mainMatchTied() ? '<button type="button" class="btn sm" onclick="openSuperOverModal()">Play Another Super Over</button>' : '')
             + '</div>';
@@ -5934,7 +5963,7 @@
             html += '<p style="margin:' + (i ? '12px 0 0' : '0') + '"><b>' + esc(inn.battingTeam) + '</b> — ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' overs)</p>'
               + battingTableHTML(inn) + '<div class="divider"></div>' + bowlingTableHTML(inn);
           });
-          if (so.resultText) html += '<p style="margin:10px 0 0"><b>' + esc(so.resultText) + '</b></p>';
+          if (so.resultText) html += '<p style="margin:10px 0 0"><b>' + esc(fixResultText(so.resultText)) + '</b></p>';
         }
         html += '<div style="margin-top:10px">' + superOverIdChipHTML(so) + '</div>';
         return html;
@@ -6097,7 +6126,7 @@
         cancelWicket();
         S.abandoned = true;
         S.status = 'finished';
-        S.resultText = 'Match abandoned' + (reason ? ' — ' + reason : '');
+        S.resultText = asSentence('Match abandoned' + (reason ? ' — ' + reason : ''));
         pushFeedEvent(S.current, 'note', '', 'Match abandoned' + (reason ? ' — ' + reason : '') + '.');
         closeMoreModal();
         commit('Match abandoned');
@@ -6213,7 +6242,7 @@
         S.dlOvers = (typeof S.oversLimit === 'number' && no < S.oversLimit) ? no : null;
         pushFeedEvent(S.current, 'note', '', 'D/L: target revised — ' + S.current.battingTeam + ' need ' + nt + (nt === 1 ? ' run' : ' runs') + ' in ' + no + (no === 1 ? ' over' : ' overs') + '.');
         closeMoreModal();
-        commit('D/L target applied: ' + nt + ' in ' + no + ' overs');
+        commit('D/L target applied: ' + nt + ' in ' + overW(no));
         checkInningsEnd(); /* fewer overs (or a lower target) can end the match right here */
       }
 
@@ -6223,7 +6252,7 @@
         if (matchFinishedGuard()) return;
         if (S.inningsNo !== 2 || !S.prevInnings){ toast('There is no target to change yet — a target exists only in the 2nd innings'); return; }
         var how = (typeof S.dlTarget === 'number' && S.dlTarget > 0) ? 'set by D/L'
-          : ((typeof S.targetOverride === 'number' && S.targetOverride > 0) ? 'changed earlier' : '1st innings ' + S.prevInnings.runs + ' runs + 1');
+          : ((typeof S.targetOverride === 'number' && S.targetOverride > 0) ? 'changed earlier' : '1st innings ' + runW(S.prevInnings.runs) + ' + 1');
         openMoreModal('Change Target',
           'Sets a new target for the chase. Everything that reads the target — the “needs …” line, Target and required rate on both outputs and the overlay — follows the new number.',
           '<p class="note" style="margin:0 0 10px">Current target: <b>' + target() + '</b> (' + how + '). ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + '.</p>'
@@ -6267,7 +6296,7 @@
         if (S.dlOvers && S.dlOvers >= ov) S.dlOvers = null; /* a D/L shortening cannot exceed the new format */
         pushFeedEvent(S.current, 'note', '', 'Match format: ' + ov + (ov === 1 ? ' over' : ' overs') + ' per innings, all out at ' + wk + (wk === 1 ? ' wicket' : ' wickets') + '.');
         closeMoreModal();
-        commit('Format updated: ' + ov + ' overs, ' + wk + ' wickets');
+        commit('Format updated: ' + overW(ov) + ', ' + wicketW(wk));
         checkInningsEnd(); /* the new limit may already be reached */
       }
 
@@ -6722,13 +6751,13 @@
         return 'Tie';
       }
       function matchResultText(match){
-        if (match.resultText) return match.resultText;
-        if (match.superOver && match.superOver.winner && match.superOver.resultText) return 'Match tied — ' + match.superOver.resultText;
+        if (match.resultText) return fixResultText(match.resultText);
+        if (match.superOver && match.superOver.winner && match.superOver.resultText) return asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
         if (!match.innings || match.innings.length < 2) return '';
         var a = match.innings[0], b = match.innings[1];
-        if (b.runs > a.runs) return b.battingTeam + ' won by ' + ((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + ' wickets';
-        if (a.runs > b.runs) return a.battingTeam + ' won by ' + (a.runs - b.runs) + ' runs';
-        return 'Match tied';
+        if (b.runs > a.runs) return b.battingTeam + ' won by ' + wicketW((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + '.';
+        if (a.runs > b.runs) return a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
+        return 'Match tied.';
       }
       /* The silent core of saving this match's result into the
          tournament: builds the result record from the live state and
@@ -6843,7 +6872,7 @@
         if (oversPartBad(ovA) || oversPartBad(ovB)){ toast('Overs must be like 18.5 — the part after the dot is balls bowled, so it can only be 0 to 6'); return; }
         var bA = parseOversToBalls(ovA, lim*6);
         var bB = parseOversToBalls(ovB, lim*6);
-        if (bA < 0 || bB < 0 || bA > lim*6 || bB > lim*6){ toast('Overs cannot be more than the match limit of ' + lim + ' overs'); return; }
+        if (bA < 0 || bB < 0 || bA > lim*6 || bB > lim*6){ toast('Overs cannot be more than the match limit of ' + overW(lim)); return; }
         var innA = blankInnings(tA, tB); innA.runs = rA; innA.wickets = wA; innA.legalBalls = bA;
         var innB = blankInnings(tB, tA); innB.runs = rB; innB.wickets = wB; innB.legalBalls = bB;
         var stageEl = $('mrStage');
@@ -9227,24 +9256,24 @@
         if (liveMatchTombstoned(S)){
           return '<div class="ml-row">'
             + mlLabel([], false)
-            + '<div class="ml-status muted">No match is being scored right now</div>'
+            + '<div class="ml-status muted">No match is being scored right now.</div>'
             + '</div>';
         }
         var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
         var t = target();
         var status = '', statusMuted = false;
-        if (S.abandoned) status = String(S.resultText || 'Match abandoned').replace(/🏆/g, '').trim();
-        else if (finished) status = String(S.resultText || 'Match finished').replace(/🏆/g, '').trim();
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '');
-        else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet' : 'No match is being scored right now'; statusMuted = true; }
+        if (S.abandoned) status = fixResultText(String(S.resultText || 'Match abandoned').replace(/🏆/g, ''));
+        else if (finished) status = fixResultText(String(S.resultText || 'Match finished').replace(/🏆/g, ''));
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '') + '.';
+        else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet.' : 'No match is being scored right now.'; statusMuted = true; }
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
           status = need > 0
-            ? inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
-            : inn.battingTeam + ' have reached the target of ' + t;
+            ? inn.battingTeam + ' needs ' + runW(need) + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballW(ballsLeft) : '') + '.'
+            : inn.battingTeam + ' have reached the target of ' + t + '.';
         }
         else if (S.tossInfo) status = S.tossInfo;
-        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam;
+        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
         var lines = '';
         if (S.prevInnings){
           lines += mlInnLine(S.prevInnings, true);
@@ -9338,10 +9367,10 @@
         var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
         if (!lines && (slice.teamA || slice.teamB)) lines = mlTeamLine(slice.teamA || '') + (slice.teamB ? mlTeamLine(slice.teamB) : '');
         var status = '';
-        if (slice.status === 'finished' && slice.awaitingFinish) status = 'Play over — the scorer is completing this match';
-        else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress';
-        else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting';
-        else status = 'Match not started yet';
+        if (slice.status === 'finished' && slice.awaitingFinish) status = 'Play over — the scorer is completing this match.';
+        else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress.';
+        else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting.';
+        else status = 'Match not started yet.';
         var tnName = slice.matchKind === 'tournament' ? ((S.tournament && S.tournament.name) || '') : '';
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
         return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
@@ -9878,13 +9907,13 @@
           if (teamBat.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Batting</b></p>' + teamBat.map(function(s){
               var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
-              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + s.runs + ' runs • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
+              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + runW(s.runs) + ' • SR ' + sr + ' • ' + s.fours + '×4, ' + s.sixes + '×6</b></div>';
             }).join(''));
           }
           if (teamBowl.length){
             sParts.push('<p class="note" style="margin:12px 0 4px"><b>Bowling</b></p>' + teamBowl.map(function(s){
               var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
-              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + s.wickets + ' wkts • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
+              return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + wktW(s.wickets) + ' • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
             }).join(''));
           }
           if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet — statistics build up from matches saved to the tournament.</p>');
@@ -11324,7 +11353,7 @@
         }
         var label = (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2');
         askVerify('Delete this match from history?',
-          label + (e.resultText ? ' — ' + String(e.resultText).replace(/ 🏆/g, '') : '')
+          label + (e.resultText ? ' — ' + fixPlurals(String(e.resultText).replace(/ 🏆/g, '')).replace(/\.$/, '') : '')
           + '. It will be removed from the permanent history in Firebase and from this device. If it was also saved as a tournament result, that result is removed too, so the points table and statistics stay correct. This cannot be undone.',
           function(){ doDeleteHistoryMatch(id); });
       }
@@ -11935,7 +11964,7 @@
             var bowlLine = rw.bowl
               ? '🎯 ' + rw.bowl.wickets + '/' + rw.bowl.runs + ' (' + oversText(rw.bowl.balls) + ' ov)'
               : '🎯 Did not bowl';
-            var res = m.live ? (m.resultText ? String(m.resultText).replace(/ 🏆/g, '') : '● Live now') : (m.resultText ? String(m.resultText).replace(/ 🏆/g, '') : matchResultText({ innings: m.innings, wicketsLimit: m.wicketsLimit, resultText: '' }));
+            var res = m.live ? (m.resultText ? fixResultText(String(m.resultText).replace(/ 🏆/g, '')) : '● Live now') : (m.resultText ? fixResultText(String(m.resultText).replace(/ 🏆/g, '')) : matchResultText({ innings: m.innings, wicketsLimit: m.wicketsLimit, resultText: '' }));
             return '<button type="button" class="prof-match" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">'
               + '<span class="pm-top"><span>' + esc((m.teamA || 'Team 1') + ' vs ' + (m.teamB || 'Team 2')) + '</span><span class="note">' + esc(date) + '</span></span>'
               + '<span class="pm-line" style="display:block">' + esc(batLine) + ' &nbsp;•&nbsp; ' + esc(bowlLine) + '</span>'
@@ -12405,13 +12434,13 @@
         var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
         var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
         var res = e.live
-          ? (e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : '● Match in progress')
-          : (e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
+          ? (e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : '● Match in progress.')
+          : (e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
         var potm = e.potmName
           ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
           : (!e.live && !e.abandoned ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: Not Decided Yet</div>' : '');
         var soLine = (e.superOver && e.superOver.id)
-          ? '<div class="note" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>⚡ Super Over: ' + esc(e.superOver.resultText || '') + '</span>' + superOverIdChipHTML(e.superOver) + '</div>'
+          ? '<div class="note" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>⚡ Super Over: ' + esc(fixResultText(e.superOver.resultText || '')) + '</span>' + superOverIdChipHTML(e.superOver) + '</div>'
           : '';
         var head = '<div class="hist-match-head"><span>' + esc([e.tournamentName, e.venue].filter(Boolean).join(' • ') || 'Match') + '</span><span class="note">' + esc(date) + (e.live ? ' • <b style="color:var(--red)">● LIVE</b>' : '') + '</span></div>';
         var canManage = !e.live && histEntryDeletable(e);
@@ -12476,11 +12505,11 @@
           return;
         }
         function resOf(e){
-          if (e.live) return e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : 'Match in progress';
-          if (e.abandoned) return 'Match abandoned';
-          var r = e.resultText ? String(e.resultText).replace(/ 🏆/g, '') : '';
+          if (e.live) return e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : 'Match in progress.';
+          if (e.abandoned) return 'Match abandoned.';
+          var r = e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : '';
           if (!r){ try { r = matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }); } catch(err){} }
-          return r || 'No result recorded';
+          return r || 'No result recorded.';
         }
         function dateOf(e){
           if (e.matchDate) return e.matchDate + (e.matchTime ? ' ' + e.matchTime : '');
@@ -12973,7 +13002,7 @@
           d.text(mrFit(String(S.tournament.name).toUpperCase(), 9, true, 230), RX, 30, 2, 9, MRC.white, 'r', 1);
         d.text('Full Scorecard', MX, 64, 2, 25, MRC.white, 'l');
         d.text(mrFit(teamA + '  vs  ' + teamB, 11.5, true, CW), MX, 88, 2, 11.5, MRC.onDark, 'l');
-        var meta = [S.venue || '', when, [S.matchFormat || '', S.ballType || '', S.oversLimit ? S.oversLimit + ' overs' : ''].filter(Boolean).join(' ')].filter(Boolean).join('   |   ');
+        var meta = [S.venue || '', when, [S.matchFormat || '', S.ballType || '', S.oversLimit ? overW(S.oversLimit) : ''].filter(Boolean).join(' ')].filter(Boolean).join('   |   ');
         if (meta) d.text(mrFit(meta, 8.5, false, CW), MX, 106, 1, 8.5, MRC.onDarkDim, 'l');
         if (S.tossInfo) d.text(mrFit('Toss: ' + S.tossInfo, 8.5, false, CW), MX, 122, 3, 8.5, MRC.onDarkDim, 'l');
         d.y = 156;
@@ -13013,7 +13042,7 @@
           d.y += bh + 10;
           if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText){
             d.need(16);
-            d.text('Super Over: ' + S.superOver.resultText, MX + CW / 2, d.y + 10, 3, 9.5, MRC.muted, 'c');
+            d.text('Super Over: ' + fixResultText(S.superOver.resultText), MX + CW / 2, d.y + 10, 3, 9.5, MRC.muted, 'c');
             d.y += 20;
           }
         } else if (!finished && inns.length){
@@ -13024,11 +13053,11 @@
               var needR = (inns[0].runs || 0) + 1 - (cur.runs || 0);
               var ballsLeft = (S.oversLimit || 0) * 6 - (cur.legalBalls || 0);
               var wktsLeft = (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10) - (cur.wickets || 0);
-              if (needR > 0) liveTxt = (cur.battingTeam || 'Team') + ' need ' + needR + (needR === 1 ? ' run' : ' runs') + ' to win'
-                + (ballsLeft > 0 ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
-                + (wktsLeft > 0 ? ' with ' + wktsLeft + (wktsLeft === 1 ? ' wicket' : ' wickets') + ' in hand' : '');
+              if (needR > 0) liveTxt = (cur.battingTeam || 'Team') + ' needs ' + runW(needR) + ' to win'
+                + (ballsLeft > 0 ? ' in ' + ballW(ballsLeft) : '')
+                + (wktsLeft > 0 ? ' with ' + wicketW(wktsLeft) + ' in hand' : '') + '.';
             } else {
-              liveTxt = (cur.battingTeam || 'Team') + '  ' + (cur.runs || 0) + '/' + (cur.wickets || 0) + ' (' + oversText(cur.legalBalls || 0) + ' overs) - innings in progress';
+              liveTxt = (cur.battingTeam || 'Team') + '  ' + (cur.runs || 0) + '/' + (cur.wickets || 0) + ' (' + oversText(cur.legalBalls || 0) + ' overs) - innings in progress.';
             }
           } catch(e){ liveTxt = ''; }
           if (liveTxt){
@@ -13461,7 +13490,7 @@
         d.y += bh + 10;
         if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText){
           d.need(16);
-          d.text('Super Over: ' + S.superOver.resultText, MX + CW / 2, d.y + 10, 3, 9.5, MRC.muted, 'c');
+          d.text('Super Over: ' + fixPlurals(S.superOver.resultText), MX + CW / 2, d.y + 10, 3, 9.5, MRC.muted, 'c');
           d.y += 20;
         }
         if (S.potmName){
@@ -13810,7 +13839,7 @@
         meas.font = '700 46px ' + COND;
         var resLines = mcWrap(meas, result.toUpperCase(), CW - 60, 2);
         var bannerH = resLines.length * 54 + 40;
-        var soText = (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) ? '⚡ Super Over: ' + S.superOver.resultText : '';
+        var soText = (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) ? '⚡ Super Over: ' + fixPlurals(S.superOver.resultText) : '';
         var H = 186 + inns.length * 248 + bannerH + (soText ? 46 : 0) + 118 + 30;
         var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
         var c = cv.getContext('2d');
@@ -14048,23 +14077,24 @@
           pill = 'RESULT'; statusKind = 'result';
           statusText = String(S.resultText || 'Match finished').replace(/🏆/g, '').trim();
           if (!statusText){ try { statusText = matchResultText({ innings: inns, wicketsLimit: S.wicketsLimit, resultText: '' }) || 'Match finished'; } catch(e){ statusText = 'Match finished'; } }
+          statusText = fixResultText(statusText);
         } else if (!started){
           pill = 'FIXTURE'; statusKind = 'fixture';
-          statusText = 'Match not started yet';
+          statusText = 'Match not started yet.';
         } else if (S.status === 'inningsBreak' && S.prevInnings){
           pill = 'BREAK';
-          statusText = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '');
+          statusText = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '') + '.';
         } else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - S.current.runs, ballsLeft = effMaxBalls() - S.current.legalBalls;
           statusText = need > 0
-            ? (S.current.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : ''))
-            : (S.current.battingTeam + ' have reached the target of ' + t);
+            ? (S.current.battingTeam + ' needs ' + runW(need) + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballW(ballsLeft) : '') + '.')
+            : (S.current.battingTeam + ' have reached the target of ' + t + '.');
         } else {
           var proj = null;
           try { proj = projectedScore(); } catch(e){}
           statusText = proj !== null
-            ? (S.current.battingTeam + ' batting • Projected score ' + proj + ' at CRR ' + crr().toFixed(2))
-            : ((S.current.battingTeam || 'The batting side') + ' batting — 1st innings in progress');
+            ? (S.current.battingTeam + ' batting • Projected score ' + proj + ' at CRR ' + crr().toFixed(2) + '.')
+            : ((S.current.battingTeam || 'The batting side') + ' batting — 1st innings in progress.');
           if (S.tossInfo) statusText = S.tossInfo;
         }
         var topBat = null, topBowl = null;
@@ -14104,7 +14134,7 @@
         else if (S.updatedAt) dateText = new Date(S.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         var superText = '';
         if (S.superOver && S.superOver.id && !finished){
-          superText = S.superOver.active ? '⚡ Super Over in progress' : (S.superOver.resultText ? '⚡ Super Over: ' + S.superOver.resultText : '');
+          superText = S.superOver.active ? '⚡ Super Over in progress.' : (S.superOver.resultText ? '⚡ Super Over: ' + fixResultText(S.superOver.resultText) : '');
         }
         return {
           title: teams.map(function(x){ return x.name; }).join(' v '),
@@ -14659,7 +14689,7 @@
           var found = players.filter(function(r){ return r.name.toLowerCase().indexOf(q) > -1; });
           if (found.length){
             html += boardTable('Players matching “' + esc(repPlayer.trim()) + '”', found.map(function(r){
-              return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r"><b>' + r.runs + '</b> runs</td><td class="r"><b>' + r.wkts + '</b> wkts</td></tr>';
+              return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r"><b>' + runW(r.runs) + '</b></td><td class="r"><b>' + wktW(r.wkts) + '</b></td></tr>';
             }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Batting</th><th class="r">Bowling</th>');
           }
         }
@@ -14689,12 +14719,12 @@
         chips += '<span class="ss-chip">CRR <b>' + crr().toFixed(2) + '</b></span>';
         if (t){ var r=rrr(); chips += '<span class="ss-chip">Target <b>' + t + '</b></span>';
           var ballsLeftChip = effMaxBalls()-inn.legalBalls;
-          chips += '<span class="ss-chip">Need <b>' + (t-inn.runs) + ' runs' + (isFinite(ballsLeftChip) ? ' off ' + ballsLeftChip + ' balls' : '') + '</b></span>';
+          chips += '<span class="ss-chip">Need <b>' + runW(t-inn.runs) + (isFinite(ballsLeftChip) ? ' off ' + ballW(ballsLeftChip) : '') + '</b></span>';
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
         chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
-        else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(S.superOver.resultText) + '</b></span>';
-        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(S.resultText) + '</b></span>';
+        else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
+        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(fixResultText(S.resultText)) + '</b></span>';
         var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
         return '<div class="scorestrip">'
@@ -14713,7 +14743,7 @@
         return { runs:0, balls:0 };
       }
       function bowlerFig(inn, name){
-        for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name){ var b=inn.bowlers[i]; return oversText(b.balls) + ' overs, ' + b.runs + ' runs, ' + b.wickets + ' wickets'; }
+        for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name){ var b=inn.bowlers[i]; return oversText(b.balls) + (b.balls === 6 ? ' over, ' : ' overs, ') + runW(b.runs) + ', ' + wicketW(b.wickets); }
         return '—';
       }
       function battingTableHTML(inn){
@@ -14746,8 +14776,8 @@
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
         var short = (inn.battingTeam || '—').length>16 ? (inn.battingTeam || '—').slice(0,16) : (inn.battingTeam || '—');
         var ballsLeftLt = effMaxBalls()-inn.legalBalls;
-        var subLeft = t ? ('Target ' + t + ' • Need ' + (t-inn.runs) + ' runs' + (isFinite(ballsLeftLt) ? ' off ' + ballsLeftLt + ' balls' : '')) : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam || '—') + ' batting vs ' + esc(inn.bowlingTeam || '—'));
-        if (S.status==='finished' && S.resultText) subLeft = '🏆 ' + esc(S.resultText);
+        var subLeft = t ? ('Target ' + t + ' • Need ' + runW(t-inn.runs) + (isFinite(ballsLeftLt) ? ' off ' + ballW(ballsLeftLt) : '')) : (S.tossInfo ? esc(S.tossInfo) : esc(inn.battingTeam || '—') + ' batting vs ' + esc(inn.bowlingTeam || '—'));
+        if (S.status==='finished' && S.resultText) subLeft = '🏆 ' + esc(fixPlurals(S.resultText));
         var ltLogo = teamLogoFor(inn.battingTeam);
         return '<div class="lowerthird"><div class="lt-main">'
           + '<div class="lt-team">' + (ltLogo ? '<img class="lt-logo" src="' + esc(ltLogo) + '" alt="" />' : '') + esc(short) + '</div>'
@@ -14841,11 +14871,11 @@
         return inns;
       }
       function summaryResultText(inns){
-        var resTxt = String(S.resultText || '').replace(/ 🏆/g, '');
+        var resTxt = fixResultText(String(S.resultText || '').replace(/ 🏆/g, ''));
         if (!resTxt && !S.abandoned){
           try { resTxt = matchResultText({ innings: inns, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), resultText: '', superOver: S.superOver }); } catch(e){ resTxt = ''; }
         }
-        if (!resTxt) resTxt = S.abandoned ? 'Match abandoned' : 'Match finished';
+        if (!resTxt) resTxt = S.abandoned ? 'Match abandoned.' : 'Match finished.';
         return resTxt;
       }
       function renderSummaryPanel(){
@@ -14956,16 +14986,16 @@
         if (t === '6') return '<span class="c6">SIX</span> — maximum, 6 runs';
         if (t === 'W') return '<span class="cw">WICKET</span> — batter is out';
         var wm = t.match(/^W\+(\d+)$/); if (wm) return '<span class="cw">WICKET</span> — batter is out, ' + wm[1] + (wm[1] === '1' ? ' run' : ' runs') + ' completed';
-        wm = t.match(/^WdW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>Wide</b> — ' + (1 + (wm[1] ? parseInt(wm[1], 10) : 0)) + ' runs in extras';
-        wm = t.match(/^NbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b>' + (wm[1] ? ' — ' + wm[1] + ' runs off the bat' : '');
-        wm = t.match(/^ByeW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Bye</b>' + (wm[1] ? ', ' + wm[1] + ' byes completed' : '');
-        wm = t.match(/^LbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Leg bye</b>' + (wm[1] ? ', ' + wm[1] + ' leg byes completed' : '');
+        wm = t.match(/^WdW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>Wide</b> — ' + runW(1 + (wm[1] ? parseInt(wm[1], 10) : 0)) + ' in extras';
+        wm = t.match(/^NbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b>' + (wm[1] ? ' — ' + runW(parseInt(wm[1], 10)) + ' off the bat' : '');
+        wm = t.match(/^ByeW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Bye</b>' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'bye', 'byes') + ' completed' : '');
+        wm = t.match(/^LbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Leg bye</b>' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'leg bye', 'leg byes') + ' completed' : '');
         if (t === '0') return '<b>no run</b> — dot ball';
         if (t === '1') return '<b>1 run</b>';
         if (/^\d+$/.test(t)) return '<b>' + esc(t) + ' runs</b>';
         if (t === 'Wd') return '<b>Wide</b> — 1 extra run';
-        var m = t.match(/^Wd\+(\d+)$/); if (m) return '<b>Wide + ' + m[1] + '</b> — ' + (1 + parseInt(m[1], 10)) + ' runs in extras';
-        m = t.match(/^Nb\+(\d+)$/); if (m) return '<b>No ball + ' + m[1] + '</b> — free hit territory, ' + (1 + parseInt(m[1], 10)) + ' runs added';
+        var m = t.match(/^Wd\+(\d+)$/); if (m) return '<b>Wide + ' + m[1] + '</b> — ' + runW(1 + parseInt(m[1], 10)) + ' in extras';
+        m = t.match(/^Nb\+(\d+)$/); if (m) return '<b>No ball + ' + m[1] + '</b> — free hit territory, ' + runW(1 + parseInt(m[1], 10)) + ' added';
         m = t.match(/^B(\d+)$/); if (m) return '<b>Bye</b> — ' + m[1] + (m[1] === '1' ? ' run' : ' runs');
         m = t.match(/^Lb(\d+)$/); if (m) return '<b>Leg bye</b> — ' + m[1] + (m[1] === '1' ? ' run' : ' runs');
         return '<b>' + esc(t) + '</b>';
@@ -15135,16 +15165,16 @@
         var status = '';
         var t = target();
         if (finished) status = '';
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t;
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t + '.';
         else if (S.inningsNo === 2 && S.prevInnings){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
           if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.';
-          else status = inn.battingTeam + ' have reached the target of ' + t;
+          else status = inn.battingTeam + ' have reached the target of ' + t + '.';
         }
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
         else if (S.tossInfo) status = S.tossInfo;
         else if (S.inningsNo === 1) status = inn.battingTeam ? inn.battingTeam + ' chose to bat.' : 'Teams not selected yet — the match has not started.';
-        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam;
+        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
@@ -15169,7 +15199,7 @@
             var finHtml = '';
             if (S.prevInnings) finHtml += finRow(S.prevInnings, true);
             finHtml += finRow(inn, false);
-            var resTxt = String(S.resultText || 'Match finished').replace(/ 🏆/g, '');
+            var resTxt = fixResultText(String(S.resultText || 'Match finished').replace(/ 🏆/g, ''));
             finHtml += '<div class="cb-fin-result">' + esc(resTxt) + '</div>';
             mainEl.innerHTML = finHtml;
           } else {
@@ -15321,7 +15351,7 @@
              full commentary back the moment the page renders. */
           var feedAll = '';
           if (S.status === 'finished' && S.resultText){
-            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">🏆 <b>' + esc(String(S.resultText).replace(/🏆/g, '').trim()) + '</b></span></div>';
+            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">🏆 <b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
           }
           feedAll += feedHTMLFor(inn);
           if (S.prevInnings){
@@ -15413,7 +15443,7 @@
           rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
           if (t) rows.push(['Target', String(t)]);
           var pr = projectedScore(); if (pr !== null) rows.push(['Projected Score', String(pr) + ' (at CRR ' + crr().toFixed(2) + ')']);
-          if (S.status === 'finished' && S.resultText) rows.push(['Result', S.resultText]);
+          if (S.status === 'finished' && S.resultText) rows.push(['Result', fixResultText(S.resultText)]);
           infoEl.innerHTML = rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
           if (S.superOver && S.superOver.id){
             infoEl.innerHTML += '<div class="cb-info-row"><span>Super Over</span><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>' + esc(S.superOver.active ? 'In progress — 1 over a side' : (S.superOver.resultText || 'Played')) + '</b>' + superOverIdChipHTML(S.superOver) + '</span></div>';
@@ -16009,7 +16039,7 @@
         if (f.date) parts.push(fmtDateShort(f.date));
         if (f.time) parts.push(f.time);
         if (f.venue) parts.push(f.venue);
-        if (f.overs) parts.push(f.overs + ' overs' + (f.format ? ' • ' + f.format : '') + (f.ballType ? ' • ' + f.ballType : ''));
+        if (f.overs) parts.push(overW(f.overs) + (f.format ? ' • ' + f.format : '') + (f.ballType ? ' • ' + f.ballType : ''));
         if (f.scorerEmailHash) parts.push('Designated scorer set');
         return parts.join(' • ');
       }
@@ -16068,7 +16098,7 @@
       function singleFixtureRowHTML(f){
         var label = [f.date ? fmtDateShort(f.date) : '', f.time || '', f.venue || ''].filter(Boolean).join(' • ');
         var meta = [];
-        if (f.overs) meta.push(f.overs + ' overs');
+        if (f.overs) meta.push(overW(f.overs));
         if (f.format) meta.push(f.format);
         var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
         return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'single\',' + fxIdArg(f.id) + ',event)', aria) + '>'
