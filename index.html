@@ -788,6 +788,22 @@
       .bk-champ{border:1px solid var(--gold);border-radius:11px;padding:12px 14px;margin-top:12px;background:#fdf6e3;font-size:15px}
       @media (prefers-color-scheme: dark){.bk-champ{background:#2a2113}}
       .bk-champ b{font-size:16px}
+      /* ---------- knockout bracket: format picker & custom builder ---------- */
+      .bk-fmt{display:block;width:100%;text-align:center;background:var(--surface);border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:8px;cursor:pointer;color:var(--ink);font:inherit}
+      .bk-fmt.sel{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);background:var(--surface2)}
+      .bk-fmt-name{display:block;font-weight:800;font-size:15px}
+      .bk-fmt-desc{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.4}
+      .bk-fmt-need{display:inline-block;margin-top:6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--green);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+      .bk-crow{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;background:var(--surface);text-align:left}
+      .bk-crow-top{display:flex;gap:8px;align-items:center}
+      .bk-crow-top input{flex:1;min-width:0}
+      .bk-finbtn{flex:none;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+      .bk-finbtn.sel{border-color:var(--gold);color:#8a5f00;background:#fdf6e3}
+      @media (prefers-color-scheme: dark){.bk-finbtn.sel{color:var(--gold);background:#2a2113}}
+      .bk-x{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:13px;cursor:pointer;line-height:1}
+      .bk-crow-slots{display:flex;gap:8px;align-items:center;margin-top:9px}
+      .bk-crow-slots select{flex:1;min-width:0}
+      .bk-vs{flex:none;color:var(--muted);font-weight:800;font-size:12px;text-transform:uppercase}
       .fxg-teams{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
       .fxg-team{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:600;cursor:pointer}
       .fxg-team.sel{border-color:var(--green);background:var(--green);color:#fff}
@@ -2743,7 +2759,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v123';
+      var APP_VERSION = 'v125';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6385,10 +6401,20 @@
               else bk.matches = [];
             }
             bk.matches = bk.matches.filter(function(m){ return m && typeof m === 'object' && typeof m.id === 'string' && m.id && typeof m.stage === 'string'; });
+            if (typeof bk.format !== 'string') bk.format = '';
+            if (typeof bk.formatLabel !== 'string') bk.formatLabel = '';
             bk.matches.forEach(function(m){
               if (typeof m.label !== 'string') m.label = '';
               if (typeof m.teamA !== 'string') m.teamA = '';
               if (typeof m.teamB !== 'string') m.teamB = '';
+              if (typeof m.round !== 'string') m.round = '';
+              m.seedA = (typeof m.seedA === 'number' && m.seedA > 0) ? Math.floor(m.seedA) : 0;
+              m.seedB = (typeof m.seedB === 'number' && m.seedB > 0) ? Math.floor(m.seedB) : 0;
+              ['srcA','srcB'].forEach(function(k){
+                var s = m[k];
+                if (s != null && (!s || typeof s !== 'object' || (s.k !== 'W' && s.k !== 'L') || typeof s.of !== 'string' || !s.of)) m[k] = null;
+              });
+              m.isFinal = !!m.isFinal;
             });
             if (!bk.matches.length) S.tournament.bracket = null;
           }
@@ -7055,23 +7081,62 @@
         toast('⚡ ' + added + ' fixture' + (added === 1 ? '' : 's') + ' generated — ' + teams.length + ' teams, every team plays every other once' + (skipped ? ' (' + skipped + ' already in the list, skipped)' : ''));
       }
       /* ---------- knockout bracket ----------
-         Generated once from the points table's top four teams —
-         Semi-final 1 is 1st vs 4th, Semi-final 2 is 2nd vs 3rd —
-         and then fixed, like a real tournament draw: later league
-         results never move a team inside it (regenerate, while no
-         knockout result exists, to draw it again). The Final pairs
-         the two semi winners; the 3rd-place match pairs the two
-         semi losers. Every bracket match is created with its own
-         stable unique ID, and a saved result belongs to a bracket
-         match only through that ID — the result's bracketId, set
-         when the match was started from the bracket — never through
-         team names alone, because the same two teams can also have
-         met in the league stage. */
+         The bracket follows the tournament's OWN format — it is no
+         longer one fixed draw. When the owner builds it they pick a
+         format: Semi-finals + Final, Eliminator + Final (1st goes
+         straight to the Final), the playoff ladder (Qualifier 1,
+         Eliminator, Qualifier 2, Final), Quarter-finals + Semis +
+         Final, a straight Final between the top 2 — or CUSTOM,
+         where they add their own knockout matches in playing order
+         and choose where each side comes from: a points-table seed,
+         a specific team, or the winner / loser of an earlier
+         knockout match. Any format a tournament can dream up can be
+         expressed that way.
+         A bracket match is { id, stage, label, round, teamA, teamB,
+         seedA, seedB, srcA, srcB, isFinal }: teamA/teamB hold the
+         concrete teams for seed / picked slots, while srcA/srcB —
+         { k:'W'|'L', of:<stage code> } — mean the slot is filled by
+         the winner / loser of another bracket match once that match
+         is decided. The draw is fixed at generation, like a real
+         tournament draw: later league results never move a team
+         inside it (the owner can pick a new format while no knockout
+         result exists). Every bracket match keeps its own stable
+         unique BK- ID for life, and a saved result belongs to a
+         bracket match only through that ID — the result's
+         bracketId, set when the match was started from the bracket —
+         never through team names alone, because the same two teams
+         can also have met in the league stage. Brackets saved by the
+         older fixed format (SF1 / SF2 / F / P3, no src slots) keep
+         working: their Final and 3rd-place slots still resolve from
+         the semi results exactly as before. */
+      var BK_FORMATS = [
+        { id:'sf', name:'Semi-finals + Final', need:4, desc:'Semi-final 1: 1st vs 4th · Semi-final 2: 2nd vs 3rd · the two winners meet in the Final.' },
+        { id:'sf3', name:'Semi-finals + Final + 3rd Place', need:4, desc:'The semi-finals and Final above, plus a 3rd-place play-off between the two semi losers.' },
+        { id:'elim', name:'Eliminator + Final', need:3, desc:'1st goes straight to the Final. 2nd vs 3rd play the Eliminator — its winner takes the other Final place.' },
+        { id:'playoff', name:'Qualifier 1 · Eliminator · Qualifier 2 · Final', need:4, desc:'Playoff ladder: Qualifier 1 is 1st vs 2nd (winner straight to the Final, loser gets a second chance), the Eliminator is 3rd vs 4th (loser is out), Qualifier 2 is the Qualifier 1 loser vs the Eliminator winner, then the Final.' },
+        { id:'qf', name:'Quarter-finals + Semi-finals + Final', need:8, desc:'Eight qualifiers: 1st vs 8th, 4th vs 5th, 2nd vs 7th, 3rd vs 6th — then semi-finals and the Final.' },
+        { id:'final', name:'Straight Final — Top 2', need:2, desc:'No semis at all: the top 2 in the points table play one Final.' },
+        { id:'custom', name:'Custom — Build Your Own Bracket', need:0, desc:'Add your own knockout matches in playing order — name them anything (Qualifier, Eliminator, Semi-final, Final…) and pick where each team comes from.' }
+      ];
+      var bkSelFormat = 'sf';
+      var bkShowPicker = false;
+      var bkCustomRows = null; /* [{label, a, b}] — a/b are source strings: 'seed:N', 'team:NAME', 'W:<row>', 'L:<row>' */
+      var bkCustomFinal = 2;
+      function bkFormatById(id){
+        var f = null;
+        BK_FORMATS.forEach(function(x){ if (x.id === id) f = x; });
+        return f;
+      }
+      function bkOrdinal(n){
+        if (n === 1) return '1st'; if (n === 2) return '2nd'; if (n === 3) return '3rd';
+        return n + 'th';
+      }
       function newBracketMatchId(stage){
         var existing = {};
         if (S.tournament && S.tournament.bracket && Array.isArray(S.tournament.bracket.matches)){
           S.tournament.bracket.matches.forEach(function(m){ existing[m.id] = 1; });
         }
+        (S.tournament && Array.isArray(S.tournament.matches) ? S.tournament.matches : []).forEach(function(m){ if (m && m.bracketId) existing[m.bracketId] = 1; });
         var id = '';
         do {
           id = 'BK-' + Date.now().toString(36).toUpperCase() + '-' + stage + '-' + Math.floor(Math.random() * 46656).toString(36).toUpperCase();
@@ -7113,6 +7178,20 @@
         }
         return { match: found, winner: (w && w !== 'Tie') ? w : null, loser: loser, tied: w === 'Tie' };
       }
+      /* The bracket match that decides the tournament: the one
+         flagged isFinal when the bracket was built, falling back to
+         the match with stage 'F' (every preset, and every bracket
+         saved before custom formats existed, has exactly one). */
+      function bracketFinalMatch(){
+        normalizeTournament();
+        if (!S.tournament.bracket) return null;
+        var fin = null, byStage = null;
+        S.tournament.bracket.matches.forEach(function(m){
+          if (m.isFinal) fin = m;
+          if (m.stage === 'F') byStage = m;
+        });
+        return fin || byStage;
+      }
       /* The decided Final of this tournament, or null while the
          tournament has no champion yet. With a knockout bracket, the
          bracket's own Final is the only decider. Without a bracket,
@@ -7125,7 +7204,7 @@
         normalizeTournament();
         var tn = S.tournament;
         if (tn.bracket){
-          var bm = bracketMatchByStage('F');
+          var bm = bracketFinalMatch();
           var res = bm ? bracketResult(bm) : null;
           return (res && res.winner) ? res : null;
         }
@@ -7179,55 +7258,178 @@
           ? (fin ? '🏆 ' + fin.winner + ' are the champions — the podium is set' : '🏆 Marked as the Final — a tied final decides nothing, so the podium fills once a result separates the teams')
           : 'Final designation removed — the podium is open again');
       }
-      /* The two teams of a bracket match right now: the semis keep
-         the pairings fixed at generation; the Final takes the semi
-         winners and the 3rd-place match the semi losers, so both
-         stay undecided (null) until the semis are decided. */
-      function bracketTeams(bm){
-        if (!bm) return { a:null, b:null };
-        if (bm.stage === 'F' || bm.stage === 'P3'){
+      /* One side of a bracket match, resolved right now: a src slot
+         follows the winner / loser of its source match (null until
+         that match is decided); any other slot holds its team from
+         the draw. Brackets saved before src slots existed resolve
+         their Final / 3rd-place slots from the semi results, exactly
+         as they always did. */
+      function bkSlotTeam(bm, side){
+        if (!bm) return null;
+        var src = (side === 'A') ? bm.srcA : bm.srcB;
+        if (src){
+          var ref = bracketMatchByStage(src.of);
+          var r = ref ? bracketResult(ref) : null;
+          if (!r) return null;
+          return (src.k === 'W') ? r.winner : r.loser;
+        }
+        if (!bm.srcA && !bm.srcB && (bm.stage === 'F' || bm.stage === 'P3')){
           var s1 = bracketResult(bracketMatchByStage('SF1'));
           var s2 = bracketResult(bracketMatchByStage('SF2'));
-          if (bm.stage === 'F') return { a: s1 ? s1.winner : null, b: s2 ? s2.winner : null };
-          return { a: s1 ? s1.loser : null, b: s2 ? s2.loser : null };
+          if (bm.stage === 'F') return (side === 'A') ? (s1 ? s1.winner : null) : (s2 ? s2.winner : null);
+          return (side === 'A') ? (s1 ? s1.loser : null) : (s2 ? s2.loser : null);
         }
-        return { a: bm.teamA || null, b: bm.teamB || null };
+        var t = (side === 'A') ? bm.teamA : bm.teamB;
+        return t || null;
+      }
+      function bracketTeams(bm){
+        if (!bm) return { a:null, b:null };
+        return { a: bkSlotTeam(bm, 'A'), b: bkSlotTeam(bm, 'B') };
+      }
+      /* The placeholder shown for a slot whose team is not known
+         yet — it names exactly what the slot is waiting for. */
+      function bkSlotTbd(bm, side){
+        if (!bm) return 'To be decided';
+        var src = (side === 'A') ? bm.srcA : bm.srcB;
+        if (src){
+          var ref = bracketMatchByStage(src.of);
+          return (src.k === 'W' ? 'Winner of ' : 'Loser of ') + (ref ? (ref.label || ref.stage) : 'an earlier match');
+        }
+        if (!bm.srcA && !bm.srcB && bm.stage === 'F') return side === 'A' ? 'Winner of Semi-final 1' : 'Winner of Semi-final 2';
+        if (!bm.srcA && !bm.srcB && bm.stage === 'P3') return side === 'A' ? 'Loser of Semi-final 1' : 'Loser of Semi-final 2';
+        return 'To be decided';
       }
       function bracketHasResults(){
         normalizeTournament();
         if (!S.tournament.bracket) return false;
         return S.tournament.bracket.matches.some(function(m){ return !!bracketResult(m); });
       }
+      /* Builds the match list for one preset format from the
+         points-table order (seedTeams[0] is 1st, and so on). Pure:
+         the caller stamps the BK- IDs on. Slot helpers — seed(n)
+         fixes a team from the table, W/L(code) leaves the slot to
+         be filled by an earlier match's winner / loser. */
+      function bkBuildMatches(formatId, seedTeams){
+        function seed(n){ return { team: seedTeams[n - 1] || '', seed: n, src: null }; }
+        function W(of){ return { team: '', seed: 0, src: { k:'W', of: of } }; }
+        function L(of){ return { team: '', seed: 0, src: { k:'L', of: of } }; }
+        function mk(stage, label, round, a, b, isFinal){
+          return { stage: stage, label: label, round: round, teamA: a.team, teamB: b.team, seedA: a.seed, seedB: b.seed, srcA: a.src, srcB: b.src, isFinal: !!isFinal };
+        }
+        if (formatId === 'final') return [
+          mk('F', 'Final', 'Final', seed(1), seed(2), true)
+        ];
+        if (formatId === 'elim') return [
+          mk('EL', 'Eliminator', 'Playoff', seed(2), seed(3), false),
+          mk('F', 'Final', 'Final', seed(1), W('EL'), true)
+        ];
+        if (formatId === 'playoff') return [
+          mk('Q1', 'Qualifier 1', 'Playoffs', seed(1), seed(2), false),
+          mk('EL', 'Eliminator', 'Playoffs', seed(3), seed(4), false),
+          mk('Q2', 'Qualifier 2', 'Playoffs', L('Q1'), W('EL'), false),
+          mk('F', 'Final', 'Final', W('Q1'), W('Q2'), true)
+        ];
+        if (formatId === 'qf') return [
+          mk('QF1', 'Quarter-final 1', 'Quarter-finals', seed(1), seed(8), false),
+          mk('QF2', 'Quarter-final 2', 'Quarter-finals', seed(4), seed(5), false),
+          mk('QF3', 'Quarter-final 3', 'Quarter-finals', seed(2), seed(7), false),
+          mk('QF4', 'Quarter-final 4', 'Quarter-finals', seed(3), seed(6), false),
+          mk('SF1', 'Semi-final 1', 'Semi-finals', W('QF1'), W('QF2'), false),
+          mk('SF2', 'Semi-final 2', 'Semi-finals', W('QF3'), W('QF4'), false),
+          mk('F', 'Final', 'Final', W('SF1'), W('SF2'), true)
+        ];
+        var base = [
+          mk('SF1', 'Semi-final 1', 'Semi-finals', seed(1), seed(4), false),
+          mk('SF2', 'Semi-final 2', 'Semi-finals', seed(2), seed(3), false),
+          mk('F', 'Final', 'Final', W('SF1'), W('SF2'), true)
+        ];
+        if (formatId === 'sf3') base.push(mk('P3', '3rd Place Play-off', '3rd Place', L('SF1'), L('SF2'), false));
+        return base;
+      }
+      /* Turns one custom-builder source string into a bracket slot.
+         Row indexes become stage codes (row 0 -> 'C1', and so on);
+         returns null for a source that cannot be used. */
+      function bkCustomSlot(srcStr, seedTeams){
+        var s = String(srcStr || '');
+        if (s.indexOf('seed:') === 0){
+          var n = parseInt(s.slice(5), 10) || 0;
+          return { team: seedTeams[n - 1] || '', seed: n, src: null };
+        }
+        if (s.indexOf('team:') === 0) return { team: s.slice(5), seed: 0, src: null };
+        if (s.indexOf('W:') === 0 || s.indexOf('L:') === 0){
+          var idx = parseInt(s.slice(2), 10);
+          if (!isNaN(idx) && idx >= 0) return { team: '', seed: 0, src: { k: s.charAt(0), of: 'C' + (idx + 1) } };
+        }
+        return null;
+      }
       function generateBracket(){
         if (!requireTnOwner('generate the knockout bracket')) return;
         normalizeTournament();
         if (bracketHasResults()){ toast('🏆 Knockout matches have already been played in this bracket — remove the bracket first if you really want a new draw'); return; }
+        var fmt = bkFormatById(bkSelFormat) || bkFormatById('sf');
         var pts = computePoints();
-        if (pts.length < 4){ toast('The knockout bracket needs at least 4 teams — only ' + pts.length + (pts.length === 1 ? ' team is' : ' teams are') + ' in this tournament'); return; }
-        var seeds = pts.slice(0, 4);
-        function mk(stage, label, a, b, sa, sb){
-          return { id: newBracketMatchId(stage), stage: stage, label: label, teamA: a || '', teamB: b || '', seedA: sa || 0, seedB: sb || 0 };
+        var seedTeams = pts.map(function(r){ return r.team; });
+        var built = null, formatLabel = fmt.name;
+        if (fmt.id === 'custom'){
+          built = bkBuildCustomMatches(seedTeams);
+          if (!built) return; /* bkBuildCustomMatches already toasted the reason */
+          formatLabel = 'Custom Bracket';
+        } else {
+          if (seedTeams.length < fmt.need){ toast('🏆 ' + fmt.name + ' needs the top ' + fmt.need + ' teams in the points table — only ' + seedTeams.length + (seedTeams.length === 1 ? ' team is' : ' teams are') + ' in this tournament'); return; }
+          built = bkBuildMatches(fmt.id, seedTeams);
         }
         S.tournament.bracket = {
           createdAt: Date.now(),
-          matches: [
-            mk('SF1', 'Semi-final 1', seeds[0].team, seeds[3].team, 1, 4),
-            mk('SF2', 'Semi-final 2', seeds[1].team, seeds[2].team, 2, 3),
-            mk('F', 'Final', '', '', 0, 0),
-            mk('P3', '3rd Place Play-off', '', '', 0, 0)
-          ]
+          format: fmt.id,
+          formatLabel: formatLabel,
+          matches: built.map(function(m){
+            return { id: newBracketMatchId(m.stage), stage: m.stage, label: m.label, round: m.round || '', teamA: m.teamA || '', teamB: m.teamB || '', seedA: m.seedA || 0, seedB: m.seedB || 0, srcA: m.srcA || null, srcB: m.srcB || null, isFinal: !!m.isFinal };
+          })
         };
+        bkShowPicker = false;
         commit('Knockout bracket generated', true);
-        toast('🏆 Bracket generated — ' + seeds[0].team + ', ' + seeds[1].team + ', ' + seeds[2].team + ' & ' + seeds[3].team + ' reach the knockouts');
+        var openers = S.tournament.bracket.matches.filter(function(m){ return m.teamA && m.teamB; }).map(function(m){ return m.label + ': ' + m.teamA + ' vs ' + m.teamB; });
+        toast('🏆 Bracket generated (' + formatLabel + ')' + (openers.length ? ' — ' + openers.join(' · ') : ''));
+      }
+      /* Validates the custom builder's rows and builds its matches,
+         or toasts the problem and returns null. Labels are read
+         from the live inputs first, so a name typed but not yet
+         blurred is not lost. */
+      function bkBuildCustomMatches(seedTeams){
+        bkEnsureCustom();
+        bkCustomRows.forEach(function(row, i){
+          var el = $('bkCrLabel' + i);
+          if (el) row.label = el.value;
+        });
+        if (!bkCustomRows.length){ toast('🏆 Add at least one knockout match to the bracket'); return null; }
+        if (bkCustomRows.length > 12){ toast('🏆 A custom bracket can hold at most 12 matches'); return null; }
+        var finIdx = (bkCustomFinal >= 0 && bkCustomFinal < bkCustomRows.length) ? bkCustomFinal : bkCustomRows.length - 1;
+        var out = [];
+        for (var i = 0; i < bkCustomRows.length; i++){
+          var row = bkCustomRows[i];
+          var label = String(row.label || '').trim() || ('Knockout Match ' + (i + 1));
+          var a = bkCustomSlot(row.a, seedTeams), b = bkCustomSlot(row.b, seedTeams);
+          if (!a || !b){ toast('🏆 "' + label + '" has a team source that cannot be used — pick again'); return null; }
+          if (a.src && parseInt(String(row.a).slice(2), 10) >= i){ toast('🏆 "' + label + '" can only take the winner or loser of an EARLIER match'); return null; }
+          if (b.src && parseInt(String(row.b).slice(2), 10) >= i){ toast('🏆 "' + label + '" can only take the winner or loser of an EARLIER match'); return null; }
+          if (a.seed && a.seed > seedTeams.length){ toast('🏆 "' + label + '" needs ' + bkOrdinal(a.seed) + ' in the points table — only ' + seedTeams.length + (seedTeams.length === 1 ? ' team is' : ' teams are') + ' in this tournament'); return null; }
+          if (b.seed && b.seed > seedTeams.length){ toast('🏆 "' + label + '" needs ' + bkOrdinal(b.seed) + ' in the points table — only ' + seedTeams.length + (seedTeams.length === 1 ? ' team is' : ' teams are') + ' in this tournament'); return null; }
+          if (a.team && S.tournament.teams.indexOf(a.team) === -1){ toast('🏆 "' + label + '" names a team that is not in this tournament'); return null; }
+          if (b.team && S.tournament.teams.indexOf(b.team) === -1){ toast('🏆 "' + label + '" names a team that is not in this tournament'); return null; }
+          if (a.team && b.team && a.team === b.team){ toast('🏆 "' + label + '" has the same team on both sides'); return null; }
+          out.push({ stage: 'C' + (i + 1), label: label, round: '', teamA: a.team, teamB: b.team, seedA: a.seed, seedB: b.seed, srcA: a.src, srcB: b.src, isFinal: i === finIdx });
+        }
+        return out;
       }
       function removeBracket(){
         if (!requireTnOwner('remove the knockout bracket')) return;
         normalizeTournament();
         askVerify('Remove the knockout bracket?',
-          'The semi-finals, final and 3rd-place fixtures in the bracket will be removed. Results already saved stay in the Matches list. This cannot be undone.',
+          'Every knockout fixture in the bracket will be removed. Results already saved stay in the Matches list. This cannot be undone.',
           function(){
             normalizeTournament();
             S.tournament.bracket = null;
+            bkShowPicker = false;
             commit('Knockout bracket removed', true);
             toast('Knockout bracket removed — results already saved stay in the Matches list');
           });
@@ -7241,13 +7443,147 @@
         var existing = bracketResult(bm);
         if (existing && existing.winner){ toast('🏆 ' + bm.label + ' is already decided — ' + existing.winner + ' won it'); return; }
         var t = bracketTeams(bm);
-        if (!t.a || !t.b){ toast('🏆 ' + bm.label + ' is waiting for the semi-finals to finish'); return; }
+        if (!t.a || !t.b){ toast('🏆 ' + bm.label + ' is waiting for the earlier knockout matches to finish'); return; }
         pendingBracketStart = id; /* doStartMatch tags the live match with this bracket match ID */
         pendingMatchKind = 'tournament'; /* a bracket match belongs to the tournament */
         $('teamA').value = t.a; $('teamB').value = t.b;
         setView('scorer');
         openFoldById('setupCard');
         toast('🏆 ' + bm.label + ': ' + t.a + ' vs ' + t.b + ' — tap Start Match when ready');
+      }
+      /* ---------- bracket format picker & custom builder ---------- */
+      function bkPickFormat(id){
+        bkSelFormat = id;
+        if (id === 'custom') bkEnsureCustom();
+        renderTournament();
+      }
+      function bkChangeFormat(){
+        if (bracketHasResults()){ toast('🏆 Knockout matches have already been played in this bracket — it can no longer be redrawn'); return; }
+        bkShowPicker = true;
+        renderTournament();
+      }
+      function bkCancelPicker(){
+        bkShowPicker = false;
+        renderTournament();
+      }
+      function bkEnsureCustom(){
+        if (!bkCustomRows){
+          bkCustomRows = [
+            { label:'Semi-final 1', a:'seed:1', b:'seed:4' },
+            { label:'Semi-final 2', a:'seed:2', b:'seed:3' },
+            { label:'Final', a:'W:0', b:'W:1' }
+          ];
+          bkCustomFinal = 2;
+        }
+      }
+      function bkCustomLabel(i, v){ bkEnsureCustom(); if (bkCustomRows[i]) bkCustomRows[i].label = v; }
+      function bkCustomSrc(i, side, v){ bkEnsureCustom(); if (bkCustomRows[i]) bkCustomRows[i][side] = v; }
+      function bkCustomSetFinal(i){ bkEnsureCustom(); bkCustomFinal = i; renderTournament(); }
+      function bkCustomAdd(){
+        bkEnsureCustom();
+        bkCustomRows.forEach(function(row, i){ var el = $('bkCrLabel' + i); if (el) row.label = el.value; });
+        if (bkCustomRows.length >= 12){ toast('🏆 A custom bracket can hold at most 12 matches'); return; }
+        bkCustomRows.push({ label:'', a:'seed:1', b:'seed:2' });
+        renderTournament();
+      }
+      function bkCustomRemove(i){
+        bkEnsureCustom();
+        bkCustomRows.forEach(function(row, j){ var el = $('bkCrLabel' + j); if (el) row.label = el.value; });
+        bkCustomRows.splice(i, 1);
+        bkCustomRows.forEach(function(row){
+          ['a','b'].forEach(function(side){
+            var m = /^([WL]):(\d+)$/.exec(String(row[side] || ''));
+            if (!m) return;
+            var idx = parseInt(m[2], 10);
+            if (idx === i) row[side] = 'seed:1';
+            else if (idx > i) row[side] = m[1] + ':' + (idx - 1);
+          });
+        });
+        if (bkCustomFinal >= bkCustomRows.length) bkCustomFinal = bkCustomRows.length - 1;
+        else if (bkCustomFinal > i) bkCustomFinal--;
+        renderTournament();
+      }
+      function bkSrcOptions(sel, rowIdx){
+        normalizeTournament();
+        var tn = S.tournament;
+        var html = '<optgroup label="Points table place">';
+        for (var n = 1; n <= 8; n++){
+          var v = 'seed:' + n;
+          html += '<option value="' + v + '"' + (sel === v ? ' selected' : '') + '>' + bkOrdinal(n) + ' in the points table</option>';
+        }
+        html += '</optgroup>';
+        if (tn.teams.length){
+          html += '<optgroup label="A specific team">';
+          tn.teams.forEach(function(t){
+            var v = 'team:' + t;
+            html += '<option value="' + esc(v) + '"' + (sel === v ? ' selected' : '') + '>' + esc(t) + '</option>';
+          });
+          html += '</optgroup>';
+        }
+        if (rowIdx > 0){
+          html += '<optgroup label="From an earlier match">';
+          for (var j = 0; j < rowIdx; j++){
+            var lbl = (bkCustomRows[j] && String(bkCustomRows[j].label || '').trim()) || ('Match ' + (j + 1));
+            var wv = 'W:' + j, lv = 'L:' + j;
+            html += '<option value="' + wv + '"' + (sel === wv ? ' selected' : '') + '>Winner of ' + esc(lbl) + '</option>';
+            html += '<option value="' + lv + '"' + (sel === lv ? ' selected' : '') + '>Loser of ' + esc(lbl) + '</option>';
+          }
+          html += '</optgroup>';
+        }
+        return html;
+      }
+      function bkCustomHTML(){
+        bkEnsureCustom();
+        var html = '<p class="note" style="margin-top:10px">Matches play in the order listed — a match can only take the winner or loser of a match ABOVE it. Mark one match as the 🏆 Final: its winner becomes the champion on the podium.</p>';
+        bkCustomRows.forEach(function(row, i){
+          html += '<div class="bk-crow">'
+            + '<div class="bk-crow-top"><span class="bk-seed">' + (i + 1) + '</span>'
+            + '<input id="bkCrLabel' + i + '" value="' + esc(row.label || '') + '" placeholder="Match name — e.g. Qualifier 1" aria-label="Knockout match name" onchange="bkCustomLabel(' + i + ',this.value)" />'
+            + '<button type="button" class="bk-finbtn' + (bkCustomFinal === i ? ' sel' : '') + '" onclick="bkCustomSetFinal(' + i + ')" title="The winner of this match takes the tournament">🏆 Final</button>'
+            + '<button type="button" class="bk-x" onclick="bkCustomRemove(' + i + ')" aria-label="Remove this match">✕</button></div>'
+            + '<div class="bk-crow-slots"><select aria-label="First team source" onchange="bkCustomSrc(' + i + ',\'a\',this.value)">' + bkSrcOptions(row.a, i) + '</select>'
+            + '<span class="bk-vs">vs</span>'
+            + '<select aria-label="Second team source" onchange="bkCustomSrc(' + i + ',\'b\',this.value)">' + bkSrcOptions(row.b, i) + '</select></div>'
+            + '</div>';
+        });
+        html += '<div class="rowflex" style="margin-top:4px"><button type="button" class="btn ghost sm" onclick="bkCustomAdd()">+ Add Match</button></div>'
+          + '<div class="rowflex bk-actions" style="margin-top:10px"><button class="btn sm" onclick="generateBracket()">🏆 Create Custom Bracket</button></div>';
+        return html;
+      }
+      function bkPickerHTML(){
+        normalizeTournament();
+        var tn = S.tournament;
+        var changing = !!tn.bracket;
+        var html = '';
+        if (tn.teams.length < 2){
+          return '<p class="note">The knockout bracket needs at least 2 teams in the tournament. Pick the format that matches this tournament\'s rules once the teams are in — every format seeds its opening matches from the points table.</p>';
+        }
+        html += '<p class="note">' + (changing
+          ? 'Pick a new format for this bracket — no knockout match has been played yet, so the draw can be replaced. Opening matches are seeded from the points table as it stands now.'
+          : 'No bracket yet. Pick the format that matches this tournament\'s rules — opening matches are seeded from the points table as it stands now, and the draw is then fixed.') + '</p>';
+        html += '<div class="bk-actions" style="margin-top:10px">';
+        BK_FORMATS.forEach(function(f){
+          html += '<button type="button" class="bk-fmt' + (bkSelFormat === f.id ? ' sel' : '') + '" onclick="bkPickFormat(\'' + f.id + '\')">'
+            + '<span class="bk-fmt-name">' + esc(f.name) + '</span>'
+            + '<span class="bk-fmt-desc">' + esc(f.desc) + '</span>'
+            + (f.need ? '<span class="bk-fmt-need">Top ' + f.need + ' qualify</span>' : '<span class="bk-fmt-need">Any format you need</span>')
+            + '</button>';
+        });
+        html += '</div>';
+        var fmt = bkFormatById(bkSelFormat) || bkFormatById('sf');
+        if (fmt.id === 'custom'){
+          html += '<div class="bk-actions">' + bkCustomHTML() + '</div>';
+        } else {
+          var pts = computePoints();
+          var qual = pts.slice(0, fmt.need).map(function(r, i){ return (i + 1) + '. ' + r.team; });
+          html += '<p class="note" style="margin-top:6px">' + (pts.length >= fmt.need
+            ? 'Qualifiers right now: ' + esc(qual.join(' · '))
+            : 'This format needs the top ' + fmt.need + ' teams — only ' + pts.length + (pts.length === 1 ? ' team is' : ' teams are') + ' in the points table so far.') + '</p>'
+            + '<div class="rowflex bk-actions" style="margin-top:10px"><button class="btn sm" onclick="generateBracket()">🏆 Generate Bracket</button>'
+            + (changing ? '<button class="btn ghost sm" onclick="bkCancelPicker()">Keep Current Bracket</button>' : '')
+            + '</div>';
+        }
+        return html;
       }
       /* Tap-to-copy for an ID shown on a chip: copies the full ID
          and confirms with a toast. Same clipboard pattern as
@@ -7316,14 +7652,11 @@
         if (!bm) return '';
         var res = bracketResult(bm);
         var t = bracketTeams(bm);
-        var isSF = (bm.stage === 'SF1' || bm.stage === 'SF2');
-        var tbdA = bm.stage === 'F' ? 'Winner of Semi-final 1' : (bm.stage === 'P3' ? 'Loser of Semi-final 1' : 'To be decided');
-        var tbdB = bm.stage === 'F' ? 'Winner of Semi-final 2' : (bm.stage === 'P3' ? 'Loser of Semi-final 2' : 'To be decided');
-        var html = '<div class="bk-match' + (bm.stage === 'F' ? ' final' : '') + '">'
+        var html = '<div class="bk-match' + (bm.stage === 'F' || bm.isFinal ? ' final' : '') + '">'
           + '<div class="bk-head"><span class="bk-title">' + esc(bm.label || bm.stage) + '</span>'
           + '<button type="button" class="bk-idchip" title="Tap to copy this match\'s unique ID" onclick="copyIdValue(\'' + bm.id + '\',\'Match ID\')">ID ' + esc(bm.id) + '</button></div>'
-          + bracketTeamRow(t.a, isSF ? bm.seedA : 0, res, !!(res && res.winner && res.winner === t.a), tbdA)
-          + bracketTeamRow(t.b, isSF ? bm.seedB : 0, res, !!(res && res.winner && res.winner === t.b), tbdB);
+          + bracketTeamRow(t.a, bm.seedA || 0, res, !!(res && res.winner && res.winner === t.a), bkSlotTbd(bm, 'A'))
+          + bracketTeamRow(t.b, bm.seedB || 0, res, !!(res && res.winner && res.winner === t.b), bkSlotTbd(bm, 'B'));
         if (res){
           html += '<div class="bk-result">' + esc(matchResultText(res.match)) + '</div>';
           if (res.tied) html += '<div class="bk-wait">Tied — no team advances from a tie, so this slot stays open for a replay.</div>'
@@ -7331,26 +7664,27 @@
         } else if (t.a && t.b){
           html += '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score This Match →</button></div>';
         } else {
-          html += '<div class="bk-wait">Waiting for the semi-finals to finish</div>';
+          html += '<div class="bk-wait">Waiting for the earlier knockout matches to finish</div>';
         }
         return html + '</div>';
       }
       function bracketHTML(){
         normalizeTournament();
         var tn = S.tournament;
-        if (!tn.bracket){
-          if (tn.teams.length < 4) return '<p class="note">The knockout bracket needs at least 4 teams — the top 4 in the points table play Semi-final 1 (1st vs 4th), Semi-final 2 (2nd vs 3rd), the Final and a 3rd-place match.</p>';
-          return '<p class="note">No bracket yet. The top 4 teams in the points table form the knockouts: Semi-final 1 (1st vs 4th), Semi-final 2 (2nd vs 3rd), then the Final between the semi winners and a 3rd-place play-off between the semi losers.</p>'
-            + '<div class="rowflex bk-actions" style="margin-top:10px"><button class="btn sm" onclick="generateBracket()">🏆 Generate Bracket from Top 4</button></div>';
-        }
-        var byStage = {};
-        tn.bracket.matches.forEach(function(m){ byStage[m.stage] = m; });
-        var html = '<div class="bk-stage">Semi-finals</div>'
-          + bracketMatchHTML(byStage.SF1) + bracketMatchHTML(byStage.SF2)
-          + '<div class="bk-stage">Final &amp; 3rd Place</div>'
-          + bracketMatchHTML(byStage.F) + bracketMatchHTML(byStage.P3);
-        var fRes = byStage.F ? bracketResult(byStage.F) : null;
-        var pRes = byStage.P3 ? bracketResult(byStage.P3) : null;
+        if (!tn.bracket) return bkPickerHTML();
+        if (bkShowPicker && !bracketHasResults()) return bkPickerHTML();
+        var html = '';
+        if (tn.bracket.formatLabel) html += '<div class="bk-stage">Format: ' + esc(tn.bracket.formatLabel) + '</div>';
+        var lastRound = null;
+        tn.bracket.matches.forEach(function(bm){
+          var round = bm.round || (bm.stage === 'SF1' || bm.stage === 'SF2' ? 'Semi-finals' : (bm.stage === 'F' || bm.stage === 'P3' ? 'Final &amp; 3rd Place' : ''));
+          if (round && round !== lastRound){ html += '<div class="bk-stage">' + round + '</div>'; lastRound = round; }
+          html += bracketMatchHTML(bm);
+        });
+        var fin = bracketFinalMatch();
+        var fRes = fin ? bracketResult(fin) : null;
+        var p3 = bracketMatchByStage('P3');
+        var pRes = p3 ? bracketResult(p3) : null;
         if (fRes && fRes.winner){
           html += '<div class="bk-champ">🏆 <b>Champion: ' + esc(fRes.winner) + '</b>'
             + (fRes.loser ? '<br>Runner-up: ' + esc(fRes.loser) : '')
@@ -7362,10 +7696,11 @@
         html += '<div class="rowflex bk-actions" style="margin-top:10px">'
           + (bracketHasResults()
               ? '<button class="btn ghost sm" onclick="removeBracket()">Remove Bracket</button>'
-              : '<button class="btn ghost sm" onclick="generateBracket()">↻ Regenerate from Current Top 4</button><button class="btn ghost sm" onclick="removeBracket()">Remove Bracket</button>')
+              : '<button class="btn ghost sm" onclick="bkChangeFormat()">↻ Change Format / Redraw</button><button class="btn ghost sm" onclick="removeBracket()">Remove Bracket</button>')
           + '</div>';
         return html;
       }
+
       /* ---------- live tournament match → live statistics ----------
          A tournament match belongs to the tournament from its first
          ball, not only once its result is saved: while it is being
@@ -9170,6 +9505,15 @@
            not the full scoring pad. */
         setView('console');
       }
+      /* Where the plain live scoreboard was opened FROM, when Back
+         should return there instead of to the Recent Matches list —
+         the Tournament view's Matches tab above all (its live row
+         records 'tournament' here via openTnLiveMatch). The Recent
+         Matches list itself leaves this empty: the list IS the
+         live scoreboard's default Back home. setView clears it
+         whenever the scoreboard is left, so it can never leak
+         into a later visit. */
+      var liveSbReturn = null;
       function openLiveMatch(){
         /* The scoreboard opens only for a match the SERVER has
            confirmed (both teams present in the confirmed state).
@@ -9195,8 +9539,21 @@
           return;
         }
         matchView = null;
+        liveSbReturn = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'scoreboard' && currentViewName !== 'live') ? currentViewName : null;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
+        setView('scoreboard');
+      }
+      /* The live row on the Tournament view's Matches tab: it opens
+         the same plain live scoreboard, but records the tournament
+         as the return, so the scoreboard's Back goes back to the
+         Tournament view (Matches tab still selected) instead of
+         falling through to the Recent Matches list. The row only
+         renders while a live tournament record with innings
+         exists, so — unlike openLiveMatch — it needs no
+         availability guard of its own. */
+      function openTnLiveMatch(){
+        liveSbReturn = 'tournament';
         setView('scoreboard');
       }
       /* Ghost-match guard: while a viewer sits on the Public
@@ -9264,6 +9621,19 @@
           matchView = null; cbOversInnSel = -1;
           if (mvRet === 'live'){ try { renderLiveHome(); } catch(e){} }
           setView(mvRet);
+          try { renderAll(); } catch(e){}
+          return;
+        }
+        /* From the plain live scoreboard opened somewhere other
+           than the Recent Matches list (the Tournament view's
+           Matches tab, via openTnLiveMatch), Back returns to where
+           it was opened from — the tab that was selected there is
+           still selected, so the user lands exactly where they
+           were. */
+        if (liveSbReturn){
+          var lsbRet = liveSbReturn;
+          liveSbReturn = null;
+          setView(lsbRet);
           try { renderAll(); } catch(e){}
           return;
         }
@@ -9558,7 +9928,7 @@
         if (lv && lv.innings && lv.innings.length){
           var l0 = lv.innings[0];
           var liveDone = (S.status === 'finished');
-          out.push('<div class="match-row tap"' + mlTapAttrs('setView(\'scoreboard\')', 'Open the live match') + '>'
+          out.push('<div class="match-row tap"' + mlTapAttrs('openTnLiveMatch()', 'Open the live match') + '>'
             + mlPill(liveDone ? 'done' : 'live')
             + tnVsTitleHTML(l0.battingTeam, l0.bowlingTeam)
             + tnInnLinesHTML(lv)
@@ -11740,7 +12110,7 @@
         var ds = liveDisplayState();
         if (!ds || !ds.teamA || !ds.teamB || liveMatchTombstoned(ds)){ toast('That match is no longer available'); try { renderLiveHome(); } catch(e){} return; }
         archiveView = null;
-        matchView = { kind: 'slice', main: true, id: String(ds.matchId), state: sliceDisplayState(mainMatchSlice(ds), ds) };
+        matchView = { kind: 'slice', main: true, id: String(ds.matchId), returnView: (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'scoreboard') ? currentViewName : 'live', state: sliceDisplayState(mainMatchSlice(ds), ds) };
         cbOversInnSel = -1;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
@@ -15723,6 +16093,14 @@
         if (v !== 'scoreboard' && typeof matchView !== 'undefined' && matchView){
           matchView = null; cbOversInnSel = -1;
           var mvEl = $('cbArchiveBar'); if (mvEl){ mvEl.hidden = true; mvEl.innerHTML = ''; }
+        }
+        /* Leaving the scoreboard also forgets where the plain live
+           scoreboard was opened from (see liveSbReturn): the next
+           visit starts with the default Back again. (Openers set
+           liveSbReturn BEFORE setView('scoreboard'), so it is
+           never cleared by its own navigation.) */
+        if (v !== 'scoreboard' && typeof liveSbReturn !== 'undefined' && liveSbReturn){
+          liveSbReturn = null;
         }
         document.body.classList.toggle('scoreboard-clean', v==='scoreboard');
         /* The header (brand bar) belongs to the home pages only —
