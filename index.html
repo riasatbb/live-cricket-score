@@ -2759,7 +2759,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v125';
+      var APP_VERSION = 'v126';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -12875,90 +12875,281 @@
         } catch(e){ toast('Backup download failed in this browser'); }
       }
       /* ---------- Per-match Scorecard PDF ----------
-         Any single match's FULL scorecard as a PDF: match header
-         (teams, tournament, venue, date, format, toss), then for
-         each innings the complete batting card (dismissal, runs,
-         balls, 4s, 6s, strike rate), yet-to-bat, extras and total,
-         and the full bowling card — plus the Super Over section
-         when one settled the match, the result and Player of the
-         Match. The text is laid out by the same on-device PDF
-         builder the Reports use (buildReportPdf), so no server and
-         no library are involved. The scorecard is built from
-         whatever state the caller swaps in — the scorer's real
-         state, the Firebase-confirmed viewer state, an archived
-         match's display state, or a History entry — exactly like
-         the Shareable Match Card, so the PDF always matches the
-         match on screen. */
-      function scInningsLines(label, inn){
-        var L = [];
-        L.push(label + ' — ' + (inn.battingTeam || 'Team') + '  ' + (inn.runs || 0) + '/' + (inn.wickets || 0) + ' (' + oversText(inn.legalBalls || 0) + ' overs)');
-        L.push('BATTING');
-        if ((inn.batters || []).length){
-          inn.batters.forEach(function(b){
-            var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-            var nm = dispName(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
-            L.push('  ' + nm + ' — ' + b.runs + ' (' + b.balls + ')  4s ' + (b.fours || 0) + '  6s ' + (b.sixes || 0) + '  SR ' + sr);
-            L.push('    ' + (b.out ? (b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out')));
-          });
-          var ytb = [];
-          try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
-          if (ytb.length) L.push('  Yet to bat: ' + ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '));
-        } else L.push('  No batting recorded.');
-        var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
-        var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
-        L.push('  Extras — ' + exTot + ' (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')');
-        L.push('  TOTAL — ' + (inn.runs || 0) + '/' + (inn.wickets || 0) + ' (' + oversText(inn.legalBalls || 0) + ' overs)');
-        L.push('BOWLING');
-        if ((inn.bowlers || []).length){
-          inn.bowlers.forEach(function(b){
-            var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-            L.push('  ' + dispName(inn.bowlingTeam, b.name) + ' — ' + oversText(b.balls || 0) + ' ov, ' + b.runs + ' runs, ' + b.wickets + ' wkts, Econ ' + econ);
-          });
-        } else L.push('  No bowling recorded.');
-        return L;
-      }
-      function scorecardTextFromState(){
-        var L = [];
-        L.push((S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' — Full Scorecard');
-        if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) L.push('Tournament: ' + S.tournament.name);
+         Any single match's FULL scorecard as a designed PDF,
+         drawn as real vector artwork with the same layout
+         engine as the Match Report (mrDoc below) — never typed
+         plain text: a dark masthead carrying the tournament,
+         the fixture, the venue / date / format meta and the
+         toss; one rounded score box per innings (the winner's
+         ringed in teal with a WINNER tag); the result in a teal
+         banner — or, while the match is still live, the chase
+         equation in a dark strip; a gold Player of the Match
+         strip; then for each innings a section bar carrying
+         the innings score, a ruled batting table (Batter /
+         Dismissal / R / B / 4s / 6s / SR) with zebra striping,
+         yet-to-bat (did-not-bat once the match is done), the
+         extras + total strip, Fall Of Wickets, and the full
+         bowling table (O / M / R / W / Eco / 0s / 4s / 6s / Wd /
+         NB) — plus the Super Over cards when one settled the
+         match. Built from whatever state the caller swaps in —
+         the scorer's real state, the Firebase-confirmed viewer
+         state, an archived match's display state, or a History
+         entry — exactly like the Shareable Match Card, so the
+         PDF always matches the match on screen. No server, no
+         library. */
+      function buildScorecardPdf(){
+        var inns = summaryInningsList();
+        var MX = 40, CW = 515, RX = MX + CW;
+        var d = mrDoc();
+        var teamA = S.teamA || 'Team 1', teamB = S.teamB || 'Team 2';
+        var fixtureLine = mrFit(teamA + ' vs ' + teamB, 7.5, false, 300);
+        d.onPage = function(){
+          d.text('FULL SCORECARD', MX, 26, 2, 7.5, MRC.tealTx, 'l', 1.6);
+          d.text(fixtureLine, RX, 26, 1, 7.5, MRC.muted, 'r');
+          d.line(MX, 33, RX, MRC.line, 0.7);
+        };
         var when = '';
         if (S.matchDate){
-          var d = new Date(S.matchDate + 'T' + (S.matchTime || '00:00'));
-          if (!isNaN(d.getTime())) when = d.toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' });
+          var dt = new Date(S.matchDate + 'T' + (S.matchTime || '00:00'));
+          if (!isNaN(dt.getTime())) when = dt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
-        var meta = [S.venue || '', when].filter(Boolean).join(' • ');
-        if (meta) L.push(meta);
-        var fmt = [S.matchFormat || '', S.ballType || ''].filter(Boolean).join(' • ');
-        if (fmt || S.oversLimit) L.push('Format: ' + [fmt, S.oversLimit ? S.oversLimit + ' overs' : ''].filter(Boolean).join(' • '));
-        if (S.tossInfo) L.push('Toss: ' + S.tossInfo);
-        L.push('');
-        var inns = [];
-        if (S.prevInnings) inns.push(S.prevInnings);
-        if (S.current) inns.push(S.current);
-        var hasFigs = inns.some(function(inn){ return (inn.batters || []).length || (inn.bowlers || []).length || (inn.legalBalls || 0) > 0; });
-        if (!hasFigs) L.push('No scorecard yet — nothing has been scored in this match.');
+        var finished = S.status === 'finished' || !!S.abandoned || !!S.resultText;
+        var result = finished ? summaryResultText(inns) : '';
+        var winner = '';
+        if (result) [teamA, teamB].forEach(function(t){ if (result.indexOf(t) === 0) winner = t; });
+        /* --- masthead --- */
+        d.fill(0, 0, 595, 134, MRC.band);
+        d.fill(0, 134, 595, 4, MRC.teal);
+        d.text('CricCast', MX, 30, 2, 8, MRC.accent, 'l', 2.4);
+        if (S.matchKind === 'tournament' && S.tournament && S.tournament.name)
+          d.text(mrFit(String(S.tournament.name).toUpperCase(), 9, true, 230), RX, 30, 2, 9, MRC.white, 'r', 1);
+        d.text('Full Scorecard', MX, 64, 2, 25, MRC.white, 'l');
+        d.text(mrFit(teamA + '  vs  ' + teamB, 11.5, true, CW), MX, 88, 2, 11.5, MRC.onDark, 'l');
+        var meta = [S.venue || '', when, [S.matchFormat || '', S.ballType || '', S.oversLimit ? S.oversLimit + ' overs' : ''].filter(Boolean).join(' ')].filter(Boolean).join('   |   ');
+        if (meta) d.text(mrFit(meta, 8.5, false, CW), MX, 106, 1, 8.5, MRC.onDarkDim, 'l');
+        if (S.tossInfo) d.text(mrFit('Toss: ' + S.tossInfo, 8.5, false, CW), MX, 122, 3, 8.5, MRC.onDarkDim, 'l');
+        d.y = 156;
+        /* --- innings score boxes --- */
+        if (inns.length){
+          d.need(66);
+          var bw = inns.length > 1 ? (CW - 12) / 2 : CW;
+          inns.forEach(function(inn, i){
+            var bx = MX + i * (bw + 12);
+            var isWin = !!winner && inn.battingTeam === winner;
+            d.rrect(bx, d.y, bw, 66, 6, MRC.tealSoft, isWin ? MRC.teal : MRC.line, isWin ? 1.6 : 0.9);
+            d.text(i === 0 ? '1ST INNINGS' : '2ND INNINGS', bx + 12, d.y + 16, 2, 7.5, MRC.tealTx, 'l', 1.4);
+            if (isWin){
+              d.rrect(bx + bw - 56, d.y + 7, 46, 14, 7, MRC.teal, null, 0);
+              d.text('WINNER', bx + bw - 33, d.y + 17, 2, 7, MRC.white, 'c');
+            }
+            d.text(mrFit(inn.battingTeam || 'Team', 10.5, true, bw - 24), bx + 12, d.y + 33, 2, 10.5, MRC.ink, 'l');
+            var sc = (inn.runs || 0) + '/' + (inn.wickets || 0);
+            d.text(sc, bx + 12, d.y + 57, 2, 20, MRC.tealTx, 'l');
+            d.text('(' + oversText(inn.legalBalls || 0) + ' overs)', bx + 12 + mrTextW(sc, 20, true) + 8, d.y + 57, 1, 9.5, MRC.muted, 'l');
+            d.text('RR ' + (inn.legalBalls > 0 ? (inn.runs / (inn.legalBalls / 6)).toFixed(2) : '0.00'), bx + bw - 12, d.y + 57, 2, 9, MRC.muted, 'r');
+          });
+          d.y += 78;
+        } else {
+          d.text('No scorecard yet - nothing has been scored in this match.', MX, d.y + 12, 3, 10, MRC.muted, 'l');
+          d.y += 26;
+        }
+        /* --- result banner, or the live chase equation --- */
+        if (finished && result){
+          var resLines = mrWrap(result, 12.5, true, CW - 48);
+          var bh = resLines.length * 17 + 20;
+          d.need(bh + 8);
+          d.rrect(MX, d.y, CW, bh, 6, MRC.teal, null, 0);
+          resLines.forEach(function(ln, li){
+            d.text(ln, MX + CW / 2, d.y + 24 + li * 17, 2, 12.5, MRC.white, 'c');
+          });
+          d.y += bh + 10;
+          if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText){
+            d.need(16);
+            d.text('Super Over: ' + S.superOver.resultText, MX + CW / 2, d.y + 10, 3, 9.5, MRC.muted, 'c');
+            d.y += 20;
+          }
+        } else if (!finished && inns.length){
+          var cur = inns[inns.length - 1];
+          var liveTxt = '';
+          try {
+            if (inns.length > 1){
+              var needR = (inns[0].runs || 0) + 1 - (cur.runs || 0);
+              var ballsLeft = (S.oversLimit || 0) * 6 - (cur.legalBalls || 0);
+              var wktsLeft = (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10) - (cur.wickets || 0);
+              if (needR > 0) liveTxt = (cur.battingTeam || 'Team') + ' need ' + needR + (needR === 1 ? ' run' : ' runs') + ' to win'
+                + (ballsLeft > 0 ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '')
+                + (wktsLeft > 0 ? ' with ' + wktsLeft + (wktsLeft === 1 ? ' wicket' : ' wickets') + ' in hand' : '');
+            } else {
+              liveTxt = (cur.battingTeam || 'Team') + '  ' + (cur.runs || 0) + '/' + (cur.wickets || 0) + ' (' + oversText(cur.legalBalls || 0) + ' overs) - innings in progress';
+            }
+          } catch(e){ liveTxt = ''; }
+          if (liveTxt){
+            d.need(38);
+            d.rrect(MX, d.y, CW, 30, 6, MRC.dark, null, 0);
+            d.fill(MX, d.y, 4, 30, MRC.teal);
+            d.text(mrFit(liveTxt, 11, true, CW - 28), MX + CW / 2, d.y + 19.5, 2, 11, MRC.white, 'c');
+            d.y += 40;
+          }
+        }
+        if (S.potmName){
+          d.need(32);
+          d.rrect(MX, d.y, CW, 30, 6, MRC.goldBg, null, 0);
+          d.fill(MX, d.y, 4, 30, MRC.goldBar);
+          d.text('PLAYER OF THE MATCH', MX + 14, d.y + 19, 2, 8, MRC.goldTx, 'l', 1.2);
+          var potm = dispName(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
+          var lx = MX + 14 + mrTextW('PLAYER OF THE MATCH', 8, true) + 1.2 * 18 + 12;
+          d.text(mrFit(potm, 11.5, true, RX - 10 - lx), lx, d.y + 19.5, 2, 11.5, MRC.ink, 'l');
+          d.y += 42;
+        }
+        /* --- shared section furniture --- */
+        function sectionBar(title, right){
+          d.need(34);
+          d.fill(MX, d.y, CW, 21, MRC.dark);
+          d.fill(MX, d.y, 4, 21, MRC.teal);
+          d.text(mrFit(title, 10, true, right ? CW - 160 : CW - 26), MX + 12, d.y + 14.5, 2, 10, MRC.white, 'l', 0.7);
+          if (right) d.text(right, RX - 12, d.y + 14.5, 2, 10, MRC.accent, 'r');
+          d.y += 31;
+        }
+        function subhead(t){
+          d.need(20);
+          d.text(t, MX + 1, d.y + 10, 2, 9, MRC.tealTx, 'l', 1.3);
+          d.y += 14;
+        }
+        function para(label, text, size, col, font){
+          font = font || 1;
+          var lw = label ? mrTextW(label, size, true) + 5 : 0;
+          var words = String(text || '').split(/\s+/).filter(Boolean);
+          var lines = [], curL = '', limit = CW - lw;
+          words.forEach(function(wd){
+            var t = curL ? curL + ' ' + wd : wd;
+            if (mrTextW(t, size, false) <= limit || !curL) curL = t;
+            else { lines.push(curL); curL = wd; limit = CW; }
+          });
+          if (curL) lines.push(curL);
+          if (!lines.length) lines = [''];
+          d.need(lines.length * (size + 3.5) + 2);
+          lines.forEach(function(ln, li){
+            if (li === 0 && label) d.text(label, MX, d.y + size, 2, size, MRC.ink, 'l');
+            d.text(ln, MX + (li === 0 ? lw : 0), d.y + size, font, size, col, 'l');
+            d.y += size + 3.5;
+          });
+          d.y += 2;
+        }
+        /* --- full innings cards --- */
+        function inningsDetail(inn, title){
+          sectionBar(title, (inn.runs || 0) + '/' + (inn.wickets || 0) + '  (' + oversText(inn.legalBalls || 0) + ' ov)');
+          function thead(cols){
+            d.fill(MX, d.y, CW, 16, MRC.dark);
+            cols.forEach(function(c){
+              if (c.a === 'r') d.text(c.h, MX + c.x + c.w - 7, d.y + 11.5, 2, 8.5, MRC.white, 'r');
+              else d.text(c.h, MX + c.x + 7, d.y + 11.5, 2, 8.5, MRC.white, 'l');
+            });
+            d.y += 16;
+          }
+          subhead('BATTING');
+          var BC = [
+            { h: 'Batter', x: 0, w: 142, a: 'l' }, { h: 'Dismissal', x: 142, w: 185, a: 'l' },
+            { h: 'R', x: 327, w: 34, a: 'r' }, { h: 'B', x: 361, w: 34, a: 'r' },
+            { h: '4s', x: 395, w: 32, a: 'r' }, { h: '6s', x: 427, w: 32, a: 'r' },
+            { h: 'SR', x: 459, w: 56, a: 'r' }
+          ];
+          thead(BC);
+          var bats = inn.batters || [];
+          if (!bats.length){
+            d.need(15);
+            d.text('No batting recorded.', MX + 7, d.y + 11, 3, 9, MRC.muted, 'l');
+            d.y += 15;
+          }
+          bats.forEach(function(b, ri){
+            if (d.needB(15)) thead(BC);
+            if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
+            var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
+            var dism = b.out ? (b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out');
+            var nm = dispName(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
+            var cells = [nm, dism, String(b.runs), String(b.balls), String(b.fours || 0), String(b.sixes || 0), sr];
+            cells.forEach(function(v, ci){
+              var c = BC[ci];
+              var bold = ci === 2;
+              var fnt = (ci === 1 && !b.out) ? 3 : (bold ? 2 : 1);
+              var colr = (ci === 1 && !b.out) ? MRC.muted : MRC.ink;
+              if (c.a === 'r') d.text(mrFit(v, 9, bold, c.w - 10), MX + c.x + c.w - 7, d.y + 11, fnt, 9, colr, 'r');
+              else d.text(mrFit(v, 9, bold, c.w - 12), MX + c.x + 7, d.y + 11, fnt, 9, colr, 'l');
+            });
+            d.y += 15;
+          });
+          d.line(MX, d.y, RX, MRC.line, 0.6);
+          d.y += 6;
+          var ytb = [];
+          try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
+          if (ytb.length) para((inn === S.current && !finished) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
+          d.need(28);
+          var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
+          var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+          d.rrect(MX, d.y, CW, 26, 5, MRC.tealSoft, null, 0);
+          d.text(mrFit('Extras: ' + exTot + ' (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')', 9, false, 248), MX + 10, d.y + 17, 1, 9, MRC.ink, 'l');
+          d.text('Overs: ' + oversText(inn.legalBalls || 0), MX + 266, d.y + 17, 1, 9, MRC.muted, 'l');
+          d.text('TOTAL  ' + (inn.runs || 0) + '/' + (inn.wickets || 0) + '    RR ' + (inn.legalBalls > 0 ? (inn.runs / (inn.legalBalls / 6)).toFixed(2) : '0.00'), RX - 10, d.y + 17.5, 2, 10.5, MRC.tealTx, 'r');
+          d.y += 34;
+          var fow = mrFallOfWickets(inn);
+          if (fow.length){
+            para('Fall of Wickets:', fow.map(function(f){
+              return f.score + '-' + f.n + (f.name ? ' (' + dispName(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
+            }).join(',  '), 8.5, MRC.muted);
+          }
+          subhead('BOWLING');
+          var WC = [
+            { h: 'Bowler', x: 0, w: 146, a: 'l' }, { h: 'O', x: 146, w: 38, a: 'r' },
+            { h: 'M', x: 184, w: 30, a: 'r' }, { h: 'R', x: 214, w: 36, a: 'r' },
+            { h: 'W', x: 250, w: 30, a: 'r' }, { h: 'Eco', x: 280, w: 50, a: 'r' },
+            { h: '0s', x: 330, w: 34, a: 'r' }, { h: '4s', x: 364, w: 34, a: 'r' },
+            { h: '6s', x: 398, w: 34, a: 'r' }, { h: 'Wd', x: 432, w: 36, a: 'r' },
+            { h: 'NB', x: 468, w: 47, a: 'r' }
+          ];
+          thead(WC);
+          var stats = mrBowlerStats(inn);
+          var bowls = inn.bowlers || [];
+          if (!bowls.length){
+            d.need(15);
+            d.text('No bowling recorded.', MX + 7, d.y + 11, 3, 9, MRC.muted, 'l');
+            d.y += 15;
+          }
+          bowls.forEach(function(b, ri){
+            if (d.needB(15)) thead(WC);
+            if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
+            var s = stats[b.name] || { dots: 0, fours: 0, sixes: 0, wides: 0, noballs: 0, maidens: 0 };
+            var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
+            var cells = [dispName(inn.bowlingTeam, b.name), oversText(b.balls || 0), String(s.maidens), String(b.runs), String(b.wickets), econ, String(s.dots), String(s.fours), String(s.sixes), String(s.wides), String(s.noballs)];
+            cells.forEach(function(v, ci){
+              var c = WC[ci];
+              var bold = ci === 4;
+              if (c.a === 'r') d.text(mrFit(v, 9, bold, c.w - 10), MX + c.x + c.w - 7, d.y + 11, bold ? 2 : 1, 9, MRC.ink, 'r');
+              else d.text(mrFit(v, 9, false, c.w - 12), MX + c.x + 7, d.y + 11, 1, 9, MRC.ink, 'l');
+            });
+            d.y += 15;
+          });
+          d.line(MX, d.y, RX, MRC.line, 0.6);
+          d.y += 14;
+        }
         inns.forEach(function(inn, i){
-          scInningsLines((i === 0 ? '1st' : '2nd') + ' INNINGS', inn).forEach(function(x){ L.push(x); });
-          L.push('');
+          inningsDetail(inn, (i === 0 ? '1ST INNINGS' : '2ND INNINGS') + ' - ' + String(inn.battingTeam || 'Team').toUpperCase());
         });
         var so = S.superOver;
         if (so && so.status === 'finished' && (so.innings || []).length){
-          L.push('SUPER OVER');
           so.innings.forEach(function(inn, i){
-            scInningsLines('Super Over — Innings ' + (i + 1), inn).forEach(function(x){ L.push(x); });
-            L.push('');
+            inningsDetail(inn, 'SUPER OVER - INNINGS ' + (i + 1) + ' - ' + String(inn.battingTeam || 'Team').toUpperCase());
           });
-          if (so.resultText) L.push('Super Over result: ' + so.resultText);
         }
-        if (S.abandoned) L.push('Match abandoned.');
-        else if (S.resultText) L.push('Result: ' + String(S.resultText).replace(/ 🏆/g, ''));
-        else if (S.status === 'finished'){
-          var rt = '';
-          try { rt = matchResultText({ innings: inns, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), resultText: '', superOver: so }); } catch(e){ rt = ''; }
-          if (rt) L.push('Result: ' + rt);
-        }
-        if (S.potmName) L.push('Player of the Match: ' + dispName(S.potmTeam, S.potmName) + (S.potmTeam ? ' (' + S.potmTeam + ')' : ''));
-        return L.join('\n');
+        /* --- footer on every page --- */
+        return d.finish(function(pg, pn, total){
+          function fT(str, x, font, col){
+            pg.push('BT', '/' + font + ' 7.5 Tf', col + ' rg', '1 0 0 1 ' + d.num(x) + ' ' + (842 - 815) + ' Tm', '(' + pdfEscape(pdfSafeText(str)) + ') Tj', 'ET');
+          }
+          pg.push(MRC.line + ' RG', '0.7 w', MX + ' ' + (842 - 802) + ' m ' + RX + ' ' + (842 - 802) + ' l S');
+          fT('CricCast by Riasat Ali', MX, 'F2', MRC.muted);
+          fT(' - Full Scorecard', MX + mrTextW('CricCast by Riasat Ali', 7.5, true), 'F1', MRC.muted);
+          var pt = 'Page ' + pn + ' of ' + total;
+          fT(pt, RX - mrTextW(pt, 7.5, false), 'F1', MRC.muted);
+        });
       }
       function scorecardPdfFileName(){
         function slug(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
@@ -12967,7 +13158,7 @@
       function saveScorecardPdf(){
         if (!S.teamA && !S.teamB){ toast('No match to download yet — start a match first'); return; }
         try {
-          var blob = new Blob([buildReportPdf(scorecardTextFromState())], { type:'application/pdf' });
+          var blob = new Blob([buildScorecardPdf()], { type:'application/pdf' });
           deliverFile(blob, scorecardPdfFileName(), 'Scorecard downloaded as PDF');
         } catch(e){ toast('PDF download failed in this browser'); }
       }
