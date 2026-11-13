@@ -748,7 +748,8 @@
       .tn-banner{margin:0;padding:0;background:#ffffff;color:#122f57;position:relative;overflow:hidden;display:block;border-bottom:1px solid var(--line)}
       @media (prefers-color-scheme: dark){.tn-banner{background:#10161d;color:#dcebfb}}
       .tn-banner-row{display:flex;align-items:center;gap:16px;padding:18px 16px 16px}
-      .tn-banner-img{width:100%;height:clamp(150px,34vw,232px);object-fit:cover;display:block;background:var(--surface2)}
+      .tn-banner-row[hidden]{display:none}
+      .tn-banner-img{width:100%;height:auto;object-fit:contain;display:block;background:var(--surface2)}
       .tn-banner-img[hidden]{display:none}
       .tn-banner-art{flex:none;width:108px;max-width:30vw;height:auto}
       .tn-banner-main{flex:1;min-width:0}
@@ -801,7 +802,7 @@
       .tne-head-btn:active{background:rgba(255,255,255,.18)}
       .tne-body{padding:0 16px 20px;text-align:left}
       .tne-banner{margin:0 -16px;position:relative;background:var(--surface2)}
-      .tne-banner img{width:100%;height:clamp(150px,34vw,232px);object-fit:cover;display:block}
+      .tne-banner img{width:100%;height:auto;object-fit:contain;display:block}
       .tne-banner img[hidden]{display:none}
       .tne-banner-art{display:flex;align-items:center;justify-content:center;padding:26px 10px}
       .tne-banner-art[hidden]{display:none}
@@ -2348,7 +2349,7 @@
           <div class="tn-panel show" id="tnPanel-home" style="padding:0">
             <div class="tn-banner" id="tnBanner">
               <img id="tnBannerImg" class="tn-banner-img" alt="Tournament banner" hidden />
-              <div class="tn-banner-row">
+              <div class="tn-banner-row" id="tnBannerRow">
               <svg class="tn-banner-art" viewBox="0 0 120 92" aria-hidden="true" focusable="false">
                 <circle cx="63" cy="13" r="7" fill="#123f6e"/>
                 <path d="M61 21 L49 43 L35 61" stroke="#e23b2e" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2434,11 +2435,6 @@
                   <div class="lbl">Fours</div>
                   <div class="tn-bignum num" id="tnTotalFours">0</div>
                 </div>
-              </div>
-              <div class="rowflex" style="margin-top:16px;justify-content:center">
-                <button class="btn sm" onclick="setTnTab('matches')">View Matches →</button>
-                <button class="btn ghost sm" onclick="setTnTab('points')">Points Table</button>
-                <button class="btn ghost sm" onclick="setTnTab('teams')">Teams &amp; Players</button>
               </div>
             </div>
           </div>
@@ -2998,7 +2994,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v137';
+      var APP_VERSION = 'v138';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -9962,6 +9958,13 @@
           if (bUrl){ if (bImg.getAttribute('src') !== bUrl) bImg.src = bUrl; bImg.alt = displayName + ' banner'; }
           else bImg.removeAttribute('src');
         }
+        /* When a banner image is set it IS the header — the
+           illustrated fallback row (kicker, second copy of the name
+           and the team-names line) hides, exactly as the Edit Info
+           page hides its fallback art, so the name is not repeated
+           between the banner and the info block below it. Without a
+           banner the illustrated row shows as before. */
+        var bRow = $('tnBannerRow'); if (bRow) bRow.hidden = !!tn.banner;
         /* The Edit Info page's banner preview follows the saved
            banner too (its Change Image / Remove controls live there
            now, not in a Home-tab fold). */
