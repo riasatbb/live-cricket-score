@@ -706,6 +706,29 @@
       .tns-table td.val{font-weight:800}
       .tns-table .howout{display:block}
       .tns-empty{color:var(--muted);font-size:14px;text-align:center;padding:10px 4px;margin:0}
+      /* Best Partnership cards (inside the Batting drill-in):
+         one card per stand — rank chip and "TEAM vs OPPONENT"
+         on top, the two batters either side of a centre circle
+         carrying the stand's runs, with the balls under it. */
+      .tnp-card{border-bottom:1px solid var(--line);padding:12px 14px 10px;text-align:center}
+      .tnp-card:last-child{border-bottom:none}
+      .tnp-top{display:flex;align-items:center;gap:9px;text-align:left}
+      .tnp-rank{flex:none;width:24px;height:24px;border-radius:50%;background:#0e6b4f;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+      .tnp-match{font-size:13.5px;font-weight:800;letter-spacing:.03em}
+      .tnp-row{display:flex;align-items:flex-start;gap:8px;margin-top:10px}
+      .tnp-bat{flex:1;min-width:0;text-align:left}
+      .tnp-bat.r{text-align:right}
+      .tnp-name{display:block;font-size:15.5px;font-weight:700;line-height:1.2;word-break:break-word}
+      .tnp-fig{display:block;font-size:14.5px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+      .tnp-mid{flex:none;width:86px;text-align:center}
+      .tnp-circle{display:flex;align-items:center;justify-content:center;width:58px;height:58px;margin:0 auto;border-radius:50%;border:2px solid #0e6b4f;color:#0e6b4f;font-family:"Barlow Condensed",sans-serif;font-size:26px;font-weight:700;line-height:1}
+      .tnp-balls{display:block;margin-top:4px;font-size:13px;font-weight:700;color:#0e6b4f}
+      .tnp-wkt{margin-top:6px;font-size:12px;color:var(--muted);font-weight:600}
+      @media (prefers-color-scheme: dark){
+        .tnp-rank{background:#173527;color:#7fd6a8}
+        .tnp-circle{border-color:#7fd6a8;color:#7fd6a8}
+        .tnp-balls{color:#7fd6a8}
+      }
       .tn-banner{margin:0;padding:0;background:#ffffff;color:#122f57;position:relative;overflow:hidden;display:block;border-bottom:1px solid var(--line)}
       @media (prefers-color-scheme: dark){.tn-banner{background:#10161d;color:#dcebfb}}
       .tn-banner-row{display:flex;align-items:center;gap:16px;padding:18px 16px 16px}
@@ -2720,7 +2743,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v122';
+      var APP_VERSION = 'v123';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7620,18 +7643,49 @@
         s[kind]++;
       }
       function tnStatData(){
-        var bat = {}, bowl = {}, field = {};
+        var bat = {}, bowl = {}, field = {}, partnerships = [], teamTotals = [];
+        function batEntry(m, team, b){
+          var bk = b.pid || entryPlayerId(m, team, b.name);
+          if (!bat[bk]) bat[bk] = { pid:bk, name:b.name, team:team, teams:[team], runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, best:0, bestBalls:0, thirties:0, fifties:0, hundreds:0, ducks:0, f30b:null, f30r:0, f50b:null, f50r:0, f100b:null, f100r:0, sixInn:0, sixInnR:0, fourInn:0, fourInnR:0 };
+          var s = bat[bk];
+          if (s.teams.indexOf(team) === -1) s.teams.push(team);
+          return s;
+        }
+        function bowlEntry(m, team, name, pid){
+          var wk = pid || entryPlayerId(m, team, name);
+          if (!bowl[wk]) bowl[wk] = { pid:wk, name:name, team:team, teams:[team], balls:0, runs:0, wickets:0, inns:0, bestW:-1, bestR:0, bestBalls:0, dots:0, maidens:0, wides:0, noballs:0, threeFers:0, fourFers:0, fiveFers:0, hatTricks:0 };
+          var s = bowl[wk];
+          if (s.teams.indexOf(team) === -1) s.teams.push(team);
+          return s;
+        }
         tournamentStatMatches().forEach(function(m){
           (m.innings || []).forEach(function(inn){
+            var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
+            var hasBalls = deliveries.length > 0;
+            if ((inn.legalBalls || 0) > 0 || (inn.runs || 0) > 0){
+              teamTotals.push({ name: inn.battingTeam, team: inn.battingTeam, opp: inn.bowlingTeam, sub: 'vs ' + inn.bowlingTeam, runs: inn.runs || 0, wkts: inn.wickets || 0, legal: inn.legalBalls || 0 });
+            }
             (inn.batters || []).forEach(function(b){
-              var bk = b.pid || entryPlayerId(m, inn.battingTeam, b.name);
-              if (!bat[bk]) bat[bk] = { pid:bk, name:b.name, team:inn.battingTeam, teams:[inn.battingTeam], runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, best:0, bestBalls:0, fifties:0, hundreds:0 };
-              var s = bat[bk];
-              if (s.teams.indexOf(inn.battingTeam) === -1) s.teams.push(inn.battingTeam);
-              s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; s.inns++;
+              var s = batEntry(m, inn.battingTeam, b);
+              var br = b.runs || 0, bb = b.balls || 0;
+              s.runs += br; s.balls += bb; s.fours += b.fours || 0; s.sixes += b.sixes || 0; s.inns++;
               if (b.out) s.outs++;
-              if (b.runs > s.best){ s.best = b.runs; s.bestBalls = b.balls || 0; }
-              if (b.runs >= 100) s.hundreds++; else if (b.runs >= 50) s.fifties++;
+              if (b.out && br === 0) s.ducks++;
+              if (br > s.best){ s.best = br; s.bestBalls = bb; }
+              if (br >= 100) s.hundreds++; else if (br >= 50) s.fifties++; else if (br >= 30) s.thirties++;
+              if ((b.sixes || 0) > s.sixInn){ s.sixInn = b.sixes || 0; s.sixInnR = br; }
+              if ((b.fours || 0) > s.fourInn){ s.fourInn = b.fours || 0; s.fourInnR = br; }
+              /* Fastest-milestone fallback for an innings with no
+                 ball-by-ball record: the balls the batter faced in
+                 the whole innings are the only figure there is. The
+                 ball-by-ball pass below replaces it with the exact
+                 balls at which the milestone was reached whenever a
+                 record exists (that figure is never larger). */
+              if (!hasBalls){
+                if (br >= 30 && (s.f30b === null || bb < s.f30b)){ s.f30b = bb; s.f30r = br; }
+                if (br >= 50 && (s.f50b === null || bb < s.f50b)){ s.f50b = bb; s.f50r = br; }
+                if (br >= 100 && (s.f100b === null || bb < s.f100b)){ s.f100b = bb; s.f100r = br; }
+              }
               var ho = String(b.howOut || ''), mm = null;
               if ((mm = /^c & b (.+)$/.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
               else if ((mm = /^c (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
@@ -7639,19 +7693,138 @@
               else if ((mm = /^st (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'stumpings');
             });
             (inn.bowlers || []).forEach(function(b){
-              var wk = b.pid || entryPlayerId(m, inn.bowlingTeam, b.name);
-              if (!bowl[wk]) bowl[wk] = { pid:wk, name:b.name, team:inn.bowlingTeam, teams:[inn.bowlingTeam], balls:0, runs:0, wickets:0, inns:0, bestW:-1, bestR:0, bestBalls:0 };
-              var s = bowl[wk];
-              if (s.teams.indexOf(inn.bowlingTeam) === -1) s.teams.push(inn.bowlingTeam);
-              s.balls += b.balls; s.runs += b.runs; s.wickets += b.wickets; s.inns++;
-              if (b.wickets > s.bestW || (b.wickets === s.bestW && b.runs < s.bestR)){ s.bestW = b.wickets; s.bestR = b.runs; s.bestBalls = b.balls || 0; }
+              var s = bowlEntry(m, inn.bowlingTeam, b.name, b.pid);
+              s.balls += b.balls || 0; s.runs += b.runs || 0; s.wickets += b.wickets || 0; s.inns++;
+              if (b.wickets > s.bestW || (b.wickets === s.bestW && b.runs < s.bestR)){ s.bestW = b.wickets; s.bestR = b.runs || 0; s.bestBalls = b.balls || 0; }
+              if (b.wickets === 3) s.threeFers++; else if (b.wickets === 4) s.fourFers++; else if (b.wickets >= 5) s.fiveFers++;
             });
+            if (hasBalls){
+              /* ---- figures only the ball-by-ball record knows ----
+                 Fastest 30 / 50 / 100 (the balls a batter had faced
+                 when their score crossed the mark — a no-ball adds
+                 runs but no ball faced, exactly as the scorer's own
+                 balls-faced count treats it), dot balls, maidens,
+                 wides and no-balls per bowler (the same derivations
+                 the Match Report uses), hat-tricks (three bowler-
+                 credited wickets in three consecutive balls of the
+                 bowler's own sequence — a run out breaks the streak,
+                 as it does for the milestone line), and every
+                 partnership stand: the pair at the crease between
+                 wickets, each batter's own runs and balls inside the
+                 stand, and the stand's total runs (extras included)
+                 and legal balls. The pair is followed through the
+                 innings-start and comes-to-the-crease announcements
+                 stored in the record, with the batting order as the
+                 fallback for older records without them. */
+              var finalRuns = {};
+              (inn.batters || []).forEach(function(b){ finalRuns[b.name] = b.runs || 0; });
+              var simBat = {}, seqs = {}, groups = [], curG = null, legalBefore = 0;
+              deliveries.forEach(function(bl){
+                var t = String(bl.text || '');
+                if (bl.batter){
+                  var rb = simBat[bl.batter] || (simBat[bl.batter] = { runs:0, balls:0, g30:false, g50:false, g100:false });
+                  rb.runs += batterRunsOnBall(t);
+                  if (isLegalDelivery(t)) rb.balls++;
+                  [[30, 'f30', 'g30'], [50, 'f50', 'g50'], [100, 'f100', 'g100']].forEach(function(th){
+                    if (!rb[th[2]] && rb.runs >= th[0]){
+                      rb[th[2]] = true;
+                      (inn.batters || []).forEach(function(x){
+                        if (x.name !== bl.batter) return;
+                        var be = batEntry(m, inn.battingTeam, x);
+                        if (be[th[1] + 'b'] === null || rb.balls < be[th[1] + 'b']){ be[th[1] + 'b'] = rb.balls; be[th[1] + 'r'] = finalRuns[bl.batter] || rb.runs; }
+                      });
+                    }
+                  });
+                }
+                if (bl.bowler){
+                  var bs = bowlEntry(m, inn.bowlingTeam, bl.bowler);
+                  if (/^Wd/.test(t)) bs.wides++;
+                  else if (/^Nb/.test(t)) bs.noballs++;
+                  else if (isLegalDelivery(t) && parseBallRuns(t) === 0) bs.dots++;
+                  if (isLegalDelivery(t) || isWicketBall(bl)){
+                    var sq = seqs[bl.bowler] || (seqs[bl.bowler] = []);
+                    sq.push(isWicketBall(bl) && bl.bowlerWicket !== false);
+                  }
+                }
+                var gno = Math.floor(legalBefore / 6) + 1;
+                if (!curG || curG.no !== gno){ curG = { no: gno, runs: 0, legal: 0, bowlers: {} }; groups.push(curG); }
+                curG.runs += parseBallRuns(t);
+                if (bl.bowler) curG.bowlers[bl.bowler] = 1;
+                if (isLegalDelivery(t)){ curG.legal++; legalBefore++; }
+              });
+              groups.forEach(function(g){
+                var names = Object.keys(g.bowlers);
+                if (g.legal === 6 && g.runs === 0 && names.length === 1) bowlEntry(m, inn.bowlingTeam, names[0]).maidens++;
+              });
+              Object.keys(seqs).forEach(function(nm){
+                var sq = seqs[nm], count = 0;
+                for (var i = 2; i < sq.length; i++){
+                  if (sq[i] && sq[i - 1] && sq[i - 2] && !(i >= 3 && sq[i - 3])) count++;
+                }
+                if (count) bowlEntry(m, inn.bowlingTeam, nm).hatTricks += count;
+              });
+              /* ---- partnership stands ---- */
+              var rawBalls = inn.balls || [];
+              var arrivals = [];
+              rawBalls.forEach(function(x){
+                if (!x) return;
+                if (x.evt === 'start'){
+                  if (x.who && arrivals.indexOf(x.who) === -1) arrivals.push(x.who);
+                  if (x.ns && arrivals.indexOf(x.ns) === -1) arrivals.push(x.ns);
+                } else if (x.evt === 'crease'){
+                  if (x.who && arrivals.indexOf(x.who) === -1) arrivals.push(x.who);
+                }
+              });
+              (inn.batters || []).forEach(function(b){ if (arrivals.indexOf(b.name) === -1) arrivals.push(b.name); });
+              var pair = [], dismissed = {}, aPtr = 0, wktsDown = 0, stand = { runs:0, balls:0, bat:{} };
+              function ensurePair(){
+                while (pair.length < 2 && aPtr < arrivals.length){
+                  var cand = arrivals[aPtr++];
+                  if (pair.indexOf(cand) === -1 && !dismissed[cand]) pair.push(cand);
+                }
+              }
+              function closeStand(wktNo){
+                if (pair.length >= 2 && (stand.runs > 0 || stand.balls > 0)){
+                  var fa = stand.bat[pair[0]], fb = stand.bat[pair[1]];
+                  partnerships.push({ team: inn.battingTeam, opp: inn.bowlingTeam, p1: pair[0], p2: pair[1], r1: fa ? fa.runs : 0, b1: fa ? fa.balls : 0, r2: fb ? fb.runs : 0, b2: fb ? fb.balls : 0, runs: stand.runs, balls: stand.balls, wkt: wktNo });
+                }
+                stand = { runs:0, balls:0, bat:{} };
+              }
+              rawBalls.forEach(function(x){
+                if (!x) return;
+                if (x.evt){
+                  if (x.evt === 'start'){ pair = [x.who, x.ns].filter(Boolean); }
+                  else if (x.evt === 'crease'){ if (x.who && pair.indexOf(x.who) === -1 && pair.length < 2) pair.push(x.who); }
+                  else if (x.evt === 'note'){
+                    var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
+                    if (rm && pair.indexOf(rm[1]) > -1){ closeStand(wktsDown + 1); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+                  }
+                  return;
+                }
+                ensurePair();
+                var t2 = String(x.text || '');
+                stand.runs += parseBallRuns(t2);
+                if (x.batter){
+                  if (!stand.bat[x.batter]) stand.bat[x.batter] = { runs:0, balls:0 };
+                  stand.bat[x.batter].runs += batterRunsOnBall(t2);
+                  if (isLegalDelivery(t2)){ stand.bat[x.batter].balls++; stand.balls++; }
+                }
+                if (isWicketBall(x)){
+                  wktsDown++;
+                  closeStand(wktsDown);
+                  var outN = x.outName || x.batter || '';
+                  if (outN) dismissed[outN] = 1;
+                  pair = pair.filter(function(n){ return n !== outN; });
+                }
+              });
+              closeStand(wktsDown + 1);
+            }
           });
         });
         function toArr(map){ return Object.keys(map).map(function(k){ return map[k]; }); }
         var fieldArr = toArr(field);
         fieldArr.forEach(function(s){ s.total = s.catches + s.runouts + s.stumpings; });
-        return { batting: toArr(bat), bowling: toArr(bowl), fielding: fieldArr };
+        return { batting: toArr(bat), bowling: toArr(bowl), fielding: fieldArr, partnerships: partnerships, teamTotals: teamTotals };
       }
       function tnStatCategories(){
         function bAve(s){ return s.outs > 0 ? s.runs / s.outs : null; }
@@ -7677,14 +7850,38 @@
               list:function(d){ return d.batting.filter(function(s){ return s.balls >= 10; }).sort(function(a,b){ return (bSR(b) - bSR(a)) || (b.runs - a.runs); }); },
               head:['SR','Runs','Balls'],
               cells:function(s){ return ['<b>' + f1(bSR(s)) + '</b>', s.runs, s.balls]; } },
-            { id:'fifties', label:'Most Fifties',
+            { id:'thirties', label:'Most 30s',
+              list:function(d){ return d.batting.filter(function(s){ return s.thirties > 0; }).sort(function(a,b){ return (b.thirties - a.thirties) || (b.fifties - a.fifties) || (b.runs - a.runs); }); },
+              head:['30s','50s','Runs'],
+              cells:function(s){ return ['<b>' + s.thirties + '</b>', s.fifties, s.runs]; } },
+            { id:'fifties', label:'Most 50s',
               list:function(d){ return d.batting.filter(function(s){ return s.fifties > 0; }).sort(function(a,b){ return (b.fifties - a.fifties) || (b.hundreds - a.hundreds) || (b.runs - a.runs); }); },
               head:['50s','100s','Runs'],
               cells:function(s){ return ['<b>' + s.fifties + '</b>', s.hundreds, s.runs]; } },
-            { id:'hundreds', label:'Most Hundreds',
+            { id:'hundreds', label:'Most 100s',
               list:function(d){ return d.batting.filter(function(s){ return s.hundreds > 0; }).sort(function(a,b){ return (b.hundreds - a.hundreds) || (b.runs - a.runs); }); },
               head:['100s','50s','Runs'],
               cells:function(s){ return ['<b>' + s.hundreds + '</b>', s.fifties, s.runs]; } },
+            { id:'fast30', label:'Fastest 30',
+              list:function(d){ return d.batting.filter(function(s){ return s.f30b !== null && s.f30b !== undefined; }).sort(function(a,b){ return (a.f30b - b.f30b) || (b.runs - a.runs); }); },
+              head:['Balls','Score'],
+              cells:function(s){ return ['<b>' + s.f30b + '</b>', s.f30r]; } },
+            { id:'fast50', label:'Fastest 50',
+              list:function(d){ return d.batting.filter(function(s){ return s.f50b !== null && s.f50b !== undefined; }).sort(function(a,b){ return (a.f50b - b.f50b) || (b.runs - a.runs); }); },
+              head:['Balls','Score'],
+              cells:function(s){ return ['<b>' + s.f50b + '</b>', s.f50r]; } },
+            { id:'fast100', label:'Fastest 100',
+              list:function(d){ return d.batting.filter(function(s){ return s.f100b !== null && s.f100b !== undefined; }).sort(function(a,b){ return (a.f100b - b.f100b) || (b.runs - a.runs); }); },
+              head:['Balls','Score'],
+              cells:function(s){ return ['<b>' + s.f100b + '</b>', s.f100r]; } },
+            { id:'ballsfaced', label:'Most Balls Faced',
+              list:function(d){ return d.batting.filter(function(s){ return s.balls > 0; }).sort(function(a,b){ return (b.balls - a.balls) || (b.runs - a.runs); }); },
+              head:['Balls','Runs','SR'],
+              cells:function(s){ return ['<b>' + s.balls + '</b>', s.runs, f1(bSR(s))]; } },
+            { id:'ducks', label:'Most Ducks',
+              list:function(d){ return d.batting.filter(function(s){ return s.ducks > 0; }).sort(function(a,b){ return (b.ducks - a.ducks) || (b.inns - a.inns); }); },
+              head:['Ducks','Inn','Runs'],
+              cells:function(s){ return ['<b>' + s.ducks + '</b>', s.inns, s.runs]; } },
             { id:'fours', label:'Most Fours',
               list:function(d){ return d.batting.filter(function(s){ return s.fours > 0; }).sort(function(a,b){ return (b.fours - a.fours) || (b.runs - a.runs); }); },
               head:['4s','Runs','6s'],
@@ -7692,7 +7889,23 @@
             { id:'sixes', label:'Most Sixes',
               list:function(d){ return d.batting.filter(function(s){ return s.sixes > 0; }).sort(function(a,b){ return (b.sixes - a.sixes) || (b.runs - a.runs); }); },
               head:['6s','Runs','4s'],
-              cells:function(s){ return ['<b>' + s.sixes + '</b>', s.runs, s.fours]; } }
+              cells:function(s){ return ['<b>' + s.sixes + '</b>', s.runs, s.fours]; } },
+            { id:'sixinn', label:'Most Sixes in an Innings',
+              list:function(d){ return d.batting.filter(function(s){ return s.sixInn > 0; }).sort(function(a,b){ return (b.sixInn - a.sixInn) || (b.sixInnR - a.sixInnR); }); },
+              head:['6s','Score','Total 6s'],
+              cells:function(s){ return ['<b>' + s.sixInn + '</b>', s.sixInnR, s.sixes]; } },
+            { id:'fourinn', label:'Most Fours in an Innings',
+              list:function(d){ return d.batting.filter(function(s){ return s.fourInn > 0; }).sort(function(a,b){ return (b.fourInn - a.fourInn) || (b.fourInnR - a.fourInnR); }); },
+              head:['4s','Score','Total 4s'],
+              cells:function(s){ return ['<b>' + s.fourInn + '</b>', s.fourInnR, s.fours]; } },
+            { id:'partnership', label:'Best Partnership',
+              list:function(d){ return (d.partnerships || []).slice().sort(function(a,b){ return (b.runs - a.runs) || (a.balls - b.balls); }); },
+              head:['Runs','Balls'],
+              cells:function(s){ return ['<b>' + s.runs + '</b>', s.balls]; } },
+            { id:'teamtotal', label:'Highest Team Total', plain:true,
+              list:function(d){ return (d.teamTotals || []).slice().sort(function(a,b){ return (b.runs - a.runs) || (a.wkts - b.wkts) || (a.legal - b.legal); }); },
+              head:['Score','Overs'],
+              cells:function(s){ return ['<b>' + s.runs + '/' + s.wkts + '</b>', oversText(s.legal) + ' ov']; } }
           ],
           bowl: [
             { id:'wkts', label:'Most Wickets',
@@ -7714,7 +7927,39 @@
             { id:'bsr', label:'Best Bowling Strike Rate',
               list:function(d){ return d.bowling.filter(function(s){ return s.wickets > 0; }).sort(function(a,b){ return (a.balls / a.wickets) - (b.balls / b.wickets) || (b.wickets - a.wickets); }); },
               head:['SR','Wkts','Overs'],
-              cells:function(s){ return ['<b>' + (s.balls / s.wickets).toFixed(1) + '</b>', s.wickets, oversText(s.balls)]; } }
+              cells:function(s){ return ['<b>' + (s.balls / s.wickets).toFixed(1) + '</b>', s.wickets, oversText(s.balls)]; } },
+            { id:'dots', label:'Most Dot Balls',
+              list:function(d){ return d.bowling.filter(function(s){ return s.dots > 0; }).sort(function(a,b){ return (b.dots - a.dots) || (b.balls - a.balls); }); },
+              head:['Dots','Overs','Wkts'],
+              cells:function(s){ return ['<b>' + s.dots + '</b>', oversText(s.balls), s.wickets]; } },
+            { id:'maidens', label:'Most Maidens',
+              list:function(d){ return d.bowling.filter(function(s){ return s.maidens > 0; }).sort(function(a,b){ return (b.maidens - a.maidens) || (b.wickets - a.wickets); }); },
+              head:['Maidens','Overs','Wkts'],
+              cells:function(s){ return ['<b>' + s.maidens + '</b>', oversText(s.balls), s.wickets]; } },
+            { id:'threefers', label:'Most 3fers',
+              list:function(d){ return d.bowling.filter(function(s){ return s.threeFers > 0; }).sort(function(a,b){ return (b.threeFers - a.threeFers) || (b.wickets - a.wickets); }); },
+              head:['3fers','Wkts','Inn'],
+              cells:function(s){ return ['<b>' + s.threeFers + '</b>', s.wickets, s.inns]; } },
+            { id:'fourfers', label:'Most 4fers',
+              list:function(d){ return d.bowling.filter(function(s){ return s.fourFers > 0; }).sort(function(a,b){ return (b.fourFers - a.fourFers) || (b.wickets - a.wickets); }); },
+              head:['4fers','Wkts','Inn'],
+              cells:function(s){ return ['<b>' + s.fourFers + '</b>', s.wickets, s.inns]; } },
+            { id:'fivefers', label:'Most 5fers',
+              list:function(d){ return d.bowling.filter(function(s){ return s.fiveFers > 0; }).sort(function(a,b){ return (b.fiveFers - a.fiveFers) || (b.wickets - a.wickets); }); },
+              head:['5fers','Wkts','Inn'],
+              cells:function(s){ return ['<b>' + s.fiveFers + '</b>', s.wickets, s.inns]; } },
+            { id:'hattricks', label:'Most Hat-Tricks',
+              list:function(d){ return d.bowling.filter(function(s){ return s.hatTricks > 0; }).sort(function(a,b){ return (b.hatTricks - a.hatTricks) || (b.wickets - a.wickets); }); },
+              head:['Hat-Tricks','Wkts','Inn'],
+              cells:function(s){ return ['<b>' + s.hatTricks + '</b>', s.wickets, s.inns]; } },
+            { id:'wides', label:'Most Wide Balls',
+              list:function(d){ return d.bowling.filter(function(s){ return s.wides > 0; }).sort(function(a,b){ return (b.wides - a.wides) || (b.balls - a.balls); }); },
+              head:['Wides','Overs','Runs'],
+              cells:function(s){ return ['<b>' + s.wides + '</b>', oversText(s.balls), s.runs]; } },
+            { id:'noballs', label:'Most No Balls',
+              list:function(d){ return d.bowling.filter(function(s){ return s.noballs > 0; }).sort(function(a,b){ return (b.noballs - a.noballs) || (b.balls - a.balls); }); },
+              head:['No Balls','Overs','Runs'],
+              cells:function(s){ return ['<b>' + s.noballs + '</b>', oversText(s.balls), s.runs]; } }
           ],
           field: [
             { id:'total', label:'Most Dismissals',
@@ -7736,12 +7981,34 @@
           ]
         };
       }
+      function tnPartnershipHTML(cat, data){
+        var list = cat.list(data).slice(0, 10);
+        if (!list.length) return '<p class="tns-empty">No partnerships recorded yet — they are built from the ball-by-ball record as tournament matches are scored.</p>';
+        function wktLabel(n){
+          var sfx = ['th', 'st', 'nd', 'rd'], v = n % 100;
+          return n + (sfx[(v - 20) % 10] || sfx[v] || sfx[0]);
+        }
+        return list.map(function(p, i){
+          return '<div class="tnp-card">'
+            + '<div class="tnp-top"><span class="tnp-rank">' + (i + 1) + '</span><span class="tnp-match">' + esc(p.team) + ' vs ' + esc(p.opp) + '</span></div>'
+            + '<div class="tnp-row">'
+            + '<div class="tnp-bat"><span class="tnp-name">' + plLink(p.team, p.p1) + '</span><span class="tnp-fig">' + p.r1 + ' (' + p.b1 + ')</span></div>'
+            + '<div class="tnp-mid"><span class="tnp-circle">' + p.runs + '</span><span class="tnp-balls">' + p.balls + (p.balls === 1 ? ' Ball' : ' Balls') + '</span></div>'
+            + '<div class="tnp-bat r"><span class="tnp-name">' + plLink(p.team, p.p2) + '</span><span class="tnp-fig">' + p.r2 + ' (' + p.b2 + ')</span></div>'
+            + '</div>'
+            + '<div class="tnp-wkt">' + wktLabel(p.wkt) + ' wicket partnership</div>'
+            + '</div>';
+        }).join('');
+      }
       function tnStatTableHTML(cat, data){
+        if (cat.id === 'partnership') return tnPartnershipHTML(cat, data);
         var list = cat.list(data).slice(0, 10);
         if (!list.length) return '<p class="tns-empty">No figures in this category yet — they build up ball by ball as tournament matches are scored.</p>';
         var rows = list.map(function(s, i){
           var cells = cat.cells(s).map(function(c, ci){ return '<td' + (ci === 0 ? ' class="val"' : '') + '>' + c + '</td>'; }).join('');
-          return '<tr><td>' + (i + 1) + '</td><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b><span class="howout">' + esc(s.teams.join(' / ')) + '</span></td>' + cells + '</tr>';
+          var nameHTML = cat.plain ? '<b>' + esc(s.name) + '</b>' : '<b>' + plLink(s.team, s.name, null, s.pid) + '</b>';
+          var sub = s.sub ? esc(s.sub) : esc((s.teams || [s.team || '']).join(' / '));
+          return '<tr><td>' + (i + 1) + '</td><td>' + nameHTML + '<span class="howout">' + sub + '</span></td>' + cells + '</tr>';
         }).join('');
         var head = cat.head.map(function(h){ return '<th>' + h + '</th>'; }).join('');
         return '<table class="tns-table"><thead><tr><th>#</th><th>Player</th>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
