@@ -628,9 +628,13 @@
       #view-tournament #tnPanel-home .tn-section h4{text-align:center}
       #view-tournament .tn-info{text-align:center}
       #view-tournament .tn-info #tnIdLine .idchip{margin-left:auto;margin-right:auto}
-      /* A match's "TEAM A vs TEAM B" line NEVER wraps: however long
-         the two names are, the fixture / result title stays on one
-         line (it ellipsises rather than spilling to a second line). */
+      /* A match's "TEAM A vs TEAM B" line NEVER wraps and NEVER
+         truncates: however long the two names are, the title stays
+         complete on one line — fitVsTitles() (below, beside
+         tnVsTitleHTML) shrinks the line's font size to match the
+         width it has. The ellipsis here is only a last-resort
+         fallback for a name so long it still overflows at the
+         smallest fitted size. */
       .tn-vs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;line-height:1.2;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
       .tn-vs .vs{color:var(--muted);font-size:.8em;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:0 2px}
       .tn-match-lines{font-size:14.5px;line-height:1.5;margin-top:2px}
@@ -2759,7 +2763,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v126';
+      var APP_VERSION = 'v127';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8422,6 +8426,10 @@
         /* The head is locked and only .tn-body scrolls, so a tab
            switch starts the new tab at its top there. */
         var tb = $('tnBody'); if (tb) tb.scrollTop = 0;
+        /* The Matches panel was display:none until this switch, so
+           its "TEAM A vs TEAM B" titles could not be measured or
+           fitted while another tab was up — fit them now it shows. */
+        try { scheduleFitVsTitles(); } catch(e){}
         window.scrollTo({ top:0, behavior:'smooth' });
       }
       /* ---------- team leadership: Captain / Vice-Captain / Wicket-keeper ----------
@@ -9911,6 +9919,46 @@
       function tnVsTitleHTML(a, b){
         return '<div class="tn-vs">' + esc(a) + '<span class="vs">vs</span>' + esc(b) + '</div>';
       }
+      /* ---------- "TEAM A vs TEAM B" auto-fit ----------
+         A .tn-vs title must show BOTH team names in full on ONE
+         line: when the names are too long for the row at the CSS
+         size, the line's font shrinks until the whole title fits
+         the width it has — the last team's name is never cut off
+         with "…". The fit runs after every renderAll (the lists are
+         rebuilt then), again when the webfont arrives (Barlow
+         Condensed measures differently from the fallback font) and
+         on resize / rotation. A title inside a hidden view cannot
+         be measured (clientWidth 0) and is skipped — showing the
+         view re-renders, which re-runs the fit. */
+      var fitVsQueued = false;
+      function fitVsTitles(){
+        fitVsQueued = false;
+        var els = document.querySelectorAll('.tn-vs');
+        for (var i = 0; i < els.length; i++){
+          var el = els[i];
+          if (!el.clientWidth) continue;
+          el.style.fontSize = '';
+          if (el.scrollWidth <= el.clientWidth) continue;
+          var base = parseFloat(window.getComputedStyle(el).fontSize) || 19;
+          var size = Math.max(10.5, Math.floor(base * el.clientWidth / el.scrollWidth * 2) / 2);
+          el.style.fontSize = size + 'px';
+          /* Letter-spacing and rounding can leave the scaled line a
+             hair too wide — step down until it truly fits. */
+          var guard = 0;
+          while (el.scrollWidth > el.clientWidth && size > 10.5 && guard++ < 24){
+            size = Math.max(10.5, size - 0.5);
+            el.style.fontSize = size + 'px';
+          }
+        }
+      }
+      function scheduleFitVsTitles(){
+        if (fitVsQueued) return;
+        fitVsQueued = true;
+        if (window.requestAnimationFrame) requestAnimationFrame(fitVsTitles);
+        else setTimeout(fitVsTitles, 30);
+      }
+      window.addEventListener('resize', scheduleFitVsTitles);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ scheduleFitVsTitles(); });
       function tnInnLinesHTML(m){
         return '<div class="tn-match-lines">' + (m.innings || []).map(function(inn){
           return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>';
@@ -15462,6 +15510,11 @@
         /* Ownership UI (account bar, pad lock, tournament lock) is
            refreshed last, after every section has rendered. */
         step(applyOwnerLocks);
+        /* "TEAM A vs TEAM B" titles are re-fitted last of all: the
+           lists above were just rebuilt at the CSS font size, so any
+           title whose names overflow their row now shrinks to fit
+           the full names on one line (see fitVsTitles). */
+        step(function(){ scheduleFitVsTitles(); });
       }
       function syncPlayersFromInputsSilent(){
         /* State wins over the form. Render must never overwrite batter /
@@ -16324,6 +16377,9 @@
         } catch(e){}
         currentViewName = v;
         try { updateScorerSbBar(); } catch(e){}
+        /* The view just shown may hold "TEAM A vs TEAM B" titles
+           that were unmeasurable while it was hidden — fit them. */
+        try { scheduleFitVsTitles(); } catch(e){}
         if (v==='scoreboard'){ try { guardViewerScoreboard(); } catch(e){} }
         if (v==='scorer'){ try { updateScoringOnly(); } catch(e){} } else { try { closeScorerPop(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
