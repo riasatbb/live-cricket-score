@@ -1537,6 +1537,10 @@
       .pf-edit-btn{flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--green);font-size:15px;line-height:1;padding:0;cursor:pointer}
       .pf-edit-btn[hidden]{display:none}
       #pfEditModal{z-index:120}
+      /* The shared confirm dialog must stack above even the Edit
+         Profile dialog: Delete Profile (inside Edit Profile) asks
+         its confirmation through it. */
+      #verifyModal{z-index:130}
       body.viewer-mode #pfEditModal,body.link-viewer #pfEditModal{display:none !important}
       .pf-photo-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
       .pf-photo-prev{flex:none;width:60px;height:60px;border-radius:50%;background:var(--surface);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;color:var(--green);overflow:hidden}
@@ -3360,7 +3364,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v152';
+      var APP_VERSION = 'v154';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3529,6 +3533,11 @@
          device's unconfirmed backup copy: a match that has not
          reached the server is shown nowhere until it syncs. */
       var fbConfirmedState = null;
+      /* A profile save's "✓ Profile saved" message waits here until
+         the push carrying it is actually accepted by Firebase (see
+         pushToFirebase / savePlayerProfile): the message must never
+         claim a save the server has not confirmed. */
+      var pendingProfileSaveMsg = null;
       /* True once Firebase has actually answered with a snapshot of
          liveMatch in THIS session (the snapshot may be null — the
          server saying "there is no live match" is still server
@@ -3750,6 +3759,10 @@
           return pushed;
         }).then(function(res){
           if (res && res.committed === false){
+            /* This push never landed, so a waiting profile-save
+               confirmation must not claim it did — the refresh
+               notice below tells the scorer to re-check instead. */
+            pendingProfileSaveMsg = null;
             /* Aborted — a newer state won. Adopt it so no ball from
                either device is silently lost in a stale overwrite. */
             try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv && shouldAdoptRemote(nv)) adoptRemoteState(nv); } catch(e){}
@@ -3761,7 +3774,11 @@
              confirmed state viewer surfaces may show. */
           fbConfirmedState = pushed;
           try { renderAll(false); } catch(e){}
-        }).catch(function(err){ showFirebaseError(err, 'update'); });
+          /* A profile save waiting on this push may now show its
+             "✓ Profile saved" confirmation — the server really has
+             the new profile. */
+          if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
+        }).catch(function(err){ pendingProfileSaveMsg = null; showFirebaseError(err, 'update'); });
       }
       /* ---------- Delete Match: publish the cleared state to Firebase FIRST ----------
          Deleting is the scorer's explicit action, so the cleared state
@@ -14197,7 +14214,11 @@
           + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
           + '</div><p class="note" style="margin:6px 0 0">The photo is shrunk to a small size before it is saved, so it syncs quickly.</p></div>'
           + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
-          + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>';
+          + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
+          + '<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
+          + '<div style="font-weight:700;color:var(--red)">Delete Profile</div>'
+          + '<p class="note" style="margin:6px 0 10px">Permanently deletes this player\u2019s profile — photo, role, jersey number and nickname — together with their Player ID, and removes them from every squad. The deletion syncs to the server like a save, so the profile is deleted for everyone, not just on this device. Scorecards of matches already recorded in History belong to those matches and stay as they are.</p>'
+          + '<button type="button" class="btn red" onclick="pfDeleteProfile()">🗑 Delete Profile</button></div>';
       }
       function pfMarkDirty(){ pfDirty = true; }
       /* Photo picking: the chosen image is drawn onto a small canvas
@@ -14302,6 +14323,8 @@
           belongs[t] = (mappedOrHashId(t, oldName) === pid) || (pidHash(t, oldName) === pid) || (t === (ctxTeam || ''));
         }
         if (S.tournament && S.tournament.squads) Object.keys(S.tournament.squads).forEach(noteTeam);
+        if (S.myTeams && S.myTeams.squads) Object.keys(S.myTeams.squads).forEach(noteTeam);
+        (Array.isArray(S.myTeams && S.myTeams.teams) ? S.myTeams.teams : []).forEach(noteTeam);
         (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){ if (tn && tn.squads) Object.keys(tn.squads).forEach(noteTeam); });
         noteTeam(S.teamA); noteTeam(S.teamB);
         (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(sl){ if (sl){ noteTeam(sl.teamA); noteTeam(sl.teamB); } });
@@ -14322,9 +14345,18 @@
         renameLeadershipIn(S.myTeams);
         renameLeadershipIn(S.tournament);
         (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){ renameLeadershipIn(a && a.data); });
-        /* Tournament / All Teams squads (the shared team lists). */
+        /* Tournament / All Teams squads (the shared team lists).
+           The All Teams pool (S.myTeams.squads) is the master list
+           the Team Page and the All Teams page render names from —
+           it must be renamed too: leaving the old name there kept
+           the old name on those pages, and the ID migration then
+           re-registered that leftover name as a second, ghost
+           player on the next load. */
         if (S.tournament && S.tournament.squads){
           Object.keys(S.tournament.squads).forEach(function(team){ renameSquadArr(team, S.tournament.squads[team], oldName, newName, belongs); });
+        }
+        if (S.myTeams && S.myTeams.squads){
+          Object.keys(S.myTeams.squads).forEach(function(team){ renameSquadArr(team, S.myTeams.squads[team], oldName, newName, belongs); });
         }
         (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){
           if (tn && tn.squads) Object.keys(tn.squads).forEach(function(team){ renameSquadArr(team, tn.squads[team], oldName, newName, belongs); });
@@ -14398,6 +14430,7 @@
             else if (!otherId && t === team) clash = true;
           };
           if (S.tournament && S.tournament.squads) Object.keys(S.tournament.squads).forEach(function(t){ checkArr(t, S.tournament.squads[t]); });
+          if (S.myTeams && S.myTeams.squads) Object.keys(S.myTeams.squads).forEach(function(t){ checkArr(t, S.myTeams.squads[t]); });
           checkArr(S.teamA, S.squadA); checkArr(S.teamB, S.squadB);
           if (clash){ toast('⚠️ Another player named “' + newName + '” is already in the squad — pick a different name so the two stay separate'); return; }
         }
@@ -14429,10 +14462,192 @@
         setPlayerMapping(team, newName, pid);
         profileCtx = { team: team, name: newName, pid: pid };
         pfDirty = false; pfPhotoDraft = null;
-        commit('Player profile updated', true);
+        var savedMsg = '✓ Profile saved — ' + newName + (newNick ? ' • “' + newNick + '”' : '') + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : '');
+        /* The "saved" confirmation is shown only once Firebase has
+           accepted the push (pushToFirebase releases
+           pendingProfileSaveMsg): saying it up front made a save
+           that never reached the server look successful. When
+           Firebase is not connected, the profile is held in this
+           device's backup only — and the message says exactly that
+           instead of claiming a synced save. */
+        if (fbRef && fbReady && !fbPushing){
+          pendingProfileSaveMsg = savedMsg;
+          commit('Player profile updated', true);
+        } else {
+          commit('Player profile updated', true);
+          toast(savedMsg + ' — on this device only; it will sync when Firebase connects');
+        }
         pfCloseEdit();
         renderPlayerProfile(true);
-        toast('✓ Profile saved — ' + newName + (newNick ? ' • “' + newNick + '”' : '') + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : ''));
+      }
+      /* ---------- deleting a player profile ----------
+         Delete Profile (in the Edit Profile dialog) removes the
+         player entirely: the registry record itself (name, role,
+         jersey, photo, nickname), every Player ID mapping for that
+         ID, the nickname mirrors, the player's place in every squad
+         (the All Teams pool, the current tournament, archived
+         tournament squads, the live match's setup squads and parked
+         matches) and any leadership pick naming them. Removing the
+         squad places matters as much as removing the record: the ID
+         migration re-registers every name found in a squad, so a
+         record deleted while the name stayed in a squad would come
+         back as a fresh, empty profile on the next load. A player
+         who happens to share the name is a different ID and is never
+         touched — squad entries are removed only where that team's
+         name resolves to THIS ID, exactly as a rename resolves them.
+         Recorded match scorecards (History entries and saved
+         tournament results) are historical records of matches that
+         were played and are NOT rewritten — the same rule a rename
+         follows for ball-by-ball commentary. The deletion goes
+         through commit() like any other change, so it is pushed to
+         Firebase and the profile is deleted on the server too, for
+         every device; and, like a profile save, the "deleted"
+         confirmation is shown only once Firebase has accepted the
+         push (pendingProfileSaveMsg carries it). */
+      function deleteSquadArr(team, arr, name, belongs){
+        if (!Array.isArray(arr)) return;
+        if (!belongs || !belongs[team || '']) return;
+        for (var i = arr.length - 1; i >= 0; i--) if (arr[i] === name) arr.splice(i, 1);
+      }
+      function deletePlayerEverywhere(pid, name, ctxTeam){
+        ensurePlayerArrays();
+        /* Decide belonging FIRST, while the registry and mappings
+           still carry the player — the removals below rewrite those
+           very mappings (same rule as renamePlayerEverywhere). An
+           archived tournament keeps its squads under .data; both
+           shapes are honoured. */
+        var belongs = {};
+        function noteTeam(t){
+          if (t == null || (t in belongs)) return;
+          t = t || '';
+          belongs[t] = (mappedOrHashId(t, name) === pid) || (pidHash(t, name) === pid) || (t === (ctxTeam || ''));
+        }
+        function noteSquads(squads){ if (squads) Object.keys(squads).forEach(noteTeam); }
+        noteSquads(S.tournament && S.tournament.squads);
+        noteSquads(S.myTeams && S.myTeams.squads);
+        (Array.isArray(S.myTeams && S.myTeams.teams) ? S.myTeams.teams : []).forEach(noteTeam);
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){ if (tn){ noteSquads(tn.squads); noteSquads(tn.data && tn.data.squads); } });
+        noteTeam(S.teamA); noteTeam(S.teamB);
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(sl){ if (sl){ noteTeam(sl.teamA); noteTeam(sl.teamB); } });
+        /* Squads: the All Teams pool, the current tournament,
+           archived tournaments, the live match's setup squads and
+           parked matches. */
+        function clearSquads(squads){
+          if (!squads) return;
+          Object.keys(squads).forEach(function(team){ deleteSquadArr(team, squads[team], name, belongs); });
+        }
+        clearSquads(S.tournament && S.tournament.squads);
+        clearSquads(S.myTeams && S.myTeams.squads);
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(tn){
+          if (!tn) return;
+          clearSquads(tn.squads);
+          clearSquads(tn.data && tn.data.squads);
+        });
+        deleteSquadArr(S.teamA, S.squadA, name, belongs);
+        deleteSquadArr(S.teamB, S.squadB, name, belongs);
+        deleteSquadArr(S.teamA, S.finalSquadA, name, belongs);
+        deleteSquadArr(S.teamB, S.finalSquadB, name, belongs);
+        (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(sl){
+          if (!sl) return;
+          deleteSquadArr(sl.teamA, sl.squadA, name, belongs);
+          deleteSquadArr(sl.teamB, sl.squadB, name, belongs);
+          deleteSquadArr(sl.teamA, sl.finalSquadA, name, belongs);
+          deleteSquadArr(sl.teamB, sl.finalSquadB, name, belongs);
+        });
+        /* Leadership picks (C / VC / WK) naming this player in a
+           team they belong to are cleared with them. */
+        var clearLeadershipIn = function(store){
+          if (!store || !Array.isArray(store.leadership)) return;
+          store.leadership.forEach(function(e){
+            if (!e) return;
+            if (!belongs[e.t] && e.t !== (ctxTeam || '')) return;
+            ['c','vc','wk'].forEach(function(r){ if (e[r] === name) e[r] = ''; });
+          });
+        };
+        clearLeadershipIn(S.myTeams);
+        clearLeadershipIn(S.tournament);
+        (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){ clearLeadershipIn(a); clearLeadershipIn(a && a.data); });
+        /* Nickname mirrors that belong to this player (resolved by
+           Player ID, plus the profile's own team entry) — resolved
+           BEFORE the mappings below are removed. */
+        if (Array.isArray(S.nicknames)){
+          S.nicknames = S.nicknames.filter(function(e){
+            if (!e || e.n !== name) return true;
+            return mappedOrHashId(e.t || '', e.n) !== pid && e.t !== (ctxTeam || '');
+          });
+        }
+        /* The ID mappings and the registry record itself. */
+        S.playerIds = S.playerIds.filter(function(e){ return !(e && e.id === pid); });
+        S.players = S.players.filter(function(p){ return !(p && p.id === pid); });
+      }
+      /* Is this player part of the live match on the pad right now —
+         at the crease, bowling, or already in either innings'
+         records? Deleting mid-match would leave the innings
+         pointing at a player who no longer exists, so the delete
+         waits until that match is finished and cleared, or deleted. */
+      function playerInLiveMatch(pid, name){
+        if (!liveMatchExists()) return false;
+        var inns = [S.current, S.prevInnings];
+        for (var i = 0; i < inns.length; i++){
+          var inn = inns[i]; if (!inn) continue;
+          if (inn.striker === name || inn.nonStriker === name || inn.bowler === name) return true;
+          var hit = false;
+          (inn.batters || []).forEach(function(b){ if (b && (b.pid === pid || b.name === name)) hit = true; });
+          (inn.bowlers || []).forEach(function(b){ if (b && (b.pid === pid || b.name === name)) hit = true; });
+          if (hit) return true;
+        }
+        return false;
+      }
+      function pfDeleteProfile(){
+        if (!profileCtx) return;
+        if (!canEditPlayerProfile()){
+          toast(isViewerSession() ? '👀 View-only — profiles can be deleted only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to delete this profile — only the owner/admin can change it.');
+          return;
+        }
+        ensurePlayerArrays();
+        var team = profileCtx.team || '';
+        var name = profileCtx.name;
+        var pid = profileCtx.pid || lookupPlayerId(team, name) || pidHash(team, name);
+        if (playerInLiveMatch(pid, name)){
+          toast('⚠️ ' + name + ' is part of the live match on the scoring pad right now — finish or delete that match first, then delete the profile.');
+          return;
+        }
+        /* Nothing live to delete: this profile exists only inside a
+           recorded match's own snapshot (opened from History). Those
+           scorecards are the matches' records and are not rewritten,
+           so there is no live profile to delete here. */
+        var inSquad = false;
+        var scanSquads = function(squads){ if (squads) Object.keys(squads).forEach(function(t){ if ((squads[t] || []).indexOf(name) > -1 && (mappedOrHashId(t, name) === pid || t === team)) inSquad = true; }); };
+        scanSquads(S.myTeams && S.myTeams.squads);
+        scanSquads(S.tournament && S.tournament.squads);
+        if (!findPerson(pid) && !inSquad && !S.playerIds.some(function(e){ return e && e.id === pid; })){
+          toast('This profile exists only inside a recorded match in History — there is no live profile to delete. Recorded scorecards stay as part of those matches.');
+          return;
+        }
+        askVerify('Delete this profile?',
+          '\u201C' + name + '\u201D will be permanently deleted — their profile (photo, role, jersey number and nickname), their Player ID and their place in every squad (All Teams, the tournament and the match setup lists) all go, and the deletion is pushed to the server, so the profile is deleted for everyone. Scorecards of matches already recorded in History belong to those matches and are not changed. This cannot be undone.',
+          function(){
+            deletePlayerEverywhere(pid, name, team);
+            var deletedMsg = '🗑 Profile deleted — ' + name;
+            /* The "deleted" confirmation follows the same rule as a
+               profile save: it is shown only once Firebase has
+               accepted the push carrying the deletion
+               (pendingProfileSaveMsg carries it to pushToFirebase).
+               When Firebase is not connected, the profile is deleted
+               in this device's backup and the deletion syncs when
+               Firebase connects — and the message says exactly that
+               instead of claiming a server delete that has not
+               happened yet. */
+            if (fbRef && fbReady && !fbPushing){
+              pendingProfileSaveMsg = deletedMsg + ' — deleted from the server too';
+              commit('Player profile deleted', true);
+            } else {
+              commit('Player profile deleted', true);
+              toast(deletedMsg + ' — on this device only for now; it will be deleted from the server when Firebase connects');
+            }
+            pfCloseEdit();
+            closePlayerProfile();
+          });
       }
       /* Does this batter / bowler record belong to the profile's
          player? By Player ID whenever either side carries one (an
