@@ -3143,7 +3143,6 @@
           <input id="tpSearch" placeholder="Search teams…" autocomplete="off" oninput="renderTeamPickerList()" aria-label="Search teams" />
           <div class="tp-list" id="tpList"></div>
         </div>
-        <button type="button" class="btn ghost" style="width:100%;margin-top:16px" onclick="closeTeamPicker()">← Back</button>
       </div>
     </div>
 
@@ -3163,7 +3162,6 @@
         <h3 class="om-h">Ball Type*</h3>
         <div class="chip-row" id="fmBallChips"></div>
         <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="fmDone()">Done</button>
-        <button type="button" class="btn ghost" style="width:100%;margin-top:10px" onclick="closeFormatModal()">← Back</button>
       </div>
     </div>
 
@@ -3181,7 +3179,6 @@
           <button type="button" class="chip" id="tossChipBowl" onclick="tossDecide('bowl')">Bowl</button>
         </div>
         <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="omStartScoring()">Start Scoring</button>
-        <button type="button" class="btn ghost" style="width:100%;margin-top:10px" onclick="closeTossModal()">← Back</button>
       </div>
     </div>
 
@@ -3189,7 +3186,6 @@
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
         <div class="modal-head">
           <h2 id="playerModalTitle">Player</h2>
-          <button type="button" class="btn ghost sm" onclick="closePlayerProfile()">← Back</button>
           <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
         </div>
         <div id="playerModalBody"></div>
@@ -3203,7 +3199,6 @@
           <button class="sq-x big" onclick="closeHistoryMatch()" aria-label="Close scorecard">×</button>
         </div>
         <div id="histModalBody"></div>
-        <div style="margin-top:16px"><button type="button" class="btn ghost" onclick="closeHistoryMatch()">← Back</button></div>
       </div>
     </div>
 
@@ -3228,7 +3223,7 @@
           <button type="button" class="btn" onclick="saveHistoryEdit()">Save Changes</button>
           <button type="button" class="btn ghost" onclick="closeHistoryEdit()">Cancel</button>
         </div>
-        <div style="margin-top:12px"><button type="button" class="btn ghost sm" onclick="closeHistoryEdit()">← Back</button></div>
+
       </div>
     </div>
 
@@ -3248,7 +3243,6 @@
         <div class="rowflex" style="margin-top:10px">
           <a class="btn ghost sm share-ext wa" id="shareWaLink" href="#" target="_blank" rel="noopener">WhatsApp</a>
           <a class="btn ghost sm share-ext fb" id="shareFbLink" href="#" target="_blank" rel="noopener">Facebook</a>
-          <button type="button" class="btn ghost sm" onclick="closeShareCard()">← Back</button>
         </div>
         <p class="note" style="margin:10px 0 0">WhatsApp and Facebook open with the caption and viewer link ready — attach the downloaded card image there to post it with the picture.</p>
       </div>
@@ -3302,7 +3296,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v146';
+      var APP_VERSION = 'v147';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -10300,6 +10294,7 @@
         var editable = teamPageEditable();
         var meta = teamMetaFor(team);
         tpData = tpCompute(team);
+        var sv = stripScrollSave(wrap);
         if (tpSettingsOpen && editable){
           wrap.innerHTML = tpSettingsHTML(team, ti, src, meta);
           return;
@@ -10310,6 +10305,7 @@
         var pb = $('tpPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
         var nb = $('tpNickBox'); if (nb && keptNick) nb.value = keptNick;
         var cb = $('tpCmpSearch'); if (cb && keptCmp) cb.value = keptCmp;
+        stripScrollRestore(wrap, sv);
       }
       function tpHeroHTML(team, ti, src, players, editable, meta){
         var d = tpData.agg;
@@ -14353,13 +14349,44 @@
       var pfInsMetric = 'run';
       var pfData = null;
       var pfCmpPid = '';
+      /* Horizontally scrolling tab / chip strips (.pf-tabs on the
+         player profile and the team page, .tp-chips on the team
+         page) are rebuilt together with their page on every render,
+         which used to reset their scroll to the first tabs: slide
+         right, tap "Tournaments", and the strip snapped back to the
+         first three tabs. stripScrollSave / stripScrollRestore
+         carry each strip's scroll position across a rebuild; a
+         strip with no saved position (a freshly built page) is
+         scrolled just enough to show its selected tab. */
+      function stripScrollSave(root){
+        var saved = [];
+        if (!root || !root.querySelectorAll) return saved;
+        root.querySelectorAll('.pf-tabs, .tp-chips').forEach(function(el){
+          saved.push({ tabs: el.classList.contains('pf-tabs'), left: el.scrollLeft });
+        });
+        return saved;
+      }
+      function stripScrollRestore(root, saved){
+        if (!root || !root.querySelectorAll) return;
+        var used = [];
+        root.querySelectorAll('.pf-tabs, .tp-chips').forEach(function(el){
+          var isTabs = el.classList.contains('pf-tabs'), s = null;
+          if (saved) for (var i = 0; i < saved.length; i++){ if (used.indexOf(i) === -1 && saved[i].tabs === isTabs){ s = saved[i]; used.push(i); break; } }
+          if (s){ el.scrollLeft = s.left; return; }
+          var on = el.querySelector('.on');
+          if (!on) return;
+          var sr = el.getBoundingClientRect(), br = on.getBoundingClientRect();
+          if (br.right > sr.right) el.scrollLeft += (br.right - sr.right) + 4;
+          else if (br.left < sr.left) el.scrollLeft = Math.max(0, el.scrollLeft - (sr.left - br.left) - 4);
+        });
+      }
       function pfSetTab(t){ pfTab = t; pfRefreshMain(); }
       function pfSetStatSub(s){ pfStatSub = s; pfRefreshMain(); }
       function pfSetYearKind(k){ pfYearKind = k; pfRefreshMain(); }
       function pfSetBestKind(k){ pfBestKind = k; pfRefreshMain(); }
       function pfSetInsKind(k){ pfInsKind = k; pfRefreshMain(); }
       function pfSetInsMetric(m){ pfInsMetric = m; pfRefreshMain(); }
-      function pfRefreshMain(){ var el = $('pfMain'); if (el && pfData) el.innerHTML = pfMainHTML(); }
+      function pfRefreshMain(){ var el = $('pfMain'); if (el && pfData){ var sv = stripScrollSave(el); el.innerHTML = pfMainHTML(); stripScrollRestore(el, sv); } }
       function pfBowlExtras(inn, bowlerName){
         var dots = 0, maidens = 0;
         var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
@@ -15229,8 +15256,7 @@
             + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
             + '</div>';
         }
-        html += '<div style="margin-top:20px"><button type="button" class="btn ghost" onclick="closePlayerProfile()">← Back</button></div>';
-        var body = $('playerModalBody'); if (body) body.innerHTML = html;
+        var body = $('playerModalBody'); if (body){ var sv = stripScrollSave(body); body.innerHTML = html; stripScrollRestore(body, sv); }
       }
       /* ---------- archived match: full scorecard ---------- */
       function potmFiguresIn(e, name, team){
