@@ -2994,7 +2994,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v140';
+      var APP_VERSION = 'v141';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3132,7 +3132,7 @@
              split (see normalizeMyTeams), so no team or player is
              lost by the split. */
           myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
-          tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, ownerUid: '', ownerName: '' },
+          tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, present: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
         };
       }
@@ -7015,6 +7015,12 @@
         });
         if (typeof S.tournament.ownerUid !== 'string') S.tournament.ownerUid = '';
         if (typeof S.tournament.ownerName !== 'string') S.tournament.ownerName = '';
+        /* present === false means there is NO current tournament —
+           the state left behind by a tournament delete (v141). It is
+           an empty shell (no teams, no defaults seeded back), never
+           a fresh seeded tournament. States saved before this field
+           existed simply have a current tournament. */
+        if (typeof S.tournament.present !== 'boolean') S.tournament.present = true;
         /* Knockout bracket: { createdAt, matches:[{id, stage, label,
            teamA, teamB, seedA, seedB}] } or null when no bracket has
            been generated. Firebase can hand the matches array back
@@ -7760,6 +7766,10 @@
         var inningsArr = [deep(S.prevInnings), deep(S.current)];
         var match = {
           id: mid, at: Date.now(), manual: false,
+          /* The owning tournament's stable key (v141) — see
+             buildHistoryEntry: a tournament delete finds its matches
+             by this stamp, never by team names alone. */
+          tournamentId: S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : ''),
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
           innings: inningsArr, resultText: S.resultText || '',
           /* Set when this match was started from the knockout
@@ -7868,7 +7878,7 @@
           if (!mgg){ toast('That group no longer exists'); return; }
           if (mgg.teams.indexOf(tA) === -1 || mgg.teams.indexOf(tB) === -1){ toast('Both teams must be in ' + mrGrp + ' for a ' + mrGrp + ' result — add them to the group first'); return; }
         }
-        var match = { id: Date.now(), at: Date.now(), manual: true, oversLimit: lim, wicketsLimit: wkLim, venue:'', innings:[innA, innB], resultText:'', stage: stage || '', group: mrGrp || '' };
+        var match = { id: Date.now(), at: Date.now(), manual: true, tournamentId: S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : ''), oversLimit: lim, wicketsLimit: wkLim, venue:'', innings:[innA, innB], resultText:'', stage: stage || '', group: mrGrp || '' };
         match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
         ensureTournamentTeam(tA); ensureTournamentTeam(tB);
@@ -12360,6 +12370,15 @@
           /* A Single Match is not attributed to any tournament in the
              history either — only a tournament match carries the name. */
           tournamentName: (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '',
+          /* The owning tournament's stable key, stamped at archive
+             time (v141): the tournament's own id when it has one,
+             else the Tour ID derived from its name. A tournament
+             delete cascades to exactly the history entries carrying
+             its key (or, for older entries, its unambiguous name) —
+             so deleting a tournament removes its matches from the
+             permanent history and from every player's career stats,
+             exactly like deleting each match. */
+          tournamentId: (S.matchKind === 'tournament' && S.tournament) ? (S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : '')) : '',
           matchKind: (S.matchKind === 'tournament') ? 'tournament' : 'single',
           tossInfo: S.tossInfo || '',
           matchFormat: S.matchFormat || '', ballType: S.ballType || '',
@@ -12610,6 +12629,11 @@
            moment the history arrives, so typing its name offers it
            in the suggestions with its original Team ID. */
         try { migrateTeamIds(); } catch(e){}
+        /* And the tournament backfill (v141): history entries and
+           tournament results saved before tournamentId stamps get
+           the owning tournament's key where it is unambiguous, so
+           a later tournament delete can cascade to them. */
+        try { stampTournamentIds(); } catch(e){}
         try { renderHistory(); } catch(e){}
         scheduleHistoryRetry();
       }
@@ -17825,6 +17849,127 @@
             doIt);
         } else doIt();
       }
+      /* ---------- tournament delete cascade (v141) ----------
+         Deleting a tournament IS deleting its matches. The
+         tournament's own results vanish with the tournament object,
+         but its matches ALSO live in the permanent match history
+         (HIST / Firebase matchHistory), and player career/profile
+         statistics are computed from that history — so a tournament
+         delete must remove those entries too, with the same
+         tombstone machinery a single match delete uses
+         (matchHistoryDeleted), or the players' stats would keep
+         counting matches whose tournament no longer exists.
+         Only THIS tournament's matches go: an entry is the
+         tournament's when its id is one of the tournament's result
+         ids, or it carries the tournament's tournamentId stamp, or
+         (entries saved before stamps) its tournamentName matches
+         the tournament's name and NO other tournament — current or
+         archived — shares that name. Single matches and other
+         tournaments' history are never touched, and neither are
+         All Teams, the team registry / Team IDs or the player
+         registry / Player IDs. */
+      function tournamentKeyOf(t){
+        if (!t) return '';
+        return t.id || (t.name ? tourIdFor(t.name) : '');
+      }
+      function stampTournamentIds(){
+        var tns = [];
+        if (S.tournament) tns.push(S.tournament);
+        tournamentsArchive().forEach(function(a){ if (a && a.data) tns.push(a.data); });
+        tns.forEach(function(t){
+          var k = tournamentKeyOf(t);
+          if (!k) return;
+          (t.matches || []).forEach(function(m){ if (m && !m.tournamentId) m.tournamentId = k; });
+        });
+        var byName = {};
+        tns.forEach(function(t){
+          var nm = (t.name || '').trim();
+          if (nm) (byName[nm] = byName[nm] || []).push(t);
+        });
+        if (typeof HIST === 'undefined' || !HIST) return;
+        Object.keys(HIST).forEach(function(id){
+          var e = HIST[id];
+          if (!e || e.tournamentId) return;
+          var nm = (e.tournamentName || '').trim();
+          if (!nm) return;
+          var cand = byName[nm] || [];
+          if (cand.length === 1){
+            var k = tournamentKeyOf(cand[0]);
+            if (k) e.tournamentId = k;
+          }
+        });
+      }
+      function tournamentCascadeIds(tn){
+        var ids = {};
+        (tn.matches || []).forEach(function(m){ if (m && m.id != null) ids[String(m.id)] = 1; });
+        var keys = {};
+        if (tn.id) keys[String(tn.id)] = 1;
+        var nm = (tn.name || '').trim();
+        if (nm) keys[tourIdFor(nm)] = 1;
+        var named = 0;
+        if (nm){
+          var all = [S.tournament];
+          tournamentsArchive().forEach(function(a){ all.push((a && a.data) || {}); });
+          all.forEach(function(t){ if (t && (t.name || '').trim() === nm) named++; });
+        }
+        var nameOk = !!nm && named <= 1;
+        if (typeof HIST === 'undefined' || !HIST) return ids;
+        Object.keys(HIST).forEach(function(id){
+          var e = HIST[id];
+          if (!e) return;
+          if (e.tournamentId && keys[String(e.tournamentId)]) ids[id] = 1;
+          else if (nameOk && (e.tournamentName || '') === nm && ((e.matchKind === 'tournament') || !!e.tournamentName)) ids[id] = 1;
+        });
+        return ids;
+      }
+      function runTournamentDeleteCascade(tn, isCurrent){
+        try { stampTournamentIds(); } catch(e){}
+        var ids = tournamentCascadeIds(tn);
+        Object.keys(ids).forEach(function(id){
+          if (typeof HIST !== 'undefined' && HIST && HIST[id]){ delete HIST[id]; delete histConfirmed[id]; }
+          histDeleted[id] = true;
+          histGone[id] = true;
+          if (fbDelRef){ fbDelRef.child(id).set({ at: parseInt(id, 10) || 1 }).catch(function(){ scheduleHistoryRetry(); }); }
+          if (fbHistRef){
+            fbHistRef.child(id).remove().then(function(){
+              delete histDeleted[id];
+              saveHistLocal();
+              try { renderHistory(); } catch(e){}
+            }).catch(function(err){
+              histFbError = 'Delete failed on Firebase: ' + ((err && err.message) ? err.message : String(err || 'unknown error'));
+              scheduleHistoryRetry();
+            });
+          }
+        });
+        if (Object.keys(ids).length) saveHistLocal();
+        /* Parked copies of the tournament's matches go too — for
+           the CURRENT tournament every parked tournament match is
+           its own (parked slices ride inside this one state, whose
+           tournament is the one being deleted). */
+        if (Array.isArray(S.pausedMatches) && S.pausedMatches.length){
+          S.pausedMatches = S.pausedMatches.filter(function(p){
+            if (!p) return true;
+            if (ids[String(p.matchId)]) return false;
+            if (isCurrent && p.matchKind === 'tournament') return false;
+            return true;
+          });
+        }
+        if (S.lastFinishedSingle && ids[String(S.lastFinishedSingle.id)]) S.lastFinishedSingle = null;
+        if (typeof archiveView !== 'undefined' && archiveView && ids[String(archiveView.id)]){
+          archiveView = null; cbOversInnSel = -1;
+          var abEl2 = $('cbArchiveBar'); if (abEl2){ abEl2.hidden = true; abEl2.innerHTML = ''; }
+        }
+        try { renderHistory(); } catch(e){}
+        return ids;
+      }
+      /* The state a deleted current tournament leaves behind: NO
+         tournament at all — an empty shell with defaultsSeeded set
+         (so normalizeTournament never seeds the default teams back)
+         and present === false (so the Tournaments list shows its
+         empty state instead of a CURRENT row). */
+      function emptyTournamentState(){
+        return { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, present: false, ownerUid: '', ownerName: '' };
+      }
       /* Deleting a tournament is permanent and always confirmed
          first. Only the tournament's admin can delete it (an
          unowned tournament can be deleted by a signed-in account,
@@ -17836,16 +17981,30 @@
         var tn = S.tournament;
         var label = tn.name || 'Current Tournament';
         askVerify('Delete this tournament?',
-          '“' + label + '” will be permanently deleted — its teams, fixtures, results, points table and statistics go with it. Your All Teams pool is separate and is not touched. This cannot be undone.',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results, points table and statistics go with it. Its matches are also deleted from the permanent match history, so those matches are removed from every player’s career statistics too — deleting a tournament deletes its matches. Your All Teams pool, Team IDs and Player IDs are separate and are not touched. This cannot be undone.',
           function(){
+            /* A tournament match still live (or just finished) on
+               the pad belongs to this tournament: it is cleared
+               like a deleted match once the tournament is gone. A
+               live Single Match is never touched. */
+            var liveBelongs = (S.matchKind === 'tournament') && !!(S.teamA || S.teamB);
+            var liveId = String(S.matchId);
+            runTournamentDeleteCascade(tn, true);
+            if (liveBelongs){
+              /* Tombstone the live match's own id too, so no render
+                 between here and the live-state clear can re-archive
+                 it into history under the emptied tournament. */
+              histDeleted[liveId] = true;
+              histGone[liveId] = true;
+              saveHistLocal();
+              if (fbDelRef){ fbDelRef.child(liveId).set({ at: parseInt(liveId, 10) || 1 }).catch(function(){ scheduleHistoryRetry(); }); }
+            }
             if (tn.id) S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== tn.id; });
-            var fresh = deep(freshState().tournament);
-            fresh.id = 'tn' + Date.now();
-            fresh.ownerUid = currentUid(); fresh.ownerName = authDisplayName();
-            S.tournament = fresh;
+            S.tournament = emptyTournamentState();
             commit('Tournament deleted', true);
+            if (liveBelongs){ try { clearLiveMatchForDeletedHistory(liveId); } catch(e){} }
             renderTournamentList();
-            toast('🗑 ' + label + ' deleted');
+            toast('🗑 ' + label + ' deleted — its matches and player statistics from it were removed too');
             /* Deleted from the Edit Info / Select Winner page: leave
                that page for the Tournaments list, since the
                tournament it belonged to no longer exists. */
@@ -17869,12 +18028,22 @@
         }
         var label = entry.name || d.name || 'Tournament';
         askVerify('Delete this tournament?',
-          '“' + label + '” will be permanently deleted — its teams, fixtures, results and statistics go with it. Your All Teams pool is separate and is not touched. This cannot be undone.',
+          '“' + label + '” will be permanently deleted — its teams, fixtures, results and statistics go with it. Its matches are also deleted from the permanent match history, so those matches are removed from every player’s career statistics too — deleting a tournament deletes its matches. Your All Teams pool, Team IDs and Player IDs are separate and are not touched. This cannot be undone.',
           function(){
+            var tnObj = deep(d);
+            if (!tnObj.id) tnObj.id = id;
+            if (!tnObj.name && entry.name) tnObj.name = entry.name;
+            var ids = runTournamentDeleteCascade(tnObj, false);
             S.tournamentsArchive = tournamentsArchive().filter(function(a){ return a.id !== id; });
-            commit('Tournament deleted', true);
+            var liveId = String(S.matchId);
+            if (ids[liveId]){
+              commit('Tournament deleted', true);
+              try { clearLiveMatchForDeletedHistory(liveId); } catch(e){}
+            } else {
+              commit('Tournament deleted', true);
+            }
             renderTournamentList();
-            toast('🗑 ' + label + ' deleted');
+            toast('🗑 ' + label + ' deleted — its matches and player statistics from it were removed too');
           });
       }
       /* A tournament's Delete button is RENDERED only for the
@@ -17899,12 +18068,23 @@
         function meta(t){
           return (t.teams || []).length + ((t.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (t.matches || []).length + ((t.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (t.ownerName ? ' • Admin: ' + t.ownerName : '');
         }
-        var html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
-          + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
-          + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
-          + '<span class="tp-badge">CURRENT</span></button>'
-          + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
-          + '</div>';
+        /* No current tournament (after a delete): an honest empty
+           state instead of a CURRENT row — a deleted tournament
+           must never be replaced by a fresh seeded one. */
+        var html = '';
+        if (tn.present === false){
+          html = '<div class="tn-row"><div class="tn-pick" style="cursor:default">'
+            + '<span><span class="tp-name">No tournament yet — Create Tournament</span>'
+            + '<span class="tp-meta">There is no current tournament. Tap Create Tournament above to start one.</span></span>'
+            + '</div></div>';
+        } else {
+          html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
+            + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
+            + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
+            + '<span class="tp-badge">CURRENT</span></button>'
+            + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
+            + '</div>';
+        }
         var arc = tournamentsArchive().slice().reverse();
         html += arc.map(function(a){
           var d = a.data || {};
