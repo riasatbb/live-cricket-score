@@ -1449,6 +1449,17 @@
       .modal.wide{max-width:780px}
       body.link-viewer .scorer-entry-btn{display:none !important}
       .hist-entry-btn{width:100%;margin-top:14px}
+      /* ---------- home search ---------- */
+      .srch-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;color:var(--ink);cursor:pointer;font:inherit}
+      .srch-row:last-child{margin-bottom:0}
+      .srch-ava{flex:none;width:38px;height:38px;border-radius:50%;overflow:hidden;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;font-family:"Barlow Condensed",sans-serif}
+      .srch-ava img{width:100%;height:100%;object-fit:cover;display:block}
+      .srch-row .sb-team-logo{flex:none}
+      .srch-main{flex:1;min-width:0}
+      .srch-name{display:block;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .srch-meta{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .srch-arrow{flex:none;color:var(--muted);font-size:15px}
+      .srch-more{font-size:12.5px;color:var(--muted);margin:2px 0 0}
       .hist-status{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.55}
       .hist-status.ok{background:#e3f4e9;border-color:#9ed3ae;color:#14532d}
       .hist-status.err{background:var(--red-bg);border-color:#e5a49c;color:var(--red)}
@@ -1809,6 +1820,7 @@
             <h2>Recent Matches</h2>
           </div>
         </div>
+        <button type="button" class="btn ghost hist-entry-btn" style="margin:0 0 14px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
@@ -1821,6 +1833,7 @@
         <div class="mode-intro">
           <h2>What are you covering?</h2>
         </div>
+        <button type="button" class="btn ghost" style="width:100%;margin-top:14px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
         <div class="mode-grid">
           <button type="button" class="mode-card mc-single" onclick="setSegment('single')">
             <span class="mode-icon" aria-hidden="true">🏏</span>
@@ -1867,6 +1880,9 @@
           <button type="button" class="console-opt co-history" onclick="setView('history')">
             <span class="co-title">📜 History &amp; Reports</span>
           </button>
+          <button type="button" class="console-opt co-search" onclick="openSearch()">
+            <span class="co-title">🔍 Search Players, Teams &amp; Tournaments</span>
+          </button>
         </div>
       </section>
 
@@ -1893,6 +1909,19 @@
           <h2 id="tpTitle">Team</h2>
         </div>
         <div id="tpBody"></div>
+      </section>
+
+      <!-- ================= SEARCH: PLAYERS / TEAMS / TOURNAMENTS ================= -->
+      <section class="view" id="view-search">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="closeSearch()" aria-label="Back">🔙</button>
+          <h2>Search</h2>
+        </div>
+        <div class="card">
+          <input id="searchBox" type="text" placeholder="Type a player, team or tournament — name or ID" autocomplete="off" aria-label="Search players, teams and tournaments by name or ID" oninput="renderSearch()" />
+          <p class="note" style="margin:8px 0 0">Tap a result to open it — a player&rsquo;s profile and career stats, a team&rsquo;s page, or the tournament.</p>
+        </div>
+        <div id="searchResults"></div>
       </section>
 
       <!-- ================= OPEN MATCH: START SINGLE MATCH SETUP ================= -->
@@ -2994,7 +3023,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v141';
+      var APP_VERSION = 'v142';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4965,7 +4994,7 @@
             + '<span class="sq-main"><span class="sq-name sq-nm">' + plLink(team, n, n) + '</span>'
             + (role ? '<span class="sq-role-line">' + esc(role) + '</span>' : '')
             + '</span>'
-            + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '">×</button></div>';
+            + '<button class="sq-x" onclick="removePlayer(\'' + which + '\',' + i + ')" aria-label="Remove ' + esc(n) + '" title="Remove player">🗑</button></div>';
         }).join('');
       }
       function renderSquads(){
@@ -5045,7 +5074,7 @@
          new order becomes final only when Confirm Squad is tapped
          again — and the order is kept in the team's tournament
          squad too. A plain tap is untouched: the name still opens
-         the profile and × still removes (the click that follows a
+         the profile and the trash icon still removes (the click that follows a
          real drag is swallowed once, below). */
       var sqDragState = null, sqDragJustEnded = 0;
       function sqDragRenumber(list){
@@ -7358,7 +7387,7 @@
               return '<div class="grp-teamrow">'
                 + (lg ? '<img class="pt-logo" src="' + esc(lg) + '" alt="" loading="lazy" />' : '')
                 + '<span class="grp-teamname">' + esc(n) + '</span>'
-                + '<button type="button" class="sq-x grp-actions" title="Remove ' + esc(n) + ' from ' + esc(g.name) + '" aria-label="Remove ' + esc(n) + ' from ' + esc(g.name) + '" onclick="removeTeamFromGroup(' + fxIdArg(g.id) + ',' + fxIdArg(n) + ')">×</button></div>';
+                + '<button type="button" class="sq-x grp-actions" title="Remove ' + esc(n) + ' from ' + esc(g.name) + '" aria-label="Remove ' + esc(n) + ' from ' + esc(g.name) + '" onclick="removeTeamFromGroup(' + fxIdArg(g.id) + ',' + fxIdArg(n) + ')">🗑</button></div>';
             }).join('') : '<p class="note">No teams in ' + esc(g.name) + ' yet — add them from the dropdown below.</p>';
             var addHTML;
             if (!tn.teams.length){
@@ -8600,7 +8629,7 @@
             + '<div class="bk-crow-top"><span class="bk-seed">' + (i + 1) + '</span>'
             + '<input id="bkCrLabel' + i + '" value="' + esc(row.label || '') + '" placeholder="Match name — e.g. Qualifier 1" aria-label="Knockout match name" onchange="bkCustomLabel(' + i + ',this.value)" />'
             + '<button type="button" class="bk-finbtn' + (bkCustomFinal === i ? ' sel' : '') + '" onclick="bkCustomSetFinal(' + i + ')" title="The winner of this match takes the tournament">🏆 Final</button>'
-            + '<button type="button" class="bk-x" onclick="bkCustomRemove(' + i + ')" aria-label="Remove this match">✕</button></div>'
+            + '<button type="button" class="bk-x" onclick="bkCustomRemove(' + i + ')" aria-label="Remove this match" title="Remove this match">🗑</button></div>'
             + '<div class="bk-crow-slots"><select aria-label="First team source" onchange="bkCustomSrc(' + i + ',\'a\',this.value)">' + bkSrcOptions(row.a, i) + '</select>'
             + '<span class="bk-vs">vs</span>'
             + '<select aria-label="Second team source" onchange="bkCustomSrc(' + i + ',\'b\',this.value)">' + bkSrcOptions(row.b, i) + '</select></div>'
@@ -9634,7 +9663,7 @@
         if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
         /* Ownership decides what is SHOWN, not just what works: the
            add-players box, the logo badge control, the remove-team
-           ×, the per-player trash and the C / VC / Wk panel render
+           trash icon, the per-player trash and the C / VC / Wk panel render
            only for the account that owns this data — the admin who
            created the tournament / teams, signed in with that same
            Google account. A guest, or any other signed-in account,
@@ -9771,7 +9800,7 @@
           + '<div class="sb-detail-head">' + badgeHTML + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div>'
           + (editable && logoNow ? '<div style="margin-top:5px"><button type="button" class="tp-logo-remove" onclick="removeTeamLogo(' + ti + logoSrcArg + ')">Remove logo</button></div>' : '')
           + '</div>'
-          + (editable ? '<button type="button" class="sq-x" onclick="tpRemoveTeam()" aria-label="Remove team ' + esc(team) + '" title="Remove team">×</button>' : '')
+          + (editable ? '<button type="button" class="sq-x" onclick="tpRemoveTeam()" aria-label="Remove team ' + esc(team) + '" title="Remove team">🗑</button>' : '')
           + '</div>'
           + '<div class="tp-sec">' + rows + '</div>'
           + (editable
@@ -18099,6 +18128,150 @@
         el.innerHTML = html;
       }
 
+      /* ---------- home search (v142) ----------
+         One search for anyone who wants a player's, a team's or a
+         tournament's stats: a Search button sits on every home —
+         the viewer's Recent Matches landing, the mode chooser and
+         the Scorer Console — and opens this one Search page. Typing
+         matches names AND IDs (Player ID, Team ID, Tour ID),
+         case-insensitively, across the player registry
+         (knownPlayers), the teams (tacKnown: registry + All Teams +
+         current tournament) and the tournament list (the current
+         tournament, plus the archived ones on the control side).
+         Tapping a result opens the thing itself: the player profile
+         with its career stats, the team's own page, or the
+         tournament. An archived tournament opens exactly as it does
+         from the Tournaments list — control side only, since opening
+         one swaps the current tournament; viewers reach the current
+         tournament through the read-only tournament viewer, like the
+         scoreboard's View Tournament button. A registry team that is
+         in neither All Teams nor the current tournament has no page
+         to open, so its tap says so and shows its Team ID instead of
+         opening an empty page. */
+      var searchReturnView = null;
+      var searchHits = { players: [], teams: [], tournaments: [] };
+      function openSearch(){
+        searchReturnView = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'search') ? currentViewName : null;
+        setView('search');
+        var box = $('searchBox');
+        if (box){ try { box.focus(); } catch(e){} }
+      }
+      function closeSearch(){
+        var back = searchReturnView;
+        searchReturnView = null;
+        var fallback = (document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) ? 'live' : 'home';
+        setView(back || fallback);
+      }
+      function searchOpenPlayer(i){
+        var r = searchHits.players[i]; if (!r) return;
+        openPlayerProfile((r.teams && r.teams.length) ? r.teams[0] : '', r.name, r.id);
+      }
+      function searchOpenTeam(i){
+        var r = searchHits.teams[i]; if (!r) return;
+        try { normalizeMyTeams(); } catch(e){}
+        try { normalizeTournament(); } catch(e){}
+        if (S.myTeams && S.myTeams.teams && S.myTeams.teams.indexOf(r.name) > -1){ openTeamPage('mt', r.name, 'search'); return; }
+        if (S.tournament && S.tournament.teams && S.tournament.teams.indexOf(r.name) > -1){ openTeamPage('tn', r.name, 'search'); return; }
+        toast('“' + r.name + '” is not in All Teams or the current tournament right now — its Team ID is ' + (r.id || teamIdFor(r.name)) + '.');
+      }
+      function searchOpenTournament(i){
+        var r = searchHits.tournaments[i]; if (!r) return;
+        if (r.current){
+          if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
+          else setView('tournament');
+          return;
+        }
+        openArchivedTournament(r.arcId);
+      }
+      function renderSearch(){
+        var wrap = $('searchResults'); if (!wrap) return;
+        var box = $('searchBox');
+        var q = box ? String(box.value || '').trim().toLowerCase() : '';
+        var qid = q.replace(/[\s\-]/g, '');
+        searchHits = { players: [], teams: [], tournaments: [] };
+        if (q.length < 2){
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Start typing — matching players, teams and tournaments appear here.</p></div>';
+          return;
+        }
+        /* Players: name, nickname or Player ID. */
+        try {
+          knownPlayers().forEach(function(p){
+            if (!p || !p.name) return;
+            var idHit = qid.length >= 3 && (String(p.id || '').toLowerCase().indexOf(qid) > -1 || pidShort(p.id).toLowerCase().replace(/[\s\-]/g, '').indexOf(qid) > -1);
+            if (p.name.toLowerCase().indexOf(q) > -1 || (p.nick && p.nick.toLowerCase().indexOf(q) > -1) || idHit) searchHits.players.push(p);
+          });
+        } catch(e){}
+        /* Teams: name or Team ID. */
+        try {
+          tacKnown().forEach(function(t){
+            if (!t || !t.name) return;
+            var idHit = qid.length >= 3 && t.id && String(t.id).toLowerCase().replace(/\s+/g, '').indexOf(qid) > -1;
+            if (t.name.toLowerCase().indexOf(q) > -1 || idHit) searchHits.teams.push(t);
+          });
+        } catch(e){}
+        /* Tournaments: name or Tour ID — the current one for
+           everyone, the archived list on the control side. */
+        function tnHit(name, keys){
+          if (name && name.toLowerCase().indexOf(q) > -1) return true;
+          if (qid.length >= 3){
+            for (var k = 0; k < keys.length; k++){ if (keys[k] && String(keys[k]).toLowerCase().replace(/[\s\-]/g, '').indexOf(qid) > -1) return true; }
+          }
+          return false;
+        }
+        try {
+          var tn = S.tournament;
+          if (tn && tn.present !== false && tournamentHasContent(tn)){
+            var cName = tn.name || 'Current Tournament';
+            if (tnHit(cName, [tournamentKeyOf(tn), tourIdFor(tn.name || '')])){
+              searchHits.tournaments.push({ current: true, name: cName, meta: 'Current tournament • ' + (tn.teams || []).length + ((tn.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (tn.matches || []).length + ((tn.matches || []).length === 1 ? ' match' : ' matches') + ' completed • Tour ID ' + tourIdFor(tn.name || '') });
+            }
+          }
+        } catch(e){}
+        if (!isViewerSession()){
+          try {
+            tournamentsArchive().forEach(function(a){
+              var d = (a && a.data) || {};
+              var aName = (a && a.name) || d.name || 'Tournament';
+              if (!tnHit(aName, [tournamentKeyOf(d), tourIdFor(aName), a && a.id])) return;
+              var date = a.at ? new Date(a.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+              searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
+            });
+          } catch(e){}
+        }
+        var CAP = 20, html = '';
+        if (searchHits.players.length){
+          html += '<div class="card"><h3 style="margin-top:0">👤 Players</h3>' + searchHits.players.slice(0, CAP).map(function(p, i){
+            var team0 = (p.teams && p.teams.length) ? p.teams[0] : '';
+            var d = { photo: '' };
+            try { d = profileDataFor(team0, p.name, p.id); } catch(e){}
+            var meta = [];
+            if (p.teams && p.teams.length) meta.push(p.teams.join(' • '));
+            if (p.role) meta.push(p.role);
+            meta.push('ID ' + pidShort(p.id));
+            return '<button type="button" class="srch-row" onclick="searchOpenPlayer(' + i + ')"><span class="srch-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p.name))) + '</span><span class="srch-main"><span class="srch-name">' + esc(p.name) + '</span><span class="srch-meta">' + esc(meta.join(' • ')) + '</span></span><span class="srch-arrow" aria-hidden="true">→</span></button>';
+          }).join('') + (searchHits.players.length > CAP ? '<p class="srch-more">' + (searchHits.players.length - CAP) + ' more — keep typing to narrow it down.</p>' : '') + '</div>';
+        }
+        if (searchHits.teams.length){
+          html += '<div class="card"><h3 style="margin-top:0">👥 Teams</h3>' + searchHits.teams.slice(0, CAP).map(function(t, i){
+            var meta = [];
+            var cnt = null;
+            if (S.myTeams && S.myTeams.squads && Array.isArray(S.myTeams.squads[t.name])) cnt = S.myTeams.squads[t.name].length;
+            else if (S.tournament && S.tournament.squads && Array.isArray(S.tournament.squads[t.name])) cnt = S.tournament.squads[t.name].length;
+            if (cnt != null) meta.push(cnt + (cnt === 1 ? ' player' : ' players'));
+            var tid = t.id || teamIdFor(t.name);
+            if (tid) meta.push('Team ID ' + tid);
+            return '<button type="button" class="srch-row" onclick="searchOpenTeam(' + i + ')">' + teamBadgeHTML(t.name, i) + '<span class="srch-main"><span class="srch-name">' + esc(t.name) + '</span><span class="srch-meta">' + esc(meta.join(' • ')) + '</span></span><span class="srch-arrow" aria-hidden="true">→</span></button>';
+          }).join('') + (searchHits.teams.length > CAP ? '<p class="srch-more">' + (searchHits.teams.length - CAP) + ' more — keep typing to narrow it down.</p>' : '') + '</div>';
+        }
+        if (searchHits.tournaments.length){
+          html += '<div class="card"><h3 style="margin-top:0">🏆 Tournaments</h3>' + searchHits.tournaments.map(function(t, i){
+            return '<button type="button" class="srch-row" onclick="searchOpenTournament(' + i + ')"><span class="srch-ava" aria-hidden="true">🏆</span><span class="srch-main"><span class="srch-name">' + esc(t.name) + '</span><span class="srch-meta">' + esc(t.meta) + '</span></span><span class="srch-arrow" aria-hidden="true">→</span></button>';
+          }).join('') + '</div>';
+        }
+        if (!html) html = '<div class="card"><p class="note" style="margin:0">No player, team or tournament matches “' + esc(q) + '”.</p></div>';
+        wrap.innerHTML = html;
+      }
+
       /* ---------- views ---------- */
       var cleanMode=false;
       var currentSegment=null; /* 'single' | 'tournament' | null (home) */
@@ -18172,6 +18345,7 @@
         if (target) target.classList.add('show');
         if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('home'); } catch(e){} try { renderHistory(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
+        if (v==='search'){ try { renderSearch(); } catch(e){} }
         if (v==='teampage'){ try { renderTeamPage(); } catch(e){} }
         /* Entering the Live Matches list always re-renders it from
            the server-confirmed state, so Back (in-page or browser)
@@ -18215,7 +18389,7 @@
         try { hv = (location.hash || '').replace(/^#/, ''); } catch(e){}
         var fallback = document.body.classList.contains('viewer-flow') ? 'live' : 'home';
         var target = st.view || hv || fallback;
-        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament','teampage'];
+        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament','teampage','search'];
         if (known.indexOf(target) === -1) target = fallback;
         /* A team-page entry carries which team it shows; without
            one (or a live context) there is no team page to return
