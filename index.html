@@ -290,6 +290,9 @@
       .ov-vs i{font-style:normal;color:#8b87ad;font-weight:600;padding:0 1px}
       .ov-scorepill{flex:none;background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
       .ov-inn{flex:none;background:#0d9488;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 7px;text-transform:uppercase}
+      .ov-freehit{flex:none;background:#f5b921;color:#241a02;font-size:13px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:3px 8px;text-transform:uppercase;animation:fhPulse 1s ease-in-out infinite}
+      @keyframes fhPulse{0%,100%{opacity:1}50%{opacity:.55}}
+      @media (prefers-reduced-motion: reduce){.ov-freehit{animation:none}}
       .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
       .ov-overs small{font-size:14px;color:#8b87ad;font-weight:700;letter-spacing:.08em}
       .ov-status{font-size:19px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
@@ -3419,7 +3422,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v155';
+      var APP_VERSION = 'v156';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3430,6 +3433,7 @@
           extras: { wide:0, noball:0, bye:0, legbye:0 },
           batters: [], bowlers: [],
           striker: null, nonStriker: null, bowler: null,
+          freeHit: false, /* true once a no-ball has been bowled and until the next legal delivery: that delivery is a FREE HIT. Lives on the innings, so it syncs through Firebase like the rest of the score — overlay, viewer scoreboard and scorer pad all read the same flag. */
           awaitingBowler: false, /* true between an over ending and the next bowler being picked — scoring is blocked meanwhile */
           balls: [] /* {over, overNo, text, cls, bowler, batter} newest last */
         };
@@ -4928,6 +4932,11 @@
         if (typeof inn.runs !== 'number') inn.runs = 0;
         if (typeof inn.wickets !== 'number') inn.wickets = 0;
         if (typeof inn.legalBalls !== 'number') inn.legalBalls = 0;
+        /* Free-hit flag: states saved before it existed carry no
+           field — rebuild it from the ball record (see
+           freeHitPending) so a match already mid-free-hit when this
+           build first loads still shows the badge everywhere. */
+        if (typeof inn.freeHit !== 'boolean'){ try { inn.freeHit = freeHitPending(inn); } catch(e){ inn.freeHit = false; } }
         /* Repair bowler figures recorded before the bye / leg-bye fix:
            when a ball-by-ball record exists, each bowler's runs are
            recomputed from the balls themselves — bat runs, wides and
@@ -5751,6 +5760,36 @@
         if (!Array.isArray(inn.balls)) inn.balls = []; /* heal a record Firebase dropped while it was empty */
         inn.balls.push(rec);
       }
+      /* ---------- free hit ----------
+         A no-ball arms the free hit: the NEXT delivery is the
+         free-hit ball. The flag lives on the innings (inn.freeHit)
+         and syncs through Firebase with the rest of the score, so
+         the overlay, the viewer scoreboard and the scorer pad all
+         show a FREE HIT badge BEFORE the ball is bowled — not only
+         a banner after it. The flag is consumed by the next LEGAL
+         delivery; a wide or another no-ball bowled on the free-hit
+         ball leaves it armed for the delivery after. On the
+         free-hit ball a batter can be dismissed only by a run out
+         (or retired out) — scoreWicket / confirmWicket enforce it. */
+      function freeHitPending(inn){
+        if (!inn) return false;
+        if (typeof inn.freeHit === 'boolean') return inn.freeHit;
+        /* Legacy state with no flag: derive it from the record —
+           walk back from the last delivery: a no-ball arms it, a
+           legal delivery clears it, a wide changes nothing. */
+        var list = (inn.balls || []).filter(function(b){ return b && !b.evt; });
+        for (var i = list.length - 1; i >= 0; i--){
+          var t = String(list[i].text || '');
+          if (/^Nb/.test(t)) return true;
+          if (isLegalDelivery(t)) return false;
+        }
+        return false;
+      }
+      function updateFreeHitAfterBall(inn, token, legal){
+        if (/^Nb/.test(String(token || ''))) inn.freeHit = true;
+        else if (legal) inn.freeHit = false;
+        /* a wide: the flag stays exactly as it was */
+      }
       function afterLegalBall(inn){
         if (inn.legalBalls % 6 === 0 && inn.legalBalls > 0) swapStrike(inn);
         checkInningsEnd();
@@ -5878,10 +5917,12 @@
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
         var overNo = Math.floor(inn.legalBalls / 6) + 1;
         var batRunsBefore = bat.runs;
+        var fhBall = freeHitPending(inn);
         inn.runs+=n; bat.runs+=n; bat.balls++; bowl.runs+=n; bowl.balls++;
         if (n===4) bat.fours++; if (n===6) bat.sixes++;
         inn.legalBalls++;
-        pushBall(inn, String(n), n===4?'b4':(n===6?'b6':''), overNo);
+        pushBall(inn, String(n), n===4?'b4':(n===6?'b6':''), overNo, fhBall ? { fh: true } : null);
+        updateFreeHitAfterBall(inn, String(n), true); /* a legal delivery consumes the free hit */
         checkBatterMilestones(inn, bat, batRunsBefore, true);
         if (n%2===1) swapStrike(inn);
         afterLegalBall(inn); commit('Ball: ' + n + (n===1 ? ' run' : ' runs'));
@@ -6064,6 +6105,7 @@
           if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(bl) ? ' in ' + bl + (bl === 1 ? ' ball' : ' balls') : '') + '.';
         }
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
+        if (freeHitPending(inn) && S.status === 'live') status = '⚡ FREE HIT — next ball: only a run out can dismiss a batter.' + (status ? ' ' + status : '');
         $('mcStatus').textContent = status;
         var ex = inn.extras.wide + inn.extras.noball + inn.extras.bye + inn.extras.legbye;
         var pship = partnershipFigures(inn);
@@ -6176,11 +6218,13 @@
         if (S.status === 'inningsBreak') S.status = 'live';
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
         var overNo = Math.floor(inn.legalBalls / 6) + 1;
+        var fhBall = freeHitPending(inn);
         if (type==='noball'){
           var batRunsBefore = bat.runs;
           inn.runs += 1+n; inn.extras.noball+=1; bowl.runs += 1+n;
           bat.runs+=n; if (n===4) bat.fours++; if (n===6) bat.sixes++;
-          pushBall(inn, 'Nb+'+n, 'bx', overNo);
+          pushBall(inn, 'Nb+'+n, 'bx', overNo, fhBall ? { fh: true } : null);
+          inn.freeHit = true; /* a no-ball arms the free hit for the next delivery */
           /* Runs off the bat on a no-ball count towards a fifty /
              century exactly like any other ball. */
           checkBatterMilestones(inn, bat, batRunsBefore, false);
@@ -6192,14 +6236,16 @@
              charged to the bowler as wides. */
           var total = 1 + n;
           inn.runs += total; inn.extras.wide += total; bowl.runs += total;
-          pushBall(inn, n>0 ? 'Wd+'+n : 'Wd', 'bx', overNo);
+          pushBall(inn, n>0 ? 'Wd+'+n : 'Wd', 'bx', overNo, fhBall ? { fh: true } : null);
+          /* a wide bowled on the free-hit ball keeps the free hit armed — the flag is left untouched */
           if (n%2===1) swapStrike(inn);
           checkInningsEnd(); commit(n>0 ? ('Wide + ' + n + ' — ' + total + ' runs total') : 'Wide — 1 run');
         } else {
           var key = (type==='bye') ? 'bye':'legbye';
           inn.runs += n; inn.extras[key]+=n; bowl.balls++; /* byes / leg-byes are team extras — never charged to the bowler */
           bat.balls++; inn.legalBalls++;
-          pushBall(inn, (type==='bye'?'B':'Lb')+n, 'bx', overNo);
+          pushBall(inn, (type==='bye'?'B':'Lb')+n, 'bx', overNo, fhBall ? { fh: true } : null);
+          updateFreeHitAfterBall(inn, (type==='bye'?'B':'Lb')+n, true); /* a bye / leg-bye is a legal delivery — it consumes the free hit */
           if (n%2===1) swapStrike(inn);
           afterLegalBall(inn); commit(pendingLabelFor(key) + ' ' + n + (n===1 ? ' run' : ' runs'));
           maybeBowlerAsk();
@@ -6244,6 +6290,19 @@
         if (ctx) ctx.textContent = pendingExtra
           ? ('This wicket falls on the pending ' + pendingLabel() + ' ball. “Runs on this ball” = the extra runs run on top of the ' + pendingLabel() + ' itself.')
           : 'Pick how the batter was out. “Runs on this ball” = runs completed before the dismissal (e.g. run out going for a second run).';
+        /* Free hit: on this delivery a batter can only be run out
+           (or retired out) — every other dismissal type is disabled
+           in the picker before the panel even opens. */
+        var fhNow = freeHitPending(S.current);
+        var typeSel = $('wktType');
+        if (typeSel){
+          for (var oi = 0; oi < typeSel.options.length; oi++){
+            var ov = typeSel.options[oi].value;
+            typeSel.options[oi].disabled = fhNow && ov !== 'runout' && ov !== 'retired';
+          }
+          if (fhNow && typeSel.value !== 'runout' && typeSel.value !== 'retired') typeSel.value = 'runout';
+        }
+        if (fhNow && ctx) ctx.textContent = '⚡ FREE HIT — on this ball a batter can only be Run Out (or Retired Out). ' + ctx.textContent;
         var outSel = $('wktOutWho'); if (outSel) outSel.value = 'striker';
         var runsSel = $('wktRuns'); if (runsSel) runsSel.value = '0';
         var panel = $('wicketPanel'); if (panel){ panel.hidden = false; try { panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
@@ -6253,6 +6312,12 @@
       }
       function confirmWicket(){
         var type = $('wktType').value;
+        /* Hard guard (the picker already disables these): a free-hit
+           ball can never record a bowler dismissal. */
+        if (freeHitPending(S.current) && type !== 'runout' && type !== 'retired'){
+          toast('⚡ Free Hit — only a Run Out can dismiss a batter on this ball');
+          return;
+        }
         var outWhich = $('wktOutWho').value === 'nonStriker' ? 'nonStriker' : 'striker';
         var fielder = $('wktFielder').value.trim();
         var runs = Math.max(0, Math.min(6, parseInt($('wktRuns').value, 10) || 0));
@@ -6275,6 +6340,7 @@
         var outBat = getBatter(inn, outName);
         var notOutName = outWhich === 'nonStriker' ? inn.striker : inn.nonStriker;
         var bowl = getBowler(inn, inn.bowler);
+        var fhBall = freeHitPending(inn);
         var credited = bowlerCredited(type);
         var batRunsBefore = strikerBat.runs, bowlWktsBefore = bowl.wickets;
         var howOut = dismissalHowOut(type, fielder, inn.bowler);
@@ -6308,7 +6374,8 @@
         inn.wickets++;
         outBat.out = true; outBat.howOut = howOut;
         if (credited) bowl.wickets++;
-        pushBall(inn, token, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: type, howOut: howOut, outName: outName });
+        pushBall(inn, token, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: type, howOut: howOut, outName: outName, fh: fhBall });
+        updateFreeHitAfterBall(inn, token, legal); /* a no-ball wicket (run out) re-arms the free hit; a legal wicket ball consumes it; a wide leaves it armed */
         /* Milestones on a wicket ball: runs the striker completed
            on it still count towards a fifty / century, and a wicket
            credited to the bowler can complete a five-wicket haul
@@ -18415,6 +18482,7 @@
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
         else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(fixResultText(S.resultText)) + '</b></span>';
+        if (freeHitPending(inn) && S.status === 'live') chips += '<span class="ss-chip" style="background:#f5b921;color:#241a02;border-color:#f5b921">⚡ <b>FREE HIT</b></span>';
         var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
         return '<div class="scorestrip">'
@@ -18594,6 +18662,7 @@
           + '<span class="ov-vs ov-fit-txt">' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span>'
           + '<span class="ov-scorepill">' + inn.runs + '-' + inn.wickets + '</span>'
           + '<span class="ov-inn">' + innTag + '</span>'
+          + (freeHitPending(inn) && S.status === 'live' ? '<span class="ov-freehit">Free Hit</span>' : '')
           + '<span class="ov-overs ov-fit-txt">' + oversText(inn.legalBalls) + ' <small>OVERS</small></span>'
           + '</div>'
           + '<div class="ov-status ov-fit-txt">' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</div></div>'
@@ -18671,7 +18740,7 @@
         var deliveries = (inn.balls || []).filter(function(b){ return !b.evt; });
         var milestones = (inn.balls || []).filter(function(b){ return b.evt === 'milestone'; });
         if (!ovFxState || ovFxState.key !== key || deliveries.length < ovFxState.balls || milestones.length < ovFxState.ms){
-          ovFxState = { key: key, balls: deliveries.length, ms: milestones.length, fh: false };
+          ovFxState = { key: key, balls: deliveries.length, ms: milestones.length, fh: freeHitPending(inn) };
           return;
         }
         var newMs = milestones.slice(ovFxState.ms);
@@ -19278,6 +19347,7 @@
         else if (S.tossInfo) status = S.tossInfo;
         else if (S.inningsNo === 1) status = inn.battingTeam ? inn.battingTeam + ' chose to bat.' : 'Teams not selected yet — the match has not started.';
         else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
+        if (freeHitPending(inn) && S.status === 'live') status = '⚡ FREE HIT — the next delivery is a free hit. ' + status;
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
