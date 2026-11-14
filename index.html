@@ -269,23 +269,30 @@
       .ov-seg{position:relative;min-width:0}
       .ov-seg::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;background:#e91e63;clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%)}
       .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#221c5e,#171240 60%,#1c1850);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 30px 10px 34px}
-      .ov-seg.bats{flex:1.3 1 0}
+      .ov-seg.bats{flex:1.08 1 0}
       .ov-seg.bowl{flex:1.2 1 0}
       .ov-seg.bowl .ov-panel{padding:10px 34px 10px 30px}
-      .ov-bat{display:grid;grid-template-columns:minmax(0,1fr) 40px 30px;align-items:baseline;gap:4px;padding:2px 0}
-      .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:7px;min-width:0}
-      .ov-bat .nm svg{flex:none;width:15px;height:15px;fill:#f5b921}
+      /* Both batters share ONE alignment: a fixed-width bat-icon
+         slot leads every row — the icon itself moves into the slot
+         of whoever is on strike, so the two names always start in
+         the same column, and the rows stay in batting order (the
+         striker is NOT always the top row). The runs column sits
+         close behind the name instead of at the panel's far edge. */
+      .ov-bat{display:grid;grid-template-columns:20px minmax(0,1fr) 38px 28px;align-items:center;gap:5px;padding:2px 0}
+      .ov-batslot{display:flex;align-items:center;justify-content:center;height:20px}
+      .ov-batslot svg{flex:none;width:15px;height:15px;fill:#f5b921}
+      .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
       .ov-bat .r{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#ffe14d;text-align:right;font-variant-numeric:tabular-nums}
       .ov-bat .b{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#b9b4d9;text-align:right;font-variant-numeric:tabular-nums}
       .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:8px 26px;text-align:center}
       .ov-top{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;min-width:0}
-      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
-      .ov-vs i{font-style:normal;color:#8b87ad;font-weight:500;padding:0 1px}
-      .ov-scorepill{flex:none;background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:29px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
-      .ov-inn{flex:none;background:#0d9488;color:#fff;font-size:11px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 6px;text-transform:uppercase}
-      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
-      .ov-overs small{font-size:13px;color:#8b87ad;font-weight:600;letter-spacing:.08em}
-      .ov-status{font-size:16px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
+      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
+      .ov-vs i{font-style:normal;color:#8b87ad;font-weight:600;padding:0 1px}
+      .ov-scorepill{flex:none;background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
+      .ov-inn{flex:none;background:#0d9488;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 7px;text-transform:uppercase}
+      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
+      .ov-overs small{font-size:14px;color:#8b87ad;font-weight:700;letter-spacing:.08em}
+      .ov-status{font-size:19px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
       .ov-status .dim{color:#6d6890;font-weight:700}
       .ov-bowl-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px}
       .ov-bowl-head .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden}
@@ -297,6 +304,46 @@
       .ov-ballb.bnd4{background:#0d9488;color:#fff}
       .ov-ballb.bnd6{background:#f5b921;color:#241a02}
       .ov-ballb.empty{background:transparent;border:2px solid rgba(255,255,255,.65)}
+      /* ---------- overlay event animations ----------
+         A full-width celebration banner that pops over the bar
+         when a big moment lands: FOUR, SIX, WICKET, FREE HIT,
+         HAT-TRICK, a batter's FIFTY / CENTURY or a five-wicket
+         haul. It is injected by detectOverlayFx() only when the
+         ball record actually grows, so opening the overlay
+         mid-match never replays old events, and it removes
+         itself after one pass (~2.8s). Colours reuse the bar's
+         own ball colours: teal for a four, gold for a six and
+         the milestones, pink for a wicket / hat-trick. */
+      .ov-fx{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;animation:ovFxPop 2.8s cubic-bezier(.2,.9,.25,1) forwards}
+      .ov-fx .fx-txt{font-family:"Barlow Condensed",sans-serif;font-size:64px;font-weight:700;letter-spacing:.06em;line-height:1;padding:8px 34px 10px;border-radius:14px;color:#fff;background:#171240;box-shadow:0 14px 34px rgba(0,0,0,.45);text-transform:uppercase;white-space:nowrap}
+      .ov-fx .fx-sub{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:600;letter-spacing:.05em;color:#fff;background:rgba(20,16,46,.85);padding:3px 16px 4px;border-radius:999px;text-transform:uppercase;white-space:nowrap}
+      .ov-fx.four .fx-txt{background:#0d9488}
+      .ov-fx.six .fx-txt{background:#f5b921;color:#241a02}
+      .ov-fx.wicket .fx-txt{background:#e91e63}
+      .ov-fx.hattrick .fx-txt{background:#e91e63;box-shadow:0 0 0 3px #f5b921,0 14px 34px rgba(0,0,0,.45)}
+      .ov-fx.freehit .fx-txt{background:#2563eb}
+      .ov-fx.fifty .fx-txt,.ov-fx.hundred .fx-txt,.ov-fx.fivefor .fx-txt{background:#f5b921;color:#241a02}
+      @keyframes ovFxPop{0%{opacity:0;transform:translateY(-50%) scale(.6)}12%{opacity:1;transform:translateY(-50%) scale(1.06)}20%{transform:translateY(-50%) scale(1)}82%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-58%) scale(.98)}}
+      @media (prefers-reduced-motion: reduce){.ov-fx{animation:ovFxFade 2.8s ease forwards}@keyframes ovFxFade{0%{opacity:0}15%{opacity:1}82%{opacity:1}100%{opacity:0}}}
+      /* ---------- overlay full scorecard panel ----------
+         Shown under the bar at the end of an over (automatic,
+         S.ovCardAuto), at the innings break and after the match,
+         or whenever the admin turns it on (S.ovCardShow) — the
+         two state flags sync through Firebase, so the scorer's
+         tap reaches the OBS overlay. It lives INSIDE the scaled
+         design canvas, so it scales with the bar at every size. */
+      .ov-card{margin-top:12px;background:#fdfcf9;color:#14102e;border-radius:10px;padding:14px 20px 16px;box-shadow:inset 0 0 0 1px rgba(20,16,46,.08)}
+      .ov-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid #e5e1d8;padding-bottom:6px;margin-bottom:6px}
+      .ov-card-head .t{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+      .ov-card-head .s{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;color:#e91e63}
+      .ov-card table{font-size:15.5px;color:#14102e}
+      .ov-card th{color:#6d6890;border-bottom-color:#e5e1d8}
+      .ov-card td{border-bottom-color:#eeeade}
+      .ov-card .howout{color:#6d6890}
+      /* Scorer-centre overlay controls row (under the More menu):
+         the two overlay scorecard switches, one tap from the pad. */
+      .mc-ovrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--surface2);border-top:1px solid var(--line)}
+      .mc-ovrow .lab{font-size:13.5px;font-weight:700;color:var(--muted);margin-right:2px}
       .steps{counter-reset:st;display:grid;gap:12px}
       .step{display:flex;gap:12px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
       .step-n{counter-increment:st;flex:none;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
@@ -2476,6 +2523,11 @@
               <button type="button" onclick="resetMatch()">🗑 Delete Match</button>
             </div>
           </div>
+          <div class="mc-ovrow">
+            <span class="lab">📺 Overlay:</span>
+            <button type="button" class="btn ghost sm" id="mcOvCardBtn" onclick="toggleOverlayCard()">📋 Show Scorecard</button>
+            <button type="button" class="btn ghost sm" id="mcOvCardAutoBtn" onclick="toggleOverlayCardAuto()">Over-End Scorecard: On</button>
+          </div>
           <div class="mc-wktwrap" id="mcWktWrap"></div>
         </div>
 
@@ -3008,7 +3060,10 @@
           <h2>Broadcast Overlay</h2>
           <div class="rowflex">
             <button class="btn gold sm" id="btnClean" onclick="toggleClean()">Enable Overlay Only (Transparent) Mode</button>
+            <button class="btn ghost sm" id="ovCardBtn" onclick="toggleOverlayCard()">📋 Show Scorecard on Overlay</button>
+            <button class="btn ghost sm" id="ovCardAutoBtn" onclick="toggleOverlayCardAuto()">Over-End Scorecard: On</button>
           </div>
+          <p class="note" style="margin:10px 0 0">The full scorecard appears under the overlay bar automatically at the end of every over (and at the innings break / end of the match), and hides again when the next over starts. “Show Scorecard on Overlay” puts it on screen — or takes it off — whenever you want. Both switches sync to every open overlay, including the OBS browser source.</p>
         </div>
         <div class="overlay-stage" id="overlayStage"><div id="overlayMain" style="width:100%;display:flex;justify-content:center"></div></div>
       </section>
@@ -3364,7 +3419,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v154';
+      var APP_VERSION = 'v155';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6035,8 +6090,15 @@
             : '<span class="mc-pname on">' + plLink(inn.battingTeam, name) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
+        /* Batting order, not strike order: the pair keeps the
+           same two rows all stand — the striker pill marks who
+           is on strike, the rows themselves never swap. */
+        var mcPair = creasePairOrdered(inn);
+        var mcRows = mcPair.length === 2
+          ? mcPair.map(function(nm){ return batRow(nm, nm === inn.striker); }).join('')
+          : batRow(inn.striker, true) + batRow(inn.nonStriker, false);
         $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
-          + batRow(inn.striker, true) + batRow(inn.nonStriker, false) + '</tbody></table>';
+          + mcRows + '</tbody></table>';
         var bwHead = '<table><thead><tr><th>' + bowlPencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
@@ -18359,8 +18421,12 @@
           + '<div class="ss-top"><div><div class="ss-team">' + esc(inn.battingTeam || '—') + '</div>'
           + '<div class="ss-score num">' + inn.runs + '/' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ' ov)</span></div></div>'
           + '<div class="ss-team" style="text-align:right">vs<br><b style="color:#fff;font-size:16px">' + esc(inn.bowlingTeam || '—') + '</b><br>Innings ' + S.inningsNo + '</div></div>'
-          + '<div class="ss-bats"><div><span class="onstrike">' + esc(inn.striker ? dispName(inn.battingTeam, inn.striker) : '—') + ' *</span> — ' + bat1.runs + ' (' + bat1.balls + ')</div>'
-          + '<div>' + esc(inn.nonStriker ? dispName(inn.battingTeam, inn.nonStriker) : '—') + ' — ' + bat2.runs + ' (' + bat2.balls + ')</div>'
+          + '<div class="ss-bats">' + (creasePairOrdered(inn).map(function(nm){
+              var fig = nm === inn.striker ? bat1 : bat2;
+              return nm === inn.striker
+                ? '<div><span class="onstrike">' + esc(dispName(inn.battingTeam, nm)) + ' *</span> — ' + fig.runs + ' (' + fig.balls + ')</div>'
+                : '<div>' + esc(dispName(inn.battingTeam, nm)) + ' — ' + fig.runs + ' (' + fig.balls + ')</div>';
+            }).join('') || '<div>— — 0 (0)</div><div>— — 0 (0)</div>')
           + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: ' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + ' • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
           + '<div class="ss-meta">' + chips + '</div>'
           + (ballsHtml ? '<div class="balls-row"><span class="over-label">Recent balls:</span>' + ballsHtml + '</div>' : '')
@@ -18420,6 +18486,23 @@
         if (logo) return '<div class="ov-flag"><img src="' + esc(logo) + '" alt="Logo of ' + esc(team || '') + '" /></div>';
         return '<div class="ov-flag"><span class="ov-badge">' + esc(teamShort(team)) + '</span></div>';
       }
+      /* The pair at the crease in BATTING ORDER — the order they
+         came in — never in strike order. Every surface that lists
+         the two batters (overlay, public scoreboard strip and
+         LIVE pair table, scorer centre) renders them through
+         this, so a batter keeps the same row for the whole stand:
+         taking strike never moves anyone up or down, only the
+         striker marker (bat icon / *) moves. Names missing from
+         the batting card (not yet recorded) keep their relative
+         striker-first order at the end. */
+      function creasePairOrdered(inn){
+        var pair = [inn.striker, inn.nonStriker].filter(Boolean);
+        function ord(name){
+          for (var i = 0; i < (inn.batters || []).length; i++) if (inn.batters[i].name === name) return i;
+          return 1000 + pair.indexOf(name);
+        }
+        return pair.slice().sort(function(a, b){ return ord(a) - ord(b); });
+      }
       function overlayHTML(){
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
@@ -18443,10 +18526,35 @@
         var vsA = teamShort(S.teamA || inn.battingTeam), vsB = teamShort(S.teamB || inn.bowlingTeam);
         var innTag = (S.superOver && S.superOver.active) ? 'SO' : (S.inningsNo === 2 ? '2nd' : '1st');
         var batIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 2.6a2.35 2.35 0 0 0-3.3 0L8.2 12l3.3 3.3 9.4-9.4a2.35 2.35 0 0 0 0-3.3ZM7.1 13.1 3.2 17a2.1 2.1 0 1 0 3 3l3.9-3.9-3-3Z"/></svg>';
+        /* Fixed rows, moving icon: the pair renders in batting
+           order (creasePairOrdered), each row leads with the same
+           fixed-width icon slot, and the bat icon sits in the slot
+           of whoever is on strike — so the names share one
+           alignment and the striker is not always the top row. */
         function batRow(name, fig, onStrike){
-          return '<div class="ov-bat"><span class="nm ov-fit-txt">' + (onStrike ? batIcon : '') + '<span>' + esc(name ? dispName(inn.battingTeam, name) : '—') + '</span></span>'
+          return '<div class="ov-bat"><span class="ov-batslot">' + (onStrike ? batIcon : '') + '</span><span class="nm ov-fit-txt"><span>' + esc(name ? dispName(inn.battingTeam, name) : '—') + '</span></span>'
             + '<span class="r">' + fig.runs + '</span><span class="b">' + fig.balls + '</span></div>';
         }
+        var pairOrdered = creasePairOrdered(inn);
+        var pairFig = {}; pairFig[inn.striker] = bat1; pairFig[inn.nonStriker] = bat2;
+        var pairRowsHTML = pairOrdered.map(function(nm){ return batRow(nm, pairFig[nm] || { runs:0, balls:0 }, nm === inn.striker); }).join('');
+        if (!pairRowsHTML) pairRowsHTML = batRow(null, { runs:0, balls:0 }, false) + batRow(null, { runs:0, balls:0 }, false);
+        /* The centre's lower line ROTATES through the live
+           information (see the rotation timer below): the main
+           status line first, then the partnership, this over's
+           runs and — in the 1st innings — the projected score,
+           each with the run rate beside it. Every line is built
+           from the live figures only. */
+        var statusLines = [{ main: statusMain, dim: statusDim }];
+        if (S.status === 'live' && inn.legalBalls > 0){
+          var pshipLt = partnershipFigures(inn);
+          if (pshipLt.balls > 0) statusLines.push({ main: 'Partnership ' + pshipLt.runs + ' (' + pshipLt.balls + ')', dim: 'CRR ' + crr().toFixed(2) });
+          var groupsLt = groupOvers(inn).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
+          if (groupsLt.length) statusLines.push({ main: 'This over: ' + runW(groupsLt[groupsLt.length - 1].runs), dim: 'CRR ' + crr().toFixed(2) });
+          if (!t){ var projLt = projectedScore(); if (projLt !== null && projLt !== undefined) statusLines.push({ main: 'Projected: ' + projLt, dim: 'CRR ' + crr().toFixed(2) }); }
+        }
+        var statusPick = statusLines[ovInfoIdx % statusLines.length];
+        statusMain = statusPick.main; statusDim = statusPick.dim;
         /* This over's deliveries for the ball circles: the last
            over group (the over in progress, or the one just
            completed at an over break), then empty circles for the
@@ -18462,11 +18570,25 @@
           return '<span class="ov-ballb' + cls + '">' + esc(overlayBallLabel(b.text)) + '</span>';
         }).join('');
         for (var ei = legalInOver; ei < 6; ei++) ballsHTML += '<span class="ov-ballb empty"></span>';
+        /* Full scorecard panel under the bar (see the .ov-card
+           CSS): the admin's manual switch wins; otherwise it
+           appears on its own at the end of an over — while the
+           next bowler is still to bowl — at the innings break
+           and once the match is finished, and goes away when
+           the next over's first legal ball is bowled. */
+        var cardHTML = '';
+        if (overlayCardVisible(inn)){
+          cardHTML = '<div class="ov-card"><div class="ov-card-head"><span class="t">' + esc(inn.battingTeam || '—') + '</span><span class="s">' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</span></div>'
+            + battingTableHTML(inn)
+            + '<div class="divider"></div>'
+            + bowlingTableHTML(inn)
+            + (S.prevInnings ? '<p class="note" style="margin:10px 0 0;color:#6d6890">' + esc(S.prevInnings.battingTeam) + ' — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' : '')
+            + '</div>';
+        }
         return '<div class="ov-fit"><div class="lowerthird"><div class="ov-bar">'
           + overlayFlagHTML(inn.battingTeam)
           + '<div class="ov-seg bats"><div class="ov-panel">'
-          + batRow(inn.striker, bat1, true)
-          + batRow(inn.nonStriker, bat2, false)
+          + pairRowsHTML
           + '</div></div>'
           + '<div class="ov-centre"><div class="ov-top">'
           + '<span class="ov-vs ov-fit-txt">' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span>'
@@ -18482,8 +18604,114 @@
           + '<div class="ov-balls">' + ballsHTML + '</div>'
           + '</div></div>'
           + overlayFlagHTML(inn.bowlingTeam)
-          + '</div></div></div>';
+          + '</div>' + cardHTML + '</div></div>';
       }
+      /* Whether the overlay's full scorecard panel is on screen:
+         the admin's manual switch (S.ovCardShow) always wins;
+         the automatic over-end showing can be turned off with
+         S.ovCardAuto (on unless explicitly false). Both flags
+         live in the synced match state, so the scorer's choice
+         reaches the OBS overlay like any other score update. */
+      function overlayCardVisible(inn){
+        if (S.ovCardShow === true) return true;
+        if (S.status === 'finished' || S.status === 'inningsBreak') return true;
+        if (S.ovCardAuto === false) return false;
+        return S.status === 'live' && inn.legalBalls > 0 && inn.legalBalls % 6 === 0
+          && inn.legalBalls < effMaxBalls() && inn.wickets < wicketsLimit();
+      }
+      function toggleOverlayCard(){
+        if (!requireLiveOwner('show the overlay scorecard')) return;
+        S.ovCardShow = S.ovCardShow !== true;
+        commit(null, true);
+        try { renderAll(false); } catch(e){}
+        toast(S.ovCardShow ? '📋 Scorecard is now showing on the overlay' : '📋 Scorecard hidden on the overlay');
+      }
+      function toggleOverlayCardAuto(){
+        if (!requireLiveOwner('change the overlay setting')) return;
+        S.ovCardAuto = (S.ovCardAuto === false);
+        commit(null, true);
+        try { renderAll(false); } catch(e){}
+        toast(S.ovCardAuto ? 'Over-end scorecard on the overlay: ON' : 'Over-end scorecard on the overlay: OFF');
+      }
+      function renderOverlayControls(){
+        var on = S.ovCardShow === true, auto = S.ovCardAuto !== false;
+        [['ovCardBtn','📋 Show Scorecard on Overlay','📋 Hide Scorecard on Overlay'], ['mcOvCardBtn','📋 Show Scorecard','📋 Hide Scorecard']].forEach(function(cfg){
+          var b = $(cfg[0]); if (b) b.textContent = on ? cfg[2] : cfg[1];
+        });
+        [['ovCardAutoBtn'], ['mcOvCardAutoBtn']].forEach(function(cfg){
+          var b = $(cfg[0]); if (b) b.textContent = 'Over-End Scorecard: ' + (auto ? 'On' : 'Off');
+        });
+      }
+      /* ---------- overlay event animations + info rotation ----------
+         detectOverlayFx runs after every render and compares the
+         ball record with the last one THIS screen saw: the first
+         sight of a match only sets the baseline (opening the
+         overlay mid-match never replays history), a shorter
+         record (undo / new match) silently re-baselines, and a
+         genuinely new delivery or milestone event fires exactly
+         one banner. A no-ball arms the free hit: the NEXT
+         delivery is the free-hit ball and gets the FREE HIT
+         banner unless it is itself a bigger moment (a wicket or
+         a boundary on a free hit still celebrates that first). */
+      var ovInfoIdx = 0;
+      var ovFxState = null;
+      function showOverlayFx(cls, txt, sub){
+        var main = $('overlayMain'); if (!main) return;
+        var fit = main.querySelector('.ov-fit'); if (!fit) return;
+        var old = fit.querySelector('.ov-fx'); if (old) old.remove();
+        var fx = document.createElement('div');
+        fx.className = 'ov-fx ' + cls;
+        fx.innerHTML = '<span class="fx-txt">' + esc(txt) + '</span>' + (sub ? '<span class="fx-sub">' + esc(sub) + '</span>' : '');
+        fit.appendChild(fx);
+        setTimeout(function(){ try { fx.remove(); } catch(e){} }, 2850);
+      }
+      function detectOverlayFx(){
+        var inn = S.current; if (!inn) return;
+        var key = String(S.matchId || '') + '|' + (S.inningsNo || 1) + '|' + (inn.battingTeam || '');
+        var deliveries = (inn.balls || []).filter(function(b){ return !b.evt; });
+        var milestones = (inn.balls || []).filter(function(b){ return b.evt === 'milestone'; });
+        if (!ovFxState || ovFxState.key !== key || deliveries.length < ovFxState.balls || milestones.length < ovFxState.ms){
+          ovFxState = { key: key, balls: deliveries.length, ms: milestones.length, fh: false };
+          return;
+        }
+        var newMs = milestones.slice(ovFxState.ms);
+        var newBalls = deliveries.slice(ovFxState.balls);
+        var wasFreeHit = ovFxState.fh;
+        ovFxState.balls = deliveries.length; ovFxState.ms = milestones.length;
+        if (newBalls.length){
+          var lastT = String(newBalls[newBalls.length - 1].text || '');
+          ovFxState.fh = /^Nb/.test(lastT);
+        }
+        var fx = null;
+        for (var i = 0; i < newMs.length; i++){
+          var m = newMs[i];
+          if (m.mkind === 'hattrick') fx = { cls:'hattrick', txt:'Hat-Trick!', sub: dispName(inn.bowlingTeam, m.who) };
+          else if (m.mkind === 'hundred' && (!fx || fx.cls === 'fifty')) fx = { cls:'hundred', txt:'Century!', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
+          else if (m.mkind === 'fifty' && !fx) fx = { cls:'fifty', txt:'Fifty!', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
+          else if (m.mkind === 'fivefor' && !fx) fx = { cls:'fivefor', txt:'5 Wickets!', sub: dispName(inn.bowlingTeam, m.who) };
+        }
+        if (!fx && newBalls.length){
+          var b = newBalls[newBalls.length - 1];
+          var bruns = batterRunsOnBall(b.text);
+          if (isWicketBall(b)) fx = { cls:'wicket', txt:'Wicket!', sub: dispName(inn.battingTeam, b.outName || b.batter || '') };
+          else if (bruns === 6) fx = { cls:'six', txt:'Six!', sub: dispName(inn.battingTeam, b.batter || '') };
+          else if (bruns === 4) fx = { cls:'four', txt:'Four!', sub: dispName(inn.battingTeam, b.batter || '') };
+          else if (wasFreeHit && newBalls.length) fx = { cls:'freehit', txt:'Free Hit', sub: dispName(inn.battingTeam, b.batter || '') };
+        }
+        if (fx) showOverlayFx(fx.cls, fx.txt, fx.sub);
+      }
+      /* Rotate the centre's lower info line every few seconds.
+         A celebration banner on screen pauses the rotation, so
+         the two never fight over the bar. */
+      setInterval(function(){
+        try {
+          var main = $('overlayMain'); if (!main || !main.querySelector('.ov-fit')) return;
+          if (main.querySelector('.ov-fx')) return;
+          ovInfoIdx++;
+          main.innerHTML = overlayHTML();
+          fitOverlay();
+        } catch(e){}
+      }, 4000);
       /* The overlay bar is a fixed 1240-unit design canvas (see the
          .ov-fit CSS): fitOverlay first shrinks any single line that
          is too long for its slot at the design size — a long name
@@ -19131,7 +19359,7 @@
           if (btEl) btEl.innerHTML = '';
           if (bwEl) bwEl.innerHTML = '';
         } else {
-          var pairRows = [inn.striker, inn.nonStriker].filter(Boolean).map(function(name){
+          var pairRows = creasePairOrdered(inn).map(function(name){
             var b = cbBatterFull(inn, name);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
             return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
@@ -19395,6 +19623,8 @@
         step(function(){ updateScoringOnly(); });
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
         step(function(){ fitOverlay(); });
+        step(function(){ detectOverlayFx(); });
+        step(function(){ renderOverlayControls(); });
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
         step(function(){ if (!archiveView && !matchView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
         step(function(){ guardViewerScoreboard(); });
