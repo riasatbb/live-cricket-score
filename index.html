@@ -3319,7 +3319,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v148';
+      var APP_VERSION = 'v149';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14663,7 +14663,7 @@
       }
       function pfFmtShort(f){ return f === 'One Day' ? 'OD' : (f === 'Test Match' ? 'Test' : f); }
       function pfMainHTML(){
-        var tabs = [['overview', 'Player Overview'], ['stats', 'Statistics'], ['matches', 'Matches'], ['teams', 'Teams'], ['tournaments', 'Tournaments'], ['insights', 'Insights'], ['compare', 'Compare']];
+        var tabs = [['overview', 'Overview'], ['stats', 'Statistics'], ['matches', 'Matches'], ['teams', 'Teams'], ['tournaments', 'Tournaments'], ['insights', 'Insights'], ['compare', 'Compare']];
         var h = '<div class="pf-tabs">'
           + tabs.map(function(tb){ return '<button type="button" class="pf-tab' + (pfTab === tb[0] ? ' on' : '') + '" onclick="pfSetTab(\'' + tb[0] + '\')">' + tb[1] + '</button>'; }).join('')
           + '</div>';
