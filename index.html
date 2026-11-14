@@ -236,14 +236,15 @@
       .notout{font-weight:700}
 
       /* ---------- overlay ----------
-         Broadcast lower-third in the reference style: one wide
-         white bar floating over the picture — the batting team's
-         logo on the far left, the bowling team's on the far right,
-         dark-navy panels with pink lightning edges carrying the two
-         batters (left) and the bowler with this over's balls
-         (right), and a white centre carrying the match-up, a pink
-         score pill with the overs, and the toss / target / result
-         line. Everything is driven by the live state in
+         Broadcast lower-third in the Abu Dhabi T10 style: one wide
+         bar floating over the picture — the batting team's logo on
+         the far left, the bowling team's on the far right, deep-navy
+         panels with orange lightning edges carrying the two batters
+         (left) and the bowler (right), and a white centre carrying
+         the match-up, the big score and the overs. The bowler panel
+         shows RUN-RATE in the 1st innings and this over's balls as
+         small squares in the chase, where the centre also carries
+         the TARGET line. Everything is driven by the live state in
          overlayHTML(), so the OBS browser source updates ball by
          ball with no refresh. */
       .overlay-stage{border-radius:var(--radius);padding:26px 14px;background:
@@ -262,13 +263,13 @@
          and the bar always spans the full width edge to edge. */
       .ov-fit{position:relative;width:100%}
       .lowerthird{position:absolute;left:0;top:0;width:1240px;color:#fff;font-family:system-ui,sans-serif;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5));transform-origin:0 0}
-      .ov-bar{display:flex;align-items:stretch;min-height:96px;background:linear-gradient(180deg,#fdfcf9,#f1eee7);box-shadow:inset 0 0 0 1px rgba(20,16,46,.08)}
+      .ov-bar{display:flex;align-items:stretch;min-height:104px;background:#ffffff;box-shadow:inset 0 0 0 1px rgba(6,24,49,.12)}
       .ov-flag{flex:none;width:96px;display:flex;align-items:center;justify-content:center;padding:8px 10px}
       .ov-flag img{max-width:76px;max-height:64px;width:auto;height:auto;object-fit:contain;display:block}
-      .ov-flag .ov-badge{width:62px;height:62px;border-radius:50%;background:#1c1850;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.03em;border:3px solid #e91e63;text-align:center;line-height:1.05;padding:4px}
+      .ov-flag .ov-badge{width:62px;height:62px;border-radius:50%;background:#0a2248;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.03em;border:3px solid #ff6a00;text-align:center;line-height:1.05;padding:4px}
       .ov-seg{position:relative;min-width:0}
-      .ov-seg::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;background:#e91e63;clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%)}
-      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#221c5e,#171240 60%,#1c1850);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 30px 10px 34px}
+      .ov-seg::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;background:linear-gradient(180deg,#ff8a1e,#ff6a00 55%,#e85d00);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%)}
+      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#0e2c56,#081f42 60%,#061831);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 30px 10px 34px}
       .ov-seg.bats{flex:1.08 1 0}
       .ov-seg.bowl{flex:1.2 1 0}
       .ov-seg.bowl .ov-panel{padding:10px 34px 10px 30px}
@@ -280,69 +281,128 @@
          close behind the name instead of at the panel's far edge. */
       .ov-bat{display:grid;grid-template-columns:20px minmax(0,1fr) 38px 28px;align-items:center;gap:5px;padding:2px 0}
       .ov-batslot{display:flex;align-items:center;justify-content:center;height:20px}
-      .ov-batslot svg{flex:none;width:15px;height:15px;fill:#f5b921}
+      .ov-batslot svg{flex:none;width:15px;height:15px;fill:#ff6a00}
       .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
-      .ov-bat .r{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#ffe14d;text-align:right;font-variant-numeric:tabular-nums}
-      .ov-bat .b{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#b9b4d9;text-align:right;font-variant-numeric:tabular-nums}
-      .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:8px 26px;text-align:center}
+      .ov-bat .r{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+      .ov-bat .b{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#a9bce0;text-align:right;font-variant-numeric:tabular-nums}
+      .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:8px 26px;text-align:center}
       .ov-top{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;min-width:0}
-      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
-      .ov-vs i{font-style:normal;color:#8b87ad;font-weight:600;padding:0 1px}
-      .ov-scorepill{flex:none;background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
-      .ov-inn{flex:none;background:#0d9488;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 7px;text-transform:uppercase}
+      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.06em;color:#42506b;white-space:nowrap;min-width:0;overflow:hidden;text-transform:uppercase}
+      .ov-vs i{font-style:normal;color:#ff6a00;font-weight:700;padding:0 1px}
+      .ov-score{flex:none;color:#081f42;font-family:"Barlow Condensed",sans-serif;font-size:52px;font-weight:700;line-height:.95;letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
+      .ov-scoreline{display:flex;align-items:baseline;gap:14px;justify-content:center}
+      .ov-target{flex:none;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.08em;color:#081f42;text-transform:uppercase;white-space:nowrap}
+      .ov-target b{color:#ff6a00;font-size:22px}
+      .ov-inn{flex:none;background:#ff6a00;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 7px;text-transform:uppercase}
       .ov-freehit{flex:none;background:#f5b921;color:#241a02;font-size:13px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:3px 8px;text-transform:uppercase;animation:fhPulse 1s ease-in-out infinite}
       @keyframes fhPulse{0%,100%{opacity:1}50%{opacity:.55}}
       @media (prefers-reduced-motion: reduce){.ov-freehit{animation:none}}
-      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
-      .ov-overs small{font-size:14px;color:#8b87ad;font-weight:700;letter-spacing:.08em}
-      .ov-status{font-size:19px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
-      .ov-status .dim{color:#6d6890;font-weight:700}
+      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#081f42;white-space:nowrap;min-width:0;overflow:hidden;font-variant-numeric:tabular-nums}
+      .ov-overs small{font-size:14px;color:#7d8aa5;font-weight:700;letter-spacing:.08em}
+      .ov-status{font-size:14.5px;font-weight:700;letter-spacing:.05em;color:#42506b;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
+      .ov-status .dim{color:#ff6a00;font-weight:800}
       .ov-bowl-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px}
       .ov-bowl-head .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden}
-      .ov-bowl-head .fig{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
-      .ov-bowl-head .ov{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#b9b4d9;font-variant-numeric:tabular-nums}
+      .ov-bowl-head .fig{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#ffb066;font-variant-numeric:tabular-nums}
+      .ov-bowl-head .ov{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#a9bce0;font-variant-numeric:tabular-nums}
       .ov-balls{display:flex;gap:5px;margin-top:7px;flex-wrap:nowrap}
-      .ov-ballb{width:27px;height:27px;flex:none;border-radius:50%;background:#fff;color:#171240;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:14.5px;font-weight:700;line-height:1}
-      .ov-ballb.wkt{background:#e91e63;color:#fff}
-      .ov-ballb.bnd4{background:#0d9488;color:#fff}
-      .ov-ballb.bnd6{background:#f5b921;color:#241a02}
-      .ov-ballb.empty{background:transparent;border:2px solid rgba(255,255,255,.65)}
+      .ov-ballb{width:27px;height:27px;flex:none;border-radius:4px;background:#fff;color:#081f42;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:14.5px;font-weight:700;line-height:1}
+      .ov-rr{display:flex;align-items:baseline;gap:9px;margin-top:8px;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;white-space:nowrap}
+      .ov-rr .lab{font-size:17px;font-weight:700;letter-spacing:.09em;color:#ff8a1e}
+      .ov-rr .val{font-size:24px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+      .ov-ballb.wkt{background:#d21f3c;color:#fff}
+      .ov-ballb.bnd4{background:#ff6a00;color:#fff}
+      .ov-ballb.bnd6{background:#123a75;color:#ffa04d;box-shadow:inset 0 0 0 2px #ff6a00}
+      .ov-ballb.empty{background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.55)}
       /* ---------- overlay event animations ----------
-         A full-width celebration banner that pops over the bar
-         when a big moment lands: FOUR, SIX, WICKET, FREE HIT,
-         HAT-TRICK, a batter's FIFTY / CENTURY or a five-wicket
-         haul. It is injected by detectOverlayFx() only when the
-         ball record actually grows, so opening the overlay
-         mid-match never replays old events, and it removes
-         itself after one pass (~2.8s). Colours reuse the bar's
-         own ball colours: teal for a four, gold for a six and
-         the milestones, pink for a wicket / hat-trick. */
-      .ov-fx{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;animation:ovFxPop 2.8s cubic-bezier(.2,.9,.25,1) forwards}
-      .ov-fx .fx-txt{font-family:"Barlow Condensed",sans-serif;font-size:64px;font-weight:700;letter-spacing:.06em;line-height:1;padding:8px 34px 10px;border-radius:14px;color:#fff;background:#171240;box-shadow:0 14px 34px rgba(0,0,0,.45);text-transform:uppercase;white-space:nowrap}
-      .ov-fx .fx-sub{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:600;letter-spacing:.05em;color:#fff;background:rgba(20,16,46,.85);padding:3px 16px 4px;border-radius:999px;text-transform:uppercase;white-space:nowrap}
-      .ov-fx.four .fx-txt{background:#0d9488}
-      .ov-fx.six .fx-txt{background:#f5b921;color:#241a02}
-      .ov-fx.wicket .fx-txt{background:#e91e63}
-      .ov-fx.hattrick .fx-txt{background:#e91e63;box-shadow:0 0 0 3px #f5b921,0 14px 34px rgba(0,0,0,.45)}
-      .ov-fx.freehit .fx-txt{background:#2563eb}
-      .ov-fx.fifty .fx-txt,.ov-fx.hundred .fx-txt,.ov-fx.fivefor .fx-txt{background:#f5b921;color:#241a02}
-      @keyframes ovFxPop{0%{opacity:0;transform:translateY(-50%) scale(.6)}12%{opacity:1;transform:translateY(-50%) scale(1.06)}20%{transform:translateY(-50%) scale(1)}82%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-58%) scale(.98)}}
-      @media (prefers-reduced-motion: reduce){.ov-fx{animation:ovFxFade 2.8s ease forwards}@keyframes ovFxFade{0%{opacity:0}15%{opacity:1}82%{opacity:1}100%{opacity:0}}}
+         A broadcast celebration in the Abu Dhabi T10 style: a
+         full-width deep-navy strip sweeps over the score bar with
+         one huge bold italic word — FOUR, SIX or WICKET (SIX is
+         styled exactly like FOUR, as in the reference) — in white
+         with an orange outline, flanked by orange lightning bolts
+         at both ends. No tournament fours / sixes counter: the user
+         explicitly does not want one. FREE HIT, HAT-TRICK and the
+         FIFTY / CENTURY / 5-WICKET milestones ride the same strip.
+         It is injected by detectOverlayFx() only when the ball
+         record actually grows, so opening the overlay mid-match
+         never replays old events, and it removes itself after one
+         pass (~2.8s). */
+      .ov-fx{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;animation:ovFxPop 2.8s cubic-bezier(.2,.9,.25,1) forwards}
+      .ov-fx .fx-strip{display:flex;align-items:center;justify-content:center;gap:26px;width:100%;background:linear-gradient(180deg,#0e2c56,#061831);padding:14px 30px 17px;box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 3px 0 #ff6a00,inset 0 -3px 0 #ff6a00;clip-path:polygon(0 0,100% 0,99.2% 50%,100% 100%,0 100%,.8% 50%)}
+      .ov-fx .fx-bolt{flex:none;width:44px;height:76px;fill:#ff6a00;filter:drop-shadow(0 0 10px rgba(255,106,0,.65));animation:fxBoltFlicker .5s steps(2) 4}
+      .ov-fx .fx-txt{font-family:"Barlow Condensed",sans-serif;font-size:96px;font-weight:700;font-style:italic;letter-spacing:.04em;line-height:.95;color:#fff;text-transform:uppercase;white-space:nowrap;text-shadow:3px 3px 0 #ff6a00,-2px -2px 0 rgba(255,106,0,.45),0 12px 30px rgba(0,0,0,.55)}
+      .ov-fx .fx-sub{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:600;letter-spacing:.06em;color:#ffb066;background:rgba(6,24,49,.92);padding:3px 18px 5px;border-radius:999px;text-transform:uppercase;white-space:nowrap}
+      .ov-fx.hattrick .fx-strip{box-shadow:0 16px 38px rgba(0,0,0,.5),inset 0 0 0 3px #f5b921,inset 0 3px 0 #ff6a00,inset 0 -3px 0 #ff6a00}
+      .ov-fx.fifty .fx-txt,.ov-fx.hundred .fx-txt,.ov-fx.fivefor .fx-txt{color:#ffc46b;text-shadow:3px 3px 0 #b45309,-2px -2px 0 rgba(255,138,30,.4),0 12px 30px rgba(0,0,0,.55)}
+      @keyframes ovFxPop{0%{opacity:0;transform:translateY(-50%) scale(.65) skewX(-6deg)}10%{opacity:1;transform:translateY(-50%) scale(1.05) skewX(-2deg)}18%{transform:translateY(-50%) scale(1) skewX(0)}82%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-56%) scale(.97)}}
+      @keyframes fxBoltFlicker{0%,100%{opacity:1}50%{opacity:.35}}
+      @media (prefers-reduced-motion: reduce){.ov-fx{animation:ovFxFade 2.8s ease forwards}.ov-fx .fx-bolt{animation:none}@keyframes ovFxFade{0%{opacity:0}15%{opacity:1}82%{opacity:1}100%{opacity:0}}}
       /* ---------- overlay full scorecard panel ----------
          Shown under the bar at the end of an over (automatic,
          S.ovCardAuto), at the innings break and after the match,
          or whenever the admin turns it on (S.ovCardShow) — the
          two state flags sync through Firebase, so the scorer's
          tap reaches the OBS overlay. It lives INSIDE the scaled
-         design canvas, so it scales with the bar at every size. */
-      .ov-card{margin-top:12px;background:#fdfcf9;color:#14102e;border-radius:10px;padding:14px 20px 16px;box-shadow:inset 0 0 0 1px rgba(20,16,46,.08)}
-      .ov-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:2px solid #e5e1d8;padding-bottom:6px;margin-bottom:6px}
-      .ov-card-head .t{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-      .ov-card-head .s{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:700;color:#e91e63}
-      .ov-card table{font-size:15.5px;color:#14102e}
-      .ov-card th{color:#6d6890;border-bottom-color:#e5e1d8}
-      .ov-card td{border-bottom-color:#eeeade}
-      .ov-card .howout{color:#6d6890}
+         design canvas, so it scales with the bar at every size.
+         Styled after the Abu Dhabi T10 full-screen graphics: a
+         deep-navy card headed by the team name and the match
+         line, rotating through its three sections — BATTING
+         (not-out batters on orange), BOWLING (orange column
+         header, fall of wickets strip) and PARTNERSHIPS (the
+         current stand on orange, still to bat below) — over a
+         fixed bottom bar: EXTRAS | big score | OVERS, split by
+         lightning edges. Built by overlayCardHTML(). */
+      .ov-card{margin-top:14px;background:linear-gradient(180deg,#0c2650,#061831);color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.4)}
+      .ovc-head{display:flex;align-items:center;gap:16px;padding:16px 26px 12px}
+      .ovc-head .ov-badge{width:56px;height:56px;border-radius:50%;background:#0a2248;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:17px;font-weight:700;letter-spacing:.03em;border:3px solid #ff6a00;text-align:center;line-height:1.05;padding:4px;flex:none}
+      .ovc-head img{max-width:64px;max-height:52px;width:auto;height:auto;object-fit:contain;display:block;flex:none}
+      .ovc-head .tt{min-width:0}
+      .ovc-head .t{font-family:"Barlow Condensed",sans-serif;font-size:34px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1;white-space:nowrap;overflow:hidden}
+      .ovc-head .sub{display:inline-block;margin-top:5px;background:#fff;color:#081f42;font-size:14.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 12px 3px;white-space:nowrap;max-width:100%;overflow:hidden}
+      .ovc-tabs{margin-left:auto;flex:none;display:flex;gap:6px}
+      .ovc-tab{font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;letter-spacing:.07em;color:#a9bce0;border:1.5px solid rgba(255,255,255,.25);border-radius:999px;padding:3px 13px 4px;text-transform:uppercase}
+      .ovc-tab.on{background:#ff6a00;border-color:#ff6a00;color:#fff}
+      .ovc-body{padding:2px 26px 6px}
+      .ovc-row{display:grid;align-items:center;gap:12px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.09)}
+      .ovc-row .nm{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
+      .ovc-row .r{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+      .ovc-row .b{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:500;color:#a9bce0;text-align:right;font-variant-numeric:tabular-nums}
+      .ovc-bat-row{grid-template-columns:minmax(0,1.05fr) minmax(0,.62fr) minmax(0,.68fr) 62px 46px}
+      .ovc-bat-row .d1,.ovc-bat-row .d2{font-size:16.5px;color:#c7d3ea;white-space:nowrap;overflow:hidden;min-width:0}
+      .ovc-bat-row.notout{background:linear-gradient(90deg,#ff6a00,#ff7d1f);margin:0 -10px;padding-left:20px;padding-right:20px;border-bottom-color:transparent}
+      .ovc-bat-row.notout .d1,.ovc-bat-row.notout .d2{color:#fff;font-weight:700;text-transform:uppercase}
+      .ovc-bat-row.notout .b{color:#ffe1c7}
+      .ovc-ytb{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 30px}
+      .ovc-ytb .nm{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#dbe4f5;white-space:nowrap;overflow:hidden;padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.07)}
+      .ovc-sec-lab{font-family:"Barlow Condensed",sans-serif;font-size:17px;font-weight:700;letter-spacing:.09em;color:#ff8a1e;text-transform:uppercase;padding:10px 10px 4px}
+      .ovc-bowl-head,.ovc-bowl-row{display:grid;grid-template-columns:minmax(0,1fr) 76px 66px 66px 92px 96px;align-items:center;gap:10px;padding:6px 10px}
+      .ovc-bowl-head{background:linear-gradient(90deg,#ff6a00,#ff7d1f);font-family:"Barlow Condensed",sans-serif;font-size:16.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#fff}
+      .ovc-bowl-head span:not(:first-child){text-align:right}
+      .ovc-bowl-row{border-bottom:1px solid rgba(255,255,255,.09)}
+      .ovc-bowl-row .nm{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
+      .ovc-bowl-row .v{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+      .ovc-fow-band{display:grid;gap:0;margin:0 0 4px}
+      .ovc-fow-h,.ovc-fow-v{display:grid;grid-template-columns:repeat(var(--fow-n,10),1fr)}
+      .ovc-fow-h{background:linear-gradient(90deg,#ff6a00,#ff7d1f);font-family:"Barlow Condensed",sans-serif;font-size:15.5px;font-weight:700;color:#fff;text-align:center}
+      .ovc-fow-h span{padding:3px 0 4px}
+      .ovc-fow-v{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;text-align:center;border-bottom:1px solid rgba(255,255,255,.12)}
+      .ovc-fow-v span{padding:4px 0 6px}
+      .ovc-ps-row{grid-template-columns:minmax(0,1fr) 190px minmax(0,1fr) 62px 46px}
+      .ovc-ps-row .nm2{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
+      .ovc-ps-bar{display:flex;height:15px;background:rgba(255,255,255,.16);overflow:hidden}
+      .ovc-ps-bar i{display:block;height:100%;background:#fff}
+      .ovc-ps-bar i.alt{background:#8fb0e8}
+      .ovc-ps-bar:empty{background:transparent}
+      .ovc-row.current{background:linear-gradient(90deg,#ff6a00,#ff7d1f);margin:0 -10px;padding-left:20px;padding-right:20px;border-bottom-color:transparent}
+      .ovc-row.current .b{color:#ffe1c7}
+      .ovc-row.current .ovc-ps-bar{background:rgba(255,255,255,.35)}
+      .ovc-note{font-size:15.5px;color:#a9bce0;padding:8px 10px}
+      .ovc-bottom{display:flex;align-items:stretch;margin-top:10px;background:#fff;color:#081f42}
+      .ovc-bottom .cell{display:flex;align-items:center;gap:9px;padding:9px 26px 11px;font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+      .ovc-bottom .cell .lab{color:#42506b}
+      .ovc-bottom .cell .val{font-size:27px;color:#081f42}
+      .ovc-bottom .mid{flex:1;justify-content:center;background:linear-gradient(180deg,#ff7d1f,#ff6a00);color:#fff;font-size:47px;font-weight:700;line-height:1;padding:7px 30px 10px;letter-spacing:.03em;clip-path:polygon(14px 0,calc(100% - 14px) 0,calc(100% - 4px) 20%,calc(100% - 14px) 40%,calc(100% - 4px) 60%,calc(100% - 14px) 80%,calc(100% - 4px) 100%,14px 100%,4px 80%,14px 60%,4px 40%,14px 20%)}
+      .ovc-bottom .right{margin-left:auto}
       /* Scorer-centre overlay controls row (under the More menu):
          the two overlay scorecard switches, one tap from the pad. */
       .mc-ovrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--surface2);border-top:1px solid var(--line)}
@@ -3066,7 +3126,7 @@
             <button class="btn ghost sm" id="ovCardBtn" onclick="toggleOverlayCard()">📋 Show Scorecard on Overlay</button>
             <button class="btn ghost sm" id="ovCardAutoBtn" onclick="toggleOverlayCardAuto()">Over-End Scorecard: On</button>
           </div>
-          <p class="note" style="margin:10px 0 0">The full scorecard appears under the overlay bar automatically at the end of every over (and at the innings break / end of the match), and hides again when the next over starts. “Show Scorecard on Overlay” puts it on screen — or takes it off — whenever you want. Both switches sync to every open overlay, including the OBS browser source.</p>
+          <p class="note" style="margin:10px 0 0">The full scorecard appears under the overlay bar automatically at the end of every over (and at the innings break / end of the match), and hides again when the next over starts. While it is on screen it rotates through Batting, Bowling and Partnerships, like a broadcast graphic. “Show Scorecard on Overlay” puts it on screen — or takes it off — whenever you want. Both switches sync to every open overlay, including the OBS browser source.</p>
         </div>
         <div class="overlay-stage" id="overlayStage"><div id="overlayMain" style="width:100%;display:flex;justify-content:center"></div></div>
       </section>
@@ -3422,7 +3482,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v156';
+      var APP_VERSION = 'v157';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18554,6 +18614,163 @@
         if (logo) return '<div class="ov-flag"><img src="' + esc(logo) + '" alt="Logo of ' + esc(team || '') + '" /></div>';
         return '<div class="ov-flag"><span class="ov-badge">' + esc(teamShort(team)) + '</span></div>';
       }
+      /* Split a dismissal line into the reference card's two
+         columns: the catching / fielding part and the bowler part
+         ("c BOULT" | "b GREEN"). "c & b" belongs wholly to the
+         bowler column; a dismissal with no bowler part (run out,
+         retired) sits in the first column alone. */
+      function overlayDismissalParts(howOut){
+        var h = String(howOut || '');
+        if (!h) return ['', ''];
+        if (/^c & b\b/.test(h)) return ['', h];
+        var i = h.lastIndexOf(' b ');
+        if (i > 0) return [h.slice(0, i), h.slice(i + 1)];
+        if (/^b\s/.test(h)) return ['', h];
+        return [h, ''];
+      }
+      /* Dot balls per bowler, rebuilt from the ball record the
+         same way the reports count them: a legal delivery with
+         no runs off it. Keyed by bowler name. */
+      function overlayDotsByBowler(inn){
+        var map = {};
+        (inn.balls || []).forEach(function(b){
+          if (!b || b.evt || !b.bowler) return;
+          if (typeof map[b.bowler] !== 'number') map[b.bowler] = 0;
+          if (isLegalDelivery(b.text) && parseBallRuns(b.text) === 0) map[b.bowler]++;
+        });
+        return map;
+      }
+      /* Every partnership of the innings, rebuilt from the ball
+         record exactly like the tournament statistics do: the pair
+         is tracked from the start / crease announcements and the
+         batting order, runs and balls accumulate ball by ball
+         (extras count in the stand's runs; wides and no-balls add
+         no ball), and a wicket — or a retired-hurt note — closes
+         the stand. The last, unbroken stand is flagged current. */
+      function overlayPartnerships(inn){
+        var rawBalls = inn.balls || [];
+        var arrivals = [];
+        rawBalls.forEach(function(x){
+          if (!x) return;
+          if (x.evt === 'start'){
+            if (x.who && arrivals.indexOf(x.who) === -1) arrivals.push(x.who);
+            if (x.ns && arrivals.indexOf(x.ns) === -1) arrivals.push(x.ns);
+          } else if (x.evt === 'crease'){
+            if (x.who && arrivals.indexOf(x.who) === -1) arrivals.push(x.who);
+          }
+        });
+        (inn.batters || []).forEach(function(b){ if (arrivals.indexOf(b.name) === -1) arrivals.push(b.name); });
+        var pair = [], dismissed = {}, aPtr = 0, stand = { runs: 0, balls: 0, bat: {} }, out = [];
+        function ensurePair(){
+          while (pair.length < 2 && aPtr < arrivals.length){
+            var cand = arrivals[aPtr++];
+            if (pair.indexOf(cand) === -1 && !dismissed[cand]) pair.push(cand);
+          }
+        }
+        function closeStand(current){
+          if (pair.length >= 2 && (stand.runs > 0 || stand.balls > 0 || current)){
+            var fa = stand.bat[pair[0]], fb = stand.bat[pair[1]];
+            out.push({ p1: pair[0], p2: pair[1], r1: fa ? fa.runs : 0, r2: fb ? fb.runs : 0, runs: stand.runs, balls: stand.balls, current: !!current });
+          }
+          stand = { runs: 0, balls: 0, bat: {} };
+        }
+        rawBalls.forEach(function(x){
+          if (!x) return;
+          if (x.evt){
+            if (x.evt === 'start'){ pair = [x.who, x.ns].filter(Boolean); }
+            else if (x.evt === 'crease'){ if (x.who && pair.indexOf(x.who) === -1 && pair.length < 2) pair.push(x.who); }
+            else if (x.evt === 'note'){
+              var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
+              if (rm && pair.indexOf(rm[1]) > -1){ closeStand(false); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+            }
+            return;
+          }
+          ensurePair();
+          var t2 = String(x.text || '');
+          stand.runs += parseBallRuns(t2);
+          if (x.batter){
+            if (!stand.bat[x.batter]) stand.bat[x.batter] = { runs: 0, balls: 0 };
+            stand.bat[x.batter].runs += batterRunsOnBall(t2);
+            if (isLegalDelivery(t2)){ stand.bat[x.batter].balls++; stand.balls++; }
+          }
+          if (isWicketBall(x)){
+            closeStand(false);
+            var outN = x.outName || x.batter || '';
+            if (outN) dismissed[outN] = 1;
+            pair = pair.filter(function(n){ return n !== outN; });
+          }
+        });
+        ensurePair();
+        closeStand(true);
+        return out;
+      }
+      /* The overlay's full scorecard panel in the Abu Dhabi T10
+         graphic style (see the .ov-card CSS): a navy card headed
+         by the batting team and the match line, ONE section at a
+         time — BATTING, BOWLING or PARTNERSHIPS — rotating every
+         two info ticks, and the fixed bottom bar EXTRAS | score |
+         OVERS. Every figure comes from the live innings record. */
+      function overlayCardHTML(inn){
+        var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
+        var exTotal = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+        var logo = teamLogoFor(inn.battingTeam);
+        var headBadge = logo ? '<img src="' + esc(logo) + '" alt="Logo of ' + esc(inn.battingTeam || '') + '" />' : '<span class="ov-badge">' + esc(teamShort(inn.battingTeam)) + '</span>';
+        var subParts = [];
+        if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) subParts.push(S.tournament.name);
+        if (S.venue) subParts.push(S.venue);
+        if (S.matchFormat) subParts.push(S.matchFormat);
+        if (!subParts.length) subParts.push((S.inningsNo === 2 ? '2nd' : '1st') + ' Innings');
+        var sections = ['batting', 'bowling', 'partnerships'];
+        var sec = sections[Math.floor((ovInfoIdx || 0) / 2) % 3];
+        var tabs = sections.map(function(k){
+          return '<span class="ovc-tab' + (k === sec ? ' on' : '') + '">' + (k === 'batting' ? 'Batting' : (k === 'bowling' ? 'Bowling' : 'Partnerships')) + '</span>';
+        }).join('');
+        var body = '';
+        if (sec === 'batting'){
+          if (!inn.batters.length) body = '<p class="ovc-note">No one has batted yet.</p>';
+          else body = inn.batters.map(function(b){
+            var isBat = (b.name === inn.striker || b.name === inn.nonStriker) && !b.out;
+            var parts = b.out ? overlayDismissalParts(b.howOut) : ['', ''];
+            var d1 = b.out ? parts[0] : '';
+            var d2 = b.out ? parts[1] : (isBat ? 'not out' : (b.retiredHurt ? 'retired hurt' : ''));
+            return '<div class="ovc-row ovc-bat-row' + (isBat ? ' notout' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, b.name)) + '</span></span>'
+              + '<span class="d1">' + esc(d1) + '</span><span class="d2">' + esc(d2) + '</span>'
+              + '<span class="r">' + b.runs + '</span><span class="b">' + b.balls + '</span></div>';
+          }).join('');
+          var ytbB = yetToBatNames(inn);
+          if (ytbB.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbB.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
+        } else if (sec === 'bowling'){
+          if (!inn.bowlers.length) body = '<p class="ovc-note">No one has bowled yet.</p>';
+          else {
+            var dots = overlayDotsByBowler(inn);
+            body = '<div class="ovc-bowl-head"><span>Bowler</span><span>Overs</span><span>Dots</span><span>Runs</span><span>Wickets</span><span>Economy</span></div>'
+              + inn.bowlers.map(function(b){
+                var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(1) : '0.0';
+                return '<div class="ovc-bowl-row"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.bowlingTeam, b.name)) + '</span></span><span class="v">' + oversText(b.balls) + '</span><span class="v">' + (dots[b.name] || 0) + '</span><span class="v">' + b.runs + '</span><span class="v">' + b.wickets + '</span><span class="v">' + econ + '</span></div>';
+              }).join('');
+          }
+          var fow = mrFallOfWickets(inn);
+          if (fow.length){
+            var ord = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+            body += '<div class="ovc-sec-lab">Fall of Wickets</div><div class="ovc-fow-band" style="--fow-n:' + fow.length + '"><div class="ovc-fow-h">' + fow.map(function(f){ return '<span>' + ord[f.n - 1] + '</span>'; }).join('') + '</div><div class="ovc-fow-v">' + fow.map(function(f){ return '<span>' + f.score + '</span>'; }).join('') + '</div></div>';
+          }
+        } else {
+          var ps = overlayPartnerships(inn);
+          if (!ps.length) body = '<p class="ovc-note">No partnership yet.</p>';
+          else body = ps.map(function(pp){
+            var tot = pp.r1 + pp.r2;
+            var w1 = tot > 0 ? Math.round(pp.r1 / tot * 100) : 0;
+            var bar = tot > 0 ? '<span class="ovc-ps-bar"><i style="width:' + w1 + '%"></i><i class="alt" style="width:' + (100 - w1) + '%"></i></span>' : '<span class="ovc-ps-bar"></span>';
+            return '<div class="ovc-row ovc-ps-row' + (pp.current ? ' current' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p1)) + '</span></span>' + bar + '<span class="nm2 ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p2)) + '</span></span><span class="r">' + pp.runs + '</span><span class="b">' + pp.balls + '</span></div>';
+          }).join('');
+          var ytbP = yetToBatNames(inn);
+          if (ytbP.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbP.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
+        }
+        var prevLine = S.prevInnings ? '<div class="ovc-note">' + esc(S.prevInnings.battingTeam) + ' — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</div>' : '';
+        return '<div class="ov-card"><div class="ovc-head">' + headBadge + '<div class="tt"><div class="t ov-fit-txt"><span>' + esc(inn.battingTeam || '—') + '</span></div><span class="sub">' + esc(subParts.join(' — ')) + '</span></div><div class="ovc-tabs">' + tabs + '</div></div>'
+          + '<div class="ovc-body">' + body + prevLine + '</div>'
+          + '<div class="ovc-bottom"><span class="cell"><span class="lab">Extras</span><span class="val">' + exTotal + '</span></span><span class="cell mid">' + inn.runs + '-' + inn.wickets + '</span><span class="cell right"><span class="lab">Overs</span><span class="val">' + oversText(inn.legalBalls) + '</span></span></div></div>';
+      }
       /* The pair at the crease in BATTING ORDER — the order they
          came in — never in strike order. Every surface that lists
          the two batters (overlay, public scoreboard strip and
@@ -18645,32 +18862,26 @@
            and once the match is finished, and goes away when
            the next over's first legal ball is bowled. */
         var cardHTML = '';
-        if (overlayCardVisible(inn)){
-          cardHTML = '<div class="ov-card"><div class="ov-card-head"><span class="t">' + esc(inn.battingTeam || '—') + '</span><span class="s">' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</span></div>'
-            + battingTableHTML(inn)
-            + '<div class="divider"></div>'
-            + bowlingTableHTML(inn)
-            + (S.prevInnings ? '<p class="note" style="margin:10px 0 0;color:#6d6890">' + esc(S.prevInnings.battingTeam) + ' — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' : '')
-            + '</div>';
-        }
+        if (overlayCardVisible(inn)) cardHTML = overlayCardHTML(inn);
         return '<div class="ov-fit"><div class="lowerthird"><div class="ov-bar">'
           + overlayFlagHTML(inn.battingTeam)
           + '<div class="ov-seg bats"><div class="ov-panel">'
           + pairRowsHTML
           + '</div></div>'
           + '<div class="ov-centre"><div class="ov-top">'
-          + '<span class="ov-vs ov-fit-txt">' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span>'
-          + '<span class="ov-scorepill">' + inn.runs + '-' + inn.wickets + '</span>'
+          + '<span class="ov-vs ov-fit-txt"><span>' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span></span>'
           + '<span class="ov-inn">' + innTag + '</span>'
           + (freeHitPending(inn) && S.status === 'live' ? '<span class="ov-freehit">Free Hit</span>' : '')
-          + '<span class="ov-overs ov-fit-txt">' + oversText(inn.legalBalls) + ' <small>OVERS</small></span>'
           + '</div>'
-          + '<div class="ov-status ov-fit-txt">' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</div></div>'
+          + '<div class="ov-scoreline"><span class="ov-score">' + inn.runs + '-' + inn.wickets + '</span>'
+          + '<span class="ov-overs ov-fit-txt"><span>' + oversText(inn.legalBalls) + ' <small>OVERS</small></span></span></div>'
+          + (t ? '<div class="ov-target">Target <b>' + t + '</b></div>' : '')
+          + '<div class="ov-status ov-fit-txt"><span>' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</span></div></div>'
           + '<div class="ov-seg bowl"><div class="ov-panel">'
-          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span>'
+          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt"><span>' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span></span>'
           + '<span class="fig">' + bowlerRec.wickets + '-' + bowlerRec.runs + '</span>'
-          + '<span class="ov">' + oversText(bowlerRec.balls) + '</span></div>'
-          + '<div class="ov-balls">' + ballsHTML + '</div>'
+          + '<span class="ov">(' + oversText(bowlerRec.balls) + ')</span></div>'
+          + (t ? '<div class="ov-balls">' + ballsHTML + '</div>' : '<div class="ov-rr"><span class="lab">Run-Rate</span><span class="val">' + crr().toFixed(2) + '</span></div>')
           + '</div></div>'
           + overlayFlagHTML(inn.bowlingTeam)
           + '</div>' + cardHTML + '</div></div>';
@@ -18730,7 +18941,8 @@
         var old = fit.querySelector('.ov-fx'); if (old) old.remove();
         var fx = document.createElement('div');
         fx.className = 'ov-fx ' + cls;
-        fx.innerHTML = '<span class="fx-txt">' + esc(txt) + '</span>' + (sub ? '<span class="fx-sub">' + esc(sub) + '</span>' : '');
+        var fxBolt = '<svg class="fx-bolt" viewBox="0 0 24 48" aria-hidden="true"><path d="M13.5 0 L2 27 L9.5 27 L6 48 L22 19 L14 19 Z"/></svg>';
+        fx.innerHTML = '<span class="fx-strip">' + fxBolt + '<span class="fx-txt">' + esc(txt) + '</span>' + fxBolt + '</span>' + (sub ? '<span class="fx-sub">' + esc(sub) + '</span>' : '');
         fit.appendChild(fx);
         setTimeout(function(){ try { fx.remove(); } catch(e){} }, 2850);
       }
@@ -18754,18 +18966,18 @@
         var fx = null;
         for (var i = 0; i < newMs.length; i++){
           var m = newMs[i];
-          if (m.mkind === 'hattrick') fx = { cls:'hattrick', txt:'Hat-Trick!', sub: dispName(inn.bowlingTeam, m.who) };
-          else if (m.mkind === 'hundred' && (!fx || fx.cls === 'fifty')) fx = { cls:'hundred', txt:'Century!', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
-          else if (m.mkind === 'fifty' && !fx) fx = { cls:'fifty', txt:'Fifty!', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
-          else if (m.mkind === 'fivefor' && !fx) fx = { cls:'fivefor', txt:'5 Wickets!', sub: dispName(inn.bowlingTeam, m.who) };
+          if (m.mkind === 'hattrick') fx = { cls:'hattrick', txt:'HAT-TRICK', sub: dispName(inn.bowlingTeam, m.who) };
+          else if (m.mkind === 'hundred' && (!fx || fx.cls === 'fifty')) fx = { cls:'hundred', txt:'CENTURY', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
+          else if (m.mkind === 'fifty' && !fx) fx = { cls:'fifty', txt:'FIFTY', sub: dispName(inn.battingTeam, m.who) + ' — ' + cbBatterFull(inn, m.who).runs + ' (' + cbBatterFull(inn, m.who).balls + ')' };
+          else if (m.mkind === 'fivefor' && !fx) fx = { cls:'fivefor', txt:'5 WICKETS', sub: dispName(inn.bowlingTeam, m.who) };
         }
         if (!fx && newBalls.length){
           var b = newBalls[newBalls.length - 1];
           var bruns = batterRunsOnBall(b.text);
-          if (isWicketBall(b)) fx = { cls:'wicket', txt:'Wicket!', sub: dispName(inn.battingTeam, b.outName || b.batter || '') };
-          else if (bruns === 6) fx = { cls:'six', txt:'Six!', sub: dispName(inn.battingTeam, b.batter || '') };
-          else if (bruns === 4) fx = { cls:'four', txt:'Four!', sub: dispName(inn.battingTeam, b.batter || '') };
-          else if (wasFreeHit && newBalls.length) fx = { cls:'freehit', txt:'Free Hit', sub: dispName(inn.battingTeam, b.batter || '') };
+          if (isWicketBall(b)) fx = { cls:'wicket', txt:'WICKET', sub: dispName(inn.battingTeam, b.outName || b.batter || '') };
+          else if (bruns === 6) fx = { cls:'six', txt:'SIX', sub: dispName(inn.battingTeam, b.batter || '') };
+          else if (bruns === 4) fx = { cls:'four', txt:'FOUR', sub: dispName(inn.battingTeam, b.batter || '') };
+          else if (wasFreeHit && newBalls.length) fx = { cls:'freehit', txt:'FREE HIT', sub: dispName(inn.battingTeam, b.batter || '') };
         }
         if (fx) showOverlayFx(fx.cls, fx.txt, fx.sub);
       }
