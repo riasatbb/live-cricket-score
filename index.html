@@ -1492,6 +1492,285 @@
       .pf-photo-prev img{width:100%;height:100%;object-fit:cover;display:block}
       .pf-file{display:none}
       body.viewer-mode .prof-edit,body.link-viewer .prof-edit{display:none !important}
+      /* ---------- player profile: Overview / Statistics (v143) ---------- */
+      .pf-hero{text-align:center;margin:4px 0 6px}
+      .pf-ava-lg{display:inline-flex;width:96px;height:96px;border-radius:50%;background:var(--surface2);border:2px solid var(--line);align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:34px;font-weight:700;color:var(--green);overflow:hidden}
+      .pf-ava-lg img{width:100%;height:100%;object-fit:cover;display:block}
+      .pf-hero-name{font-size:24px;font-weight:800;line-height:1.15;margin-top:9px;word-break:break-word}
+      .pf-hero-sub{color:var(--muted);font-size:13.5px;margin-top:3px;line-height:1.45}
+      .pf-idrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 14px}
+      .pf-idpill{font:inherit;font-size:13px;font-weight:700;background:var(--chip);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:5px 12px;cursor:pointer}
+      .pf-idpill:active{border-color:var(--green);color:var(--green)}
+      .pf-tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      .pf-tabs::-webkit-scrollbar{display:none}
+      .pf-tab{flex:none;white-space:nowrap;border:none;cursor:pointer;font:inherit;font-size:14.5px;font-weight:700;padding:9px 16px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+      .pf-tab.on{background:var(--green2);color:#fff}
+      .pf-trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+      .pf-col{border-radius:12px;overflow:hidden;text-align:center;padding-bottom:12px}
+      .pf-col h4{margin:0;padding:6px 4px;font-size:13.5px;font-weight:700;color:#fff;letter-spacing:.02em}
+      .pf-col .pf-stat{margin-top:12px}
+      .pf-col .pf-stat b{display:block;font-size:21px;line-height:1.1;color:#132018}
+      .pf-col .pf-stat span{display:block;font-size:11.5px;color:#5c6d62;margin-top:2px}
+      .pf-col.bat{background:#f9d7dc}.pf-col.bat h4{background:#9a7580}
+      .pf-col.bowl{background:#d8ecd2}.pf-col.bowl h4{background:#77896f}
+      .pf-col.field{background:#d2e6f8}.pf-col.field h4{background:#6d8499}
+      @media (prefers-color-scheme: dark){
+        .pf-col.bat{background:#3a232a}.pf-col.bat h4{background:#59323d}
+        .pf-col.bowl{background:#223528}.pf-col.bowl h4{background:#31493a}
+        .pf-col.field{background:#1f3040}.pf-col.field h4{background:#2c4356}
+        .pf-col .pf-stat b{color:#e9f2ec}
+        .pf-col .pf-stat span{color:#9db3a5}
+      }
+      .pf-sec{font-size:17px;font-weight:800;margin:20px 0 10px}
+      .pf-formrow{display:flex;align-items:center;gap:7px;margin-bottom:8px;overflow-x:auto;padding-bottom:2px}
+      .pf-formlab{flex:none;width:46px;height:46px;border-radius:50%;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+      .pf-dot{flex:none;min-width:46px;height:46px;padding:0 6px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+      .pf-formdir{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.14em;margin-top:2px}
+      .pf-card{background:var(--surface2);border-radius:14px;padding:12px 14px}
+      .pf-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:8px}
+      .pf-seg button{border:none;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:5px 14px;cursor:pointer}
+      .pf-seg button.on{background:var(--green2);color:#fff}
+      .pf-seg-lg{display:flex;width:100%}
+      .pf-seg-lg button{flex:1;padding:7px 4px;font-size:12.5px;letter-spacing:.03em}
+      table.pf-mini{width:100%;border-collapse:collapse;font-size:13.5px}
+      .pf-mini th{color:var(--muted);font-weight:700;text-align:right;padding:4px 6px}
+      .pf-mini th:first-child{text-align:left}
+      .pf-mini td{padding:6px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+      .pf-mini td:first-child{text-align:left;font-weight:600}
+      .pf-stat-scroll{overflow-x:auto}
+      table.pf-stat-t{width:100%;border-collapse:collapse;font-size:13.5px}
+      .pf-stat-t th{color:var(--green);font-weight:800;text-align:right;padding:5px 8px;white-space:nowrap}
+      .pf-stat-t th:first-child{text-align:left;color:var(--muted)}
+      .pf-stat-t td{padding:6.5px 8px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+      .pf-stat-t td:first-child{text-align:left;font-weight:700}
+      .pf-mw{display:block;background:var(--surface2);border-radius:14px;padding:12px 14px;margin-bottom:10px;width:100%;text-align:left;border:none;font:inherit;color:var(--ink)}
+      button.pf-mw{cursor:pointer}
+      .pf-mw-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:8px}
+      .pf-mw-title{font-weight:700;font-size:14.5px}
+      .pf-mw-tag{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--gold-ink)}
+      .pf-mw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px 4px;text-align:center}
+      .pf-mw-grid span{display:block;font-size:10.5px;color:var(--muted)}
+      .pf-mw-grid b{display:block;font-size:14.5px;margin-top:1px;font-variant-numeric:tabular-nums}
+      .pf-awards{display:flex;gap:10px;flex-wrap:wrap}
+      .pf-award{width:104px;border-radius:12px;padding:10px 12px;color:#fff;background:linear-gradient(160deg,#2e7cc2,#173d63)}
+      .pf-award .a-star{font-size:13px}
+      .pf-award .a-num{font-size:30px;font-weight:800;line-height:1.05}
+      .pf-award .a-lab{font-size:12px;opacity:.85}
+      .pf-award .a-sub{border-top:1px solid rgba(255,255,255,.4);margin-top:7px;padding-top:6px;font-size:11.5px;font-weight:700;text-align:right}
+      .pf-jerseymark{text-align:right;margin-top:10px;color:var(--muted);opacity:.35;pointer-events:none;line-height:.9}
+      .pf-jerseymark span{font-size:19px;font-weight:700;vertical-align:bottom;margin-right:3px}
+      .pf-jerseymark b{font-size:74px;font-weight:800;vertical-align:bottom}
+      /* ---------- player profile: full-screen page + Matches / Teams /
+         Tournaments / Insights tabs (v144) ----------
+         The profile is a full-screen page like the reference app, not
+         a bottom sheet: the modal fills the whole viewport at every
+         width and its content centres in a readable column. */
+      #playerModal{align-items:stretch;justify-content:stretch;padding:0}
+      #playerModal .modal{width:100%;max-width:none;max-height:none;height:100dvh;border-radius:0;padding:14px 16px 26px}
+      #playerModal .modal-head{max-width:760px;margin:0 auto 4px;width:100%}
+      #playerModalBody{max-width:760px;margin:0 auto}
+      /* Matches tab — one card per match the player played in. */
+      .pf-mcard{display:block;width:100%;text-align:left;background:var(--surface2);border:none;border-radius:14px;padding:12px 14px;margin-bottom:10px;font:inherit;color:var(--ink)}
+      button.pf-mcard{cursor:pointer}
+      .pf-mcard-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:12.5px;color:var(--muted);margin-bottom:9px}
+      .pf-mcard-st{flex:none;font-weight:700}
+      .pf-mcard-st.live{color:#d84b4b;font-weight:800}
+      .pf-mrow{display:flex;align-items:center;gap:9px;padding:3.5px 0;font-size:14.5px}
+      .pf-mrow .sb-team-logo{width:30px;height:30px;font-size:11px;margin:0;flex:none;padding:2px;box-shadow:none}
+      .pf-mrow .pf-mname{flex:1;font-weight:700;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-mrow .pf-mscore{flex:none;font-weight:700;font-variant-numeric:tabular-nums}
+      .pf-mrow.won .pf-mname,.pf-mrow.won .pf-mscore{color:var(--green)}
+      .pf-mres{display:block;text-align:right;font-size:12.5px;color:var(--muted);margin-top:7px}
+      .pf-mtn{display:flex;justify-content:space-between;gap:10px;align-items:baseline;border-top:1px solid var(--line);margin-top:9px;padding-top:8px;font-size:12.5px}
+      .pf-mtn b{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-mtn span{flex:none;color:var(--green);font-weight:700}
+      /* Teams tab — circular logo grid, like the reference app. */
+      .pf-teamgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px 10px;padding:6px 2px}
+      .pf-team{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;font:inherit;color:var(--ink);cursor:pointer;padding:0}
+      .pf-team .sb-team-logo{width:96px;height:96px;font-size:24px;margin:0 auto 6px}
+      .pf-team-name{font-weight:800;font-size:14.5px;text-align:center;line-height:1.25;letter-spacing:.02em}
+      .pf-team-meta{font-size:12px;color:var(--muted)}
+      /* Tournaments tab — banner cards. */
+      .pf-tncard{display:block;width:100%;text-align:left;border:none;padding:0;border-radius:16px;overflow:hidden;background:#20312a;color:#fff;margin-bottom:14px;font:inherit;cursor:pointer;box-shadow:var(--shadow)}
+      .pf-tncard-art{position:relative;min-height:118px;display:flex;align-items:flex-end;background:linear-gradient(150deg,#2e5d47,#122019)}
+      .pf-tncard-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+      .pf-tncard-art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,18,12,0) 34%,rgba(8,18,12,.78))}
+      .pf-tncard-meta{position:relative;z-index:1;padding:12px 14px;width:100%}
+      .pf-tncard-meta b{display:block;font-size:16.5px;line-height:1.25}
+      .pf-tncard-meta span{display:block;font-size:12.5px;opacity:.88;margin-top:2px}
+      /* Insights tab. */
+      .pf-ins-seg{display:flex;justify-content:center;margin-bottom:14px}
+      .pf-ins-card{background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:14px}
+      .pf-ins-card h3{margin:0 0 12px;font-size:16.5px;font-weight:800;text-align:center}
+      .pf-ins-metrics{display:flex;justify-content:center;gap:10px;margin-bottom:6px}
+      .pf-ins-metric{width:46px;height:46px;border-radius:50%;border:none;font:inherit;font-size:13px;font-weight:800;background:var(--surface);color:var(--muted);cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+      .pf-ins-metric.on{background:#2e9484;color:#fff;box-shadow:none}
+      .pf-ins-chart{width:100%;height:auto;display:block;overflow:visible}
+      .pf-ins-cap{font-size:13.5px;font-weight:700;margin-top:8px}
+      table.pf-ins-t{width:100%;border-collapse:collapse;font-size:13.5px}
+      .pf-ins-t td,.pf-ins-t th{padding:6.5px 6px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .pf-ins-t td:first-child,.pf-ins-t th:first-child{text-align:left;font-weight:700;position:sticky;left:0;background:var(--surface2)}
+      .pf-ins-t tr:first-child td{border-top:none;font-weight:800}
+      .pf-ins-scroll{overflow-x:auto}
+      .pf-dis-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+      .pf-dis-row:last-child{margin-bottom:0}
+      .pf-dis-lab{flex:none;width:86px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 2px;font-size:13px;font-weight:700;color:var(--muted)}
+      .pf-dis-num{flex:none;width:40px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 0;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+      .pf-dis-track{flex:1;height:26px}
+      .pf-dis-fill{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#8ec9f5,#5aa7e8);min-width:0}
+      .pf-pie-wrap{max-width:300px;margin:0 auto}
+      .pf-ins-total{text-align:center;font-weight:800;font-size:14.5px;margin:10px 0 0}
+      .pf-strip{display:flex;justify-content:space-around;gap:4px;background:#14231b;border-radius:14px;padding:12px 8px;margin-top:10px}
+      .pf-strip-it{display:flex;flex-direction:column;align-items:center;gap:5px;color:#eaf3ec;font-size:14px}
+      .pf-strip-c{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;color:#fff}
+      .pf-xbar{position:relative;height:30px;border-radius:6px;overflow:hidden;display:flex}
+      .pf-xbar .xw{background:#c05a7e;height:100%}
+      .pf-xbar .xn{background:#1b9aaa;height:100%}
+      .pf-xlab{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+      .pf-xscale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+      .pf-xcount{text-align:center;font-size:13px;color:var(--muted);margin-top:8px;font-weight:600}
+      /* ---------- player profile: Compare tab (v146) ----------
+         The reference app's player comparison: a grey pill search,
+         result rows with photo / NAME / role, then one bordered
+         card holding both names and the Batting / Bowling /
+         Fielding sections. Each stat row is label-centred with a
+         value box on each side and a bar tucked behind the box —
+         blue for this player (left), green for the compared player
+         (right) — as long as the value's share of the larger one. */
+      .pf-cmp-search{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:999px;padding:4px 18px 4px 20px}
+      .pf-cmp-search input{flex:1;min-width:0;border:none;background:none;font:inherit;font-size:15px;color:var(--ink);padding:9px 0;outline:none}
+      .pf-cmp-mag{flex:none;font-size:16px;opacity:.7}
+      .pf-cmp-empty{text-align:center;font-size:15.5px;margin:52px 0 30px}
+      .pf-cmp-prow{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-bottom:1px solid var(--line);padding:9px 2px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+      .pf-cmp-prow .srch-ava{width:44px;height:44px;font-size:16px}
+      .pf-cmp-pmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+      .pf-cmp-pmain b{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-cmp-pmain span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-cmp-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);padding:4px 12px 16px;margin-top:14px}
+      .pf-cmp-head{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);padding:10px 0 12px}
+      .pf-cmp-hp{text-align:center;min-width:0;padding:0 4px}
+      .pf-cmp-hp b{display:block;font-size:16.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-cmp-hp span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pf-cmp-sec{text-align:center;font-size:25px;font-weight:800;margin:22px 0 2px}
+      .pf-cmp-subs{display:grid;grid-template-columns:1fr 1fr;text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px}
+      .pf-cmp-subs span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+      .pf-cmp-row{display:grid;grid-template-columns:1fr auto 84px auto 1fr;align-items:center;column-gap:6px;margin-bottom:9px}
+      .pf-cmp-row:last-child{margin-bottom:0}
+      .pf-cmp-side{display:flex;align-items:center;height:26px;min-width:0}
+      .pf-cmp-side.l{justify-content:flex-end}
+      .pf-cmp-side.r{justify-content:flex-start}
+      .pf-cmp-bar{display:block;height:24px;min-width:14px}
+      .pf-cmp-bar.bl{background:linear-gradient(90deg,#5cb0f5,#1d84de);border-radius:8px 0 0 8px}
+      .pf-cmp-bar.gr{background:linear-gradient(90deg,#3da34c,#2f8f3e);border-radius:0 8px 8px 0}
+      .pf-cmp-val{position:relative;z-index:1;min-width:56px;padding:7px 6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-align:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+      .pf-cmp-val.l{margin-left:-7px}
+      .pf-cmp-val.r{margin-right:-7px}
+      .pf-cmp-lab{text-align:center;font-weight:700;font-size:14.5px}
+      @media (max-width:420px){
+        .pf-cmp-row{grid-template-columns:1fr auto 74px auto 1fr;column-gap:4px}
+        .pf-cmp-val{min-width:48px;font-size:14px;padding:6px 4px}
+        .pf-cmp-lab{font-size:13.5px}
+        .pf-cmp-sec{font-size:22px}
+      }
+      /* ---------- team page (v145) ---------- */
+      .pf-mcard.tap{cursor:pointer}
+      .tp2-headmain{flex:1;min-width:0}
+      .tp-formrow{display:flex;gap:6px;margin-top:7px}
+      .tp-form{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;color:#fff}
+      .tp-form.w{background:#3d9e63}.tp-form.l{background:#e58aa5;color:#5c1225}.tp-form.t{background:#8a97a0}
+      .tp-gear{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+      .tp2-loc{margin-top:12px;font-size:13px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+      .tp2-idrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+      .tp2-lead{margin-top:8px}
+      .tp-wlbar{display:flex;height:26px;border-radius:6px;overflow:hidden}
+      .tp-wl-won{background:#43555e}
+      .tp-wl-lost{background:#b9c8ce}
+      .tp-wl-foot{text-align:center;color:var(--muted);font-size:13px;font-weight:600;margin:10px 0 0}
+      .tp-field{position:relative;border-radius:16px;min-height:300px;padding:14px 10px 12px;background:repeating-linear-gradient(90deg,#69a84f 0 46px,#74b45a 46px 92px);overflow:hidden}
+      .tp-jp{position:absolute;width:118px;text-align:center}
+      .tp-jp.c{left:50%;transform:translateX(-50%);top:12px}
+      .tp-jp.l{left:4px;bottom:10px}
+      .tp-jp.r{right:4px;bottom:10px}
+      .tp-shirt{width:86px;height:auto;display:block;margin:14px auto 0}
+      .tp-rate{position:absolute;top:0;left:2px;background:#f5b921;color:#241a02;font-size:12.5px;font-weight:800;border-radius:999px;padding:2px 8px;z-index:2}
+      .tp-jbadge{position:absolute;top:2px;right:0;width:27px;height:27px;border-radius:50%;background:#5b666d;color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2}
+      .tp-jbadge + .tp-jbadge{top:33px}
+      .tp-jname{margin:4px auto 0;background:rgba(255,255,255,.34);color:#17301c;font-weight:700;font-size:13px;border-radius:6px;padding:2.5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
+      .tp-sched{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:999px;padding:8px 16px 8px 8px;margin-bottom:10px}
+      .tp-sched-badges{display:flex;flex:none}
+      .tp-sched-badges .sb-team-logo{width:44px;height:44px;font-size:14px;margin:0;padding:3px;box-shadow:none}
+      .tp-sched-badges .sb-team-logo + .sb-team-logo{margin-left:-14px}
+      .tp-sched-main b{display:block;font-size:14.5px}
+      .tp-sched-main span{display:block;font-size:12px;color:var(--muted)}
+      .tp-bars{display:flex;gap:10px;align-items:flex-end}
+      .tp-bar-col{flex:1;text-align:center}
+      .tp-bar-track{height:110px;display:flex;align-items:flex-end}
+      .tp-bar{width:100%;border-radius:7px 7px 0 0}
+      .tp-bar-val{display:inline-block;margin-top:6px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:1px 9px;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+      .tp-pl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+      .tp-msub{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em;margin-top:8px}
+      .tp-mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px}
+      .tp-vtn{flex:none;background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+      .tp-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
+      .tp-chips::-webkit-scrollbar{display:none}
+      .tp-chip{flex:none;border:1px solid var(--line);background:#dcebe4;color:#33523f;font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:6px 14px;cursor:pointer}
+      .tp-chip.on{background:#22343c;color:#fff;border-color:#22343c}
+      @media (prefers-color-scheme:dark){.tp-chip{background:#22392f;color:#b9d2c2}.tp-chip.on{background:#3f5a68;color:#fff}}
+      table.tp-lb{width:100%;border-collapse:collapse;font-size:14px}
+      .tp-lb th{color:var(--muted);font-size:12.5px;font-weight:700;text-align:right;padding:5px 6px;white-space:nowrap}
+      .tp-lb td{padding:8px 6px;border-top:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .tp-lb td.tp-lb-name{text-align:left;font-weight:600;white-space:normal}
+      .tp-rank{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--surface);border:1px solid var(--line);align-items:center;justify-content:center;font-size:12px;font-weight:800}
+      .tp-sgrid{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px;margin-bottom:10px}
+      .tp-scell{background:var(--surface2);border-radius:12px;padding:11px 6px;text-align:center}
+      .tp-scell span{display:block;font-size:12.5px;color:var(--muted);font-weight:600}
+      .tp-scell b{display:block;font-size:19px;margin-top:3px;font-variant-numeric:tabular-nums}
+      table.tp-simple{width:100%;border-collapse:collapse;font-size:14px;background:var(--surface2);border-radius:12px;overflow:hidden}
+      .tp-simple th{color:var(--muted);font-size:12.5px;font-weight:700;text-align:right;padding:9px 12px}
+      .tp-simple th:first-child{text-align:left}
+      .tp-simple td{padding:9px 12px;border-top:1px solid var(--line);text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+      .tp-simple td:first-child{text-align:left;font-weight:600}
+      .tp-part{display:flex;gap:12px;align-items:center}
+      .tp-part-l{flex:1;min-width:0}
+      .tp-part-row{display:flex;gap:10px;align-items:baseline;margin-top:5px}
+      .tp-part-score{flex:none;width:64px;font-weight:700;font-variant-numeric:tabular-nums}
+      .tp-part-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tp-part-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:2px 0 4px 74px}
+      .tp-part-bar span{display:block;height:100%;background:#e58aa5}
+      .tp-part-r{flex:none;text-align:right}
+      .tp-part-r b{display:block;font-size:24px;line-height:1}
+      .tp-part-r span{font-size:11.5px;color:var(--muted)}
+      .tp-cmp-row{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-bottom:1px solid var(--line);padding:8px 2px;font:inherit;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;text-align:left}
+      .tp-cmp-row .sb-team-logo{width:38px;height:38px;font-size:12px;margin:0;flex:none;padding:2px;box-shadow:none}
+      .tp-cmp-pick-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+      .tp-cmp-pick-head h3{margin:0;font-size:18px}
+      .tp-cmp-vs{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:8px;flex-wrap:wrap;text-align:center}
+      .tp-cmp-vs .sb-team-logo{width:44px;height:44px;font-size:14px;margin:0;padding:3px;box-shadow:none}
+      .tp-cmp-x{color:var(--muted);font-weight:700}
+      .tp-cmp-sum{text-align:center;font-weight:700;margin:0 0 12px}
+      table.tp-cmp-t{width:100%;border-collapse:collapse;font-size:14px}
+      .tp-cmp-t td{padding:8px 6px;border-top:1px solid var(--line);text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+      .tp-cmp-t td:first-child{text-align:right;width:42%}
+      .tp-cmp-t td:last-child{text-align:left;width:42%}
+      .tp-cmp-t td.tp-cmp-lab{color:var(--muted);font-weight:600;font-size:12.5px;width:16%}
+      .tp-set-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+      .tp-set-head h3{margin:0;font-size:19px}
+      .tp-set-x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+      .tp-set-logo{text-align:center;margin:8px 0 4px}
+      .tp-set-logo .sb-team-logo{width:96px;height:96px;font-size:24px}
+      .tp-set-field{margin-top:13px}
+      .tp-set-field label{display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:3px}
+      .tp-set-field input{width:100%;font-size:16px;padding:7px 2px;background:none;border:none;border-bottom:1px solid var(--line);border-radius:0;color:var(--ink)}
+      .tp-switch-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px}
+      .tp-switch-txt b{display:block;font-size:15.5px}
+      .tp-switch-txt small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+      .tp-switch{position:relative;flex:none;width:52px;height:30px;display:inline-block}
+      .tp-switch input{opacity:0;width:0;height:0;position:absolute}
+      .tp-slider{position:absolute;inset:0;border-radius:999px;background:#c3ced4;transition:.18s;cursor:pointer}
+      .tp-slider::before{content:"";position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+      .tp-switch input:checked + .tp-slider{background:#2ec4a6}
+      .tp-switch input:checked + .tp-slider::before{transform:translateX(22px)}
+      @media (max-width:400px){.pf-col .pf-stat b{font-size:18px}.pf-mw-grid b{font-size:13px}.pf-dot{min-width:42px;height:42px}.pf-formlab{width:42px;height:42px}}
       .sq-ava{flex:none;width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid var(--line);vertical-align:middle}
       .sq-role{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
       .sq-jersey{flex:none;background:var(--gold);border:1px solid var(--gold);color:#241a02;font-size:11.5px;font-weight:800;border-radius:999px;padding:1px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -3023,7 +3302,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v142';
+      var APP_VERSION = 'v146';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6866,6 +7145,13 @@
         if (!Array.isArray(S.myTeams.teams)) S.myTeams.teams = [];
         if (!S.myTeams.squads || typeof S.myTeams.squads !== 'object' || Array.isArray(S.myTeams.squads)) S.myTeams.squads = {};
         S.myTeams.teams.forEach(function(n){ if (!Array.isArray(S.myTeams.squads[n])) S.myTeams.squads[n] = []; });
+        /* Per-team settings (location, social IDs, Show Team ID,
+           Restrict Edit Access) live by team name in
+           S.tournament.teamMeta, alongside teamLogos, so a team's
+           settings follow it between All Teams and tournaments and
+           sync with the rest of the state (v145). */
+        if (!Array.isArray(S.tournament.teamMeta)) S.tournament.teamMeta = [];
+        S.tournament.teamMeta = S.tournament.teamMeta.filter(function(e){ return e && typeof e === 'object' && e.t; });
         /* Team leadership (Captain / Vice-Captain / Wicket-keeper):
            an ARRAY of {t, c, vc, wk} entries keyed by team name —
            never an object keyed by name (Firebase key rules, same
@@ -6999,6 +7285,9 @@
           tlSeen[e.t] = 1;
           return true;
         });
+        /* Per-team settings by team name (v145, see teamMetaFor). */
+        if (!Array.isArray(S.tournament.teamMeta)) S.tournament.teamMeta = [];
+        S.tournament.teamMeta = S.tournament.teamMeta.filter(function(e){ return e && typeof e === 'object' && e.t; });
         /* Team leadership (Captain / Vice-Captain / Wicket-keeper)
            for THIS tournament's teams: an ARRAY of {t, c, vc, wk}
            entries keyed by team name, normalised exactly like the
@@ -9641,6 +9930,9 @@
       function openTeamPage(src, team, back){
         if (!team) return;
         tpOpenName = null;
+        tpTab = 'overview'; tpSettingsOpen = false; tpCmpTeam = ''; tpCmpPicking = false;
+        tpWlMode = 'both'; tpStatSub = 'team'; tpTeamMode = 'overall'; tpSortMode = 'role';
+        tpCmpDataCache = {};
         if (src === 'sb'){ sbSelectedTeam = team; sbTeamDetailTab = 'players'; }
         teamPageCtx = { src: src, team: team, back: back || (src === 'mt' ? 'myteams' : (src === 'sb' ? 'scoreboard' : 'tournament')) };
         setView('teampage');
@@ -9673,7 +9965,299 @@
            record is editable only by a signed-in account (which
            then claims it), never by a guest. */
         try { if (tournamentLocked()) return false; } catch(e){}
+        /* Restrict Edit Access (Team Settings): when the team's
+           admin has switched it on, only the account that owns the
+           store (the admin who created the team / tournament) may
+           edit this team — everyone else gets the read-only page. */
+        try {
+          var metaR = teamMetaFor(teamPageCtx.team);
+          if (metaR && metaR.restrict){
+            var stR = leadershipStore(teamPageCtx.src);
+            if (stR && stR.ownerUid && currentUid() && currentUid() !== stR.ownerUid) return false;
+          }
+        } catch(e){}
         return true;
+      }
+      /* ---------- team page (v145): Overview / Players / Matches /
+         Tournaments / Statistics / Compare + Team Settings ----------
+         The Team Page follows the layout the owner asked for from a
+         reference video. A hero (logo, name, recent W/L form
+         circles, location, Team ID pill, the settings gear for the
+         owner) sits above a scrollable pill tab bar. Team Overview
+         carries the Win Loss Ratio card (Both / Bat First / Bowl
+         First over the recent 20 matches), Top Performers of the
+         last 5 matches on a pitch graphic (jersey + rating), the
+         scheduled fixtures and the recent Runs Scored / Wickets
+         Taken bar charts. Players keeps the role-grouped squad
+         (with ROLE / A-Z / MAT / SQUAD sorting) and every existing
+         maintenance behaviour. Matches lists the team's completed
+         matches, Tournaments the banner cards of the tournaments
+         it played in, Statistics the TEAM / BAT / BOWL / FIELD
+         leaderboards, and Compare puts this team side by side with
+         any other known team (or head to head). Team Settings —
+         name, location, social IDs, the Show Team ID and Restrict
+         Edit Access toggles — lives behind the gear; per-team
+         settings are stored by team name in S.tournament.teamMeta,
+         alongside teamLogos, so they sync everywhere the team
+         goes. Every figure comes from the recorded matches
+         (allRecordMatches) in which this team played. */
+      var tpTab = 'overview';
+      var tpSortMode = 'role';
+      var tpWlMode = 'both';
+      var tpStatSub = 'team';
+      var tpTeamMode = 'overall';
+      var tpBatMetric = 'runs';
+      var tpBowlMetric = 'wkts';
+      var tpFieldMetric = 'catches';
+      var tpCmpMode = 'compare';
+      var tpCmpTeam = '';
+      var tpCmpPicking = false;
+      var tpSettingsOpen = false;
+      var tpData = null;
+      var tpCmpDataCache = {};
+      function tpSetTab(t){ tpTab = t; tpCmpPicking = false; renderTeamPage(); }
+      function tpSetSort(m){ tpSortMode = m; renderTeamPage(); }
+      function tpSetWl(m){ tpWlMode = m; renderTeamPage(); }
+      function tpSetStatSub(s){ tpStatSub = s; renderTeamPage(); }
+      function tpSetTeamMode(m){ tpTeamMode = m; renderTeamPage(); }
+      function tpSetBatMetric(m){ tpBatMetric = m; renderTeamPage(); }
+      function tpSetBowlMetric(m){ tpBowlMetric = m; renderTeamPage(); }
+      function tpSetFieldMetric(m){ tpFieldMetric = m; renderTeamPage(); }
+      function tpSetCmpMode(m){ tpCmpMode = m; renderTeamPage(); }
+      function tpOpenSettings(){ tpSettingsOpen = true; renderTeamPage(); }
+      function tpCloseSettings(){ tpSettingsOpen = false; renderTeamPage(); }
+      function tpCmpPick(){ tpCmpPicking = true; renderTeamPage(); }
+      function tpCmpCancelPick(){ tpCmpPicking = false; renderTeamPage(); }
+      function tpCmpChoose(name){ tpCmpTeam = name; tpCmpPicking = false; renderTeamPage(); }
+      function tpCmpClear(){ tpCmpTeam = ''; renderTeamPage(); }
+      function tpFocusAddPlayer(){ var el = $('tpPlayerBox'); if (el){ try { el.scrollIntoView({ block: 'center' }); el.focus(); } catch(e){} } }
+      function teamMetaFor(team){
+        try { normalizeTournament(); } catch(e){}
+        var arr = (S.tournament && Array.isArray(S.tournament.teamMeta)) ? S.tournament.teamMeta : [];
+        for (var i = 0; i < arr.length; i++) if (arr[i] && arr[i].t === team) return arr[i];
+        return { t: team, location: '', fb: '', ig: '', tw: '', yt: '', showId: true, restrict: false };
+      }
+      function saveTeamMeta(team, patch){
+        try { normalizeTournament(); } catch(e){}
+        if (!S.tournament) return null;
+        if (!Array.isArray(S.tournament.teamMeta)) S.tournament.teamMeta = [];
+        var found = null;
+        S.tournament.teamMeta.forEach(function(e){ if (e && e.t === team) found = e; });
+        if (!found){ found = { t: team, location: '', fb: '', ig: '', tw: '', yt: '', showId: true, restrict: false }; S.tournament.teamMeta.push(found); }
+        ['location', 'fb', 'ig', 'tw', 'yt', 'showId', 'restrict'].forEach(function(k){ if (patch[k] !== undefined) found[k] = patch[k]; });
+        return found;
+      }
+      function tpPartnershipsOf(m, inn){
+        var batters = inn.batters || [];
+        var balls = (inn.balls || []).filter(function(b){ return b && !b.evt; });
+        if (batters.length < 2 || !balls.length) return [];
+        var order = batters.map(function(b){ return b.name; });
+        var segs = [], nextIn = 2;
+        function newSeg(a, b){
+          var s = { a: a, b: b, runs: 0, balls: 0, per: {} };
+          s.per[a] = { runs: 0, balls: 0 };
+          if (b) s.per[b] = { runs: 0, balls: 0 };
+          return s;
+        }
+        var cur = newSeg(order[0], order[1]);
+        balls.forEach(function(bl){
+          if (!cur) return;
+          var t = String(bl.text || '');
+          cur.runs += parseBallRuns(t);
+          if (isLegalDelivery(t)) cur.balls++;
+          var st = bl.batter;
+          if (st && cur.per[st]){ cur.per[st].runs += batterRunsOnBall(t); if (isLegalDelivery(t) || /^Nb/.test(t)) cur.per[st].balls++; }
+          if (isWicketBall(bl)){
+            segs.push(cur);
+            var lastSeg = cur; cur = null;
+            var nb = order[nextIn++];
+            if (nb !== undefined){
+              var rem = (lastSeg.a === st) ? lastSeg.b : lastSeg.a;
+              cur = newSeg(rem, nb);
+            }
+          }
+        });
+        if (cur) segs.push(cur);
+        return segs.filter(function(s){ return s.balls > 0 || s.runs > 0; }).map(function(s){
+          return { a: s.a, b: s.b, perA: s.per[s.a] || { runs: 0, balls: 0 }, perB: s.per[s.b] || { runs: 0, balls: 0 }, runs: s.runs, balls: s.balls };
+        });
+      }
+      function tpCompute(team){
+        var ms = allRecordMatches().filter(function(m){ return m && (m.teamA === team || m.teamB === team); });
+        var done = ms.filter(function(m){ return !m.live; });
+        var A = { played: 0, won: 0, lost: 0, tied: 0, nr: 0,
+          batFirst: { p: 0, w: 0, l: 0 }, bowlFirst: { p: 0, w: 0, l: 0 },
+          scoredHigh: -1, scoredLow: -1, concHigh: -1, concLow: -1, tossWon: 0,
+          chased: [], defended: [], form: [], recentScores: [], players: {}, partnerships: [],
+          wl: { both: { w: 0, l: 0 }, bat: { w: 0, l: 0 }, bowl: { w: 0, l: 0 } } };
+        function prec(name, pid){
+          var key = pid ? ('p:' + pid) : ('n:' + name);
+          var r = A.players[key];
+          if (!r){
+            r = A.players[key] = { name: name, pid: pid || '', matchIds: {},
+              bat: { inns: 0, runs: 0, balls: 0, fours: 0, sixes: 0, outs: 0, best: -1, bestNO: false, ducks: 0, hundreds: 0, fifties: 0, thirties: 0 },
+              bowl: { inns: 0, balls: 0, runs: 0, wkts: 0, dots: 0, maidens: 0, bestW: -1, bestR: 0, three: 0, five: 0 },
+              field: { catches: 0, stumpings: 0, runouts: 0 }, spells: [], potm: 0 };
+          }
+          return r;
+        }
+        done.forEach(function(m, mi){
+          var opp = (m.teamA === team) ? m.teamB : m.teamA;
+          A.played++;
+          var winner = null;
+          try { winner = matchWinner(m); } catch(e){}
+          var abandoned = !!m.abandoned;
+          var myInn = (m.innings || []).filter(function(inn){ return inn.battingTeam === team; });
+          var oppInn = (m.innings || []).filter(function(inn){ return inn.battingTeam === opp; });
+          var myScore = myInn.reduce(function(s, inn){ return s + (inn.runs || 0); }, 0);
+          var oppScore = oppInn.reduce(function(s, inn){ return s + (inn.runs || 0); }, 0);
+          var wktsTaken = oppInn.reduce(function(s, inn){ return s + (inn.wickets || 0); }, 0);
+          if (abandoned || !winner) A.nr++;
+          else if (winner === 'Tie'){ A.tied++; A.form.push('T'); }
+          else if (winner === team){ A.won++; A.form.push('W'); }
+          else { A.lost++; A.form.push('L'); }
+          var battedFirst = (m.innings && m.innings[0]) ? (m.innings[0].battingTeam === team) : null;
+          if (!abandoned && winner && winner !== 'Tie' && mi < 20){
+            var wmode = winner === team ? 'w' : 'l';
+            A.wl.both[wmode]++;
+            if (battedFirst === true) A.wl.bat[wmode]++;
+            else if (battedFirst === false) A.wl.bowl[wmode]++;
+          }
+          if (!abandoned && winner && battedFirst !== null){
+            var bf = battedFirst ? A.batFirst : A.bowlFirst;
+            bf.p++;
+            if (winner === team) bf.w++;
+            else if (winner !== 'Tie') bf.l++;
+            if (battedFirst && winner === team) A.defended.push({ opp: opp, fmt: String(m.matchFormat || '').trim() || 'Other', score: myScore });
+            if (!battedFirst && winner === team && m.innings[0]) A.chased.push({ opp: opp, fmt: String(m.matchFormat || '').trim() || 'Other', target: (m.innings[0].runs || 0) + 1 });
+          }
+          if (!abandoned && myInn.length){
+            if (A.scoredHigh < 0 || myScore > A.scoredHigh) A.scoredHigh = myScore;
+            if (A.scoredLow < 0 || myScore < A.scoredLow) A.scoredLow = myScore;
+            if (A.concHigh < 0 || oppScore > A.concHigh) A.concHigh = oppScore;
+            if (A.concLow < 0 || oppScore < A.concLow) A.concLow = oppScore;
+            A.recentScores.push({ score: myScore, wkts: wktsTaken });
+          }
+          if (m.tossWinner === team) A.tossWon++;
+          (m.innings || []).forEach(function(inn){
+            if (inn.battingTeam === team){
+              (inn.batters || []).forEach(function(b){
+                var r = prec(b.name, b.pid || ''); r.matchIds[m.id] = 1;
+                var fb = r.bat, runs = b.runs || 0;
+                fb.inns++; fb.runs += runs; fb.balls += b.balls || 0; fb.fours += b.fours || 0; fb.sixes += b.sixes || 0;
+                if (b.out){ fb.outs++; if (runs === 0) fb.ducks++; }
+                if (runs > fb.best || (runs === fb.best && !b.out && !fb.bestNO)){ fb.best = runs; fb.bestNO = !b.out; }
+                if (runs >= 100) fb.hundreds++; else if (runs >= 50) fb.fifties++; else if (runs >= 30) fb.thirties++;
+              });
+            }
+            if (inn.bowlingTeam === team){
+              (inn.bowlers || []).forEach(function(b){
+                var r = prec(b.name, b.pid || ''); r.matchIds[m.id] = 1;
+                var fo = r.bowl, wk = b.wickets || 0;
+                fo.inns++; fo.balls += b.balls || 0; fo.runs += b.runs || 0; fo.wkts += wk;
+                if (wk > fo.bestW || (wk === fo.bestW && (b.runs || 0) < fo.bestR)){ fo.bestW = wk; fo.bestR = b.runs || 0; }
+                if (wk >= 3) fo.three++;
+                if (wk >= 5) fo.five++;
+                try { var ex = pfBowlExtras(inn, b.name); fo.dots += ex.dots; fo.maidens += ex.maidens; } catch(e){}
+                r.spells.push({ wkts: wk, runs: b.runs || 0, balls: b.balls || 0 });
+              });
+              (inn.batters || []).forEach(function(b){
+                var ho = String(b.howOut || ''), mm = null, kind = '';
+                if ((mm = /^c & b (.+)$/.exec(ho))) kind = 'catches';
+                else if ((mm = /^c (.+?) b /.exec(ho))) kind = 'catches';
+                else if ((mm = /^run out \((.+)\)$/.exec(ho))) kind = 'runouts';
+                else if ((mm = /^st (.+?) b /.exec(ho))) kind = 'stumpings';
+                if (kind && mm){
+                  var nm = String(mm[1] || '').trim();
+                  if (nm && nm.indexOf('not recorded') === -1){
+                    var fp = '';
+                    try { fp = entryPlayerId(m, team, nm); } catch(e){}
+                    var r2 = prec(nm, fp); r2.matchIds[m.id] = 1; r2.field[kind]++;
+                  }
+                }
+              });
+            }
+          });
+          if (m.potmPid || m.potmName){
+            Object.keys(A.players).forEach(function(k){
+              var r = A.players[k];
+              if (m.potmPid ? (r.pid && r.pid === m.potmPid) : (r.name === m.potmName)) r.potm++;
+            });
+          }
+          (m.innings || []).forEach(function(inn){
+            if (inn.battingTeam !== team) return;
+            try { tpPartnershipsOf(m, inn).forEach(function(p){ p.opp = opp; A.partnerships.push(p); }); } catch(e){}
+          });
+        });
+        A.partnerships.sort(function(a, b){ return b.runs - a.runs; });
+        A.partnerships = A.partnerships.slice(0, 10);
+        /* A fielder whose Player ID could not be resolved from a
+           match snapshot lands in a name-keyed record apart from
+           his PID-keyed batting / bowling record — merge records
+           that share a name back into one (the PID record wins). */
+        var byName = {};
+        Object.keys(A.players).forEach(function(k){
+          var r = A.players[k], ex = byName[r.name];
+          if (!ex){ byName[r.name] = r; return; }
+          var dst = ex.pid ? ex : (r.pid ? r : ex);
+          var src = (dst === ex) ? r : ex;
+          ['inns', 'runs', 'balls', 'fours', 'sixes', 'outs', 'ducks', 'hundreds', 'fifties', 'thirties'].forEach(function(f){ dst.bat[f] += src.bat[f]; });
+          if (src.bat.best > dst.bat.best || (src.bat.best === dst.bat.best && src.bat.bestNO)) { dst.bat.best = src.bat.best; dst.bat.bestNO = src.bat.bestNO; }
+          ['inns', 'balls', 'runs', 'wkts', 'dots', 'maidens', 'three', 'five'].forEach(function(f){ dst.bowl[f] += src.bowl[f]; });
+          if (src.bowl.bestW > dst.bowl.bestW || (src.bowl.bestW === dst.bowl.bestW && src.bowl.bestR < dst.bowl.bestR)){ dst.bowl.bestW = src.bowl.bestW; dst.bowl.bestR = src.bowl.bestR; }
+          ['catches', 'stumpings', 'runouts'].forEach(function(f){ dst.field[f] += src.field[f]; });
+          dst.spells = dst.spells.concat(src.spells);
+          dst.potm += src.potm;
+          Object.keys(src.matchIds).forEach(function(id){ dst.matchIds[id] = 1; });
+          byName[r.name] = dst;
+        });
+        A.playerList = Object.keys(byName).map(function(n){ var r = byName[n]; r.matches = Object.keys(r.matchIds).length; return r; });
+        return { ms: ms, done: done, agg: A };
+      }
+      function tpTopPerf(team){
+        var last5 = tpData.done.slice(0, 5);
+        var map = {};
+        function pr(name){
+          var r = map[name];
+          if (!r) r = map[name] = { name: name, runs: 0, wkts: 0, field: 0, fifties: 0, hundreds: 0, threeW: 0, matchIds: {}, fiftyBadge: false, threeBadge: false };
+          return r;
+        }
+        last5.forEach(function(m){
+          (m.innings || []).forEach(function(inn){
+            if (inn.battingTeam === team){
+              (inn.batters || []).forEach(function(b){
+                var r = pr(b.name); r.matchIds[m.id] = 1; r.runs += b.runs || 0;
+                if ((b.runs || 0) >= 100){ r.hundreds++; r.fiftyBadge = true; }
+                else if ((b.runs || 0) >= 50){ r.fifties++; r.fiftyBadge = true; }
+              });
+            }
+            if (inn.bowlingTeam === team){
+              (inn.bowlers || []).forEach(function(b){
+                var r = pr(b.name); r.matchIds[m.id] = 1; r.wkts += b.wickets || 0;
+                if ((b.wickets || 0) >= 3){ r.threeW++; r.threeBadge = true; }
+              });
+              (inn.batters || []).forEach(function(b){
+                var ho = String(b.howOut || ''), mm = null;
+                if ((mm = /^c & b (.+)$/.exec(ho))) {}
+                else if ((mm = /^c (.+?) b /.exec(ho))) {}
+                else if ((mm = /^run out \((.+)\)$/.exec(ho))) {}
+                else if ((mm = /^st (.+?) b /.exec(ho))) {}
+                else mm = null;
+                if (mm){ var r = pr(String(mm[1]).trim()); r.matchIds[m.id] = 1; r.field++; }
+              });
+            }
+          });
+        });
+        var out = Object.keys(map).map(function(k){
+          var r = map[k];
+          r.matches = Object.keys(r.matchIds).length;
+          var pts = r.runs + 25 * r.wkts + 10 * r.field + 10 * r.fifties + 25 * r.hundreds + 10 * r.threeW;
+          r.rating = r.matches ? pts / r.matches : 0;
+          try { r.jersey = profileDataFor(team, r.name, '').jersey || ''; } catch(e){ r.jersey = ''; }
+          return r;
+        }).filter(function(r){ return r.matches > 0; });
+        out.sort(function(a, b){ return b.rating - a.rating; });
+        return out.slice(0, 3);
       }
       function renderTeamPage(){
         var wrap = $('tpBody'); if (!wrap) return;
@@ -9683,97 +10267,207 @@
           wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Pick a team from All Teams or a tournament\u2019s Teams tab to open its page.</p></div>';
           return;
         }
-        var team = teamPageCtx.team;
-        if (title) title.textContent = team;
+        if (title) title.textContent = teamPageCtx.team;
         if (teamPageCtx.src === 'sb'){
           /* The scoreboard's team page is a viewer surface: it is
-             built from the Firebase-confirmed display state only,
-             with its Players / Matches / Statistics tabs. */
-          wrap.innerHTML = '<div class="card"><div id="tpSbDetail"></div></div>';
-          renderWithDisplayState(function(){ renderSbTeamDetailDisplay($('tpSbDetail')); });
+             built from the Firebase-confirmed display state only. */
+          wrap.innerHTML = '<div id="tpSbDetail"></div>';
+          renderWithDisplayState(function(){ tpRenderInner($('tpSbDetail')); });
           return;
         }
+        tpRenderInner(wrap);
+      }
+      function tpRenderInner(wrap){
+        if (!wrap || !teamPageCtx || !teamPageCtx.team) return;
+        var team = teamPageCtx.team;
+        var title = $('tpTitle'); if (title) title.textContent = team;
         var src = teamPageCtx.src;
         if (src === 'mt') normalizeMyTeams(); else normalizeTournament();
-        var store = leadershipStore(src);
+        var store = leadershipStore(src === 'mt' ? 'mt' : 'tn');
         var teams = (store && store.teams) || [];
         var ti = teams.indexOf(team);
-        if (ti === -1){
+        if (ti === -1 && src !== 'sb'){
           wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">This team is no longer in the list — go back and pick another team.</p></div>';
           return;
         }
-        /* Keep text already typed into the add-player boxes across
-           re-renders (a Firebase update must not eat it). */
+        /* Keep text already typed into the add-player / compare
+           boxes across re-renders (a Firebase update must not eat
+           it). */
         var keptPlayer = ''; var pb0 = $('tpPlayerBox'); if (pb0) keptPlayer = pb0.value;
         var keptNick = ''; var nb0 = $('tpNickBox'); if (nb0) keptNick = nb0.value;
+        var keptCmp = ''; var cb0 = $('tpCmpSearch'); if (cb0) keptCmp = cb0.value;
         var players = Array.isArray(store.squads[team]) ? store.squads[team] : [];
         var editable = teamPageEditable();
-        var L = leadershipFor(src, team);
-        /* Squad in the reference layout: players grouped by their
-           profile playing role — Batters, Wicketkeeping Batters,
-           Wicket-keepers, All Rounders, Bowlers, then anyone whose
-           role is not set yet. Every row is the round photo (or
-           initials), the name with its (C) / (VC) / (Wk) suffix and
-           the jersey number at the right edge. What a name tap does
-           follows who is looking: on an EDITABLE page (the owner
-           maintaining the team from All Teams or the Tournament
-           editor) it opens that player's maintenance panel inline —
-           career Matches / Runs / Wickets, the C · VC · Wk pickers,
-           the Player ID chip and View Profile — so the whole team
-           is maintained from this one list. On a READ-ONLY page —
-           above all the team page a viewer reaches from the match
-           scoreboard (scoreboard → View Tournament → Teams) — there
-           is nothing to maintain, so the same tap opens the player's
-           profile DIRECTLY, exactly like a name tap on the
-           scoreboard itself. This holds for teams from BOTH places,
-           All Teams and Tournament: wherever a team page is shown
-           read-only, its player names go straight to the profile. */
-        var TP_GROUPS = [['Batter','Batters'],['Wicket-keeper Batter','Wicketkeeping Batters'],['Wicket-keeper','Wicket-keepers'],['All-rounder','All Rounders'],['Bowler','Bowlers'],['','Players']];
-        var tpCareer = null;
-        function tpCareerFor(pid, name){
-          if (!tpCareer) tpCareer = aggregatePlayers(allRecordMatches());
-          for (var ci = 0; ci < tpCareer.length; ci++) if (pid ? tpCareer[ci].pid === pid : tpCareer[ci].name === name) return tpCareer[ci];
-          return null;
+        var meta = teamMetaFor(team);
+        tpData = tpCompute(team);
+        if (tpSettingsOpen && editable){
+          wrap.innerHTML = tpSettingsHTML(team, ti, src, meta);
+          return;
         }
-        function tpRowHTML(p, pi){
-          var d = profileDataFor(team, p, '');
-          var pid = d.pid || lookupPlayerId(team, p);
-          var sfx = '';
-          LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx += ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
-          var open = editable && (tpOpenName === p);
-          var row = '<div class="tp-prow' + (open ? ' open' : '') + '">'
-            + '<span class="tp-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p))) + '</span>'
-            + (editable
-              ? '<button type="button" class="tp-pname" onclick="tpTogglePlayer(' + pi + ')" aria-expanded="' + (open ? 'true' : 'false') + '">' + esc(p) + sfx + '</button>'
-              : '<button type="button" class="tp-pname" onclick="tpViewProfile(' + pi + ')" title="Open the profile of ' + esc(p) + '">' + esc(p) + sfx + '</button>')
-            + (d.jersey ? '<span class="tp-jersey">' + esc(d.jersey) + '</span>' : '')
-            + (open && editable ? '<button type="button" class="tp-trash" onclick="tpRemovePlayer(' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '" title="Remove player">🗑</button>' : '')
-            + '</div>';
-          if (open){
-            var rec = tpCareerFor(pid, p);
-            var nk = nickOf(team, p);
-            row += '<div class="tp-panel">'
-              + '<div class="tp-stats">'
-              + '<div class="tp-stat"><span>Matches</span><b>' + (rec ? rec.matches : 0) + '</b></div>'
-              + '<div class="tp-stat"><span>Runs</span><b>' + (rec ? rec.runs : 0) + '</b></div>'
-              + '<div class="tp-stat"><span>Wickets</span><b>' + (rec ? rec.wkts : 0) + '</b></div>'
-              + '</div>'
-              + '<div class="tp-panel-actions">'
-              + (editable ? LEAD_ROLES.map(function(r){
-                  var on = L[r[0]] === p;
-                  return '<button type="button" class="tp-rolebtn' + (on ? ' on-' + r[0] : '') + '" onclick="tpToggleLead(\'' + r[0] + '\',' + pi + ')" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? ('Remove ' + r[1] + ' from ' + esc(p)) : ('Make ' + esc(p) + ' the ' + r[1])) + '">' + (r[0] === 'wk' ? 'Wk' : r[2]) + '</button>';
-                }).join('') : '')
-              + '<button type="button" class="btn ghost sm tp-viewbtn" onclick="tpViewProfile(' + pi + ')">View Profile</button>'
-              + '</div>'
-              + ((nk || pid) ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + '</div>' : '')
-              + '</div>';
-          }
-          return row;
-        }
-        var rows;
-        if (!players.length){
-          rows = '<div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div>';
+        wrap.innerHTML = tpHeroHTML(team, ti, src, players, editable, meta)
+          + tpTabsHTML()
+          + tpTabBodyHTML(team, ti, src, players, editable, meta);
+        var pb = $('tpPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
+        var nb = $('tpNickBox'); if (nb && keptNick) nb.value = keptNick;
+        var cb = $('tpCmpSearch'); if (cb && keptCmp) cb.value = keptCmp;
+      }
+      function tpHeroHTML(team, ti, src, players, editable, meta){
+        var d = tpData.agg;
+        var form = d.form.slice(0, 5).map(function(r){
+          return '<span class="tp-form ' + r.toLowerCase() + '">' + r + '</span>';
+        }).join('');
+        var logoSrcArg = src === 'mt' ? ",'mt'" : '';
+        var badgeHTML = editable
+          ? '<button type="button" class="tp-logo-btn" onclick="pickTeamLogo(' + ti + logoSrcArg + ')" title="Change the logo of ' + esc(team) + '" aria-label="Change the logo of ' + esc(team) + '">' + teamBadgeHTML(team, ti) + '<span class="tp-logo-edit" aria-hidden="true">✎</span></button>'
+          : teamBadgeHTML(team, ti);
+        var lead = '';
+        try { lead = leadSummaryHTML(src === 'mt' ? 'mt' : 'tn', team); } catch(e){}
+        return '<div class="card tp-card">'
+          + '<div class="sb-detail-head">' + badgeHTML + '<div class="tp2-headmain"><h3>' + esc(team) + '</h3>'
+          + (form ? '<div class="tp-formrow">' + form + '</div>' : '<div class="note">No completed matches yet</div>')
+          + '</div>'
+          + (editable ? '<button type="button" class="tp-gear" onclick="tpOpenSettings()" aria-label="Team settings" title="Team settings">⚙️</button>' : '')
+          + '</div>'
+          + (meta.location ? '<div class="tp2-loc">' + esc(String(meta.location).toUpperCase()) + '</div>' : '')
+          + '<div class="tp2-idrow">' + (meta.showId !== false || editable ? teamIdChipHTML(team) : '<span class="note">Team ID hidden by the team admin</span>')
+          + '<span class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</span></div>'
+          + (lead ? '<div class="tp2-lead">' + lead + '</div>' : '')
+          + (editable && teamLogoFor(team) ? '<div style="margin-top:6px"><button type="button" class="tp-logo-remove" onclick="removeTeamLogo(' + ti + logoSrcArg + ')">Remove logo</button></div>' : '')
+          + '</div>';
+      }
+      function tpTabsHTML(){
+        var tabs = [['overview', 'Team Overview'], ['players', 'Players'], ['matches', 'Matches'], ['tournaments', 'Tournaments'], ['stats', 'Statistics'], ['compare', 'Compare']];
+        return '<div class="pf-tabs">'
+          + tabs.map(function(tb){ return '<button type="button" class="pf-tab' + (tpTab === tb[0] ? ' on' : '') + '" onclick="tpSetTab(\'' + tb[0] + '\')">' + tb[1] + '</button>'; }).join('')
+          + '</div>';
+      }
+      function tpTabBodyHTML(team, ti, src, players, editable, meta){
+        if (tpTab === 'players') return tpPlayersHTML(team, src, players, editable);
+        if (tpTab === 'matches') return tpMatchesTabHTML(team);
+        if (tpTab === 'tournaments') return tpTournamentsTabHTML(team);
+        if (tpTab === 'stats') return tpStatsHTML(team);
+        if (tpTab === 'compare') return tpCompareHTML(team);
+        return tpOverviewHTML(team);
+      }
+      function tpBarsHTML(list, key, color){
+        if (!list.length) return '<p class="note" style="margin:0">No completed matches yet.</p>';
+        var vals = list.slice(0, 5);
+        var max = 1;
+        vals.forEach(function(v){ if (v[key] > max) max = v[key]; });
+        return '<div class="tp-bars">' + vals.map(function(v){
+          return '<div class="tp-bar-col"><div class="tp-bar-track"><div class="tp-bar" style="height:' + Math.max(3, Math.round(v[key] / max * 100)) + '%;background:' + color + '"></div></div><span class="tp-bar-val">' + v[key] + '</span></div>';
+        }).join('') + '</div><div class="pf-formdir">NEW &nbsp;◀&nbsp;&nbsp;&nbsp;▶&nbsp; OLD</div>';
+      }
+      function tpJerseyHTML(p, cls){
+        var badges = '';
+        if (p.fiftyBadge) badges += '<span class="tp-jbadge">50</span>';
+        if (p.threeBadge) badges += '<span class="tp-jbadge">3w</span>';
+        return '<div class="tp-jp ' + cls + '">'
+          + '<span class="tp-rate">' + p.rating.toFixed(1) + '★</span>' + badges
+          + '<svg viewBox="0 0 100 92" class="tp-shirt" aria-hidden="true"><path d="M35 6 L14 15 L5 38 L22 45 L22 86 L78 86 L78 45 L95 38 L86 15 L65 6 C60 15 40 15 35 6 Z" fill="#26292d"/><text x="50" y="62" text-anchor="middle" font-size="30" font-weight="800" fill="#d5dade">' + esc(p.jersey || '') + '</text></svg>'
+          + '<div class="tp-jname">' + esc(p.name) + '</div></div>';
+      }
+      function tpOverviewHTML(team){
+        var d = tpData.agg;
+        var h = '<h3 class="pf-sec">Win Loss Ratio</h3><p class="note" style="margin:-6px 0 10px">Recent 20 matches</p>';
+        var wl = tpWlMode === 'bat' ? d.wl.bat : (tpWlMode === 'bowl' ? d.wl.bowl : d.wl.both);
+        var dec = wl.w + wl.l;
+        var seg = '<div class="pf-seg" style="margin-bottom:12px">'
+          + '<button type="button" class="' + (tpWlMode === 'both' ? 'on' : '') + '" onclick="tpSetWl(\'both\')">Both</button>'
+          + '<button type="button" class="' + (tpWlMode === 'bat' ? 'on' : '') + '" onclick="tpSetWl(\'bat\')">Bat First</button>'
+          + '<button type="button" class="' + (tpWlMode === 'bowl' ? 'on' : '') + '" onclick="tpSetWl(\'bowl\')">Bowl First</button></div>';
+        if (!dec){
+          h += '<div class="card">' + seg + '<p class="note" style="margin:0">No decisive matches yet in this view.</p></div>';
         } else {
+          var wp = wl.w / dec * 100, lp = 100 - wp;
+          h += '<div class="card">' + seg
+            + '<div class="pf-xlab"><span>Won - ' + wp.toFixed(1) + '%</span><span>Lost - ' + lp.toFixed(1) + '%</span></div>'
+            + '<div class="tp-wlbar"><span class="tp-wl-won" style="width:' + wp.toFixed(1) + '%"></span><span class="tp-wl-lost" style="width:' + lp.toFixed(1) + '%"></span></div>'
+            + '<div class="pf-xscale"><span>0</span><span>50</span><span>100</span></div>'
+            + '<p class="tp-wl-foot">Matches - ' + dec + ' &nbsp; Won - ' + wl.w + ' &nbsp; Lost - ' + wl.l + '</p></div>';
+        }
+        var tops = tpTopPerf(team);
+        h += '<h3 class="pf-sec">Top Performers</h3><p class="note" style="margin:-6px 0 10px">Recent 5 matches</p>';
+        if (tops.length){
+          h += '<div class="tp-field">'
+            + tpJerseyHTML(tops[0], 'c')
+            + (tops[1] ? tpJerseyHTML(tops[1], 'l') : '')
+            + (tops[2] ? tpJerseyHTML(tops[2], 'r') : '')
+            + '</div>';
+        } else {
+          h += '<div class="card"><p class="note" style="margin:0">No recorded performances yet — top performers appear once this team plays recorded matches.</p></div>';
+        }
+        var fx = [];
+        try { fx = fx.concat(S.tournament.fixtures || []); } catch(e){}
+        try { fx = fx.concat(S.singleFixtures || []); } catch(e){}
+        fx = fx.filter(function(f){ return f && (f.teamA === team || f.teamB === team); });
+        h += '<h3 class="pf-sec">Scheduled Matches</h3>';
+        if (fx.length){
+          h += fx.map(function(f){
+            var metaBits = [];
+            if (f.label) metaBits.push(f.label);
+            if (f.stage) metaBits.push(f.stage);
+            if (f.matchDate || f.date) metaBits.push(f.matchDate || f.date);
+            if (f.matchTime) metaBits.push(f.matchTime);
+            if (f.venue) metaBits.push(f.venue);
+            return '<div class="tp-sched"><span class="tp-sched-badges">' + teamBadgeHTML(f.teamA, 0) + teamBadgeHTML(f.teamB, 1) + '</span><span class="tp-sched-main"><b>' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</b>' + (metaBits.length ? '<span>' + esc(metaBits.join(' • ')) + '</span>' : '') + '</span></div>';
+          }).join('');
+        } else {
+          h += '<div class="tp-sched empty"><span class="tp-sched-badges">' + teamBadgeHTML(team, 0) + '</span><span class="tp-sched-main"><b>----</b><span>--------------</span></span></div>'
+            + '<p class="note" style="margin:6px 0 0">No scheduled matches for this team right now.</p>';
+        }
+        h += '<h3 class="pf-sec">Runs Scored In Recent Matches</h3><div class="card">' + tpBarsHTML(d.recentScores, 'score', 'linear-gradient(180deg,#3f8fe0,#1c5fa8)') + '</div>';
+        h += '<h3 class="pf-sec">Wickets Taken In Recent Matches</h3><div class="card">' + tpBarsHTML(d.recentScores, 'wkts', 'linear-gradient(180deg,#e05a4e,#b02a20)') + '</div>';
+        return h;
+      }
+      function tpPlayerRowHTML(team, src, p, pi, editable, L){
+        var d = profileDataFor(team, p, '');
+        var pid = d.pid || lookupPlayerId(team, p);
+        var sfx = '';
+        LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx += ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
+        var open = editable && (tpOpenName === p);
+        var row = '<div class="tp-prow' + (open ? ' open' : '') + '">'
+          + '<span class="tp-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p))) + '</span>'
+          + (editable
+            ? '<button type="button" class="tp-pname" onclick="tpTogglePlayer(' + pi + ')" aria-expanded="' + (open ? 'true' : 'false') + '">' + esc(p) + sfx + '</button>'
+            : '<button type="button" class="tp-pname" onclick="tpViewProfile(' + pi + ')" title="Open the profile of ' + esc(p) + '">' + esc(p) + sfx + '</button>')
+          + (d.jersey ? '<span class="tp-jersey">' + esc(d.jersey) + '</span>' : '')
+          + (open && editable ? '<button type="button" class="tp-trash" onclick="tpRemovePlayer(' + pi + ')" aria-label="Remove ' + esc(p) + ' from ' + esc(team) + '" title="Remove player">🗑</button>' : '')
+          + '</div>';
+        if (open){
+          var rec = null;
+          var all = aggregatePlayers(allRecordMatches());
+          for (var ci = 0; ci < all.length; ci++) if (pid ? all[ci].pid === pid : all[ci].name === p) { rec = all[ci]; break; }
+          var nk = nickOf(team, p);
+          row += '<div class="tp-panel">'
+            + '<div class="tp-stats">'
+            + '<div class="tp-stat"><span>Matches</span><b>' + (rec ? rec.matches : 0) + '</b></div>'
+            + '<div class="tp-stat"><span>Runs</span><b>' + (rec ? rec.runs : 0) + '</b></div>'
+            + '<div class="tp-stat"><span>Wickets</span><b>' + (rec ? rec.wkts : 0) + '</b></div>'
+            + '</div>'
+            + '<div class="tp-panel-actions">'
+            + LEAD_ROLES.map(function(r){
+                var on = L[r[0]] === p;
+                return '<button type="button" class="tp-rolebtn' + (on ? ' on-' + r[0] : '') + '" onclick="tpToggleLead(\'' + r[0] + '\',' + pi + ')" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? ('Remove ' + r[1] + ' from ' + esc(p)) : ('Make ' + esc(p) + ' the ' + r[1])) + '">' + (r[0] === 'wk' ? 'Wk' : r[2]) + '</button>';
+              }).join('')
+            + '<button type="button" class="btn ghost sm tp-viewbtn" onclick="tpViewProfile(' + pi + ')">View Profile</button>'
+            + '</div>'
+            + ((nk || pid) ? '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' + (nk ? '<span class="sq-nick">“' + esc(nk) + '”</span>' : '') + (pid ? pidChipHTML(pid) : '') + '</div>' : '')
+            + '</div>';
+        }
+        return row;
+      }
+      function tpPlayersHTML(team, src, players, editable){
+        var L = leadershipFor(src === 'mt' ? 'mt' : 'tn', team);
+        var h = '<div class="tp-pl-head">'
+          + (editable ? '<button type="button" class="btn ghost sm" onclick="tpFocusAddPlayer()">ADD PLAYER</button>' : '<span></span>')
+          + '<div class="pf-seg" style="margin:0">' + [['role', 'ROLE'], ['az', 'A-Z'], ['mat', 'MAT'], ['squad', 'SQUAD']].map(function(sm){
+              return '<button type="button" class="' + (tpSortMode === sm[0] ? 'on' : '') + '" onclick="tpSetSort(\'' + sm[0] + '\')">' + sm[1] + '</button>';
+            }).join('') + '</div></div>';
+        if (!players.length){
+          h += '<div class="card"><div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div></div>';
+        } else if (tpSortMode === 'role'){
+          var TP_GROUPS = [['Batter', 'Batters'], ['Wicket-keeper Batter', 'Wicketkeeping Batters'], ['Wicket-keeper', 'Wicket-keepers'], ['All-rounder', 'All Rounders'], ['Bowler', 'Bowlers'], ['', 'Unspecified']];
           var grouped = {};
           players.forEach(function(p, pi){
             var role = profileDataFor(team, p, '').role || '';
@@ -9782,34 +10476,431 @@
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push([p, pi]);
           });
-          rows = TP_GROUPS.filter(function(g){ return grouped[g[0]] && grouped[g[0]].length; }).map(function(g){
-            return '<div class="tp-group"><h5>' + g[1] + '</h5>' + grouped[g[0]].map(function(pr){ return tpRowHTML(pr[0], pr[1]); }).join('') + '</div>';
+          h += '<div class="card tp-card">' + TP_GROUPS.filter(function(g){ return grouped[g[0]] && grouped[g[0]].length; }).map(function(g){
+            return '<div class="tp-group"><h5>' + g[1] + '</h5>' + grouped[g[0]].map(function(pr){ return tpPlayerRowHTML(team, src, pr[0], pr[1], editable, L); }).join('') + '</div>';
+          }).join('') + '</div>';
+        } else {
+          var entries = players.map(function(p, pi){ return [p, pi]; });
+          if (tpSortMode === 'az') entries.sort(function(a, b){ return a[0].localeCompare(b[0]); });
+          if (tpSortMode === 'mat'){
+            var byName = {};
+            tpData.agg.playerList.forEach(function(r){ byName[r.name] = r.matches; });
+            entries.sort(function(a, b){ return ((byName[b[0]] || 0) - (byName[a[0]] || 0)) || a[0].localeCompare(b[0]); });
+          }
+          h += '<div class="card tp-card">' + entries.map(function(pr){ return tpPlayerRowHTML(team, src, pr[0], pr[1], editable, L); }).join('') + '</div>';
+        }
+        if (editable){
+          h += '<div class="card" style="margin-top:12px"><div class="rowflex names-row"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
+            + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div></div>';
+        }
+        return h;
+      }
+      function tpMatchCardHTML(m){
+        var date = '';
+        if (m.at) date = new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        else if (m.matchDate) date = String(m.matchDate);
+        var fmt = String(m.matchFormat || '').trim();
+        var head = (m.stage ? m.stage : (m.tournamentName ? 'Tournament Match' : 'Open Match'))
+          + (fmt && fmt !== 'Other' ? ', ' + pfFmtShort(fmt) : '') + (date ? ', ' + date : '');
+        var res = '';
+        try { res = matchResultText(m); } catch(e){ res = m.resultText || ''; }
+        var winner = '';
+        try { winner = matchWinner(m) || ''; } catch(e){}
+        function trow(team){
+          return '<span class="pf-mrow' + (winner && team === winner ? ' won' : '') + '">' + teamBadgeHTML(team, 0) + '<span class="pf-mname">' + esc(String(team || '').toUpperCase()) + '</span><span class="pf-mscore">' + esc(pfTeamScoreLine(m, team)) + '</span></span>';
+        }
+        var sub = '';
+        if (m.tournamentName) sub = esc(String(m.tournamentName).toUpperCase()) + (m.venue ? ' - ' + esc(String(m.venue).toUpperCase()) : '');
+        else if (m.venue) sub = esc(String(m.venue).toUpperCase());
+        var inner = '<span class="pf-mcard-top"><span>' + esc(head) + '</span>' + (m.live ? '<span class="pf-mcard-st live">● LIVE</span>' : '<span class="pf-mcard-st">Completed</span>') + '</span>'
+          + trow(m.teamA) + trow(m.teamB)
+          + (sub ? '<span class="tp-msub">' + sub + '</span>' : '')
+          + '<span class="tp-mfoot">' + (m.tournamentName ? '<button type="button" class="tp-vtn" onclick="event.stopPropagation();tpOpenTournamentOfMatch(\'' + esc(m.id) + '\')">View Tournament</button>' : '<span></span>')
+          + (res ? '<span class="pf-mres" style="margin:0">' + esc(res) + '</span>' : '') + '</span>';
+        if (m.live) return '<div class="pf-mcard">' + inner + '</div>';
+        return '<div class="pf-mcard tap" role="button" tabindex="0" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</div>';
+      }
+      function tpMatchesTabHTML(team){
+        if (!tpData.ms.length) return '<div class="card"><p class="note" style="margin:0">No matches recorded for this team yet.</p></div>';
+        return tpData.ms.map(function(m){ return tpMatchCardHTML(m); }).join('');
+      }
+      function tpTnTarget(tid, tname){
+        var out = { kind: 'none', arcId: '' };
+        try {
+          var cur = S.tournament || {};
+          if ((tid && cur.id && tid === cur.id) || (cur.name && cur.name === tname)){ out.kind = 'current'; return out; }
+          tournamentsArchive().forEach(function(a){
+            if (!a || !a.data) return;
+            if ((tid && (a.id === tid || a.data.id === tid)) || a.data.name === tname || a.name === tname){ out.kind = 'arc'; out.arcId = a.id; }
+          });
+        } catch(e){}
+        return out;
+      }
+      function tpOpenTnTarget(t){
+        if (t.kind === 'current'){
+          if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
+          else setView('tournament');
+          return;
+        }
+        if (t.kind === 'arc'){ openArchivedTournament(t.arcId); return; }
+        toast('This tournament is not in the tournament list on this device any more.');
+      }
+      function tpOpenTournamentOfMatch(id){
+        var m = null;
+        tpData.ms.forEach(function(x){ if (String(x.id) === String(id)) m = x; });
+        if (!m || !m.tournamentName) return;
+        tpOpenTnTarget(tpTnTarget(String(m.tournamentId || ''), String(m.tournamentName)));
+      }
+      var tpTnList = [];
+      function tpOpenTournamentFromTeamPage(i){
+        var t = tpTnList[i]; if (!t) return;
+        tpOpenTnTarget(tpTnTarget(t.id, t.name));
+      }
+      function tpTournamentsTabHTML(team){
+        var map = {};
+        tpData.ms.forEach(function(m){
+          if (!m.tournamentName) return;
+          var key = String(m.tournamentId || m.tournamentName);
+          var e = map[key] || (map[key] = { id: String(m.tournamentId || ''), name: String(m.tournamentName), matches: 0 });
+          e.matches++;
+        });
+        var list = Object.keys(map).map(function(k){ return map[k]; });
+        if (!list.length) return '<div class="card"><p class="note" style="margin:0">This team has not played in a recorded tournament yet.</p></div>';
+        tpTnList = list;
+        return list.map(function(t, i){
+          var banner = '', winner = '';
+          try {
+            var cur = S.tournament || {};
+            if ((t.id && cur.id && t.id === cur.id) || (cur.name && cur.name === t.name)){ banner = cur.banner || ''; winner = pfTnWinnerOf(cur); }
+            else {
+              tournamentsArchive().forEach(function(a){
+                if (!a || !a.data) return;
+                if ((t.id && (a.id === t.id || a.data.id === t.id)) || a.data.name === t.name || a.name === t.name){ banner = a.data.banner || ''; winner = pfTnWinnerOf(a.data); }
+              });
+            }
+          } catch(e){}
+          var sub = [];
+          if (winner) sub.push(esc(String(winner).toUpperCase()) + ' is the winner');
+          sub.push(t.matches + (t.matches === 1 ? ' match' : ' matches') + ' played');
+          return '<button type="button" class="pf-tncard" onclick="tpOpenTournamentFromTeamPage(' + i + ')">'
+            + '<span class="pf-tncard-art">' + (banner ? '<img src="' + esc(banner) + '" alt="" loading="lazy" />' : '')
+            + '<span class="pf-tncard-meta"><b>' + esc(t.name) + '</b><span>' + sub.join(' • ') + '</span></span></span></button>';
+        }).join('');
+      }
+      function tpLbTable(heads, rows){
+        if (!rows.length) return '<p class="note" style="text-align:center;padding:16px 0;margin:0">No data to show.</p>';
+        return '<div class="pf-ins-scroll"><table class="tp-lb"><thead><tr><th></th><th></th>'
+          + heads.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '</tr></thead><tbody>'
+          + rows.map(function(r, i){
+              return '<tr><td><span class="tp-rank">' + (i + 1) + '</span></td><td class="tp-lb-name">' + esc(r.name) + '</td>'
+                + r.cols.map(function(c){ return '<td>' + c + '</td>'; }).join('') + '</tr>';
+            }).join('') + '</tbody></table></div>';
+      }
+      function tpChipRow(items, cur, fn){
+        return '<div class="tp-chips">' + items.map(function(it){
+          return '<button type="button" class="tp-chip' + (cur === it[0] ? ' on' : '') + '" onclick="' + fn + '(\'' + it[0] + '\')">' + it[1] + '</button>';
+        }).join('') + '</div>';
+      }
+      function tpStatsHTML(team){
+        var subs = [['team', 'TEAM'], ['bat', 'BAT'], ['bowl', 'BOWL'], ['field', 'FIELD']];
+        var h = '<div class="pf-seg pf-seg-lg">'
+          + subs.map(function(s){ return '<button type="button" class="' + (tpStatSub === s[0] ? 'on' : '') + '" onclick="tpSetStatSub(\'' + s[0] + '\')">' + s[1] + '</button>'; }).join('')
+          + '</div>';
+        if (tpStatSub === 'bat') return h + tpStatsBatHTML();
+        if (tpStatSub === 'bowl') return h + tpStatsBowlHTML();
+        if (tpStatSub === 'field') return h + tpStatsFieldHTML();
+        return h + tpStatsTeamHTML();
+      }
+      function tpStatGrid(cells){
+        return '<div class="tp-sgrid">' + cells.map(function(c){
+          return '<div class="tp-scell"><span>' + c[0] + '</span><b>' + c[1] + '</b></div>';
+        }).join('') + '</div>';
+      }
+      function tpStatsTeamHTML(){
+        var d = tpData.agg;
+        var h = tpChipRow([['overall', 'Overall'], ['chased', 'Chased'], ['defended', 'Defended'], ['partnerships', 'Partnerships']], tpTeamMode, 'tpSetTeamMode');
+        if (tpTeamMode === 'chased'){
+          if (!d.chased.length) return h + '<p class="note" style="text-align:center;padding:16px 0">No data to show.</p>';
+          return h + tpLbTable(['Format', 'Target'], d.chased.map(function(c){ return { name: c.opp, cols: [esc(pfFmtShort(c.fmt)), c.target] }; }));
+        }
+        if (tpTeamMode === 'defended'){
+          if (!d.defended.length) return h + '<p class="note" style="text-align:center;padding:16px 0">No data to show.</p>';
+          return h + tpLbTable(['Format', 'Score'], d.defended.map(function(c){ return { name: c.opp, cols: [esc(pfFmtShort(c.fmt)), c.score] }; }));
+        }
+        if (tpTeamMode === 'partnerships'){
+          if (!d.partnerships.length) return h + '<p class="note" style="text-align:center;padding:16px 0">No data to show.</p>';
+          return h + d.partnerships.map(function(p){
+            function line(nm, per){
+              var share = p.runs > 0 ? Math.round(per.runs / p.runs * 100) : 0;
+              return '<div class="tp-part-row"><span class="tp-part-score">' + per.runs + ' (' + per.balls + ')</span><span class="tp-part-name">' + esc(nm) + '</span></div>'
+                + '<div class="tp-part-bar"><span style="width:' + share + '%"></span></div>';
+            }
+            return '<div class="card tp-part"><div class="tp-part-l">' + line(p.a, p.perA) + line(p.b, p.perB)
+              + '<div class="note" style="margin-top:5px">vs ' + esc(p.opp || '') + '</div></div>'
+              + '<div class="tp-part-r"><b>' + p.runs + '</b><span>' + p.balls + ' Balls</span></div></div>';
           }).join('');
         }
-        /* No separate Upload Logo option on the Team Page: the round
-           badge in the head is itself the control — tapping it opens
-           the image picker, exactly what the old Upload Logo button
-           did. A small Remove logo link stays only while a logo is
-           set. Viewers keep the plain, non-tappable badge. */
-        var logoNow = teamLogoFor(team);
+        var winPct = d.played ? (d.won / d.played * 100).toFixed(1) + ' %' : '—';
+        function dash(v){ return v < 0 ? '—' : v; }
+        h += tpStatGrid([['Matches', d.played], ['Won', d.won], ['Win %', winPct]]);
+        h += tpStatGrid([['Lost', d.lost], ['Tie', d.tied], ['Draw', 0], ['NR', d.nr]]);
+        h += '<h3 class="pf-sec" style="text-align:center">Team Score</h3>'
+          + '<table class="tp-simple"><thead><tr><th></th><th>High</th><th>Low</th></tr></thead><tbody>'
+          + '<tr><td>Scored</td><td>' + dash(d.scoredHigh) + '</td><td>' + dash(d.scoredLow) + '</td></tr>'
+          + '<tr><td>Conceded</td><td>' + dash(d.concHigh) + '</td><td>' + dash(d.concLow) + '</td></tr></tbody></table>';
+        h += '<h3 class="pf-sec" style="text-align:center">Toss</h3>'
+          + tpStatGrid([['Toss Won', d.tossWon], ['Bat First', d.batFirst.p], ['Bowl First', d.bowlFirst.p]]);
+        function ri(label, s){
+          var pct = s.p ? (s.w / s.p * 100).toFixed(1) + ' %' : '—';
+          return '<tr><td>' + label + '</td><td>' + s.p + '</td><td>' + s.w + '</td><td>' + pct + '</td></tr>';
+        }
+        h += '<h3 class="pf-sec" style="text-align:center">Result Insights</h3>'
+          + '<table class="tp-simple"><thead><tr><th></th><th>Matches</th><th>Won</th><th>Win %</th></tr></thead><tbody>'
+          + ri('Bat First', d.batFirst) + ri('Bowl First', d.bowlFirst) + '</tbody></table>';
+        return h;
+      }
+      var TP_BAT_DEFS = [
+        { key: 'runs', label: 'Most Runs', val: function(b){ return b.runs; }, need: function(b){ return b.inns > 0; }, heads: ['Run', 'Inn', 'Avg'], cols: function(r){ var b = r.bat; return [b.runs, b.inns, b.outs > 0 ? (b.runs / b.outs).toFixed(1) : '—']; } },
+        { key: 'thirties', label: 'Most 30s', val: function(b){ return b.thirties; }, need: function(b){ return b.thirties > 0; }, heads: ['30s', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.thirties, b.inns, b.runs]; } },
+        { key: 'fifties', label: 'Most 50s', val: function(b){ return b.fifties; }, need: function(b){ return b.fifties > 0; }, heads: ['50s', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.fifties, b.inns, b.runs]; } },
+        { key: 'hundreds', label: 'Most 100s', val: function(b){ return b.hundreds; }, need: function(b){ return b.hundreds > 0; }, heads: ['100s', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.hundreds, b.inns, b.runs]; } },
+        { key: 'best', label: 'Highest Score', val: function(b){ return b.best; }, need: function(b){ return b.best >= 0; }, heads: ['HS', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [(b.best < 0 ? '—' : b.best + (b.bestNO ? '*' : '')), b.inns, b.runs]; } },
+        { key: 'avg', label: 'Batting Average', val: function(b){ return b.outs > 0 ? b.runs / b.outs : -1; }, need: function(b){ return b.outs > 0; }, heads: ['Avg', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [(b.runs / b.outs).toFixed(1), b.inns, b.runs]; } },
+        { key: 'sr', label: 'Strike Rate', val: function(b){ return b.balls > 0 ? b.runs / b.balls * 100 : -1; }, need: function(b){ return b.balls > 0; }, heads: ['SR', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [(b.runs / b.balls * 100).toFixed(1), b.inns, b.runs]; } },
+        { key: 'sixes', label: 'Most Sixes', val: function(b){ return b.sixes; }, need: function(b){ return b.sixes > 0; }, heads: ['6s', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.sixes, b.inns, b.runs]; } },
+        { key: 'fours', label: 'Most Fours', val: function(b){ return b.fours; }, need: function(b){ return b.fours > 0; }, heads: ['4s', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.fours, b.inns, b.runs]; } },
+        { key: 'balls', label: 'Balls Faced', val: function(b){ return b.balls; }, need: function(b){ return b.balls > 0; }, heads: ['Bal', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.balls, b.inns, b.runs]; } },
+        { key: 'ducks', label: 'Duck Outs', val: function(b){ return b.ducks; }, need: function(b){ return b.ducks > 0; }, heads: ['Ducks', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.ducks, b.inns, b.runs]; } }
+      ];
+      function tpStatsBatHTML(){
+        var def = TP_BAT_DEFS[0];
+        TP_BAT_DEFS.forEach(function(x){ if (x.key === tpBatMetric) def = x; });
+        var h = tpChipRow(TP_BAT_DEFS.map(function(x){ return [x.key, x.label]; }), tpBatMetric, 'tpSetBatMetric');
+        var rows = tpData.agg.playerList.filter(function(r){ return def.need(r.bat); })
+          .sort(function(a, b){ return def.val(b.bat) - def.val(a.bat); })
+          .map(function(r){ return { name: r.name, cols: def.cols(r) }; });
+        return h + '<div class="card">' + tpLbTable(def.heads, rows) + '</div>';
+      }
+      var TP_BOWL_DEFS = [
+        { key: 'wkts', label: 'Most Wickets', asc: false, val: function(b){ return b.wkts; }, need: function(b){ return b.inns > 0; }, heads: ['Wkts', 'Inn', 'Eco'], cols: function(r){ var b = r.bowl; return [b.wkts, b.inns, b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(1) : '0.0']; } },
+        { key: 'three', label: '3 Wkt Hauls', asc: false, val: function(b){ return b.three; }, need: function(b){ return b.three > 0; }, heads: ['3w', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [b.three, b.inns, b.wkts]; } },
+        { key: 'five', label: '5 Wkt Hauls', asc: false, val: function(b){ return b.five; }, need: function(b){ return b.five > 0; }, heads: ['5w', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [b.five, b.inns, b.wkts]; } },
+        { key: 'avg', label: 'Bowling Average', asc: true, val: function(b){ return b.wkts > 0 ? b.runs / b.wkts : 1e9; }, need: function(b){ return b.wkts > 0; }, heads: ['Avg', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [(b.runs / b.wkts).toFixed(1), b.inns, b.wkts]; } },
+        { key: 'econ', label: 'Economy', asc: true, val: function(b){ return b.balls > 0 ? b.runs / (b.balls / 6) : 1e9; }, need: function(b){ return b.balls > 0; }, heads: ['Eco', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [(b.runs / (b.balls / 6)).toFixed(1), b.inns, b.wkts]; } },
+        { key: 'bsr', label: 'Strike Rate', asc: true, val: function(b){ return b.wkts > 0 ? b.balls / b.wkts : 1e9; }, need: function(b){ return b.wkts > 0; }, heads: ['SR', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [(b.balls / b.wkts).toFixed(1), b.inns, b.wkts]; } },
+        { key: 'maidens', label: 'Maidens', asc: false, val: function(b){ return b.maidens; }, need: function(b){ return b.maidens > 0; }, heads: ['Maidens', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [b.maidens, b.inns, b.wkts]; } },
+        { key: 'balls', label: 'Balls Bowled', asc: false, val: function(b){ return b.balls; }, need: function(b){ return b.balls > 0; }, heads: ['Balls', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [b.balls, b.inns, b.wkts]; } },
+        { key: 'dots', label: 'Dots', asc: false, val: function(b){ return b.dots; }, need: function(b){ return b.dots > 0; }, heads: ['Dots', 'Inn', 'Wkts'], cols: function(r){ var b = r.bowl; return [b.dots, b.inns, b.wkts]; } }
+      ];
+      function tpStatsBowlHTML(){
+        var h = tpChipRow(TP_BOWL_DEFS.map(function(x){ return [x.key, x.label]; }).concat([['best', 'Best Bowling']]), tpBowlMetric, 'tpSetBowlMetric');
+        if (tpBowlMetric === 'best'){
+          var spells = [];
+          tpData.agg.playerList.forEach(function(r){ r.spells.forEach(function(s){ spells.push({ name: r.name, wkts: s.wkts, runs: s.runs, balls: s.balls }); }); });
+          spells.sort(function(a, b){ return (b.wkts - a.wkts) || (a.runs - b.runs); });
+          var srows = spells.map(function(s){
+            return { name: s.name, cols: [s.wkts + '-' + s.runs, oversText(s.balls), s.balls > 0 ? (s.runs / (s.balls / 6)).toFixed(1) : '0.0'] };
+          });
+          return h + '<div class="card">' + tpLbTable(['BBo', 'Ove', 'Eco'], srows) + '</div>';
+        }
+        var def = TP_BOWL_DEFS[0];
+        TP_BOWL_DEFS.forEach(function(x){ if (x.key === tpBowlMetric) def = x; });
+        var rows = tpData.agg.playerList.filter(function(r){ return def.need(r.bowl); })
+          .sort(function(a, b){ return def.asc ? (def.val(a.bowl) - def.val(b.bowl)) : (def.val(b.bowl) - def.val(a.bowl)); })
+          .map(function(r){ return { name: r.name, cols: def.cols(r) }; });
+        return h + '<div class="card">' + tpLbTable(def.heads, rows) + '</div>';
+      }
+      function tpStatsFieldHTML(){
+        var h = tpChipRow([['catches', 'Catches'], ['stumpings', 'Stumpings'], ['runouts', 'Runouts']], tpFieldMetric, 'tpSetFieldMetric');
+        var order = [tpFieldMetric].concat(['catches', 'stumpings', 'runouts'].filter(function(k){ return k !== tpFieldMetric; }));
+        var heads = { catches: 'Cat', stumpings: 'Stu', runouts: 'Rou' };
+        var rows = tpData.agg.playerList.filter(function(r){ return (r.field.catches + r.field.stumpings + r.field.runouts) > 0; })
+          .sort(function(a, b){ return b.field[tpFieldMetric] - a.field[tpFieldMetric]; })
+          .map(function(r){ return { name: r.name, cols: order.map(function(k){ return r.field[k]; }) }; });
+        return h + '<div class="card">' + tpLbTable(order.map(function(k){ return heads[k]; }), rows) + '</div>';
+      }
+      function tpKnownTeamNames(exclude){
+        var seen = {}, out = [];
+        try {
+          tacKnown().forEach(function(t){
+            if (t && t.name && t.name !== exclude && !seen[t.name]){ seen[t.name] = 1; out.push(t.name); }
+          });
+        } catch(e){}
+        return out.sort(function(a, b){ return a.localeCompare(b); });
+      }
+      function tpCmpRowsHTML(names){
+        return names.map(function(n, i){
+          return '<button type="button" class="tp-cmp-row" onclick="tpCmpChoose(' + fxIdArg(n) + ')">' + teamBadgeHTML(n, i) + '<span>' + esc(n) + '</span></button>';
+        }).join('');
+      }
+      function tpCmpSearchInput(q){
+        var list = $('tpCmpList'); if (!list) return;
+        var team = teamPageCtx ? teamPageCtx.team : '';
+        var query = String(q || '').trim().toLowerCase();
+        if (!query){ list.innerHTML = tpCmpPicking ? tpCmpRowsHTML(tpKnownTeamNames(team)) : ''; return; }
+        var names = tpKnownTeamNames(team).filter(function(n){ return n.toLowerCase().indexOf(query) > -1; }).slice(0, 10);
+        list.innerHTML = names.length ? tpCmpRowsHTML(names) : '<p class="note" style="margin:8px 0 0">No team matches your typing.</p>';
+      }
+      function tpCompareHTML(team){
+        if (tpCmpPicking){
+          return '<div class="card"><div class="tp-cmp-pick-head"><h3>Select a Team</h3><button type="button" class="tp-set-x" onclick="tpCmpCancelPick()" aria-label="Close team picker">✕</button></div>'
+            + '<input id="tpCmpSearch" placeholder="Search a team" autocomplete="off" oninput="tpCmpSearchInput(this.value)" />'
+            + '<div id="tpCmpList" style="margin-top:8px">' + tpCmpRowsHTML(tpKnownTeamNames(team)) + '</div></div>';
+        }
+        var h = '<div class="card"><input id="tpCmpSearch" placeholder="Search a Team" autocomplete="off" oninput="tpCmpSearchInput(this.value)" /><div id="tpCmpList"></div>'
+          + '<div class="pf-seg pf-seg-lg" style="margin-top:12px">'
+          + '<button type="button" class="' + (tpCmpMode === 'compare' ? 'on' : '') + '" onclick="tpSetCmpMode(\'compare\')">COMPARE</button>'
+          + '<button type="button" class="' + (tpCmpMode === 'h2h' ? 'on' : '') + '" onclick="tpSetCmpMode(\'h2h\')">HEAD TO HEAD</button></div>';
+        if (!tpCmpTeam){
+          h += '<p class="note" style="text-align:center;margin:14px 0">Search a team to compare or click the below button to select one of your teams.</p>'
+            + '<div style="text-align:center"><button type="button" class="btn ghost" onclick="tpCmpPick()">Select one of my teams</button></div>';
+          return h + '</div>';
+        }
+        return h + tpCmpResultHTML(team, tpCmpTeam) + '</div>';
+      }
+      function tpCmpResultHTML(team, other){
+        var mine = tpData;
+        if (!tpCmpDataCache[other]) tpCmpDataCache[other] = tpCompute(other);
+        var theirs = tpCmpDataCache[other];
+        var head = '<div class="tp-cmp-vs">' + teamBadgeHTML(team, 0) + '<b>' + esc(team) + '</b><span class="tp-cmp-x">vs</span><b>' + esc(other) + '</b>' + teamBadgeHTML(other, 1) + '</div>'
+          + '<div style="text-align:center;margin-bottom:10px"><button type="button" class="btn ghost sm" onclick="tpCmpClear()">Change team</button></div>';
+        if (tpCmpMode === 'h2h'){
+          var games = mine.ms.filter(function(m){ return (m.teamA === team && m.teamB === other) || (m.teamA === other && m.teamB === team); });
+          var w1 = 0, w2 = 0, rest = 0;
+          games.forEach(function(m){
+            if (m.live) return;
+            var w = null;
+            try { w = matchWinner(m); } catch(e){}
+            if (w === team) w1++; else if (w === other) w2++; else rest++;
+          });
+          var played = games.filter(function(m){ return !m.live; }).length;
+          return head + '<p class="tp-cmp-sum">Played ' + played + ' • ' + esc(team) + ' won ' + w1 + ' • ' + esc(other) + ' won ' + w2 + ' • Tied / NR ' + rest + '</p>'
+            + (games.length ? games.map(function(m){ return tpMatchCardHTML(m); }).join('') : '<p class="note" style="text-align:center">These two teams have not met in a recorded match yet.</p>');
+        }
+        function topBy(list, fn){
+          var best = null, bv = -1;
+          list.forEach(function(r){ var v = fn(r); if (v > bv){ bv = v; best = r; } });
+          return best;
+        }
+        var a = mine.agg, b = theirs.agg;
+        var aBat = topBy(a.playerList, function(r){ return r.bat.runs; });
+        var bBat = topBy(b.playerList, function(r){ return r.bat.runs; });
+        var aBowl = topBy(a.playerList, function(r){ return r.bowl.wkts; });
+        var bBowl = topBy(b.playerList, function(r){ return r.bowl.wkts; });
+        function prow(label, va, vb){
+          return '<tr><td>' + va + '</td><td class="tp-cmp-lab">' + label + '</td><td>' + vb + '</td></tr>';
+        }
+        function dash(v){ return v < 0 ? '—' : v; }
+        return head + '<table class="tp-cmp-t"><tbody>'
+          + prow('Matches', a.played, b.played)
+          + prow('Won', a.won, b.won)
+          + prow('Lost', a.lost, b.lost)
+          + prow('Win %', a.played ? (a.won / a.played * 100).toFixed(1) + '%' : '—', b.played ? (b.won / b.played * 100).toFixed(1) + '%' : '—')
+          + prow('Highest Score', dash(a.scoredHigh), dash(b.scoredHigh))
+          + prow('Lowest Score', dash(a.scoredLow), dash(b.scoredLow))
+          + prow('Most Runs', aBat ? esc(aBat.name) + ' (' + aBat.bat.runs + ')' : '—', bBat ? esc(bBat.name) + ' (' + bBat.bat.runs + ')' : '—')
+          + prow('Most Wickets', aBowl ? esc(aBowl.name) + ' (' + aBowl.bowl.wkts + ')' : '—', bBowl ? esc(bBowl.name) + ' (' + bBowl.bowl.wkts + ')' : '—')
+          + '</tbody></table>';
+      }
+      function tpSettingsHTML(team, ti, src, meta){
         var logoSrcArg = src === 'mt' ? ",'mt'" : '';
-        var badgeHTML = editable
-          ? '<button type="button" class="tp-logo-btn" onclick="pickTeamLogo(' + ti + logoSrcArg + ')" title="' + (logoNow ? 'Change the logo of ' : 'Add a logo for ') + esc(team) + '" aria-label="' + (logoNow ? 'Change the logo of ' : 'Add a logo for ') + esc(team) + '">' + teamBadgeHTML(team, ti) + '<span class="tp-logo-edit" aria-hidden="true">✎</span></button>'
-          : teamBadgeHTML(team, ti);
-        wrap.innerHTML = '<div class="card tp-card">'
-          + '<div class="sb-detail-head">' + badgeHTML + '<div><h3>' + esc(team) + '</h3><div class="note">' + players.length + (players.length === 1 ? ' player' : ' players') + '</div><div style="margin-top:5px">' + teamIdChipHTML(team) + '</div>'
-          + (editable && logoNow ? '<div style="margin-top:5px"><button type="button" class="tp-logo-remove" onclick="removeTeamLogo(' + ti + logoSrcArg + ')">Remove logo</button></div>' : '')
-          + '</div>'
-          + (editable ? '<button type="button" class="sq-x" onclick="tpRemoveTeam()" aria-label="Remove team ' + esc(team) + '" title="Remove team">🗑</button>' : '')
-          + '</div>'
-          + '<div class="tp-sec">' + rows + '</div>'
-          + (editable
-            ? '<div class="rowflex names-row" style="margin-top:12px"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
-            + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div>'
-            : '')
+        var admin = '';
+        try { admin = (src === 'mt' ? (S.myTeams.ownerName || '') : (S.tournament.ownerName || '')) || authDisplayName() || ''; } catch(e){}
+        function field(label, input){ return '<div class="tp-set-field"><label>' + label + '</label>' + input + '</div>'; }
+        function textInp(id, val, ph){ return '<input id="' + id + '" value="' + esc(val || '') + '" placeholder="' + (ph || '') + '" autocomplete="off" />'; }
+        function toggle(id, on, title, sub){
+          return '<div class="tp-switch-row"><span class="tp-switch-txt"><b>' + title + '</b><small>' + sub + '</small></span>'
+            + '<label class="tp-switch"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + ' /><span class="tp-slider"></span></label></div>';
+        }
+        return '<div class="card tp-card">'
+          + '<div class="tp-set-head"><button type="button" class="tp-set-x" onclick="tpCloseSettings()" aria-label="Close settings">✕</button><h3>Team Settings</h3><button type="button" class="tp-set-x" onclick="tpRemoveTeam()" aria-label="Remove team" title="Remove team">🗑</button></div>'
+          + '<div class="tp-set-logo"><button type="button" class="tp-logo-btn" onclick="pickTeamLogo(' + ti + logoSrcArg + ')" title="Change the logo of ' + esc(team) + '" aria-label="Change the logo of ' + esc(team) + '">' + teamBadgeHTML(team, ti) + '<span class="tp-logo-edit" aria-hidden="true">✎</span></button></div>'
+          + field('Team Name', textInp('tpSetName', team))
+          + field('Location', textInp('tpSetLoc', meta.location, 'e.g. Bangladesh Bank, Khulna'))
+          + field('Facebook ID', textInp('tpSetFb', meta.fb))
+          + field('Instagram ID', textInp('tpSetIg', meta.ig))
+          + field('Twitter ID', textInp('tpSetTw', meta.tw))
+          + field('Youtube ID', textInp('tpSetYt', meta.yt))
+          + toggle('tpSetShowId', meta.showId !== false, 'Show Team ID', 'Team ID will be visible to everyone.')
+          + toggle('tpSetRestrict', !!meta.restrict, 'Restrict Edit Access', 'Disable the edit access of team members — only the admin who created this team can edit it.')
+          + (admin ? '<p class="note" style="margin:12px 0 0">Admin - ' + esc(admin) + '</p>' : '')
+          + '<button type="button" class="btn" style="width:100%;margin-top:14px" onclick="tpSaveSettings()">SAVE</button>'
           + '</div>';
-        var pb = $('tpPlayerBox'); if (pb && keptPlayer) pb.value = keptPlayer;
-        var nb = $('tpNickBox'); if (nb && keptNick) nb.value = keptNick;
+      }
+      function tpSaveSettings(){
+        if (!teamPageCtx || !teamPageCtx.team) return;
+        var team = teamPageCtx.team;
+        function val(id){ var el = $(id); return el ? String(el.value || '').trim() : ''; }
+        function chk(id){ var el = $(id); return !!(el && el.checked); }
+        saveTeamMeta(team, {
+          location: val('tpSetLoc'), fb: val('tpSetFb'), ig: val('tpSetIg'), tw: val('tpSetTw'), yt: val('tpSetYt'),
+          showId: chk('tpSetShowId'), restrict: chk('tpSetRestrict')
+        });
+        var newName = val('tpSetName');
+        tpSettingsOpen = false;
+        if (newName && newName !== team){
+          if (tpRenameTeam(team, newName)){
+            teamPageCtx.team = newName;
+            commit('Team settings saved — team renamed to ' + newName, true);
+            toast('Team settings saved — the team is now “' + newName + '”. Recorded match history keeps the name it was played under.');
+          } else {
+            commit('Team settings saved', true);
+            toast('Team settings saved — the name was not changed (another team already uses it, or it is empty).');
+          }
+        } else {
+          commit('Team settings saved', true);
+          toast('Team settings saved');
+        }
+        renderTeamPage();
+      }
+      function tpRenameTeam(oldName, newName){
+        newName = String(newName || '').trim();
+        if (!newName || newName === oldName) return false;
+        var stores = [];
+        try { normalizeMyTeams(); if (S.myTeams) stores.push(S.myTeams); } catch(e){}
+        try { normalizeTournament(); if (S.tournament) stores.push(S.tournament); } catch(e){}
+        var clash = false;
+        stores.forEach(function(st){ if ((st.teams || []).indexOf(newName) > -1) clash = true; });
+        if (clash) return false;
+        stores.forEach(function(st){
+          var idx = (st.teams || []).indexOf(oldName);
+          if (idx > -1) st.teams[idx] = newName;
+          if (st.squads && st.squads[oldName]){ st.squads[newName] = st.squads[oldName]; delete st.squads[oldName]; }
+          (st.leadership || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; });
+        });
+        try { (S.nicknames || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
+        try { (S.tournament.teamLogos || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
+        try { (S.tournament.teamMeta || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
+        function fixFx(list){
+          (list || []).forEach(function(f){
+            if (!f) return;
+            if (f.teamA === oldName) f.teamA = newName;
+            if (f.teamB === oldName) f.teamB = newName;
+          });
+        }
+        try { fixFx(S.tournament.fixtures); } catch(e){}
+        try { fixFx(S.singleFixtures); } catch(e){}
+        try {
+          (S.tournament.matches || []).forEach(function(m){
+            if (!m) return;
+            if (m.teamA === oldName) m.teamA = newName;
+            if (m.teamB === oldName) m.teamB = newName;
+            if (m.potmTeam === oldName) m.potmTeam = newName;
+            (m.innings || []).forEach(function(inn){
+              if (inn.battingTeam === oldName) inn.battingTeam = newName;
+              if (inn.bowlingTeam === oldName) inn.bowlingTeam = newName;
+            });
+          });
+        } catch(e){}
+        function deepFix(o){
+          if (!o || typeof o !== 'object') return;
+          if (Array.isArray(o)){ o.forEach(function(v, i){ if (v === oldName) o[i] = newName; else deepFix(v); }); return; }
+          Object.keys(o).forEach(function(k){ if (o[k] === oldName) o[k] = newName; else deepFix(o[k]); });
+        }
+        try { deepFix(S.tournament.groups); } catch(e){}
+        try { deepFix(S.tournament.bracket); } catch(e){}
+        try { if (sbSelectedTeam === oldName) sbSelectedTeam = newName; } catch(e){}
+        return true;
       }
       function tpSetLeadership(role, val){
         if (!teamPageCtx || teamPageCtx.src === 'sb') return;
@@ -12982,6 +14073,7 @@
         if (!name) return;
         profileCtx = { team: team || '', name: name, pid: pid || lookupPlayerId(team || '', name) || '' };
         pfDirty = false; pfPhotoDraft = null;
+        pfTab = 'overview'; pfStatSub = 'bat'; pfYearKind = 'bat'; pfBestKind = 'bat'; pfInsKind = 'bat'; pfInsMetric = 'run'; pfCmpPid = '';
         renderPlayerProfile(true);
         var m = $('playerModal'); if (m) m.classList.add('show');
       }
@@ -13230,6 +14322,849 @@
         });
         return out;
       }
+      /* ---------- player profile (v143, tabs + full screen v144) ----------
+         The profile follows the layout the owner asked for from a
+         reference video: a centred hero (photo, name, role • team),
+         a Profile ID pill, then a scrollable pill tab bar — Player
+         Overview, Statistics, Matches, Teams, Tournaments and
+         Insights (v144: the profile is a full-screen page, and the
+         Matches / Teams / Tournaments tabs list what this player
+         has played in while Insights charts positions, dismissals
+         and ball-by-ball distributions). Overview carries the three pastel career columns
+         (Batting rose / Bowling green / Fielding blue), Recent Form
+         as rows of circles (newest first), a Yearly Overview card and
+         a Best Against Team card (each with its own Batting/Bowling
+         toggle), an Awards strip when the record has any, and the
+         jersey number as a big ghost watermark. Statistics carries
+         BAT / BOWL / FIELD tables split by match format and a
+         MATCH-WISE list of per-match cards. Every figure comes from
+         the same recorded matches the career totals use
+         (allRecordMatches, by Player ID); fielding figures are read
+         from the dismissal text recorded on each wicket — the same
+         derivation the tournament Fielding statistics use — and dots
+         / maidens are counted from the ball-by-ball record. Tab and
+         toggle taps re-render only #pfMain, so an owner mid-edit in
+         the form below never loses what they typed. */
+      var pfTab = 'overview';
+      var pfStatSub = 'bat';
+      var pfYearKind = 'bat';
+      var pfBestKind = 'bat';
+      var pfInsKind = 'bat';
+      var pfInsMetric = 'run';
+      var pfData = null;
+      var pfCmpPid = '';
+      function pfSetTab(t){ pfTab = t; pfRefreshMain(); }
+      function pfSetStatSub(s){ pfStatSub = s; pfRefreshMain(); }
+      function pfSetYearKind(k){ pfYearKind = k; pfRefreshMain(); }
+      function pfSetBestKind(k){ pfBestKind = k; pfRefreshMain(); }
+      function pfSetInsKind(k){ pfInsKind = k; pfRefreshMain(); }
+      function pfSetInsMetric(m){ pfInsMetric = m; pfRefreshMain(); }
+      function pfRefreshMain(){ var el = $('pfMain'); if (el && pfData) el.innerHTML = pfMainHTML(); }
+      function pfBowlExtras(inn, bowlerName){
+        var dots = 0, maidens = 0;
+        var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
+        var groups = [], cur = null, legalBefore = 0;
+        deliveries.forEach(function(bl){
+          var t = String(bl.text || '');
+          if (bl.bowler === bowlerName && isLegalDelivery(t) && parseBallRuns(t) === 0) dots++;
+          var gno = Math.floor(legalBefore / 6);
+          if (!cur || cur.no !== gno){ cur = { no: gno, runs: 0, legal: 0, bowlers: {} }; groups.push(cur); }
+          cur.runs += parseBallRuns(t);
+          if (bl.bowler) cur.bowlers[bl.bowler] = 1;
+          if (isLegalDelivery(t)){ cur.legal++; legalBefore++; }
+        });
+        groups.forEach(function(g){
+          var ns = Object.keys(g.bowlers);
+          if (g.legal === 6 && g.runs === 0 && ns.length === 1 && ns[0] === bowlerName) maidens++;
+        });
+        return { dots: dots, maidens: maidens };
+      }
+      function pfComputeData(name, useTeam, usePid){
+        var ctx = { team: useTeam, name: name, pid: usePid };
+        var fmtOrder = ['T10','T20','Club','100','One Day','Test Match','L-4i'];
+        var field = { catches: 0, stumpings: 0, runouts: 0 };
+        var fmts = {}, fmtSeen = [];
+        function fmtRec(f){
+          if (!fmts[f]){
+            fmts[f] = { matchIds: {}, matches: 0,
+              bat: { inns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, notouts:0, best:-1, bestNO:false, ducks:0, hundreds:0, fifties:0, thirties:0 },
+              bowl: { inns:0, balls:0, runs:0, wkts:0, dots:0, maidens:0, bestW:-1, bestR:0, three:0, five:0 },
+              field: { catches:0, stumpings:0, runouts:0 } };
+            fmtSeen.push(f);
+          }
+          return fmts[f];
+        }
+        var years = {}, latestYear = 0;
+        var vsBat = {}, vsBowl = {};
+        var mw = [], recentBat = [], recentBowl = [];
+        var potm = 0;
+        /* Insights / Matches / Teams / Tournaments accumulators
+           (v144): batting positions and dismissal kinds come from
+           the scorecard records; the distribution charts come from
+           the ball-by-ball record (balls carry the striker's and
+           bowler's names, matched by name exactly as pfBowlExtras
+           matches a bowler). Matches without a ball record simply
+           contribute nothing to the charts. */
+        var posMap = {};
+        var batDis = { bowled: 0, caught: 0, stumped: 0, lbw: 0, runout: 0, others: 0 };
+        var bowlDis = { bowled: 0, caught: 0, stumped: 0, lbw: 0 };
+        var insBat = { faced: 0, byRuns: {}, scored: {}, scoredTotal: 0 };
+        var insBowl = { balls: 0, byRuns: {}, conc: {}, concEx: 0, concTotal: 0, wide: 0, nb: 0 };
+        var teamsPlayedMap = {}, tnPlayedMap = {};
+        function disKind(ho){
+          var htxt = String(ho || '').toLowerCase();
+          if (/^run out/.test(htxt)) return 'runout';
+          if (/^st /.test(htxt)) return 'stumped';
+          if (/^lbw/.test(htxt)) return 'lbw';
+          if (/^c /.test(htxt)) return 'caught';
+          if (/^b /.test(htxt)) return 'bowled';
+          return 'others';
+        }
+        allRecordMatches().forEach(function(m){
+          var f = String(m.matchFormat || '').trim() || 'Other';
+          var fr = fmtRec(f);
+          var batRecs = [], bowlRecs = [];
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b, bi){ if (recBelongsTo(m, inn, inn.battingTeam, b, ctx)) batRecs.push({ b: b, inn: inn, order: bi + 1 }); });
+            (inn.bowlers || []).forEach(function(b){ if (recBelongsTo(m, inn, inn.bowlingTeam, b, ctx)) bowlRecs.push({ b: b, inn: inn, maidens: 0 }); });
+          });
+          /* Fielding: credit catches / stumpings / run-outs named in
+             the dismissal text to this player (resolved by Player ID
+             through the match's own snapshot, as in tnFieldingCredit). */
+          var fielded = false;
+          function credit(inn, fielderName, kind){
+            var nm = String(fielderName || '').trim();
+            if (!nm || nm.indexOf('not recorded') > -1) return;
+            var fp = '';
+            try { fp = entryPlayerId(m, inn.bowlingTeam, nm); } catch(e){}
+            if (fp === usePid || (!fp && nm === name)){ field[kind]++; fr.field[kind]++; fielded = true; }
+          }
+          (m.innings || []).forEach(function(inn){
+            (inn.batters || []).forEach(function(b){
+              var ho = String(b.howOut || ''), mm = null;
+              if ((mm = /^c & b (.+)$/.exec(ho))) credit(inn, mm[1], 'catches');
+              else if ((mm = /^c (.+?) b /.exec(ho))) credit(inn, mm[1], 'catches');
+              else if ((mm = /^run out \((.+)\)$/.exec(ho))) credit(inn, mm[1], 'runouts');
+              else if ((mm = /^st (.+?) b /.exec(ho))) credit(inn, mm[1], 'stumpings');
+              /* Bowling dismissals: a wicket the dismissal text
+                 credits to this bowler ("… b <name>"), by kind. */
+              var bm = /(?:^| )b (.+)$/.exec(ho);
+              if (bm && bm[1].trim() === name){ var bk = disKind(ho); if (bk !== 'runout' && bk !== 'others') bowlDis[bk]++; }
+            });
+          });
+          if (!batRecs.length && !bowlRecs.length && !fielded) return;
+          fr.matchIds[m.id] = 1;
+          var yr = 0;
+          if (m.at) yr = new Date(m.at).getFullYear();
+          if (!yr && m.matchDate){ var ym = /(\d{4})/.exec(String(m.matchDate)); if (ym) yr = parseInt(ym[1], 10); }
+          if (yr && yr > latestYear) latestYear = yr;
+          var yrec = null;
+          if (yr) yrec = years[yr] || (years[yr] = { bat: { runs:0, outs:0, best:-1, bestNO:false }, bowl: { wkts:0, runs:0, bestW:-1, bestR:0 } });
+          if (m.potmPid ? (m.potmPid === usePid) : (m.potmName === name)) potm++;
+          batRecs.forEach(function(x){
+            var b = x.b, fb = fr.bat, runs = b.runs || 0;
+            fb.inns++; fb.runs += runs; fb.balls += b.balls || 0; fb.fours += b.fours || 0; fb.sixes += b.sixes || 0;
+            if (b.out){ fb.outs++; if (runs === 0) fb.ducks++; } else fb.notouts++;
+            if (runs > fb.best || (runs === fb.best && !b.out && !fb.bestNO)){ fb.best = runs; fb.bestNO = !b.out; }
+            if (runs >= 100) fb.hundreds++; else if (runs >= 50) fb.fifties++; else if (runs >= 30) fb.thirties++;
+            if (yrec){
+              yrec.bat.runs += runs;
+              if (b.out) yrec.bat.outs++;
+              if (runs > yrec.bat.best || (runs === yrec.bat.best && !b.out && !yrec.bat.bestNO)){ yrec.bat.best = runs; yrec.bat.bestNO = !b.out; }
+            }
+            var opp = x.inn.bowlingTeam || '';
+            if (opp){ var vb = vsBat[opp] || (vsBat[opp] = { team: opp, runs: 0, inns: 0, balls: 0 }); vb.runs += runs; vb.inns++; vb.balls += b.balls || 0; }
+            var pr = posMap[x.order] || (posMap[x.order] = { pos: x.order, inns: 0, runs: 0, balls: 0, outs: 0 });
+            pr.inns++; pr.runs += runs; pr.balls += b.balls || 0; if (b.out) pr.outs++;
+            if (b.out) batDis[disKind(b.howOut)]++;
+          });
+          bowlRecs.forEach(function(x){
+            var b = x.b, fo = fr.bowl, wk = b.wickets || 0;
+            fo.inns++; fo.balls += b.balls || 0; fo.runs += b.runs || 0; fo.wkts += wk;
+            if (wk > fo.bestW || (wk === fo.bestW && (b.runs || 0) < fo.bestR)){ fo.bestW = wk; fo.bestR = b.runs || 0; }
+            if (wk >= 3) fo.three++;
+            if (wk >= 5) fo.five++;
+            var ex = pfBowlExtras(x.inn, b.name);
+            fo.dots += ex.dots; fo.maidens += ex.maidens; x.maidens = ex.maidens;
+            if (yrec){
+              yrec.bowl.wkts += wk; yrec.bowl.runs += b.runs || 0;
+              if (wk > yrec.bowl.bestW || (wk === yrec.bowl.bestW && (b.runs || 0) < yrec.bowl.bestR)){ yrec.bowl.bestW = wk; yrec.bowl.bestR = b.runs || 0; }
+            }
+            var opp = x.inn.battingTeam || '';
+            if (opp){ var vo = vsBowl[opp] || (vo = vsBowl[opp] = { team: opp, wkts: 0, inns: 0, runs: 0, balls: 0 }); vo.wkts += wk; vo.inns++; vo.runs += b.runs || 0; vo.balls += b.balls || 0; }
+          });
+          /* Recent form: newest match first; inside a two-innings
+             match the later innings is the more recent one. */
+          for (var i = batRecs.length - 1; i >= 0; i--){ if (recentBat.length < 5) recentBat.push(String(batRecs[i].b.runs || 0) + (batRecs[i].b.out ? '' : '*')); }
+          for (var j = bowlRecs.length - 1; j >= 0; j--){ if (recentBowl.length < 5) recentBowl.push(String(bowlRecs[j].b.wickets || 0) + '-' + String(bowlRecs[j].b.runs || 0)); }
+          /* Match-wise card: the match's batting and bowling
+             figures combined across its innings. */
+          var cBat = null, cBowl = null, opp = '';
+          batRecs.forEach(function(x){
+            if (!cBat) cBat = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+            cBat.runs += x.b.runs || 0; cBat.balls += x.b.balls || 0; cBat.fours += x.b.fours || 0; cBat.sixes += x.b.sixes || 0;
+            if (!opp) opp = x.inn.bowlingTeam || '';
+          });
+          bowlRecs.forEach(function(x){
+            if (!cBowl) cBowl = { balls: 0, runs: 0, wkts: 0, maidens: 0 };
+            cBowl.balls += x.b.balls || 0; cBowl.runs += x.b.runs || 0; cBowl.wkts += x.b.wickets || 0; cBowl.maidens += x.maidens || 0;
+            if (!opp) opp = x.inn.battingTeam || '';
+          });
+          mw.push({ m: m, fmt: f, opp: opp, batOrder: batRecs.length ? batRecs[0].order : 0, bat: cBat, bowl: cBowl });
+          /* Teams / tournaments this match belongs to, for the
+             profile's Teams and Tournaments tabs. */
+          var myTeam = batRecs.length ? (batRecs[0].inn.battingTeam || '') : (bowlRecs.length ? (bowlRecs[0].inn.bowlingTeam || '') : '');
+          if (myTeam) teamsPlayedMap[myTeam] = (teamsPlayedMap[myTeam] || 0) + 1;
+          if (m.tournamentName){
+            var tk = String(m.tournamentId || m.tournamentName);
+            var tr = tnPlayedMap[tk] || (tnPlayedMap[tk] = { key: tk, id: String(m.tournamentId || ''), name: String(m.tournamentName), matches: 0 });
+            tr.matches++;
+          }
+          /* Ball-by-ball distributions for Insights. A wide is
+             never a ball faced; byes / leg-byes are not runs a
+             bowler concedes, so they stay out of his chart. */
+          (m.innings || []).forEach(function(inn){
+            (inn.balls || []).forEach(function(bl){
+              if (!bl || bl.evt) return;
+              var t = String(bl.text || '');
+              if (bl.batter === name && !/^Wd/.test(t)){
+                var v = batterRunsOnBall(t);
+                insBat.faced++; insBat.byRuns[v] = (insBat.byRuns[v] || 0) + 1;
+                if (v > 0){ insBat.scored[v] = (insBat.scored[v] || 0) + v; insBat.scoredTotal += v; }
+              }
+              if (bl.bowler === name){
+                var br = batterRunsOnBall(t), ex = 0;
+                if (/^Wd/.test(t)){ ex = parseBallRuns(t); insBowl.wide++; }
+                else if (/^Nb/.test(t)){ ex = 1; insBowl.nb++; }
+                if (br > 0){ insBowl.conc[br] = (insBowl.conc[br] || 0) + br; insBowl.concTotal += br; }
+                if (ex > 0){ insBowl.concEx += ex; insBowl.concTotal += ex; }
+                if (isLegalDelivery(t)){ insBowl.balls++; insBowl.byRuns[br] = (insBowl.byRuns[br] || 0) + 1; }
+              }
+            });
+          });
+        });
+        fmtSeen.forEach(function(f){ fmts[f].matches = Object.keys(fmts[f].matchIds).length; });
+        var fmtList = fmtSeen.filter(function(f){ return fmts[f].matches > 0; }).sort(function(a, b){
+          var ia = fmtOrder.indexOf(a), ib = fmtOrder.indexOf(b);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+        var fifties = 0, hundreds = 0;
+        fmtList.forEach(function(f){ fifties += fmts[f].bat.fifties; hundreds += fmts[f].bat.hundreds; });
+        return {
+          field: field, fmts: fmts, fmtList: fmtList, years: years, latestYear: latestYear,
+          vsBat: Object.keys(vsBat).map(function(k){ return vsBat[k]; }).sort(function(a, b){ return b.runs - a.runs; }).slice(0, 5),
+          vsBowl: Object.keys(vsBowl).map(function(k){ return vsBowl[k]; }).sort(function(a, b){ return (b.wkts - a.wkts) || (a.runs - b.runs); }).slice(0, 5),
+          mw: mw, recentBat: recentBat, recentBowl: recentBowl, potm: potm, fifties: fifties, hundreds: hundreds,
+          positions: Object.keys(posMap).map(function(k){ return posMap[k]; }).sort(function(a, b){ return a.pos - b.pos; }),
+          batDis: batDis, bowlDis: bowlDis, insBat: insBat, insBowl: insBowl,
+          teamsPlayed: Object.keys(teamsPlayedMap).map(function(k){ return { name: k, matches: teamsPlayedMap[k] }; }).sort(function(a, b){ return (b.matches - a.matches) || a.name.localeCompare(b.name); }),
+          tournamentsPlayed: Object.keys(tnPlayedMap).map(function(k){ return tnPlayedMap[k]; }).sort(function(a, b){ return b.matches - a.matches; })
+        };
+      }
+      function pfFmtShort(f){ return f === 'One Day' ? 'OD' : (f === 'Test Match' ? 'Test' : f); }
+      function pfMainHTML(){
+        var tabs = [['overview', 'Player Overview'], ['stats', 'Statistics'], ['matches', 'Matches'], ['teams', 'Teams'], ['tournaments', 'Tournaments'], ['insights', 'Insights'], ['compare', 'Compare']];
+        var h = '<div class="pf-tabs">'
+          + tabs.map(function(tb){ return '<button type="button" class="pf-tab' + (pfTab === tb[0] ? ' on' : '') + '" onclick="pfSetTab(\'' + tb[0] + '\')">' + tb[1] + '</button>'; }).join('')
+          + '</div>';
+        if (pfTab === 'overview') h += pfOverviewHTML();
+        else if (pfTab === 'stats') h += pfStatsHTML();
+        else if (pfTab === 'matches') h += pfMatchesHTML();
+        else if (pfTab === 'teams') h += pfTeamsHTML();
+        else if (pfTab === 'tournaments') h += pfTournamentsHTML();
+        else if (pfTab === 'compare') h += pfCompareHTML();
+        else h += pfInsightsHTML();
+        return h;
+      }
+      /* ---------- profile Matches tab (v144) ----------
+         Every recorded match this player played in, newest first,
+         as the reference app shows them: a type / format / date
+         line, both teams with their scores, the result, and the
+         tournament line when the match belongs to one. Tapping a
+         completed match opens it (openHistoryMatch closes the
+         profile itself); a live match is shown but not tappable,
+         exactly like the Statistics match-wise list. */
+      function pfTeamScoreLine(m, team){
+        var parts = [];
+        (m.innings || []).forEach(function(inn){ if (inn.battingTeam === team) parts.push(inn.runs + '-' + inn.wickets + ' (' + oversText(inn.legalBalls) + ')'); });
+        return parts.length ? parts.join(' & ') : '—';
+      }
+      function pfMatchesHTML(){
+        var d = pfData;
+        if (!d.mw.length) return '<p class="note">No recorded matches yet — matches this player plays in will appear here.</p>';
+        return d.mw.map(function(rw, i){
+          var m = rw.m;
+          var date = '';
+          if (m.at) date = new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          else if (m.matchDate) date = String(m.matchDate);
+          var head = (m.stage ? m.stage : (m.tournamentName ? 'Tournament Match' : 'Open Match'))
+            + (rw.fmt && rw.fmt !== 'Other' ? ', ' + pfFmtShort(rw.fmt) : '') + (date ? ', ' + date : '');
+          var res = '';
+          try { res = matchResultText(m); } catch(e){ res = m.resultText || ''; }
+          var winner = '';
+          try { winner = matchWinner(m) || ''; } catch(e){}
+          function trow(team){
+            return '<span class="pf-mrow' + (winner && team === winner ? ' won' : '') + '">' + teamBadgeHTML(team, i) + '<span class="pf-mname">' + esc(String(team || '').toUpperCase()) + '</span><span class="pf-mscore">' + esc(pfTeamScoreLine(m, team)) + '</span></span>';
+          }
+          var inner = '<span class="pf-mcard-top"><span>' + esc(head) + '</span>' + (m.live ? '<span class="pf-mcard-st live">● LIVE</span>' : '<span class="pf-mcard-st">Completed</span>') + '</span>'
+            + trow(m.teamA) + trow(m.teamB)
+            + (res ? '<span class="pf-mres">' + esc(res) + '</span>' : '')
+            + (m.tournamentName ? '<span class="pf-mtn"><b>' + esc(String(m.tournamentName).toUpperCase()) + '</b><span>View Tournament</span></span>' : '');
+          if (m.live) return '<div class="pf-mcard">' + inner + '</div>';
+          return '<button type="button" class="pf-mcard" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</button>';
+        }).join('');
+      }
+      /* ---------- profile Teams tab (v144) ----------
+         The teams this player has played for, as a circular-logo
+         grid. Tapping one opens that team's own page, by the same
+         rule Home Search uses (All Teams first, then the current
+         tournament); the profile closes first because the team
+         page is a full page of its own. */
+      function pfTeamsHTML(){
+        var d = pfData;
+        var list = d.teamsPlayed.length ? d.teamsPlayed : (d.rec && d.rec.teams ? d.rec.teams.map(function(t){ return { name: t, matches: 0 }; }) : []);
+        if (!list.length) return '<p class="note">No team recorded yet — the teams this player plays for will appear here.</p>';
+        pfTeamTapList = list;
+        return '<div class="pf-teamgrid">' + list.map(function(t, i){
+          return '<button type="button" class="pf-team" onclick="pfOpenTeamFromProfile(' + i + ')">' + teamBadgeHTML(t.name, i)
+            + '<span class="pf-team-name">' + esc(String(t.name).toUpperCase()) + '</span>'
+            + (t.matches ? '<span class="pf-team-meta">' + t.matches + (t.matches === 1 ? ' match' : ' matches') + '</span>' : '')
+            + '</button>';
+        }).join('') + '</div>';
+      }
+      var pfTeamTapList = [];
+      function pfOpenTeamFromProfile(i){
+        var t = pfTeamTapList[i]; if (!t) return;
+        try { normalizeMyTeams(); } catch(e){}
+        try { normalizeTournament(); } catch(e){}
+        var back = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'teampage') ? currentViewName : 'home';
+        if (S.myTeams && S.myTeams.teams && S.myTeams.teams.indexOf(t.name) > -1){ closePlayerProfile(); openTeamPage('mt', t.name, back); return; }
+        if (S.tournament && S.tournament.teams && S.tournament.teams.indexOf(t.name) > -1){ closePlayerProfile(); openTeamPage('tn', t.name, back); return; }
+        toast('“' + t.name + '” is not in All Teams or the current tournament right now — its Team ID is ' + teamIdFor(t.name) + '.');
+      }
+      /* ---------- profile Tournaments tab (v144) ----------
+         The tournaments this player has played in, as banner
+         cards: the tournament's own banner when it has one, its
+         name, the winner when that is known (the Select Winner
+         honours first, then the Final's result) and how many of
+         its matches this player played. Tapping opens the
+         tournament by the same rule Home Search uses. */
+      function pfTnWinnerOf(tnData){
+        if (!tnData) return '';
+        var hon = tnData.honours || {};
+        if (hon.winner) return hon.winner;
+        var fin = null;
+        (tnData.matches || []).forEach(function(mm){ if (mm && String(mm.stage || '').toLowerCase() === 'final') fin = mm; });
+        if (fin){
+          try { var w = matchWinner(fin); if (w && w !== 'Tie') return w; } catch(e){}
+          var rt = String(fin.resultText || ''), wm = /^(.+?) won /.exec(rt);
+          if (wm) return wm[1];
+        }
+        return '';
+      }
+      function pfTournamentsHTML(){
+        var d = pfData;
+        if (!d.tournamentsPlayed.length) return '<p class="note">No tournament matches recorded yet — tournaments this player plays in will appear here.</p>';
+        pfTnTapList = d.tournamentsPlayed.map(function(t){
+          var out = { name: t.name, id: t.id, matches: t.matches, banner: '', winner: '', kind: 'none', arcId: '' };
+          try {
+            var cur = S.tournament || {};
+            if ((t.id && cur.id && t.id === cur.id) || (!t.id && cur.name && cur.name === t.name) || (cur.name && cur.name === t.name)){
+              out.kind = 'current'; out.banner = cur.banner || ''; out.winner = pfTnWinnerOf(cur);
+            } else {
+              tournamentsArchive().forEach(function(a){
+                if (!a || !a.data) return;
+                if ((t.id && (a.id === t.id || a.data.id === t.id)) || a.data.name === t.name || a.name === t.name){
+                  out.kind = 'arc'; out.arcId = a.id; out.banner = a.data.banner || ''; out.winner = pfTnWinnerOf(a.data);
+                }
+              });
+            }
+          } catch(e){}
+          return out;
+        });
+        return pfTnTapList.map(function(t, i){
+          var sub = [];
+          if (t.winner) sub.push(esc(String(t.winner).toUpperCase()) + ' is the winner');
+          sub.push(t.matches + (t.matches === 1 ? ' match' : ' matches') + ' played');
+          return '<button type="button" class="pf-tncard" onclick="pfOpenTournamentFromProfile(' + i + ')">'
+            + '<span class="pf-tncard-art">' + (t.banner ? '<img src="' + esc(t.banner) + '" alt="" loading="lazy" />' : '')
+            + '<span class="pf-tncard-meta"><b>' + esc(t.name) + '</b><span>' + sub.join(' • ') + '</span></span></span></button>';
+        }).join('');
+      }
+      var pfTnTapList = [];
+      function pfOpenTournamentFromProfile(i){
+        var t = pfTnTapList[i]; if (!t) return;
+        if (t.kind === 'current'){
+          closePlayerProfile();
+          if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
+          else setView('tournament');
+          return;
+        }
+        if (t.kind === 'arc'){ closePlayerProfile(); openArchivedTournament(t.arcId); return; }
+        toast('This tournament is not in the tournament list on this device any more.');
+      }
+      function pfOverviewHTML(){
+        var d = pfData, rec = d.rec;
+        if (!d.hasMatches) return '<p class="note">No recorded innings yet — this player has not batted or bowled in a recorded match.</p>';
+        function stat(v, l){ return '<div class="pf-stat"><b>' + v + '</b><span>' + l + '</span></div>'; }
+        var batAve = rec.outs > 0 ? (rec.runs / rec.outs).toFixed(1) : '—';
+        var bowlAve = rec.wkts > 0 ? (rec.bowlRuns / rec.wkts).toFixed(1) : '—';
+        var h = '<div class="pf-trio">'
+          + '<div class="pf-col bat"><h4>Batting</h4>' + stat(rec.runs, 'Runs') + stat(batAve, 'Average') + stat(rec.best < 0 ? '—' : (rec.best + (rec.bestNO ? '*' : '')), 'High Score') + '</div>'
+          + '<div class="pf-col bowl"><h4>Bowling</h4>' + stat(rec.wkts, 'Wickets') + stat(bowlAve, 'Average') + stat(rec.bestBW < 0 ? '—' : (rec.bestBW + '-' + rec.bestBR), 'Best Bowling') + '</div>'
+          + '<div class="pf-col field"><h4>Fielding</h4>' + stat(d.field.catches, 'Catches') + stat(d.field.stumpings, 'Stumpings') + stat(d.field.runouts, 'Runouts') + '</div>'
+          + '</div>';
+        if (d.recentBat.length || d.recentBowl.length){
+          h += '<h3 class="pf-sec">Recent Form</h3>';
+          if (d.recentBat.length) h += '<div class="pf-formrow"><span class="pf-formlab">Bat</span>' + d.recentBat.map(function(v){ return '<span class="pf-dot">' + esc(v) + '</span>'; }).join('') + '</div>';
+          if (d.recentBowl.length) h += '<div class="pf-formrow"><span class="pf-formlab">Bowl</span>' + d.recentBowl.map(function(v){ return '<span class="pf-dot">' + esc(v) + '</span>'; }).join('') + '</div>';
+          h += '<div class="pf-formdir">NEW &nbsp;◀&nbsp;&nbsp;&nbsp;▶&nbsp; OLD</div>';
+        }
+        /* Yearly Overview — this year (the latest recorded year)
+           against last year, Batting or Bowling. */
+        var y1 = d.latestYear || new Date().getFullYear(), y0 = y1 - 1;
+        function yrow(label, yr){
+          var y = d.years[yr];
+          if (pfYearKind === 'bat'){
+            var yb = y ? y.bat : { runs: 0, outs: 0, best: -1, bestNO: false };
+            return '<tr><td>' + label + '</td><td>' + yb.runs + '</td><td>' + (yb.outs > 0 ? (yb.runs / yb.outs).toFixed(1) : '—') + '</td><td>' + (yb.best < 0 ? '—' : (yb.best + (yb.bestNO ? '*' : ''))) + '</td></tr>';
+          }
+          var yo = y ? y.bowl : { wkts: 0, runs: 0, bestW: -1, bestR: 0 };
+          return '<tr><td>' + label + '</td><td>' + yo.wkts + '</td><td>' + (yo.wkts > 0 ? (yo.runs / yo.wkts).toFixed(1) : '—') + '</td><td>' + (yo.bestW < 0 ? '—' : (yo.bestW + '-' + yo.bestR)) + '</td></tr>';
+        }
+        h += '<h3 class="pf-sec">Yearly Overview</h3><div class="pf-card">'
+          + '<div class="pf-seg"><button type="button" class="' + (pfYearKind === 'bat' ? 'on' : '') + '" onclick="pfSetYearKind(\'bat\')">Batting</button><button type="button" class="' + (pfYearKind === 'bowl' ? 'on' : '') + '" onclick="pfSetYearKind(\'bowl\')">Bowling</button></div>'
+          + '<table class="pf-mini"><thead><tr><th></th>' + (pfYearKind === 'bat' ? '<th>Runs</th><th>Avg</th><th>HS</th>' : '<th>Wkts</th><th>Avg</th><th>Best</th>') + '</tr></thead><tbody>'
+          + yrow('This Year So Far', y1) + yrow('Last Year', y0)
+          + '</tbody></table></div>';
+        /* Best Against Team — the opponents this player scores /
+           takes wickets against most. */
+        var vsRows = (pfBestKind === 'bat' ? d.vsBat : d.vsBowl);
+        if (vsRows.length){
+          h += '<h3 class="pf-sec">Best Against Team</h3><div class="pf-card">'
+            + '<div class="pf-seg"><button type="button" class="' + (pfBestKind === 'bat' ? 'on' : '') + '" onclick="pfSetBestKind(\'bat\')">Batting</button><button type="button" class="' + (pfBestKind === 'bowl' ? 'on' : '') + '" onclick="pfSetBestKind(\'bowl\')">Bowling</button></div>'
+            + '<table class="pf-mini"><thead><tr><th>Team</th>' + (pfBestKind === 'bat' ? '<th>Runs</th><th>Inn</th><th>SR</th>' : '<th>Wkts</th><th>Inn</th><th>Eco</th>') + '</tr></thead><tbody>'
+            + vsRows.map(function(r){
+                if (pfBestKind === 'bat') return '<tr><td>' + esc(r.team) + '</td><td>' + r.runs + '</td><td>' + r.inns + '</td><td>' + (r.balls > 0 ? (r.runs / r.balls * 100).toFixed(1) : '0.0') + '</td></tr>';
+                return '<tr><td>' + esc(r.team) + '</td><td>' + r.wkts + '</td><td>' + r.inns + '</td><td>' + (r.balls > 0 ? (r.runs / (r.balls / 6)).toFixed(2) : '0.00') + '</td></tr>';
+              }).join('')
+            + '</tbody></table></div>';
+        }
+        /* Awards — only what the record actually holds. */
+        var awards = '';
+        if (d.potm > 0) awards += '<div class="pf-award"><div class="a-star">★</div><div class="a-num">' + d.potm + '</div><div class="a-lab">Player of the Match</div><div class="a-sub">Awards</div></div>';
+        if (d.hundreds > 0) awards += '<div class="pf-award"><div class="a-star">★</div><div class="a-num">' + d.hundreds + '</div><div class="a-lab">Hundreds</div><div class="a-sub">Career</div></div>';
+        if (d.fifties > 0) awards += '<div class="pf-award"><div class="a-star">★</div><div class="a-num">' + d.fifties + '</div><div class="a-lab">Fifties</div><div class="a-sub">Career</div></div>';
+        if (awards) h += '<h3 class="pf-sec">Awards</h3><div class="pf-awards">' + awards + '</div>';
+        if (d.jersey) h += '<div class="pf-jerseymark" aria-hidden="true"><span>Jersey No.</span><b>' + esc(d.jersey) + '</b></div>';
+        return h;
+      }
+      function pfStatsHTML(){
+        var d = pfData;
+        var h = '<div class="pf-seg pf-seg-lg">'
+          + '<button type="button" class="' + (pfStatSub === 'bat' ? 'on' : '') + '" onclick="pfSetStatSub(\'bat\')">BAT</button>'
+          + '<button type="button" class="' + (pfStatSub === 'bowl' ? 'on' : '') + '" onclick="pfSetStatSub(\'bowl\')">BOWL</button>'
+          + '<button type="button" class="' + (pfStatSub === 'field' ? 'on' : '') + '" onclick="pfSetStatSub(\'field\')">FIELD</button>'
+          + '<button type="button" class="' + (pfStatSub === 'match' ? 'on' : '') + '" onclick="pfSetStatSub(\'match\')">MATCH-WISE</button>'
+          + '</div>';
+        if (pfStatSub === 'match'){
+          if (!d.mw.length) return h + '<p class="note">No recorded matches yet.</p>';
+          return h + d.mw.map(function(rw){
+            var m = rw.m;
+            var date = m.at ? new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+            var title = (rw.fmt && rw.fmt !== 'Other' ? pfFmtShort(rw.fmt) + ' - ' : '') + date + (rw.opp ? ' vs ' + rw.opp.toUpperCase() : '');
+            function cell(l, v){ return '<div><span>' + l + '</span><b>' + v + '</b></div>'; }
+            var bat = rw.bat, bowl = rw.bowl;
+            var grid = cell('Bat Order', bat ? rw.batOrder : 0)
+              + cell('Runs', bat ? bat.runs : 0) + cell('Balls', bat ? bat.balls : 0)
+              + cell('Fours', bat ? bat.fours : 0) + cell('Sixes', bat ? bat.sixes : 0)
+              + cell('SR', bat && bat.balls > 0 ? (bat.runs / bat.balls * 100).toFixed(1) : '0.0')
+              + cell('Overs', bowl ? oversText(bowl.balls) : '0.0') + cell('Runs', bowl ? bowl.runs : 0)
+              + cell('Maidens', bowl ? bowl.maidens : 0) + cell('Wickets', bowl ? bowl.wkts : 0)
+              + cell('Eco.', bowl && bowl.balls > 0 ? (bowl.runs / (bowl.balls / 6)).toFixed(1) : '0.0');
+            var inner = '<span class="pf-mw-top"><span class="pf-mw-title">' + esc(title) + '</span>' + (m.live ? '<span class="pf-mw-tag">● LIVE</span>' : '') + '</span>'
+              + '<span class="pf-mw-grid">' + grid + '</span>';
+            if (m.live) return '<div class="pf-mw">' + inner + '</div>';
+            return '<button type="button" class="pf-mw" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</button>';
+          }).join('');
+        }
+        if (!d.fmtList.length) return h + '<p class="note">No recorded matches yet.</p>';
+        var rowsDef;
+        if (pfStatSub === 'bat'){
+          rowsDef = [
+            ['Matches', function(F){ return F.matches; }],
+            ['Innings', function(F){ return F.bat.inns; }],
+            ['Runs', function(F){ return F.bat.runs; }],
+            ['Balls', function(F){ return F.bat.balls; }],
+            ['Highest', function(F){ return F.bat.best < 0 ? '—' : (F.bat.best + (F.bat.bestNO ? '*' : '')); }],
+            ['Average', function(F){ return F.bat.outs > 0 ? (F.bat.runs / F.bat.outs).toFixed(1) : '—'; }],
+            ['SR', function(F){ return F.bat.balls > 0 ? (F.bat.runs / F.bat.balls * 100).toFixed(1) : '0.0'; }],
+            ['Not Out', function(F){ return F.bat.notouts; }],
+            ['Ducks', function(F){ return F.bat.ducks; }],
+            ['100s', function(F){ return F.bat.hundreds; }],
+            ['50s', function(F){ return F.bat.fifties; }],
+            ['30s', function(F){ return F.bat.thirties; }],
+            ['4s', function(F){ return F.bat.fours; }],
+            ['6s', function(F){ return F.bat.sixes; }]
+          ];
+        } else if (pfStatSub === 'bowl'){
+          rowsDef = [
+            ['Matches', function(F){ return F.matches; }],
+            ['Innings', function(F){ return F.bowl.inns; }],
+            ['Balls', function(F){ return F.bowl.balls; }],
+            ['Runs', function(F){ return F.bowl.runs; }],
+            ['Dots', function(F){ return F.bowl.dots; }],
+            ['Maidens', function(F){ return F.bowl.maidens; }],
+            ['Wickets', function(F){ return F.bowl.wkts; }],
+            ['Average', function(F){ return F.bowl.wkts > 0 ? (F.bowl.runs / F.bowl.wkts).toFixed(1) : '—'; }],
+            ['Economy', function(F){ return F.bowl.balls > 0 ? (F.bowl.runs / (F.bowl.balls / 6)).toFixed(2) : '0.00'; }],
+            ['Best', function(F){ return F.bowl.bestW < 0 ? '—' : (F.bowl.bestW + '-' + F.bowl.bestR); }],
+            ['SR', function(F){ return F.bowl.wkts > 0 ? (F.bowl.balls / F.bowl.wkts).toFixed(1) : '—'; }],
+            ['3w', function(F){ return F.bowl.three; }],
+            ['5w', function(F){ return F.bowl.five; }]
+          ];
+        } else {
+          rowsDef = [
+            ['Catches', function(F){ return F.field.catches; }],
+            ['Stumpings', function(F){ return F.field.stumpings; }],
+            ['Runouts', function(F){ return F.field.runouts; }]
+          ];
+        }
+        h += '<div class="pf-stat-scroll"><table class="pf-stat-t"><thead><tr><th></th>'
+          + d.fmtList.map(function(f){ return '<th>' + esc(pfFmtShort(f)) + '</th>'; }).join('')
+          + '</tr></thead><tbody>'
+          + rowsDef.map(function(rd){
+              return '<tr><td>' + rd[0] + '</td>' + d.fmtList.map(function(f){ return '<td>' + rd[1](d.fmts[f]) + '</td>'; }).join('') + '</tr>';
+            }).join('')
+          + '</tbody></table></div>';
+        return h;
+      }
+      /* ---------- profile Insights tab (v144) ----------
+         Modelled on the reference app's Insights screen: a
+         BATTING / BOWLING toggle. Batting shows Bat Position Stats
+         (a bar chart with an Inn / Run / Avg / SR metric toggle)
+         and the same figures as a Detailed Stats table, Batting
+         Dismissals as proportional bars, then two distribution
+         charts drawn from the ball-by-ball record — Scored Runs
+         (pie) and Faced Balls (donut), each with its total and a
+         per-category strip. Bowling mirrors it: Conceded Runs
+         (pie, with an Ex slice for wides / no-ball runs), the
+         Extras split, Bowled Balls (donut) and Bowling
+         Dismissals. Positions and dismissals come from the
+         scorecard records, so they exist even for matches with no
+         ball-by-ball record; the distributions honestly say so
+         when there is no ball record to draw from. */
+      var PF_RUN_COLORS = { '1': '#2ea3d8', '2': '#7b5ea7', '3': '#6c4ab0', '4': '#f0a51e', '5': '#e0655f', '6': '#9b3d6e', 'Ex': '#1e88d0' };
+      var PF_BALL_COLORS = { '0': '#57ab8f', '1': '#2f9685', '2': '#43a661', '3': '#6ab04c', '4': '#8fbc82', '5': '#a9c79b', '6': '#c2d6b4' };
+      var PF_STRIP_COLORS = { '1': '#5b8dd9', '2': '#b0627f', '3': '#e0655f', '4': '#eda97e', '5': '#c98bb0', '6': '#7fb069' };
+      function pfPieSVG(slices, donut){
+        var total = 0;
+        slices.forEach(function(s){ total += s.value; });
+        if (!total) return '';
+        var cx = 120, cy = 120, r = 104, ri = donut ? 62 : 0;
+        var big = slices.filter(function(s){ return s.value > 0; });
+        if (big.length === 1){
+          var one = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + big[0].color + '"/>';
+          if (donut) one += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ri + '" fill="var(--surface2)"/>';
+          one += '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">' + esc(big[0].label) + '</text>'
+            + '<text x="' + cx + '" y="' + (cy + 17) + '" text-anchor="middle" font-size="12.5" fill="#fff">100.0%</text>';
+          return '<svg class="pf-ins-chart" viewBox="0 0 240 240" role="img">' + one + '</svg>';
+        }
+        var a = -Math.PI / 2, parts = [], labels = '';
+        big.forEach(function(s){
+          var frac = s.value / total, a2 = a + frac * Math.PI * 2, large = frac > 0.5 ? 1 : 0;
+          var x1 = cx + r * Math.cos(a), y1 = cy + r * Math.sin(a), x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+          if (donut){
+            var xi1 = cx + ri * Math.cos(a), yi1 = cy + ri * Math.sin(a), xi2 = cx + ri * Math.cos(a2), yi2 = cy + ri * Math.sin(a2);
+            parts.push('<path d="M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' L ' + xi2.toFixed(1) + ' ' + yi2.toFixed(1) + ' A ' + ri + ' ' + ri + ' 0 ' + large + ' 0 ' + xi1.toFixed(1) + ' ' + yi1.toFixed(1) + ' Z" fill="' + s.color + '"/>');
+          } else {
+            parts.push('<path d="M ' + cx + ' ' + cy + ' L ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' Z" fill="' + s.color + '"/>');
+          }
+          var mid = (a + a2) / 2, pct = frac * 100;
+          if (pct >= 4.5){
+            var lr = donut ? (r + ri) / 2 : r * 0.62;
+            var lx = cx + lr * Math.cos(mid), ly = cy + lr * Math.sin(mid);
+            labels += '<text x="' + lx.toFixed(1) + '" y="' + (ly - 1).toFixed(1) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">' + esc(s.label) + '</text>'
+              + '<text x="' + lx.toFixed(1) + '" y="' + (ly + 15).toFixed(1) + '" text-anchor="middle" font-size="11.5" fill="#fff">' + pct.toFixed(1) + '%</text>';
+          } else if (pct > 0){
+            var ox = cx + (r + 12) * Math.cos(mid), oy = cy + (r + 12) * Math.sin(mid);
+            var anch = Math.cos(mid) > 0.3 ? 'start' : (Math.cos(mid) < -0.3 ? 'end' : 'middle');
+            labels += '<text x="' + ox.toFixed(1) + '" y="' + oy.toFixed(1) + '" text-anchor="' + anch + '" font-size="11" font-weight="700" fill="var(--ink)">' + esc(s.label) + ' ' + pct.toFixed(1) + '%</text>';
+          }
+          a = a2;
+        });
+        return '<svg class="pf-ins-chart" viewBox="0 0 240 240" role="img">' + parts.join('') + labels + '</svg>';
+      }
+      function pfStripHTML(items){
+        return '<div class="pf-strip">' + items.map(function(it){
+          return '<span class="pf-strip-it"><span class="pf-strip-c" style="background:' + it.color + '">' + esc(it.label) + '</span><b>' + it.value + '</b></span>';
+        }).join('') + '</div>';
+      }
+      function pfDisBars(rows){
+        var max = 0;
+        rows.forEach(function(r){ if (r.n > max) max = r.n; });
+        return rows.map(function(r){
+          var w = max > 0 ? Math.round(r.n / max * 100) : 0;
+          return '<div class="pf-dis-row"><span class="pf-dis-lab">' + r.label + '</span><span class="pf-dis-num">' + r.n + '</span><span class="pf-dis-track">' + (r.n > 0 ? '<span class="pf-dis-fill" style="width:' + w + '%"></span>' : '') + '</span></div>';
+        }).join('');
+      }
+      function pfPosChartHTML(posList){
+        var metric = pfInsMetric;
+        function val(p){
+          if (metric === 'inn') return p.inns;
+          if (metric === 'run') return p.runs;
+          if (metric === 'avg') return p.outs > 0 ? p.runs / p.outs : 0;
+          return p.balls > 0 ? p.runs / p.balls * 100 : 0;
+        }
+        function fmt(v){ return (metric === 'inn' || metric === 'run') ? String(Math.round(v)) : v.toFixed(1); }
+        var max = 0;
+        posList.forEach(function(p){ var v = val(p); if (v > max) max = v; });
+        var nice = max <= 10 ? Math.ceil(max) : (max <= 40 ? Math.ceil(max / 10) * 10 : Math.ceil(max / 50) * 50);
+        if (!nice) nice = 1;
+        var W = 340, x0 = 32, y0 = 10, pw = W - x0 - 8, ph = 132;
+        var parts = ['<defs><linearGradient id="pfBarGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3aa68e"/><stop offset="1" stop-color="#17352a"/></linearGradient></defs>'];
+        for (var g = 0; g <= 3; g++){
+          var gy = y0 + ph - ph * g / 3;
+          parts.push('<line x1="' + x0 + '" y1="' + gy + '" x2="' + (x0 + pw) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>');
+          parts.push('<text x="' + (x0 - 5) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="10.5" fill="var(--muted)">' + fmt(nice * g / 3) + '</text>');
+        }
+        var slot = pw / posList.length;
+        posList.forEach(function(p, i){
+          var v = val(p), bh = (v / nice) * ph;
+          if (v > 0 && bh < 2) bh = 2;
+          var bw = Math.min(40, slot * 0.52), bx = x0 + slot * i + (slot - bw) / 2, by = y0 + ph - bh;
+          if (bh > 0) parts.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="4" fill="url(#pfBarGrad)"/>');
+          parts.push('<rect x="' + (bx + bw / 2 - 13).toFixed(1) + '" y="' + (y0 + ph + 8) + '" width="26" height="20" rx="6" fill="var(--surface)" stroke="var(--line)"/>');
+          parts.push('<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (y0 + ph + 22) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--ink)">' + p.pos + '</text>');
+        });
+        var chips = [['inn', 'Inn'], ['run', 'Run'], ['avg', 'Avg'], ['sr', 'SR']].map(function(mc){
+          return '<button type="button" class="pf-ins-metric' + (metric === mc[0] ? ' on' : '') + '" onclick="pfSetInsMetric(\'' + mc[0] + '\')">' + mc[1] + '</button>';
+        }).join('');
+        return '<div class="pf-ins-metrics">' + chips + '</div>'
+          + '<svg class="pf-ins-chart" viewBox="0 0 ' + W + ' ' + (y0 + ph + 36) + '" role="img">' + parts.join('') + '</svg>'
+          + '<div class="pf-ins-cap">Bat Positions</div>';
+      }
+      function pfPosTableHTML(posList){
+        var cols = posList.slice().sort(function(a, b){ return b.runs - a.runs; });
+        function row(label, fn){ return '<tr><td>' + label + '</td>' + cols.map(function(p){ return '<td>' + fn(p) + '</td>'; }).join('') + '</tr>'; }
+        return '<div class="pf-ins-scroll"><table class="pf-ins-t">'
+          + row('Position', function(p){ return p.pos; })
+          + row('Inn', function(p){ return p.inns; })
+          + row('Runs', function(p){ return p.runs; })
+          + row('Avg', function(p){ return p.outs > 0 ? (p.runs / p.outs).toFixed(1) : '—'; })
+          + row('SR', function(p){ return p.balls > 0 ? (p.runs / p.balls * 100).toFixed(1) : '0.0'; })
+          + '</table></div>';
+      }
+      function pfInsightsHTML(){
+        var h = '<div class="pf-ins-seg"><div class="pf-seg" style="margin:0">'
+          + '<button type="button" class="' + (pfInsKind === 'bat' ? 'on' : '') + '" onclick="pfSetInsKind(\'bat\')">BATTING</button>'
+          + '<button type="button" class="' + (pfInsKind === 'bowl' ? 'on' : '') + '" onclick="pfSetInsKind(\'bowl\')">BOWLING</button></div></div>';
+        h += (pfInsKind === 'bat') ? pfInsightsBatHTML() : pfInsightsBowlHTML();
+        return h;
+      }
+      function pfInsightsBatHTML(){
+        var d = pfData, ib = d.insBat;
+        if (!d.positions.length && !ib.faced) return '<p class="note">No batting record yet — batting insights appear once this player has batted in a recorded match.</p>';
+        var h = '';
+        if (d.positions.length){
+          h += '<div class="pf-ins-card"><h3>Bat Position Stats</h3>' + pfPosChartHTML(d.positions) + '</div>';
+          h += '<div class="pf-ins-card"><h3>Detailed Stats</h3>' + pfPosTableHTML(d.positions) + '</div>';
+          h += '<div class="pf-ins-card"><h3>Batting Dismissals</h3>' + pfDisBars([
+            { label: 'Bowled', n: d.batDis.bowled }, { label: 'Caught', n: d.batDis.caught },
+            { label: 'Stumped', n: d.batDis.stumped }, { label: 'LBW', n: d.batDis.lbw },
+            { label: 'Run Out', n: d.batDis.runout }, { label: 'Others', n: d.batDis.others }]) + '</div>';
+        }
+        if (ib.faced > 0){
+          var runSlices = [1, 2, 3, 4, 5, 6].filter(function(v){ return ib.scored[v] > 0; }).map(function(v){ return { label: String(v), value: ib.scored[v], color: PF_RUN_COLORS[String(v)] }; });
+          h += '<div class="pf-ins-card"><h3>Scored Runs Distribution</h3><div class="pf-pie-wrap">' + pfPieSVG(runSlices, false) + '</div>'
+            + '<p class="pf-ins-total">Total Batsman Runs : ' + ib.scoredTotal + '</p>'
+            + pfStripHTML([1, 2, 3, 4, 6].map(function(v){ return { label: String(v), value: ib.scored[v] || 0, color: PF_STRIP_COLORS[String(v)] }; })) + '</div>';
+          var ballSlices = [0, 1, 2, 3, 4, 5, 6].filter(function(v){ return ib.byRuns[v] > 0; }).map(function(v){ return { label: v + 's', value: ib.byRuns[v], color: PF_BALL_COLORS[String(v)] }; });
+          h += '<div class="pf-ins-card"><h3>Faced Balls Distribution</h3><div class="pf-pie-wrap">' + pfPieSVG(ballSlices, true) + '</div>'
+            + '<p class="pf-ins-total">Total Balls Faced : ' + ib.faced + '</p>'
+            + pfStripHTML([0, 1, 2, 3, 4, 5, 6].map(function(v){ return { label: v + 's', value: ib.byRuns[v] || 0, color: PF_BALL_COLORS[String(v)] }; })) + '</div>';
+        } else if (d.positions.length){
+          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">The ball-by-ball record for this player\u2019s matches is not available, so the distribution charts cannot be drawn.</p></div>';
+        }
+        return h;
+      }
+      function pfInsightsBowlHTML(){
+        var d = pfData, ib = d.insBowl;
+        var hasBowl = false;
+        d.fmtList.forEach(function(f){ if (d.fmts[f].bowl.inns > 0) hasBowl = true; });
+        if (!hasBowl && !ib.balls && !ib.wide && !ib.nb) return '<p class="note">No bowling record yet — bowling insights appear once this player has bowled in a recorded match.</p>';
+        var h = '';
+        if (ib.concTotal > 0){
+          var slices = [1, 2, 3, 4, 5, 6].filter(function(v){ return ib.conc[v] > 0; }).map(function(v){ return { label: String(v), value: ib.conc[v], color: PF_RUN_COLORS[String(v)] }; });
+          if (ib.concEx > 0) slices.push({ label: 'Ex', value: ib.concEx, color: PF_RUN_COLORS['Ex'] });
+          h += '<div class="pf-ins-card"><h3>Conceded Runs Distribution</h3><div class="pf-pie-wrap">' + pfPieSVG(slices, false) + '</div>'
+            + '<p class="pf-ins-total">Total Bowl Runs : ' + ib.concTotal + '</p>'
+            + pfStripHTML([1, 2, 3, 4, 6].map(function(v){ return { label: String(v), value: ib.conc[v] || 0, color: PF_STRIP_COLORS[String(v)] }; })) + '</div>';
+        }
+        var exTot = ib.wide + ib.nb;
+        if (exTot > 0){
+          var wp = ib.wide / exTot * 100, np = 100 - wp;
+          h += '<div class="pf-ins-card"><h3>Extras</h3>'
+            + '<div class="pf-xlab"><span>Wide - ' + wp.toFixed(2) + '%</span><span>No Ball - ' + np.toFixed(2) + '%</span></div>'
+            + '<div class="pf-xbar"><span class="xw" style="width:' + wp.toFixed(1) + '%"></span><span class="xn" style="width:' + np.toFixed(1) + '%"></span></div>'
+            + '<div class="pf-xscale"><span>0</span><span>50</span><span>100</span></div>'
+            + '<p class="pf-xcount">Wide - ' + ib.wide + ' &nbsp; NoBall - ' + ib.nb + '</p></div>';
+        }
+        if (ib.balls > 0){
+          var ballSlices = [0, 1, 2, 3, 4, 5, 6].filter(function(v){ return ib.byRuns[v] > 0; }).map(function(v){ return { label: v + 's', value: ib.byRuns[v], color: PF_BALL_COLORS[String(v)] }; });
+          h += '<div class="pf-ins-card"><h3>Bowled Balls Distribution</h3><div class="pf-pie-wrap">' + pfPieSVG(ballSlices, true) + '</div>'
+            + '<p class="pf-ins-total">Total Balls Bowled : ' + ib.balls + '</p>'
+            + pfStripHTML([0, 1, 2, 3, 4, 5, 6].map(function(v){ return { label: v + 's', value: ib.byRuns[v] || 0, color: PF_BALL_COLORS[String(v)] }; })) + '</div>';
+        }
+        if (!ib.concTotal && !ib.balls && hasBowl){
+          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">The ball-by-ball record for this player\u2019s matches is not available, so the distribution charts cannot be drawn.</p></div>';
+        }
+        h += '<div class="pf-ins-card"><h3>Bowling Dismissals</h3>' + pfDisBars([
+          { label: 'Bowled', n: d.bowlDis.bowled }, { label: 'Caught', n: d.bowlDis.caught },
+          { label: 'Stumped', n: d.bowlDis.stumped }, { label: 'LBW', n: d.bowlDis.lbw }]) + '</div>';
+        return h;
+      }
+      /* ---------- profile Compare tab (v146) ----------
+         The reference app's player Compare, as shown in the
+         reference video: a pill search ("Search a player to
+         compare") whose results are photo / NAME / role rows;
+         picking a player puts the two career records side by side
+         in one bordered card — both names and roles on top, then
+         Batting, Bowling and Fielding sections. Every stat row
+         carries its label in the middle, a value box on each side
+         and a bar tucked behind each box (blue for this profile's
+         player on the left, green for the compared player on the
+         right) whose length is the value's share of the larger of
+         the two; a 0 draws no bar. Rows follow the reference —
+         Batting: Matches, Innings, Runs, Avg, SR, 30s, 50s, 100s,
+         6s, 4s. Bowling: Matches, Innings, Wickets, Runs, Maiden,
+         Avg, SR, Eco., 3 Wkts, 5 Wkts. Fielding: Catches,
+         Stumping, Runout. The reference prints a batting / bowling
+         style under each section title ("Right Hand Bat", "Right
+         Arm Medium"); CricCast records no batting or bowling
+         style, so that line carries the player's team instead —
+         the same substitution the profile hero already makes.
+         Every figure is the player's real career record by Player
+         ID (aggregatePlayers + pfComputeData), the same numbers
+         the Overview and Statistics tabs show. Typing re-renders
+         only the result list, so the search box never loses
+         focus; picking a player re-renders #pfMain only, like
+         every other profile tab control. */
+      function pfCmpStats(pid, name, team){
+        var recs = aggregatePlayers(allRecordMatches()).filter(function(r){ return pid ? r.pid === pid : r.name === name; });
+        var rec = null;
+        recs.forEach(function(r){ if (r.team === team) rec = r; });
+        if (!rec) rec = recs[0] || null;
+        var useTeam = rec ? rec.team : (team || '');
+        if (!rec) rec = { pid: pid || '', name: name || '', team: useTeam, teams: [useTeam], matches: 0, batInns: 0, runs: 0, balls: 0, fours: 0, sixes: 0, outs: 0, bowlBalls: 0, bowlRuns: 0, wkts: 0 };
+        var d = pfComputeData(rec.name, useTeam, rec.pid);
+        var t30 = 0, bowlInns = 0, maidens = 0, three = 0, five = 0;
+        d.fmtList.forEach(function(f){
+          t30 += d.fmts[f].bat.thirties || 0;
+          bowlInns += d.fmts[f].bowl.inns || 0;
+          maidens += d.fmts[f].bowl.maidens || 0;
+          three += d.fmts[f].bowl.three || 0;
+          five += d.fmts[f].bowl.five || 0;
+        });
+        var prof = profileDataFor(useTeam, rec.name, rec.pid);
+        return {
+          pid: rec.pid, name: rec.name, team: useTeam, role: prof.role || '', photo: prof.photo || '',
+          bat: { matches: rec.matches, inns: rec.batInns, runs: rec.runs,
+            avg: rec.outs > 0 ? rec.runs / rec.outs : null,
+            sr: rec.balls > 0 ? rec.runs / rec.balls * 100 : null,
+            t30: t30, t50: d.fifties, t100: d.hundreds, sixes: rec.sixes, fours: rec.fours },
+          bowl: { matches: rec.matches, inns: bowlInns, wkts: rec.wkts, runs: rec.bowlRuns, maidens: maidens,
+            avg: rec.wkts > 0 ? rec.bowlRuns / rec.wkts : null,
+            sr: rec.wkts > 0 ? rec.bowlBalls / rec.wkts : null,
+            eco: rec.bowlBalls > 0 ? rec.bowlRuns / (rec.bowlBalls / 6) : null,
+            three: three, five: five },
+          field: { catches: d.field.catches, stumpings: d.field.stumpings, runouts: d.field.runouts }
+        };
+      }
+      function pfCmpRowHTML(lab, a, b, dec){
+        var max = Math.max(a || 0, b || 0);
+        function w(v){ return (max > 0 && v) ? Math.max(4, Math.round(v / max * 100)) : 0; }
+        function txt(v){ return v == null ? '—' : (dec ? v.toFixed(1) : String(Math.round(v))); }
+        var wl = w(a), wr = w(b);
+        return '<div class="pf-cmp-row">'
+          + '<span class="pf-cmp-side l">' + (wl ? '<span class="pf-cmp-bar bl" style="width:' + wl + '%"></span>' : '') + '</span>'
+          + '<span class="pf-cmp-val l">' + txt(a) + '</span>'
+          + '<span class="pf-cmp-lab">' + lab + '</span>'
+          + '<span class="pf-cmp-val r">' + txt(b) + '</span>'
+          + '<span class="pf-cmp-side r">' + (wr ? '<span class="pf-cmp-bar gr" style="width:' + wr + '%"></span>' : '') + '</span>'
+          + '</div>';
+      }
+      function pfCmpSectionHTML(title, subA, subB, rows){
+        var h = '<h3 class="pf-cmp-sec">' + title + '</h3>';
+        if (subA || subB) h += '<div class="pf-cmp-subs"><span>' + esc(subA || '') + '</span><span>' + esc(subB || '') + '</span></div>';
+        return h + rows.join('');
+      }
+      function pfCompareHTML(){
+        var h = '<div class="pf-cmp-search"><input id="pfCmpQ" placeholder="Search a player to compare" autocomplete="off" oninput="pfCmpSearchInput(this.value)" /><span class="pf-cmp-mag" aria-hidden="true">🔍</span></div>'
+          + '<div id="pfCmpList"></div>';
+        if (!pfCmpPid || !pfData || !pfData.rec) return h + '<p class="pf-cmp-empty">Search a player to compare.</p>';
+        var me = pfCmpStats(pfData.rec.pid, pfData.rec.name, pfData.rec.team);
+        var kp = null;
+        knownPlayers().forEach(function(p){ if (p.id === pfCmpPid) kp = p; });
+        var other = pfCmpStats(pfCmpPid, kp ? kp.name : '', kp && kp.teams && kp.teams.length ? kp.teams[0] : '');
+        h += '<div class="pf-cmp-card">'
+          + '<div class="pf-cmp-head">'
+          + '<div class="pf-cmp-hp"><b>' + esc(me.name) + '</b><span>' + esc(me.role || me.team || '') + '</span></div>'
+          + '<div class="pf-cmp-hp"><b>' + esc(other.name) + '</b><span>' + esc(other.role || other.team || '') + '</span></div>'
+          + '</div>'
+          + pfCmpSectionHTML('Batting', me.team, other.team, [
+              pfCmpRowHTML('Matches', me.bat.matches, other.bat.matches, 0),
+              pfCmpRowHTML('Innings', me.bat.inns, other.bat.inns, 0),
+              pfCmpRowHTML('Runs', me.bat.runs, other.bat.runs, 0),
+              pfCmpRowHTML('Avg', me.bat.avg, other.bat.avg, 1),
+              pfCmpRowHTML('SR', me.bat.sr, other.bat.sr, 1),
+              pfCmpRowHTML('30s', me.bat.t30, other.bat.t30, 0),
+              pfCmpRowHTML('50s', me.bat.t50, other.bat.t50, 0),
+              pfCmpRowHTML('100s', me.bat.t100, other.bat.t100, 0),
+              pfCmpRowHTML('6s', me.bat.sixes, other.bat.sixes, 0),
+              pfCmpRowHTML('4s', me.bat.fours, other.bat.fours, 0)
+            ])
+          + pfCmpSectionHTML('Bowling', me.team, other.team, [
+              pfCmpRowHTML('Matches', me.bowl.matches, other.bowl.matches, 0),
+              pfCmpRowHTML('Innings', me.bowl.inns, other.bowl.inns, 0),
+              pfCmpRowHTML('Wickets', me.bowl.wkts, other.bowl.wkts, 0),
+              pfCmpRowHTML('Runs', me.bowl.runs, other.bowl.runs, 0),
+              pfCmpRowHTML('Maiden', me.bowl.maidens, other.bowl.maidens, 0),
+              pfCmpRowHTML('Avg', me.bowl.avg, other.bowl.avg, 1),
+              pfCmpRowHTML('SR', me.bowl.sr, other.bowl.sr, 1),
+              pfCmpRowHTML('Eco.', me.bowl.eco, other.bowl.eco, 1),
+              pfCmpRowHTML('3 Wkts', me.bowl.three, other.bowl.three, 0),
+              pfCmpRowHTML('5 Wkts', me.bowl.five, other.bowl.five, 0)
+            ])
+          + pfCmpSectionHTML('Fielding', '', '', [
+              pfCmpRowHTML('Catches', me.field.catches, other.field.catches, 0),
+              pfCmpRowHTML('Stumping', me.field.stumpings, other.field.stumpings, 0),
+              pfCmpRowHTML('Runout', me.field.runouts, other.field.runouts, 0)
+            ])
+          + '</div>';
+        return h;
+      }
+      function pfCmpRowsHTML(list){
+        return list.map(function(p){
+          var team0 = p.teams && p.teams.length ? p.teams[0] : '';
+          var prof = profileDataFor(team0, p.name, p.id);
+          var meta = prof.role || (p.teams && p.teams.length ? p.teams.join(' • ') : 'Player');
+          return '<button type="button" class="pf-cmp-prow" onclick="pfCmpChoose(' + fxIdArg(p.id) + ')">'
+            + '<span class="srch-ava">' + (prof.photo ? '<img src="' + esc(prof.photo) + '" alt="" />' : esc(initialsOf(p.name))) + '</span>'
+            + '<span class="pf-cmp-pmain"><b>' + esc(p.name) + '</b><span>' + esc(meta) + '</span></span></button>';
+        }).join('');
+      }
+      function pfCmpSearchInput(q){
+        var list = $('pfCmpList'); if (!list) return;
+        var query = String(q || '').trim().toLowerCase();
+        if (!query){ list.innerHTML = ''; return; }
+        var myPid = pfData && pfData.rec ? pfData.rec.pid : '';
+        var hits = knownPlayers().filter(function(p){
+          return p.id !== myPid && (p.name.toLowerCase().indexOf(query) > -1 || String(p.id).toLowerCase().indexOf(query) > -1);
+        }).slice(0, 12);
+        list.innerHTML = hits.length ? pfCmpRowsHTML(hits) : '<p class="note" style="margin:10px 0 0">No player matches your typing.</p>';
+      }
+      function pfCmpChoose(pid){ pfCmpPid = pid || ''; pfRefreshMain(); }
       function renderPlayerProfile(force){
         if (!profileCtx) return;
         /* While the scorer is mid-edit (typed something or picked a
@@ -13246,39 +15181,39 @@
         var useTeam = rec ? rec.team : team;
         var usePid = rec ? rec.pid : (ctxPid || lookupPlayerId(team, name) || pidHash(team, name));
         if (!rec) rec = { pid:usePid, name:name, team:useTeam, teams:[useTeam], matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0 };
-        var titleName = dispName(useTeam, name);
-        if (titleName === name){
-          var nk = '';
-          allRecordMatches().forEach(function(m){ if (!nk) nk = nickIn(m.nicknames, useTeam, name); });
-          if (nk) titleName = nk;
-        }
-        var titleEl = $('playerModalTitle'); if (titleEl) titleEl.textContent = titleName;
-        var sr = rec.balls > 0 ? (rec.runs / rec.balls * 100).toFixed(1) : '0.0';
-        var ave = rec.outs > 0 ? (rec.runs / rec.outs).toFixed(2) : '—';
-        var econ = rec.bowlBalls > 0 ? (rec.bowlRuns / (rec.bowlBalls / 6)).toFixed(2) : '0.00';
-        function prow(l, v){ return '<div class="prof-row"><span>' + l + '</span><b>' + v + '</b></div>'; }
+        var titleEl = $('playerModalTitle'); if (titleEl) titleEl.textContent = 'Player Profile';
         var teamsLine = (rec.teams && rec.teams.length) ? rec.teams.join(' • ') : (useTeam || '—');
         var sameNameCount = knownPlayers().filter(function(p){ return p.name === name; }).length;
         /* Profile header: photo (or initials), full name, team, role
            and jersey — the editable identity of this player. */
         var prof = profileDataFor(useTeam, name, usePid);
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : prof.photo;
-        var chips = '';
-        if (prof.role) chips += '<span class="prof-chip">' + esc(prof.role) + '</span>';
-        if (prof.jersey) chips += '<span class="prof-chip jersey">Jersey #' + esc(prof.jersey) + '</span>';
-        chips += '<button type="button" class="prof-chip" title="Tap to copy the full Player ID" onclick="copyIdTap(event,' + fxIdArg(usePid) + ',\'Player ID\')">ID ' + esc(pidShort(usePid)) + '</button>';
-        var html = '<div class="prof-head">'
-          + '<span class="prof-ava">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="Photo of ' + esc(name) + '" />' : esc(initialsOf(name))) + '</span>'
-          + '<div class="prof-head-main"><div class="prof-head-name">' + esc(name) + '</div>'
-          + '<div class="note" style="margin-top:2px">' + esc(teamsLine) + '</div>'
-          + '<div class="prof-chips">' + chips + '</div></div></div>';
+        pfData = pfComputeData(name, useTeam, usePid);
+        pfData.rec = rec;
+        pfData.jersey = prof.jersey || '';
+        pfData.hasMatches = rec.matches > 0 || pfData.mw.length > 0;
+        var subParts = [];
+        if (prof.role) subParts.push(prof.role);
+        if (teamsLine && teamsLine !== '—') subParts.push(teamsLine);
+        var html = '<div class="pf-hero">'
+          + '<span class="pf-ava-lg">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="Photo of ' + esc(name) + '" />' : esc(initialsOf(name))) + '</span>'
+          + '<div class="pf-hero-name">' + esc(name) + '</div>'
+          + (subParts.length ? '<div class="pf-hero-sub">' + esc(subParts.join('  |  ')) + '</div>' : '')
+          + '</div>'
+          + '<div class="pf-idrow"><button type="button" class="pf-idpill" title="Tap to copy the full Player ID" onclick="copyIdTap(event,' + fxIdArg(usePid) + ',\'Player ID\')">Profile ID : ' + esc(pidShort(usePid)) + '</button>'
+          + (prof.jersey ? '<span class="prof-chip jersey">Jersey #' + esc(prof.jersey) + '</span>' : '')
+          + '</div>';
+        if (sameNameCount > 1){
+          html += '<p class="note" style="margin:0 0 12px">Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID ' + esc(pidShort(usePid)) + ' only, so their records never mix.</p>';
+        }
+        html += '<div id="pfMain">' + pfMainHTML() + '</div>';
         /* Edit form — only for a signed-in owner/admin on the control
            side (canEditPlayerProfile); everyone else gets the
-           read-only profile above and below, exactly as before. */
+           read-only profile above, exactly as before. */
         if (canEditPlayerProfile()){
           var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === prof.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
             + (prof.role && PROFILE_ROLES.indexOf(prof.role) === -1 ? '<option value="' + esc(prof.role) + '" selected>' + esc(prof.role) + '</option>' : '');
-          html += '<div class="prof-edit"><h3>✏️ Edit Profile</h3>'
+          html += '<div class="prof-edit" style="margin-top:18px"><h3>✏️ Edit Profile</h3>'
             + '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
             + '<div class="grid2" style="margin-top:10px">'
             + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
@@ -13293,43 +15228,6 @@
             + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
             + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
             + '</div>';
-        }
-        html += '<p class="sub" style="color:var(--muted);font-size:14px;margin:2px 0 12px">Career across every recorded match, including the live one'
-          + (sameNameCount > 1 ? '<br>Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID <span class="id-tap" title="Tap to copy the full Player ID" onclick="copyIdTap(event,' + fxIdArg(usePid) + ',\'Player ID\')">' + esc(pidShort(usePid)) + '</span> only, so their records never mix.' : '')
-          + '</p>';
-        html += '<h3 style="margin:0 0 4px">Batting</h3><div class="prof-grid">'
-          + prow('Matches', rec.matches) + prow('Innings', rec.batInns)
-          + prow('Runs', rec.runs) + prow('Balls faced', rec.balls)
-          + prow('Fours', rec.fours) + prow('Sixes', rec.sixes)
-          + prow('Strike rate', sr) + prow('Average', ave)
-          + prow('Best score', rec.best < 0 ? '—' : (rec.best + (rec.bestNO ? '*' : '')))
-          + '</div>';
-        html += '<h3 style="margin:16px 0 4px">Bowling</h3><div class="prof-grid">'
-          + prow('Wickets', rec.wkts) + prow('Overs bowled', oversText(rec.bowlBalls))
-          + prow('Runs conceded', rec.bowlRuns) + prow('Economy', econ)
-          + prow('Best bowling', rec.bestBW < 0 ? '—' : (rec.bestBW + '/' + rec.bestBR))
-          + '</div>';
-        var rows = playerMatchRows(useTeam, name, usePid);
-        html += '<h3 style="margin:18px 0 8px">Match by Match</h3>';
-        if (!rows.length){
-          html += '<p class="note">No recorded innings yet — this player has not batted or bowled in a recorded match.</p>';
-        } else {
-          html += rows.map(function(rw){
-            var m = rw.m;
-            var date = m.at ? new Date(m.at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
-            var batLine = rw.bat
-              ? '🏏 ' + rw.bat.runs + (rw.bat.out ? '' : '*') + ' (' + rw.bat.balls + ') • ' + (rw.bat.fours || 0) + '×4, ' + (rw.bat.sixes || 0) + '×6'
-              : '🏏 Did not bat';
-            var bowlLine = rw.bowl
-              ? '🎯 ' + rw.bowl.wickets + '/' + rw.bowl.runs + ' (' + oversText(rw.bowl.balls) + ' ov)'
-              : '🎯 Did not bowl';
-            var res = m.live ? (m.resultText ? fixResultText(String(m.resultText).replace(/ 🏆/g, '')) : '● Live now') : (m.resultText ? fixResultText(String(m.resultText).replace(/ 🏆/g, '')) : matchResultText({ innings: m.innings, wicketsLimit: m.wicketsLimit, resultText: '' }));
-            return '<button type="button" class="prof-match" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">'
-              + '<span class="pm-top"><span>' + esc((m.teamA || 'Team 1') + ' vs ' + (m.teamB || 'Team 2')) + '</span><span class="note">' + esc(date) + '</span></span>'
-              + '<span class="pm-line" style="display:block">' + esc(batLine) + ' &nbsp;•&nbsp; ' + esc(bowlLine) + '</span>'
-              + (res ? '<span class="pm-line" style="display:block">' + esc(res) + '</span>' : '')
-              + '</button>';
-          }).join('');
         }
         html += '<div style="margin-top:20px"><button type="button" class="btn ghost" onclick="closePlayerProfile()">← Back</button></div>';
         var body = $('playerModalBody'); if (body) body.innerHTML = html;
