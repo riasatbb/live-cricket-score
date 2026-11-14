@@ -249,35 +249,46 @@
       .overlay-stage{border-radius:var(--radius);padding:26px 14px;background:
         repeating-conic-gradient(#3a3f3a 0% 25%, #313631 0% 50%) 0 0/28px 28px;
         display:flex;align-items:flex-end;justify-content:center;min-height:230px;border:1px solid var(--line)}
-      .overlay-stage.clean{background:transparent;border:1.5px dashed var(--line)}
-      .lowerthird{width:100%;max-width:1240px;color:#fff;font-family:system-ui,sans-serif;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5))}
+      .overlay-stage.clean{background:transparent;border:none;border-radius:0;padding:0}
+      body.ov-clean main{padding-left:0;padding-right:0}
+      body.overlay-only main{padding-left:0;padding-right:0}
+      body.overlay-only .overlay-stage{background:transparent;border:none;border-radius:0;padding:0;min-height:0}
+      /* The bar is ONE fixed design canvas, 1240 units wide: flags,
+         fonts, ball circles and zigzags are laid out once at that
+         size and the whole bar is then scaled as a single unit to
+         whatever width the screen or OBS source gives it (see
+         fitOverlay). The proportions are therefore identical at
+         every size — nothing reflows, wraps, hides or truncates,
+         and the bar always spans the full width edge to edge. */
+      .ov-fit{position:relative;width:100%}
+      .lowerthird{position:absolute;left:0;top:0;width:1240px;color:#fff;font-family:system-ui,sans-serif;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5));transform-origin:0 0}
       .ov-bar{display:flex;align-items:stretch;min-height:96px;background:linear-gradient(180deg,#fdfcf9,#f1eee7);box-shadow:inset 0 0 0 1px rgba(20,16,46,.08)}
       .ov-flag{flex:none;width:96px;display:flex;align-items:center;justify-content:center;padding:8px 10px}
       .ov-flag img{max-width:76px;max-height:64px;width:auto;height:auto;object-fit:contain;display:block}
       .ov-flag .ov-badge{width:62px;height:62px;border-radius:50%;background:#1c1850;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.03em;border:3px solid #e91e63;text-align:center;line-height:1.05;padding:4px}
       .ov-seg{position:relative;min-width:0}
       .ov-seg::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;background:#e91e63;clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%)}
-      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#221c5e,#171240 60%,#1c1850);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 20px 10px 24px}
+      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#221c5e,#171240 60%,#1c1850);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 30px 10px 34px}
       .ov-seg.bats{flex:1.3 1 0}
       .ov-seg.bowl{flex:1.2 1 0}
-      .ov-seg.bowl .ov-panel{padding:10px 24px 10px 20px}
+      .ov-seg.bowl .ov-panel{padding:10px 34px 10px 30px}
       .ov-bat{display:grid;grid-template-columns:minmax(0,1fr) 40px 30px;align-items:baseline;gap:4px;padding:2px 0}
-      .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:7px;min-width:0}
+      .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:7px;min-width:0}
       .ov-bat .nm svg{flex:none;width:15px;height:15px;fill:#f5b921}
       .ov-bat .r{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#ffe14d;text-align:right;font-variant-numeric:tabular-nums}
       .ov-bat .b{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#b9b4d9;text-align:right;font-variant-numeric:tabular-nums}
-      .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:8px 12px;text-align:center}
+      .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:8px 26px;text-align:center}
       .ov-top{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;min-width:0}
-      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap}
+      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
       .ov-vs i{font-style:normal;color:#8b87ad;font-weight:500;padding:0 1px}
-      .ov-pill{background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:29px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
+      .ov-scorepill{flex:none;background:linear-gradient(180deg,#f43f8e,#e91e63);color:#fff;font-family:"Barlow Condensed",sans-serif;font-size:29px;font-weight:700;line-height:1;padding:5px 18px 6px;border-radius:999px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 2px 8px rgba(233,30,99,.35)}
       .ov-inn{flex:none;background:#0d9488;color:#fff;font-size:11px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 6px;text-transform:uppercase}
-      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap}
+      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:600;letter-spacing:.05em;color:#37335c;white-space:nowrap;min-width:0;overflow:hidden}
       .ov-overs small{font-size:13px;color:#8b87ad;font-weight:600;letter-spacing:.08em}
-      .ov-status{font-size:16px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+      .ov-status{font-size:16px;font-weight:800;letter-spacing:.045em;color:#14102e;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
       .ov-status .dim{color:#6d6890;font-weight:700}
       .ov-bowl-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px}
-      .ov-bowl-head .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ov-bowl-head .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden}
       .ov-bowl-head .fig{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
       .ov-bowl-head .ov{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#b9b4d9;font-variant-numeric:tabular-nums}
       .ov-balls{display:flex;gap:5px;margin-top:7px;flex-wrap:nowrap}
@@ -286,25 +297,6 @@
       .ov-ballb.bnd4{background:#0d9488;color:#fff}
       .ov-ballb.bnd6{background:#f5b921;color:#241a02}
       .ov-ballb.empty{background:transparent;border:2px solid rgba(255,255,255,.65)}
-      @media (max-width:820px){
-        .ov-flag{width:64px;padding:6px}
-        .ov-flag img{max-width:52px;max-height:48px}
-        .ov-flag .ov-badge{width:46px;height:46px;font-size:14px}
-        .ov-panel{padding:8px 14px 8px 18px}
-        .ov-seg.bowl .ov-panel{padding:8px 18px 8px 14px}
-        .ov-bat .nm,.ov-bat .r,.ov-bowl-head .nm,.ov-bowl-head .fig{font-size:18px}
-        .ov-bat{grid-template-columns:minmax(0,1fr) 30px 24px}
-        .ov-pill{font-size:22px;padding:4px 13px 5px}
-        .ov-vs,.ov-overs{font-size:15px}
-        .ov-status{font-size:12.5px}
-        .ov-ballb{width:22px;height:22px;font-size:12px}
-      }
-      @media (max-width:560px){
-        .ov-flag{display:none}
-        .ov-bat .b,.ov-bowl-head .ov{display:none}
-        .ov-bat{grid-template-columns:minmax(0,1fr) 30px}
-        .ov-status{white-space:normal}
-      }
       .steps{counter-reset:st;display:grid;gap:12px}
       .step{display:flex;gap:12px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
       .step-n{counter-increment:st;flex:none;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
@@ -3368,7 +3360,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v150';
+      var APP_VERSION = 'v152';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4015,15 +4007,24 @@
          the nickname when one is set for that player in that team,
          otherwise the full name. Squad lists keep the full name. */
       function nickOf(team, name){
-        if (!name || !Array.isArray(S.nicknames)) return '';
+        if (!name) return '';
         var fallback = '';
-        for (var i = 0; i < S.nicknames.length; i++){
-          var e = S.nicknames[i];
-          if (!e || e.n !== name || !e.k) continue;
-          if (e.t === team) return e.k;
-          if (!fallback) fallback = e.k;
+        if (Array.isArray(S.nicknames)){
+          for (var i = 0; i < S.nicknames.length; i++){
+            var e = S.nicknames[i];
+            if (!e || e.n !== name || !e.k) continue;
+            if (e.t === team) return e.k;
+            if (!fallback) fallback = e.k;
+          }
         }
-        return fallback;
+        if (fallback) return fallback;
+        /* The nickname set on the player's profile (Edit Profile)
+           lives on the registry record itself, keyed by Player ID,
+           so it follows the player across teams and renames even
+           when no squad-entry nickname was ever typed. */
+        var pid = lookupPlayerId(team || '', name);
+        var person = pid ? findPerson(pid) : null;
+        return (person && person.nickname) || '';
       }
       function dispName(team, name){
         if (!name) return name;
@@ -4091,8 +4092,8 @@
         if (!p){ p = { id: id, name: name }; S.players.push(p); }
         return p;
       }
-      /* ---------- editable player profile data (role, jersey, photo) ----------
-         A person's playing role, jersey number and photo live on the
+      /* ---------- editable player profile data (role, jersey, photo, nickname) ----------
+         A person's playing role, jersey number, photo and nickname live on the
          registry record itself (S.players), alongside the name — so
          they sync through Firebase and the on-device backup with the
          rest of the state, and every device shows the same profile.
@@ -4100,13 +4101,13 @@
          never the original file, so the state stays light. */
       var PROFILE_ROLES = ['Batter','Bowler','All-rounder','Wicket-keeper','Wicket-keeper Batter'];
       /* Snapshot of the registry for archived matches / tournament
-         results: identity + role + jersey travel with the match, but
+         results: identity + role + jersey + nickname travel with the match, but
          photos do NOT — copying every photo into every archived
          match would bloat the permanent history for no gain, since
          the live registry (which keeps the photos) is never reset. */
       function playersSnapshot(){
         ensurePlayerArrays();
-        return S.players.map(function(p){ return { id: p.id, name: p.name, role: p.role || '', jersey: p.jersey || '' }; });
+        return S.players.map(function(p){ return { id: p.id, name: p.name, role: p.role || '', jersey: p.jersey || '', nickname: p.nickname || '' }; });
       }
       /* Find a person by Player ID wherever a record of them lives:
          the live registry first, then the snapshots carried inside
@@ -4145,6 +4146,7 @@
           name: (p && p.name) || name || '',
           role: (p && p.role) || '',
           jersey: (p && p.jersey) || '',
+          nickname: (p && p.nickname) || '',
           photo: (p && p.photo) || ''
         };
       }
@@ -14176,12 +14178,14 @@
         pfEditOpen = false; pfDirty = false; pfPhotoDraft = null;
       }
       function pfEditFormHTML(){
-        var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', photo: '' } : null);
+        var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', nickname: '', photo: '' } : null);
         if (!ctx) return '';
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : (ctx.photo || '');
         var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === ctx.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
           + (ctx.role && PROFILE_ROLES.indexOf(ctx.role) === -1 ? '<option value="' + esc(ctx.role) + '" selected>' + esc(ctx.role) + '</option>' : '');
         return '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(ctx.name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
+          + '<div style="margin-top:10px"><label for="pfNick">Nickname</label><input id="pfNick" value="' + esc(ctx.nickname || '') + '" autocomplete="off" placeholder="e.g. Miraz" oninput="pfMarkDirty()" />'
+          + '<p class="note" style="margin:6px 0 0">Shown on the scoreboard and the broadcast overlay instead of the full name, so a long name never gets cut off there. This profile always shows the full name.</p></div>'
           + '<div class="grid2" style="margin-top:10px">'
           + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
           + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 7" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
@@ -14373,11 +14377,12 @@
           toast(isViewerSession() ? '👀 View-only — profiles can be edited only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to edit this profile — only the owner/admin can change it.');
           return;
         }
-        var nameEl = $('pfName'), roleEl = $('pfRole'), jerseyEl = $('pfJersey');
+        var nameEl = $('pfName'), roleEl = $('pfRole'), jerseyEl = $('pfJersey'), nickEl = $('pfNick');
         var newName = nameEl ? nameEl.value.trim().replace(/\s+/g, ' ') : '';
         if (!newName){ toast('Type the player\u2019s name first'); if (nameEl) nameEl.focus(); return; }
         var newRole = roleEl ? roleEl.value : '';
         var newJersey = jerseyEl ? jerseyEl.value.trim().replace(/[^0-9]/g, '').slice(0, 3) : '';
+        var newNick = nickEl ? nickEl.value.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
         var team = profileCtx.team || '';
         var pid = profileCtx.pid || lookupPlayerId(team, profileCtx.name) || pidHash(team, profileCtx.name);
         var oldName = profileCtx.name;
@@ -14405,6 +14410,21 @@
         person.name = newName;
         person.role = newRole;
         person.jersey = newJersey;
+        person.nickname = newNick;
+        /* The profile is the one place this player's nickname is
+           managed: drop every squad-entry nickname mirror that
+           resolves to THIS Player ID (under any team), then write
+           the fresh one for the profile's team, so archived matches
+           snapshot it and dispName shows exactly what was set here.
+           A different player who shares the name keeps their own
+           entries — theirs resolve to a different ID. */
+        if (Array.isArray(S.nicknames)){
+          S.nicknames = S.nicknames.filter(function(e){
+            if (!e || e.n !== newName) return true;
+            return mappedOrHashId(e.t || '', e.n) !== pid;
+          });
+        }
+        if (newNick) setNickname(team, newName, newNick);
         if (pfPhotoDraft !== null) person.photo = pfPhotoDraft;
         setPlayerMapping(team, newName, pid);
         profileCtx = { team: team, name: newName, pid: pid };
@@ -14412,7 +14432,7 @@
         commit('Player profile updated', true);
         pfCloseEdit();
         renderPlayerProfile(true);
-        toast('✓ Profile saved — ' + newName + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : ''));
+        toast('✓ Profile saved — ' + newName + (newNick ? ' • “' + newNick + '”' : '') + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : ''));
       }
       /* Does this batter / bowler record belong to the profile's
          player? By Player ID whenever either side carries one (an
@@ -15342,7 +15362,7 @@
            and jersey — the editable identity of this player. */
         var prof = profileDataFor(useTeam, name, usePid);
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : prof.photo;
-        pfEditCtx = { name: name, team: useTeam, pid: usePid, role: prof.role || '', jersey: prof.jersey || '', photo: prof.photo || '' };
+        pfEditCtx = { name: name, team: useTeam, pid: usePid, role: prof.role || '', jersey: prof.jersey || '', nickname: prof.nickname || nickOf(useTeam, name) || '', photo: prof.photo || '' };
         pfData = pfComputeData(name, useTeam, usePid);
         pfData.rec = rec;
         pfData.jersey = prof.jersey || '';
@@ -18209,7 +18229,7 @@
         var innTag = (S.superOver && S.superOver.active) ? 'SO' : (S.inningsNo === 2 ? '2nd' : '1st');
         var batIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 2.6a2.35 2.35 0 0 0-3.3 0L8.2 12l3.3 3.3 9.4-9.4a2.35 2.35 0 0 0 0-3.3ZM7.1 13.1 3.2 17a2.1 2.1 0 1 0 3 3l3.9-3.9-3-3Z"/></svg>';
         function batRow(name, fig, onStrike){
-          return '<div class="ov-bat"><span class="nm">' + (onStrike ? batIcon : '') + '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(name ? dispName(inn.battingTeam, name) : '—') + '</span></span>'
+          return '<div class="ov-bat"><span class="nm ov-fit-txt">' + (onStrike ? batIcon : '') + '<span>' + esc(name ? dispName(inn.battingTeam, name) : '—') + '</span></span>'
             + '<span class="r">' + fig.runs + '</span><span class="b">' + fig.balls + '</span></div>';
         }
         /* This over's deliveries for the ball circles: the last
@@ -18227,28 +18247,79 @@
           return '<span class="ov-ballb' + cls + '">' + esc(overlayBallLabel(b.text)) + '</span>';
         }).join('');
         for (var ei = legalInOver; ei < 6; ei++) ballsHTML += '<span class="ov-ballb empty"></span>';
-        return '<div class="lowerthird"><div class="ov-bar">'
+        return '<div class="ov-fit"><div class="lowerthird"><div class="ov-bar">'
           + overlayFlagHTML(inn.battingTeam)
           + '<div class="ov-seg bats"><div class="ov-panel">'
           + batRow(inn.striker, bat1, true)
           + batRow(inn.nonStriker, bat2, false)
           + '</div></div>'
           + '<div class="ov-centre"><div class="ov-top">'
-          + '<span class="ov-vs">' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span>'
-          + '<span class="ov-pill">' + inn.runs + '-' + inn.wickets + '</span>'
+          + '<span class="ov-vs ov-fit-txt">' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span>'
+          + '<span class="ov-scorepill">' + inn.runs + '-' + inn.wickets + '</span>'
           + '<span class="ov-inn">' + innTag + '</span>'
-          + '<span class="ov-overs">' + oversText(inn.legalBalls) + ' <small>OVERS</small></span>'
+          + '<span class="ov-overs ov-fit-txt">' + oversText(inn.legalBalls) + ' <small>OVERS</small></span>'
           + '</div>'
-          + '<div class="ov-status">' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</div></div>'
+          + '<div class="ov-status ov-fit-txt">' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</div></div>'
           + '<div class="ov-seg bowl"><div class="ov-panel">'
-          + '<div class="ov-bowl-head"><span class="nm">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span>'
+          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span>'
           + '<span class="fig">' + bowlerRec.wickets + '-' + bowlerRec.runs + '</span>'
           + '<span class="ov">' + oversText(bowlerRec.balls) + '</span></div>'
           + '<div class="ov-balls">' + ballsHTML + '</div>'
           + '</div></div>'
           + overlayFlagHTML(inn.bowlingTeam)
-          + '</div></div>';
+          + '</div></div></div>';
       }
+      /* The overlay bar is a fixed 1240-unit design canvas (see the
+         .ov-fit CSS): fitOverlay first shrinks any single line that
+         is too long for its slot at the design size — a long name
+         or status line steps its font down until it fits whole, so
+         nothing is ever cut off with "…" — then scales the whole
+         bar as one unit to the width on offer and sets the shell's
+         height to the scaled height. The bar therefore looks
+         exactly the same, in exactly the same proportions, on a
+         1920px OBS source, a laptop and a phone. Runs after every
+         renderAll, again when the webfont arrives (Barlow Condensed
+         measures differently from the fallback), on resize /
+         rotation, and when the overlay view is shown (a hidden bar
+         has no width to measure and is skipped). */
+      var OV_DESIGN_W = 1240;
+      var fitOvQueued = false;
+      function fitOverlay(){
+        fitOvQueued = false;
+        var main = $('overlayMain');
+        if (!main) return;
+        var fit = main.querySelector('.ov-fit');
+        var bar = fit ? fit.querySelector('.lowerthird') : null;
+        if (!fit || !bar) return;
+        var w = fit.clientWidth;
+        if (!w) return;
+        var texts = bar.querySelectorAll('.ov-fit-txt');
+        for (var i = 0; i < texts.length; i++){
+          var el = texts[i];
+          if (!el.clientWidth) continue;
+          el.style.fontSize = '';
+          if (el.scrollWidth <= el.clientWidth) continue;
+          var base = parseFloat(window.getComputedStyle(el).fontSize) || 16;
+          var size = Math.max(10, Math.floor(base * el.clientWidth / el.scrollWidth * 2) / 2);
+          el.style.fontSize = size + 'px';
+          var guard = 0;
+          while (el.scrollWidth > el.clientWidth && size > 10 && guard++ < 30){
+            size = Math.max(10, size - 0.5);
+            el.style.fontSize = size + 'px';
+          }
+        }
+        var s = w / OV_DESIGN_W;
+        bar.style.transform = 'scale(' + s + ')';
+        fit.style.height = Math.ceil(bar.offsetHeight * s) + 'px';
+      }
+      function scheduleFitOverlay(){
+        if (fitOvQueued) return;
+        fitOvQueued = true;
+        if (window.requestAnimationFrame) requestAnimationFrame(fitOverlay);
+        else setTimeout(fitOverlay, 30);
+      }
+      window.addEventListener('resize', scheduleFitOverlay);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ scheduleFitOverlay(); });
       /* Ball-by-Ball list paging: the FULL innings list is shown,
          newest ball first, HIST_PAGE_SIZE entries to a page. The old
          hard cap of 30 balls is gone — every ball of the innings
@@ -19108,6 +19179,7 @@
         try { renderScorerCentre(); } catch(e){}
         step(function(){ updateScoringOnly(); });
         step(function(){ $('overlayMain').innerHTML = overlayHTML(); });
+        step(function(){ fitOverlay(); });
         step(function(){ $('historyList').innerHTML = historyHTML(S.current); });
         step(function(){ if (!archiveView && !matchView) renderWithDisplayState(function(){ renderScoreboardCB(); }); });
         step(function(){ guardViewerScoreboard(); });
@@ -20470,6 +20542,10 @@
         /* The view just shown may hold "TEAM A vs TEAM B" titles
            that were unmeasurable while it was hidden — fit them. */
         try { scheduleFitVsTitles(); } catch(e){}
+        /* Same for the overlay bar: unmeasurable while hidden, so
+           re-fit it (text, then whole-bar scale) whenever a view is
+           shown. */
+        try { scheduleFitOverlay(); } catch(e){}
         if (v==='scoreboard'){ try { guardViewerScoreboard(); } catch(e){} }
         if (v==='scorer'){ try { updateScoringOnly(); } catch(e){} } else { try { closeScorerPop(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
@@ -20521,6 +20597,10 @@
         $('overlayHelp').style.display = cleanMode ? 'none':'block';
         var obt = $('overlayBackTop'); if (obt) obt.style.display = cleanMode ? 'none':'flex';
         document.querySelector('.topbar').style.display = cleanMode ? 'none':'block';
+        /* Clean mode is edge-to-edge: the page side padding goes
+           too, so the scaled bar spans the full width. */
+        document.body.classList.toggle('ov-clean', cleanMode);
+        try { scheduleFitOverlay(); } catch(e){}
         $('btnClean').textContent = cleanMode ? 'Back to Normal View' : 'Enable Overlay Only (Transparent) Mode';
         if (cleanMode) toast('Transparent mode — only the score bar is visible. Reload the page to go back, or just use this link in OBS.');
       }
