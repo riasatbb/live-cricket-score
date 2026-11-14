@@ -1487,6 +1487,16 @@
       .prof-chip.jersey{background:var(--gold);border-color:var(--gold);color:#241a02}
       .prof-edit{border:1px solid var(--line);border-radius:12px;background:var(--surface2);padding:13px 14px;margin:0 0 16px}
       .prof-edit h3{margin:0 0 10px;font-size:16px}
+      /* Player Profile header actions: the admin's edit (pencil) icon
+         sits immediately left of the close ×, and only for someone
+         who may edit this profile — the profile itself stays clean,
+         with no edit form under the tabs. The form lives in its own
+         dialog (#pfEditModal) stacked above the full-screen profile. */
+      .pf-head-actions{display:flex;gap:8px;align-items:flex-start;flex:none}
+      .pf-edit-btn{flex:none;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--green);font-size:15px;line-height:1;padding:0;cursor:pointer}
+      .pf-edit-btn[hidden]{display:none}
+      #pfEditModal{z-index:120}
+      body.viewer-mode #pfEditModal,body.link-viewer #pfEditModal{display:none !important}
       .pf-photo-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
       .pf-photo-prev{flex:none;width:60px;height:60px;border-radius:50%;background:var(--surface);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;color:var(--green);overflow:hidden}
       .pf-photo-prev img{width:100%;height:100%;object-fit:cover;display:block}
@@ -3186,9 +3196,22 @@
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
         <div class="modal-head">
           <h2 id="playerModalTitle">Player</h2>
-          <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
+          <div class="pf-head-actions">
+            <button type="button" class="pf-edit-btn" id="pfEditBtn" onclick="pfOpenEdit()" aria-label="Edit player profile" title="Edit Profile" hidden>✏️</button>
+            <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
+          </div>
         </div>
         <div id="playerModalBody"></div>
+      </div>
+    </div>
+
+    <div class="modal-back" id="pfEditModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pfEditTitle">
+        <div class="modal-head">
+          <h2 id="pfEditTitle">✏️ Edit Profile</h2>
+          <button class="sq-x big" onclick="pfCloseEdit()" aria-label="Close edit profile">×</button>
+        </div>
+        <div id="pfEditBody"></div>
       </div>
     </div>
 
@@ -3296,7 +3319,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v147';
+      var APP_VERSION = 'v148';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14065,15 +14088,64 @@
          data URL once a photo has been picked. */
       var pfDirty = false;
       var pfPhotoDraft = null;
+      /* Edit-dialog state: the Edit Profile form no longer sits under
+         the profile tabs — it opens in its own dialog (#pfEditModal)
+         from the pencil icon in the profile header, so the profile
+         page itself stays clean. pfEditCtx is the identity snapshot
+         (name / team / Player ID / role / jersey / photo) the form is
+         built from, refreshed by every profile render. */
+      var pfEditOpen = false;
+      var pfEditCtx = null;
       function openPlayerProfile(team, name, pid){
         if (!name) return;
         profileCtx = { team: team || '', name: name, pid: pid || lookupPlayerId(team || '', name) || '' };
-        pfDirty = false; pfPhotoDraft = null;
+        pfDirty = false; pfPhotoDraft = null; pfEditOpen = false;
+        var em = $('pfEditModal'); if (em) em.classList.remove('show');
         pfTab = 'overview'; pfStatSub = 'bat'; pfYearKind = 'bat'; pfBestKind = 'bat'; pfInsKind = 'bat'; pfInsMetric = 'run'; pfCmpPid = '';
         renderPlayerProfile(true);
         var m = $('playerModal'); if (m) m.classList.add('show');
       }
-      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
+      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); var em = $('pfEditModal'); if (em) em.classList.remove('show'); pfEditOpen = false; profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
+      /* Open the Edit Profile dialog. Only someone who may edit this
+         profile (canEditPlayerProfile — signed-in owner/admin on the
+         control side) ever sees the pencil icon; the check runs
+         again here and in savePlayerProfile, so the icon is never
+         the only protection. */
+      function pfOpenEdit(){
+        if (!profileCtx) return;
+        if (!canEditPlayerProfile()){
+          toast(isViewerSession() ? '👀 View-only — profiles can be edited only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to edit this profile — only the owner/admin can change it.');
+          return;
+        }
+        var body = $('pfEditBody'); if (!body) return;
+        body.innerHTML = pfEditFormHTML();
+        pfEditOpen = true;
+        var m = $('pfEditModal'); if (m) m.classList.add('show');
+      }
+      function pfCloseEdit(){
+        var m = $('pfEditModal'); if (m) m.classList.remove('show');
+        pfEditOpen = false; pfDirty = false; pfPhotoDraft = null;
+      }
+      function pfEditFormHTML(){
+        var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', photo: '' } : null);
+        if (!ctx) return '';
+        var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : (ctx.photo || '');
+        var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === ctx.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
+          + (ctx.role && PROFILE_ROLES.indexOf(ctx.role) === -1 ? '<option value="' + esc(ctx.role) + '" selected>' + esc(ctx.role) + '</option>' : '');
+        return '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(ctx.name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
+          + '<div class="grid2" style="margin-top:10px">'
+          + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
+          + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 7" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
+          + '</div>'
+          + '<div style="margin-top:12px"><label>Photo</label><div class="pf-photo-row">'
+          + '<span class="pf-photo-prev" id="pfPhotoPrev">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="" />' : esc(initialsOf(ctx.name))) + '</span>'
+          + '<button type="button" class="btn ghost sm" onclick="document.getElementById(\'pfPhotoFile\').click()">' + (shownPhoto ? 'Change Photo' : 'Add Photo') + '</button>'
+          + '<button type="button" class="btn ghost sm" id="pfPhotoRemove" onclick="pfPhotoRemoveTap()"' + (shownPhoto ? '' : ' hidden') + '>Remove Photo</button>'
+          + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
+          + '</div><p class="note" style="margin:6px 0 0">The photo is shrunk to a small size before it is saved, so it syncs quickly.</p></div>'
+          + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
+          + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>';
+      }
       function pfMarkDirty(){ pfDirty = true; }
       /* Photo picking: the chosen image is drawn onto a small canvas
          and stored as a compressed JPEG data URL (max 320px, smaller
@@ -14289,6 +14361,7 @@
         profileCtx = { team: team, name: newName, pid: pid };
         pfDirty = false; pfPhotoDraft = null;
         commit('Player profile updated', true);
+        pfCloseEdit();
         renderPlayerProfile(true);
         toast('✓ Profile saved — ' + newName + (newRole ? ' • ' + newRole : '') + (newJersey ? ' • #' + newJersey : ''));
       }
@@ -15194,9 +15267,10 @@
       function pfCmpChoose(pid){ pfCmpPid = pid || ''; pfRefreshMain(); }
       function renderPlayerProfile(force){
         if (!profileCtx) return;
-        /* While the scorer is mid-edit (typed something or picked a
-           photo), background re-renders leave the form exactly as it
-           is — the stats below it refresh on the next open / save. */
+        /* While the scorer is mid-edit in the Edit Profile dialog
+           (typed something or picked a photo), background re-renders
+           leave the profile exactly as it is — it refreshes on the
+           next open / save. */
         if (!force && pfDirty) return;
         var name = profileCtx.name, team = profileCtx.team, ctxPid = profileCtx.pid || '';
         /* The profile follows the Player ID: another player with the
@@ -15209,12 +15283,17 @@
         var usePid = rec ? rec.pid : (ctxPid || lookupPlayerId(team, name) || pidHash(team, name));
         if (!rec) rec = { pid:usePid, name:name, team:useTeam, teams:[useTeam], matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0 };
         var titleEl = $('playerModalTitle'); if (titleEl) titleEl.textContent = 'Player Profile';
+        /* The header pencil icon (left of the ×) shows only for
+           someone who may edit this profile; viewers and guests
+           never see it, so their profile header holds just the ×. */
+        var editBtn = $('pfEditBtn'); if (editBtn) editBtn.hidden = !canEditPlayerProfile();
         var teamsLine = (rec.teams && rec.teams.length) ? rec.teams.join(' • ') : (useTeam || '—');
         var sameNameCount = knownPlayers().filter(function(p){ return p.name === name; }).length;
         /* Profile header: photo (or initials), full name, team, role
            and jersey — the editable identity of this player. */
         var prof = profileDataFor(useTeam, name, usePid);
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : prof.photo;
+        pfEditCtx = { name: name, team: useTeam, pid: usePid, role: prof.role || '', jersey: prof.jersey || '', photo: prof.photo || '' };
         pfData = pfComputeData(name, useTeam, usePid);
         pfData.rec = rec;
         pfData.jersey = prof.jersey || '';
@@ -15234,28 +15313,10 @@
           html += '<p class="note" style="margin:0 0 12px">Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID ' + esc(pidShort(usePid)) + ' only, so their records never mix.</p>';
         }
         html += '<div id="pfMain">' + pfMainHTML() + '</div>';
-        /* Edit form — only for a signed-in owner/admin on the control
-           side (canEditPlayerProfile); everyone else gets the
-           read-only profile above, exactly as before. */
-        if (canEditPlayerProfile()){
-          var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === prof.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
-            + (prof.role && PROFILE_ROLES.indexOf(prof.role) === -1 ? '<option value="' + esc(prof.role) + '" selected>' + esc(prof.role) + '</option>' : '');
-          html += '<div class="prof-edit" style="margin-top:18px"><h3>✏️ Edit Profile</h3>'
-            + '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
-            + '<div class="grid2" style="margin-top:10px">'
-            + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
-            + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 7" value="' + esc(prof.jersey) + '" oninput="pfMarkDirty()" /></div>'
-            + '</div>'
-            + '<div style="margin-top:12px"><label>Photo</label><div class="pf-photo-row">'
-            + '<span class="pf-photo-prev" id="pfPhotoPrev">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="" />' : esc(initialsOf(name))) + '</span>'
-            + '<button type="button" class="btn ghost sm" onclick="document.getElementById(\'pfPhotoFile\').click()">' + (shownPhoto ? 'Change Photo' : 'Add Photo') + '</button>'
-            + '<button type="button" class="btn ghost sm" id="pfPhotoRemove" onclick="pfPhotoRemoveTap()"' + (shownPhoto ? '' : ' hidden') + '>Remove Photo</button>'
-            + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
-            + '</div><p class="note" style="margin:6px 0 0">The photo is shrunk to a small size before it is saved, so it syncs quickly.</p></div>'
-            + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
-            + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
-            + '</div>';
-        }
+        /* No edit form here any more: the profile page stays clean.
+           Editing lives in the Edit Profile dialog, opened from the
+           header pencil icon (pfOpenEdit / pfEditFormHTML) and shown
+           only to a signed-in owner/admin on the control side. */
         var body = $('playerModalBody'); if (body){ var sv = stripScrollSave(body); body.innerHTML = html; stripScrollRestore(body, sv); }
       }
       /* ---------- archived match: full scorecard ---------- */
@@ -20301,10 +20362,18 @@
          the history entry (or the hash) is shown, including its
          tournament / scoreboard tab where the entry carries one. */
       window.addEventListener('popstate', function(ev){
+        /* The Edit Profile dialog stacks above the profile — Back
+           closes it first, leaving the profile open underneath. */
+        var pfEditM = $('pfEditModal');
+        if (pfEditM && pfEditM.classList.contains('show')){
+          pfCloseEdit();
+          try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
+          return;
+        }
         var openModal = document.querySelector('.modal-back.show');
         if (openModal){
           openModal.classList.remove('show');
-          if (openModal.id === 'playerModal'){ profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
+          if (openModal.id === 'playerModal'){ profileCtx = null; pfDirty = false; pfPhotoDraft = null; pfEditOpen = false; var em2 = $('pfEditModal'); if (em2) em2.classList.remove('show'); }
           try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
           return;
         }
