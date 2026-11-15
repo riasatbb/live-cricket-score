@@ -233,8 +233,8 @@
       td.r,th.r{text-align:right}
       td.c,th.c{text-align:center}
       tr.out td{color:var(--muted)}
-      /* Fall of Wickets / Partnerships sub-heads inside the Previous
-         Innings card, and the partnership centre cell */
+      /* Partnerships sub-head inside an innings card, and the
+         partnership centre cell */
       .sc-sub{font-weight:800;font-size:15px;margin:12px 0 4px}
       .pship-c{font-weight:800;white-space:nowrap;text-align:center;vertical-align:middle}
       /* Partnerships table: fixed layout with equal batter columns
@@ -3554,7 +3554,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v169';
+      var APP_VERSION = 'v170';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18871,9 +18871,9 @@
          Both sections are rebuilt from the stored ball-by-ball record
          at render time (nothing new is stored), so they appear for
          live, archived and viewed matches alike, in the reference's
-         layout: Fall of Wickets as (blank) | Score ("26 - 1") | Over — the
-         section heading above the table carries the "Fall of Wickets"
-         label, so the table's first header cell stays empty,
+         layout: Fall of Wickets with its header row on one line —
+         Fall of Wickets | Score ("26 - 1") | Over — and no separate
+         section heading above the table,
          Partnerships as one row per stand — a batter and his figures
          on each side, the stand's total runs (balls) in the middle. */
       function fowTableHTML(inn){
@@ -18883,7 +18883,7 @@
         var rows = fow.map(function(f){
           return '<tr><td><span class="pname">' + (f.name ? plLink(inn.battingTeam, f.name) + leadSuffix(inn.battingTeam, f.name) : '—') + '</span></td><td class="r">' + f.score + ' - ' + f.n + '</td><td class="r">' + esc(f.over || '') + '</td></tr>';
         }).join('');
-        return '<table><thead><tr><th></th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        return '<table><thead><tr><th>Fall of Wickets</th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
       /* Partnership stands of one innings, split at every wicket.
          The survivor of a stand is the batter the ball record does
@@ -19000,7 +19000,7 @@
       function fowPshipSectionsHTML(inn){
         var out = '';
         var fowH = fowTableHTML(inn);
-        if (fowH) out += '<div class="sc-sub">Fall of Wickets</div>' + fowH;
+        if (fowH) out += fowH;
         var psH = partnershipsTableHTML(inn);
         if (psH) out += '<div class="sc-sub">Partnerships</div>' + psH;
         return out;
