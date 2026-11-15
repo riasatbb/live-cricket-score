@@ -231,7 +231,12 @@
       th{ text-align:left;font-size:12.5px;color:var(--muted);font-weight:700;padding:7px 8px;border-bottom:2px solid var(--line)}
       td{padding:7px 8px;border-bottom:1px solid var(--line)}
       td.r,th.r{text-align:right}
+      td.c,th.c{text-align:center}
       tr.out td{color:var(--muted)}
+      /* Fall of Wickets / Partnerships sub-heads inside the Previous
+         Innings card, and the partnership centre cell */
+      .sc-sub{font-weight:800;font-size:15px;margin:12px 0 4px}
+      .pship-c{font-weight:800;white-space:nowrap}
       .howout{font-size:12px;color:var(--muted);display:block}
       /* a dismissal line never wraps: it stays on ONE line under the
          batter's name, like the reference scorecard — anything too
@@ -2642,7 +2647,7 @@
               <div><label for="wktOutWho">Batter out</label><select id="wktOutWho"><option value="striker">Striker</option><option value="nonStriker">Non-Striker (run out)</option></select></div>
               <div><label for="wktRuns">Runs on this ball</label><select id="wktRuns"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
             </div>
-            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><input id="wktFielder" placeholder="e.g. the fielder who took the catch or made the run out" /></div>
+            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><select id="wktFielder"><option value="">— None —</option></select></div>
             <div class="rowflex" style="margin-top:12px">
               <button class="btn red sm" onclick="confirmWicket()">Confirm Wicket</button>
               <button class="btn ghost sm" onclick="cancelWicket()">Cancel</button>
@@ -2743,6 +2748,8 @@
           <div class="cb-panel" id="cbPanel-scorecard">
             <div class="card"><h2>Batting Card</h2><div id="sbBatting"></div></div>
             <div class="card"><h2>Bowling Card</h2><div id="sbBowling"></div></div>
+            <div class="card" id="sbFowWrap" style="display:none"><h2>Fall of Wickets</h2><div id="sbFow"></div></div>
+            <div class="card" id="sbPshipWrap" style="display:none"><h2>Partnerships</h2><div id="sbPship"></div></div>
             <div class="card" id="sbPrevWrap" style="display:none"><h2>Previous Innings</h2><div id="sbPrev"></div></div>
             <div class="card" id="sbSuperOverWrap" style="display:none"><h2>⚡ Super Over</h2><div id="sbSuperOver"></div></div>
           </div>
@@ -3520,7 +3527,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v164';
+      var APP_VERSION = 'v165';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6513,6 +6520,25 @@
         if (fhNow && ctx) ctx.textContent = '⚡ FREE HIT — on this ball a batter can only be Run Out (or Retired Out). ' + ctx.textContent;
         var outSel = $('wktOutWho'); if (outSel) outSel.value = 'striker';
         var runsSel = $('wktRuns'); if (runsSel) runsSel.value = '0';
+        /* Fielder / catcher is a DROPDOWN, not a typing box: the
+           choices are the fielding (bowling) team's players for this
+           match — the confirmed final squad when one is set, the
+           loaded squad otherwise. The option VALUE is the player's
+           full name (confirmWicket passes it through dispName()
+           exactly as the typed name used to be), the label is the
+           display name the scorecard shows. */
+        var fSel = $('wktFielder');
+        if (fSel){
+          var fTeam = S.current.bowlingTeam || '';
+          var fList = [];
+          try { fList = displaySquadForTeam(fTeam) || []; } catch(e){}
+          if (!fList.length){ try { fList = bowlingSquad() || []; } catch(e){} }
+          var fSeen = {};
+          fSel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
+            return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
+          }).join('');
+          fSel.value = '';
+        }
         var panel = $('wicketPanel'); if (panel){ panel.hidden = false; try { panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
       }
       function cancelWicket(){
@@ -16144,11 +16170,12 @@
           var sl = $('sbLive'); if (sl) sl.innerHTML = scoreStripHTML();
           var sb = $('sbBatting'); if (sb) sb.innerHTML = battingTableHTML(S.current);
           var sw = $('sbBowling'); if (sw) sw.innerHTML = bowlingTableHTML(S.current);
+          fillFowPship(S.current);
           var pw = $('sbPrevWrap'), pv = $('sbPrev');
           if (pw && pv){
             if (S.prevInnings){
               pw.style.display = 'block';
-              pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+              pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
             } else pw.style.display = 'none';
           }
           renderSuperOverSection();
@@ -16329,15 +16356,17 @@
           if (matchView.kind === 'fixture'){
             if (sb) sb.innerHTML = '<p class="cb-empty" style="padding-left:2px">Match is not started yet.</p>';
             if (sw) sw.innerHTML = '';
+            fillFowPship(null);
             if (pw) pw.style.display = 'none';
             var soW = $('sbSuperOverWrap'); if (soW) soW.style.display = 'none';
           } else {
             if (sb) sb.innerHTML = battingTableHTML(S.current);
             if (sw) sw.innerHTML = bowlingTableHTML(S.current);
+            fillFowPship(S.current);
             if (pw && pv){
               if (S.prevInnings){
                 pw.style.display = 'block';
-                pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+                pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
               } else pw.style.display = 'none';
             }
             renderSuperOverSection();
@@ -18825,6 +18854,96 @@
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
+      /* ---------- Scorecard: Fall of Wickets + Partnerships ----------
+         Both sections are rebuilt from the stored ball-by-ball record
+         at render time (nothing new is stored), so they appear for
+         live, archived and viewed matches alike, in the reference's
+         layout: Fall of Wickets as Batter | Score ("26 - 1") | Over,
+         Partnerships as one row per stand — a batter and his figures
+         on each side, the stand's total runs (balls) in the middle. */
+      function fowTableHTML(inn){
+        var fow = [];
+        try { fow = mrFallOfWickets(inn); } catch(e){}
+        if (!fow.length) return '';
+        var rows = fow.map(function(f){
+          return '<tr><td><span class="pname">' + (f.name ? plLink(inn.battingTeam, f.name) + leadSuffix(inn.battingTeam, f.name) : '—') + '</span></td><td class="r">' + f.score + ' - ' + f.n + '</td><td class="r">' + esc(f.over || '') + '</td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>Fall of Wickets</th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
+      /* Partnership stands of one innings, split at every wicket.
+         The survivor of a stand is the batter the ball record does
+         NOT name as out (b.outName — a run out can dismiss either
+         end), and the next partner is the next name in the batting
+         order. A batter's balls in a stand count the deliveries he
+         faced in it: legal balls, plus a no-ball (faced, though not
+         a legal delivery) — the convention tpPartnershipsOf already
+         uses; the stand's own balls are legal deliveries only. */
+      function inningsPartnerships(inn){
+        var batters = inn.batters || [];
+        var balls = (inn.balls || []).filter(function(b){ return b && !b.evt; });
+        if (batters.length < 2 || !balls.length) return [];
+        var order = batters.map(function(b){ return b.name; });
+        var segs = [], nextIn = 2;
+        function newSeg(a, b){
+          var s = { a: a, b: b || '', runs: 0, balls: 0, per: {} };
+          s.per[a] = { runs: 0, balls: 0 };
+          if (b) s.per[b] = { runs: 0, balls: 0 };
+          return s;
+        }
+        var cur = newSeg(order[0], order[1]);
+        balls.forEach(function(bl){
+          if (!cur) return;
+          var t = String(bl.text || '');
+          cur.runs += parseBallRuns(t);
+          if (isLegalDelivery(t)) cur.balls++;
+          var st = bl.batter;
+          if (st && cur.per[st]){ cur.per[st].runs += batterRunsOnBall(t); if (isLegalDelivery(t) || /^Nb/.test(t)) cur.per[st].balls++; }
+          if (isWicketBall(bl)){
+            segs.push(cur);
+            var outN = bl.outName || st;
+            var rem = (cur.a === outN) ? cur.b : cur.a;
+            cur = null;
+            var nb = order[nextIn++];
+            if (nb !== undefined && rem) cur = newSeg(rem, nb);
+          }
+        });
+        if (cur) segs.push(cur);
+        return segs.filter(function(s){ return s.balls > 0 || s.runs > 0; }).map(function(s){
+          return { a: s.a, b: s.b, perA: s.per[s.a] || { runs: 0, balls: 0 }, perB: s.per[s.b] || { runs: 0, balls: 0 }, runs: s.runs, balls: s.balls };
+        });
+      }
+      function partnershipsTableHTML(inn){
+        var segs = [];
+        try { segs = inningsPartnerships(inn); } catch(e){}
+        if (!segs.length) return '';
+        var rows = segs.map(function(p){
+          var left = '<span class="pname">' + plLink(inn.battingTeam, p.a) + leadSuffix(inn.battingTeam, p.a) + '</span> ' + p.perA.runs + '(' + p.perA.balls + ')';
+          var right = p.b ? '<span class="pname">' + plLink(inn.battingTeam, p.b) + leadSuffix(inn.battingTeam, p.b) + '</span> ' + p.perB.runs + '(' + p.perB.balls + ')' : '';
+          return '<tr><td>' + left + '</td><td class="c pship-c">' + p.runs + '(' + p.balls + ')</td><td class="r">' + right + '</td></tr>';
+        }).join('');
+        return '<table><tbody>' + rows + '</tbody></table>';
+      }
+      /* Fill the Scorecard tab's two extra cards for one innings;
+         each card hides itself while its section has nothing to
+         show (no wicket yet / no stand yet / a fixture not started). */
+      function fillFowPship(inn){
+        var fw = $('sbFowWrap'), pw = $('sbPshipWrap');
+        var fowH = inn ? fowTableHTML(inn) : '';
+        var psH = inn ? partnershipsTableHTML(inn) : '';
+        if (fw){ fw.style.display = fowH ? '' : 'none'; var f = $('sbFow'); if (f) f.innerHTML = fowH; }
+        if (pw){ pw.style.display = psH ? '' : 'none'; var p = $('sbPship'); if (p) p.innerHTML = psH; }
+      }
+      /* The same two sections for the Previous Innings card, which
+         prints both innings' cards stacked in one box: sub-headed
+         blocks appended after that innings' bowling card. */
+      function fowPshipSectionsHTML(inn){
+        var out = '';
+        var fowH = fowTableHTML(inn);
+        if (fowH) out += '<div class="sc-sub">Fall of Wickets</div>' + fowH;
+        var psH = partnershipsTableHTML(inn);
+        if (psH) out += '<div class="sc-sub">Partnerships</div>' + psH;
+        return out;
+      }
       /* Short label for one delivery inside the overlay's
          this-over ball circles: a dot for a scoreless ball, W for
          any wicket ball, Wd / Nb for extras, the bat runs
@@ -19906,6 +20025,30 @@
            innings (see the render block below). */
         function feedHTMLFor(innX){
           if (!innX || !innX.balls || !innX.balls.length) return '';
+          /* Each dismissed batter's figures AT THE MOMENT of the
+             dismissal — runs (balls) — rebuilt by replaying the ball
+             record in order with the same counting the over-summary
+             cards use (bat runs off the striker's balls; a ball faced
+             is a legal delivery). The wicket ball itself is applied
+             BEFORE the snapshot, so runs completed on it count for
+             the striker; a non-striker run out keeps the figures he
+             had, untouched by that ball. Keyed by ball record, so
+             the line below can print "MIRAZ, c & b BILLAL 5 (3)" on
+             the very ball he fell — for matches scored before this
+             existed too, since nothing new is stored. */
+          var dismFig = new Map();
+          var replayBat = {};
+          (innX.batters || []).forEach(function(bb){ if (bb && bb.name && !replayBat[bb.name]) replayBat[bb.name] = { runs: 0, balls: 0 }; });
+          (innX.balls || []).forEach(function(rb){
+            if (rb.evt) return;
+            var rst = rb.batter || '';
+            if (rst){
+              if (!replayBat[rst]) replayBat[rst] = { runs: 0, balls: 0 };
+              replayBat[rst].runs += batterRunsOnBall(rb.text);
+              if (isLegalDelivery(rb.text)) replayBat[rst].balls++;
+            }
+            if (isWicketBall(rb) && rb.outName && replayBat[rb.outName]) dismFig.set(rb, replayBat[rb.outName].runs + ' (' + replayBat[rb.outName].balls + ')');
+          });
           var snapsX = overSnapshots(innX);
           var lastCompletedIdxX = -1;
           snapsX.forEach(function(s, i){ if (s.completed) lastCompletedIdxX = i; });
@@ -19948,7 +20091,7 @@
                 return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + plLink(b.evt === 'attack' ? innX.bowlingTeam : innX.battingTeam, whoName) + '</b>' + esc(rest) + '</span></div>';
               }
               var who = (b.bowler && b.batter) ? '<b>' + plLink(innX.bowlingTeam, b.bowler) + '</b> to <b>' + plLink(innX.battingTeam, b.batter) + '</b>, ' : '';
-              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + (b.outName ? (plLink(innX.battingTeam, b.outName) + ', ') : '') + esc(b.howOut) : '';
+              var dism = (isWicketBall(b) && b.howOut) ? ' — ' + (b.outName ? (plLink(innX.battingTeam, b.outName) + ', ') : '') + esc(b.howOut) + (dismFig.get(b) ? ' ' + dismFig.get(b) : '') : '';
               return '<div class="cb-comm-row"><span class="cb-comm-over">' + esc(b.over) + '</span><span class="cb-comm-text">' + who + ballOutcomeHTML(b.text) + dism + '</span></div>';
             }).join('');
           }
@@ -20129,9 +20272,10 @@
             $('sbLive').innerHTML = scoreStripHTML();
             $('sbBatting').innerHTML = battingTableHTML(S.current);
             $('sbBowling').innerHTML = bowlingTableHTML(S.current);
+            fillFowPship(S.current);
             if (S.prevInnings){
               $('sbPrevWrap').style.display='block';
-              $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings);
+              $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
             } else { $('sbPrevWrap').style.display='none'; }
             renderSuperOverSection();
           });
