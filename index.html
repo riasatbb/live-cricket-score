@@ -3520,7 +3520,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v162';
+      var APP_VERSION = 'v164';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -15091,12 +15091,26 @@
       function pfSetInsMetric(m){ pfInsMetric = m; pfRefreshMain(); }
       function pfRefreshMain(){ var el = $('pfMain'); if (el && pfData){ var sv = stripScrollSave(el); el.innerHTML = pfMainHTML(); stripScrollRestore(el, sv); } }
       function pfBowlExtras(inn, bowlerName){
-        var dots = 0, maidens = 0;
+        var dots = 0, maidens = 0, wides = 0, noballs = 0, fours = 0, sixes = 0;
         var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
         var groups = [], cur = null, legalBefore = 0;
         deliveries.forEach(function(bl){
           var t = String(bl.text || '');
-          if (bl.bowler === bowlerName && isLegalDelivery(t) && parseBallRuns(t) === 0) dots++;
+          if (bl.bowler === bowlerName){
+            if (isLegalDelivery(t) && parseBallRuns(t) === 0) dots++;
+            /* Wides / no-balls bowled and boundaries conceded off
+               the bat, derived exactly as the Match Report derives
+               them (mrBowlerStats): a boundary bye is never charged
+               to the bowler, a 4 / 6 struck off a no-ball is. */
+            if (/^Wd/.test(t)) wides++;
+            else if (/^Nb/.test(t)){
+              noballs++;
+              var br = batterRunsOnBall(t);
+              if (br === 4) fours++; else if (br === 6) sixes++;
+            }
+            else if (t === '4') fours++;
+            else if (t === '6') sixes++;
+          }
           var gno = Math.floor(legalBefore / 6);
           if (!cur || cur.no !== gno){ cur = { no: gno, runs: 0, legal: 0, bowlers: {} }; groups.push(cur); }
           cur.runs += parseBallRuns(t);
@@ -15107,7 +15121,24 @@
           var ns = Object.keys(g.bowlers);
           if (g.legal === 6 && g.runs === 0 && ns.length === 1 && ns[0] === bowlerName) maidens++;
         });
-        return { dots: dots, maidens: maidens };
+        return { dots: dots, maidens: maidens, wides: wides, noballs: noballs, fours: fours, sixes: sixes };
+      }
+      /* Dot balls faced by one batter in an innings, from the
+         ball-by-ball record: a legal delivery the striker faced off
+         which no run of any kind came — the same test the bowler's
+         Dots figure uses, seen from the striker's side. A wide is
+         never a ball faced and a no-ball adds no ball faced in this
+         app's accounting, so neither can be a dot faced; a bye /
+         leg-bye ball was faced but produced a run, so it is not a
+         dot either. Matches with no ball record contribute 0. */
+      function pfBatDotsFaced(inn, batterName){
+        var dots = 0;
+        (inn.balls || []).forEach(function(bl){
+          if (!bl || bl.evt || bl.batter !== batterName) return;
+          var t = String(bl.text || '');
+          if (isLegalDelivery(t) && parseBallRuns(t) === 0) dots++;
+        });
+        return dots;
       }
       function pfComputeData(name, useTeam, usePid){
         var ctx = { team: useTeam, name: name, pid: usePid };
@@ -15117,8 +15148,8 @@
         function fmtRec(f){
           if (!fmts[f]){
             fmts[f] = { matchIds: {}, matches: 0,
-              bat: { inns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, notouts:0, best:-1, bestNO:false, ducks:0, hundreds:0, fifties:0, thirties:0 },
-              bowl: { inns:0, balls:0, runs:0, wkts:0, dots:0, maidens:0, bestW:-1, bestR:0, three:0, five:0 },
+              bat: { inns:0, runs:0, balls:0, dotsFaced:0, fours:0, sixes:0, outs:0, notouts:0, best:-1, bestNO:false, ducks:0, hundreds:0, fifties:0, thirties:0 },
+              bowl: { inns:0, balls:0, runs:0, wkts:0, dots:0, wides:0, noballs:0, foursConc:0, sixesConc:0, maidens:0, bestW:-1, bestR:0, three:0, five:0 },
               field: { catches:0, stumpings:0, runouts:0 } };
             fmtSeen.push(f);
           }
@@ -15194,6 +15225,7 @@
           batRecs.forEach(function(x){
             var b = x.b, fb = fr.bat, runs = b.runs || 0;
             fb.inns++; fb.runs += runs; fb.balls += b.balls || 0; fb.fours += b.fours || 0; fb.sixes += b.sixes || 0;
+            fb.dotsFaced += pfBatDotsFaced(x.inn, b.name);
             if (b.out){ fb.outs++; if (runs === 0) fb.ducks++; } else fb.notouts++;
             if (runs > fb.best || (runs === fb.best && !b.out && !fb.bestNO)){ fb.best = runs; fb.bestNO = !b.out; }
             if (runs >= 100) fb.hundreds++; else if (runs >= 50) fb.fifties++; else if (runs >= 30) fb.thirties++;
@@ -15216,6 +15248,7 @@
             if (wk >= 5) fo.five++;
             var ex = pfBowlExtras(x.inn, b.name);
             fo.dots += ex.dots; fo.maidens += ex.maidens; x.maidens = ex.maidens;
+            fo.wides += ex.wides; fo.noballs += ex.noballs; fo.foursConc += ex.fours; fo.sixesConc += ex.sixes;
             if (yrec){
               yrec.bowl.wkts += wk; yrec.bowl.runs += b.runs || 0;
               if (wk > yrec.bowl.bestW || (wk === yrec.bowl.bestW && (b.runs || 0) < yrec.bowl.bestR)){ yrec.bowl.bestW = wk; yrec.bowl.bestR = b.runs || 0; }
@@ -15526,6 +15559,7 @@
             ['Innings', function(F){ return F.bat.inns; }],
             ['Runs', function(F){ return F.bat.runs; }],
             ['Balls', function(F){ return F.bat.balls; }],
+            ['Dot Balls', function(F){ return F.bat.dotsFaced; }],
             ['Highest', function(F){ return F.bat.best < 0 ? '—' : (F.bat.best + (F.bat.bestNO ? '*' : '')); }],
             ['Average', function(F){ return F.bat.outs > 0 ? (F.bat.runs / F.bat.outs).toFixed(1) : '—'; }],
             ['SR', function(F){ return F.bat.balls > 0 ? (F.bat.runs / F.bat.balls * 100).toFixed(1) : '0.0'; }],
@@ -15544,6 +15578,10 @@
             ['Balls', function(F){ return F.bowl.balls; }],
             ['Runs', function(F){ return F.bowl.runs; }],
             ['Dots', function(F){ return F.bowl.dots; }],
+            ['Wides', function(F){ return F.bowl.wides; }],
+            ['No Balls', function(F){ return F.bowl.noballs; }],
+            ['4s Conceded', function(F){ return F.bowl.foursConc; }],
+            ['6s Conceded', function(F){ return F.bowl.sixesConc; }],
             ['Maidens', function(F){ return F.bowl.maidens; }],
             ['Wickets', function(F){ return F.bowl.wkts; }],
             ['Average', function(F){ return F.bowl.wkts > 0 ? (F.bowl.runs / F.bowl.wkts).toFixed(1) : '—'; }],
@@ -19533,7 +19571,17 @@
             var bowlName = b.bowler || '';
             if (bowlName){
               if (!bowlMap[bowlName]) bowlMap[bowlName] = { name: bowlName, runs: 0, wickets: 0, balls: 0 };
-              bowlMap[bowlName].runs += parseBallRuns(b.text);
+              /* The bowler is charged only with the runs that count
+                 against him — bat runs, wides and the no-ball penalty.
+                 Byes and leg-byes are team extras and are NEVER charged
+                 to the bowler: bowlerRunsForBall() is the very helper
+                 the scorecard's bowling card is rebuilt with, and it
+                 returns null for a bye / leg-bye ball (charged 0 here).
+                 Adding the ball's full run value instead used to put
+                 every extra of the over against the bowler's name in
+                 this summary while the scorecard showed less. */
+              var charged = bowlerRunsForBall(b.text);
+              bowlMap[bowlName].runs += (charged === null ? 0 : charged);
               /* A run out is a team wicket but NOT the bowler's: the
                  ball record carries bowlerWicket from record time.
                  Legacy 'W' balls (no flag) were all bowler wickets. */
