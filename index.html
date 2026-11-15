@@ -1380,7 +1380,7 @@
       .cb-table td{border-bottom:1px solid #333;padding:10px;color:#e9e9e9}
       .cb-table th:first-child,.cb-table td:first-child{padding-left:16px}
       .cb-table th:last-child,.cb-table td:last-child{padding-right:16px}
-      .cb-table .pname{color:#64b5e8;font-weight:500}
+      .pname{color:#64b5e8;font-weight:500}
       .cb-table .yetbat td{color:#9a9a9a;font-size:13.5px;line-height:1.5}
       .cb-comm{background:#2b2b2b;padding:6px 0 10px}
       .cb-comm-row{display:flex;gap:16px;padding:13px 16px;align-items:flex-start}
@@ -2559,6 +2559,10 @@
             <div class="mc-so-banner" id="mcSoBanner" hidden></div>
             <div class="pending-note" id="pendingNote"></div>
           </div>
+          <div class="mc-finish" id="mcEndInnBar" hidden>
+            <p class="note" style="margin:0 0 8px">1st innings is complete — scoring is paused, and Undo still works if the last ball was wrong.</p>
+            <button type="button" class="btn gold mc-finish-btn" onclick="endInnings()">End Innings</button>
+          </div>
           <div class="mc-finish" id="mcFinishBar" hidden>
             <button type="button" class="btn gold mc-finish-btn" onclick="finishMatch()">✓ Finish Match</button>
           </div>
@@ -3506,7 +3510,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v158';
+      var APP_VERSION = 'v159';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3568,6 +3572,11 @@
              which clears this flag and completes the match. */
           awaitingFinish: false,
           inningsNo: 1,
+          /* The 1st innings is complete (all out / overs done) but has
+             NOT been ended yet: the End Innings button is showing on
+             the pad and the innings ends only when the scorer taps
+             it. Until then scoring is paused but Undo stays live. */
+          inningsEndReady: false,
           current: blankInnings('',''),
           prevInnings: null,
           squadA: [],
@@ -3713,6 +3722,37 @@
          control page restore the score instantly, before — and even
          without — Firebase answering). */
       var LS_BACKUP_KEY = 'live-cricket-score-backup-v1';
+      /* The undo snapshots ride in their own on-device store, rewritten
+         on every ball, so Undo keeps working after the app is closed or
+         the page is refreshed mid-innings — they are restored only
+         together with the control-side backup above (viewer sessions
+         never load either). At most the newest 12 snapshots are kept
+         on disk; if the device refuses the write (quota), the oldest
+         are dropped until it fits. */
+      var LS_UNDO_KEY = 'live-cricket-score-undo-v1';
+      function persistUndoStack(){
+        try {
+          var keep = undoStack.slice(-12);
+          while (keep.length){
+            try { localStorage.setItem(LS_UNDO_KEY, JSON.stringify(keep)); return; }
+            catch(e){ keep = keep.slice(Math.ceil(keep.length / 2)); }
+          }
+          try { localStorage.removeItem(LS_UNDO_KEY); } catch(e){}
+        } catch(e){}
+      }
+      function restoreUndoStack(){
+        try {
+          var raw = localStorage.getItem(LS_UNDO_KEY);
+          if (!raw) return;
+          var arr = JSON.parse(raw);
+          if (!Array.isArray(arr)) return;
+          undoStack = arr.filter(function(s){ return s && typeof s === 'object' && s.current && typeof s.current === 'object'; }).slice(-60);
+        } catch(e){}
+      }
+      function clearUndoStack(){
+        undoStack = [];
+        try { localStorage.removeItem(LS_UNDO_KEY); } catch(e){}
+      }
       var localRestored = false;
       function saveLocalBackup(){
         try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(S)); } catch(e){}
@@ -3979,7 +4019,7 @@
          back to blank, so the next match starts from the beginning. */
       function applyDeletedState(ns){
         S = ns;
-        undoStack = []; pendingExtra = null; renderPending();
+        clearUndoStack(); pendingExtra = null; renderPending();
         cancelWicket();
         ['teamA','teamB','oversLimit','venue'].forEach(function(id){
           var el = $(id); if (el){ el.value = ''; el.classList.remove('req-missing'); }
@@ -5041,6 +5081,7 @@
         if (S.dlOvers === undefined) S.dlOvers = null;
         if (typeof S.abandoned !== 'boolean') S.abandoned = false;
         if (typeof S.awaitingFinish !== 'boolean') S.awaitingFinish = false;
+        if (typeof S.inningsEndReady !== 'boolean') S.inningsEndReady = false;
         if (S.pendingPenalty === undefined) S.pendingPenalty = null;
         /* Nicknames: an array of {t, n, k} entries. Firebase hands
            arrays back as objects with numeric keys when it feels like
@@ -5255,6 +5296,18 @@
       function matchFinishedGuard(){
         if (S.status === 'finished'){ toast(S.awaitingFinish ? 'Play is over — tap Finish Match to complete this match, or Undo to take back the last ball.' : 'This match is finished — scoring is closed. Start a new match to score again.'); return true; }
         return false;
+      }
+      /* While the completed 1st innings waits for its End Innings
+         tap, the pad refuses any further ball: the only ways forward
+         are End Innings itself and Undo (which restores the pre-ball
+         snapshot and so clears the flag on its own). A stale flag on
+         an innings that is not actually complete clears itself. */
+      function inningsEndGuard(){
+        if (S.inningsNo !== 1 || !S.inningsEndReady) return false;
+        var inn = S.current;
+        if (!(inn.wickets >= wicketsLimit() || inn.legalBalls >= effMaxBalls())){ S.inningsEndReady = false; return false; }
+        toast('Innings complete — tap End Innings to close the 1st innings, or Undo to take back the last ball.');
+        return true;
       }
       /* ---------- in-page confirmation dialog (the browser's own dialog does not work in the app) ---------- */
       var verifyCb = null;
@@ -5665,11 +5718,29 @@
         var t = e.target;
         if (t && t.closest && t.closest('#squadAList, #squadBList')){ e.preventDefault(); e.stopPropagation(); sqDragJustEnded = 0; }
       }, true);
+      /* An innings is DONE once it can no longer be batted in: the
+         match is finished, the innings is not the live one any more
+         (it sits in prevInnings, or in an archive), or the 1st
+         innings is complete and waiting for the scorer's End
+         Innings tap. A done innings calls its remaining players
+         "Did not bat"; a live innings calls them "Yet to bat". */
+      function inningsDone(inn){
+        if (!inn) return false;
+        if (S.status === 'finished' || S.awaitingFinish) return true;
+        if (inn === S.current) return S.inningsNo === 1 && !!S.inningsEndReady;
+        return true;
+      }
       function yetToBatNames(inn){
-        var squad = squadForTeam(inn.battingTeam);
+        /* Only the Playing XI can still come in: the first
+           (wickets limit + 1) names of the squad order — 11 when the
+           match is set to 10 wickets — never the whole squad. */
+        var squad = null;
+        try { squad = displaySquadForTeam(inn.battingTeam); } catch(e){ squad = null; }
+        if (!squad || !squad.length) squad = squadForTeam(inn.battingTeam);
         if (!squad || !squad.length) return [];
+        var xi = squad.slice(0, wicketsLimit() + 1);
         var batted = {}; inn.batters.forEach(function(b){ batted[b.name]=true; });
-        return squad.filter(function(n){ return !batted[n]; });
+        return xi.filter(function(n){ return !batted[n]; });
       }
       function batterCandidates(excludeName){
         var inn = S.current;
@@ -5881,7 +5952,14 @@
       function checkInningsEnd(){
         var inn = S.current;
         if (inn.wickets >= wicketsLimit() || inn.legalBalls >= effMaxBalls()){
-          if (S.inningsNo === 1){ endInnings(true); }
+          if (S.inningsNo === 1){
+            /* The 1st innings no longer ends itself: it is complete
+               on the card and the End Innings button appears on the
+               pad — the innings ends only when the scorer taps it.
+               Until then the undo snapshots stay live, so the last
+               ball can still be taken back, even after a refresh. */
+            S.inningsEndReady = true;
+          }
           else { finishMatch(true); }
         } else if (S.inningsNo === 2 && S.prevInnings){
           var tg = target();
@@ -5991,9 +6069,9 @@
       }
 
       /* ---------- scoring ---------- */
-      function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); }
+      function snapshot(){ undoStack.push(deep(S)); if (undoStack.length>60) undoStack.shift(); persistUndoStack(); }
 
-      function scoreRuns(n){ if (scoringLocked()) return; if (!requireLiveOwner('score')) return; if (matchFinishedGuard()) return; syncPlayersFromInputs(); if (!playersSelected()) return; if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
+      function scoreRuns(n){ if (scoringLocked()) return; if (!requireLiveOwner('score')) return; if (matchFinishedGuard()) return; if (inningsEndGuard()) return; syncPlayersFromInputs(); if (!playersSelected()) return; if (pendingExtra){ completeExtra(n); } else { applyBatRuns(n); } }
 
       function applyBatRuns(n){
         snapshot(); syncPlayersFromInputs();
@@ -6016,6 +6094,7 @@
         if (scoringLocked()) return;
         if (!requireLiveOwner('score')) return;
         if (matchFinishedGuard()) return;
+        if (inningsEndGuard()) return;
         syncPlayersFromInputs(); if (!playersSelected()) return;
         pendingExtra = (pendingExtra===type) ? null : type;
         renderPending();
@@ -6198,7 +6277,7 @@
           ? '<span>Target - <b>' + t + '</b></span><span>REQ - <b>' + (rrr() !== null ? rrr().toFixed(2) : '—') + '</b></span>'
           : '<span>Proj. Score - <b>' + (proj === null ? '—' : proj) + '</b></span>';
         row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
-        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b></span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
+        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ')</span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
           + '<div class="mrow">' + row2 + '</div>';
         /* One Edit (✎) icon beside Batsman and one beside Bowler:
            the Batsman icon opens the Batters & Bowler popup (change
@@ -6213,7 +6292,7 @@
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
           var nameHtml = isStriker
             ? '<span class="mc-striker-pill">' + plLink(inn.battingTeam, name) + ' *</span>'
-            : '<span class="mc-pname on">' + plLink(inn.battingTeam, name) + '</span>';
+            : '<span class="pname">' + plLink(inn.battingTeam, name) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
         /* Batting order, not strike order: the pair keeps the
@@ -6229,7 +6308,7 @@
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
           var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-pname on">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
         } else {
           $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
         }
@@ -6288,6 +6367,10 @@
            Scoring; until then the match stays running. */
         var fbEl = $('mcFinishBar');
         if (fbEl) fbEl.hidden = !(S.status === 'finished' && S.awaitingFinish);
+        /* End Innings bar — shown only while the completed 1st
+           innings waits for the scorer's tap (see checkInningsEnd). */
+        var eiBarEl = $('mcEndInnBar');
+        if (eiBarEl) eiBarEl.hidden = !(S.inningsNo === 1 && !!S.inningsEndReady && S.status === 'live');
         /* Player of the Match picker — finished matches only. */
         try { renderPotmPicker(); } catch(e){}
         /* Super Over banner (while one is live) and card (offer /
@@ -6366,6 +6449,7 @@
         if (scoringLocked()) return;
         if (!requireLiveOwner('score')) return;
         if (matchFinishedGuard()) return;
+        if (inningsEndGuard()) return;
         syncPlayersFromInputs(); if (!playersSelected()) return;
         /* A pending extra no longer blocks a wicket: a batter can be
            stumped off a wide, run out off a no-ball, and so on — the
@@ -6427,7 +6511,11 @@
         var fhBall = freeHitPending(inn);
         var credited = bowlerCredited(type);
         var batRunsBefore = strikerBat.runs, bowlWktsBefore = bowl.wickets;
-        var howOut = dismissalHowOut(type, fielder, inn.bowler);
+        /* The dismissal line carries the NICKNAMES of the bowler and
+           the fielder — the same display names the bowling card
+           shows — never their full names. (Matches already scored
+           keep the lines they were scored with.) */
+        var howOut = dismissalHowOut(type, fielder ? dispName(inn.bowlingTeam, fielder) : fielder, dispName(inn.bowlingTeam, inn.bowler));
         var legal = false, token = '', teamRuns = 0, batRuns = 0;
         if (extra === 'wide'){
           token = runs > 0 ? ('WdW+' + runs) : 'WdW';
@@ -6505,7 +6593,11 @@
         if (scoringLocked()) return;
         if (!requireLiveOwner('undo a ball')) return;
         if (!undoStack.length){ toast('No ball to undo'); return; }
-        S = undoStack.pop(); try { normalizeStateShape(); } catch(e){} pendingExtra=null; renderPending();
+        /* Snapshots restored from disk belong to the match they were
+           taken in — never roll a different match back with them. */
+        var snapTop = undoStack[undoStack.length - 1];
+        if (snapTop && snapTop.matchId && S.matchId && String(snapTop.matchId) !== String(S.matchId)){ clearUndoStack(); toast('No ball to undo'); return; }
+        S = undoStack.pop(); persistUndoStack(); try { normalizeStateShape(); } catch(e){} pendingExtra=null; renderPending();
         /* Dismiss any open picker without running its callbacks — it
            was opened for the state that has just been undone (e.g. the
            innings-break opening-bowler picker shown after the last
@@ -6665,7 +6757,7 @@
           if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
           if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
         }
-        undoStack = [];
+        clearUndoStack();
         /* The creator owns the match: this account — and only this
            account — can score, edit or delete it from here on. */
         S.ownerUid = currentUid(); S.ownerName = authDisplayName();
@@ -6808,6 +6900,7 @@
         if (S.inningsNo===2){ finishMatch(auto); return; }
         var inn=S.current;
         S.prevInnings = deep(inn);
+        S.inningsEndReady = false;
         /* The break is a real status: the scoreboard shows the
            innings-break line (and BREAK pill) until the first ball of
            innings 2 is scored, which flips it back to live. */
@@ -15833,17 +15926,19 @@
         if (!(inn.batters || []).length) return '<p class="note">No batting recorded.</p>';
         var rows = inn.batters.map(function(b){
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-          return '<tr class="' + (b.out ? 'out' : '') + '"><td>' + plLinkIn(e, inn.battingTeam, b.name)
+          return '<tr class="' + (b.out ? 'out' : '') + '"><td><span class="pname">' + plLinkIn(e, inn.battingTeam, b.name) + '</span>'
             + (b.out ? '<span class="howout">' + esc(b.howOut || 'out') + '</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '<span class="howout">not out</span>'))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var squad = inn.battingTeam === e.teamA ? e.squadA : (inn.battingTeam === e.teamB ? e.squadB : []);
         var batted = {}; (inn.batters || []).forEach(function(b){ batted[b.name] = 1; });
-        var ytb = (squad || []).filter(function(n){ return !batted[n]; });
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
+        /* Archived innings are finished, and only the Playing XI —
+           the first (wickets limit + 1) of the squad — counts. */
+        var ytb = (squad || []).slice(0, (typeof e.wicketsLimit === 'number' ? e.wicketsLimit : 10) + 1).filter(function(n){ return !batted[n]; });
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
         var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')</td><td class="r"><b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b></td><td colspan="4"></td></tr>'
+          + '<tr><td>Extras <b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b> <span class="howout">(Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')</span></td><td colspan="5"></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -15851,7 +15946,7 @@
         if (!(inn.bowlers || []).length) return '<p class="note">No bowling recorded.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-          return '<tr><td>' + plLinkIn(e, inn.bowlingTeam, b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><span class="pname">' + plLinkIn(e, inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -16999,7 +17094,7 @@
           d.y += 6;
           var ytb = [];
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
-          if (ytb.length) para((inn === S.current && !finished) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
+          if (ytb.length) para((inn === S.current && !finished && !inningsDone(inn)) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
           var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
           var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
@@ -17461,7 +17556,7 @@
           d.y += 6;
           var ytb = [];
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
-          if (ytb.length) para('Yet to bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
+          if (ytb.length) para('Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
           var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
           var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
@@ -18562,7 +18657,7 @@
           var ballsLeftChip = effMaxBalls()-inn.legalBalls;
           chips += '<span class="ss-chip">Need <b>' + runW(t-inn.runs) + (isFinite(ballsLeftChip) ? ' off ' + ballW(ballsLeftChip) : '') + '</b></span>';
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
-        chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b></span>';
+        chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ')</span>';
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
         else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(fixResultText(S.resultText)) + '</b></span>';
@@ -18577,9 +18672,9 @@
               var fig = nm === inn.striker ? bat1 : bat2;
               return nm === inn.striker
                 ? '<div><span class="onstrike">' + esc(dispName(inn.battingTeam, nm)) + ' *</span> — ' + fig.runs + ' (' + fig.balls + ')</div>'
-                : '<div>' + esc(dispName(inn.battingTeam, nm)) + ' — ' + fig.runs + ' (' + fig.balls + ')</div>';
+                : '<div><span class="pname">' + esc(dispName(inn.battingTeam, nm)) + '</span> — ' + fig.runs + ' (' + fig.balls + ')</div>';
             }).join('') || '<div>— — 0 (0)</div><div>— — 0 (0)</div>')
-          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: ' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + ' • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
+          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: <span class="pname">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span> • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
           + '<div class="ss-meta">' + chips + '</div>'
           + (ballsHtml ? '<div class="balls-row"><span class="over-label">Recent balls:</span>' + ballsHtml + '</div>' : '')
           + '</div>';
@@ -18597,15 +18692,15 @@
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
-          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout':'')+'">' + plLink(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
+          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout pname':'pname')+'">' + plLink(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
             + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = inn.extras;
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Yet to bat: ' + ytb.map(function(n){ return plLink(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</td><td class="r"><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b></td><td colspan="4"></td></tr>'
+          + '<tr><td>Extras <b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b> <span class="howout">(Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</span></td><td colspan="5"></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -18613,7 +18708,7 @@
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td>' + plLink(inn.bowlingTeam, b.name) + '</td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -20145,7 +20240,7 @@
         if (j < 0) return;
         var slice = list2.splice(j, 1)[0];
         applyMatchSlice(slice);
-        undoStack = []; pendingExtra = null; renderPending();
+        clearUndoStack(); pendingExtra = null; renderPending();
         try { cancelWicket(); } catch(e){}
         commit('Resumed: ' + (S.teamA || '') + ' vs ' + (S.teamB || ''), true);
         setView('scorer');
@@ -21381,6 +21476,10 @@
           S = backup;
           try { cleanGhostPlayers(); } catch(e){}
           try { normalizeStateShape(); } catch(e){}
+          /* The backup's undo snapshots come back with it, so Undo
+             works after a refresh / app close exactly as it did
+             before — right up to the End Innings tap. */
+          try { restoreUndoStack(); } catch(e){}
           localRestored = true;
           /* The backup is a display fallback ONLY — it is NOT treated
              as local work that outranks the database. The moment
