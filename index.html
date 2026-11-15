@@ -1371,6 +1371,26 @@
       .cb-panel.show{display:block}
       .cb-status{color:#f07a5f;font-size:16.5px;font-weight:500;line-height:1.4;padding:14px 16px 4px;background:#2b2b2b}
       .cb-status:empty{display:none}
+      /* Scorecard tab (per reference): a situation band on top, then
+         one collapsible row per innings — team name left, the score
+         as runs-wickets (overs) right, and a chevron — expanding in
+         place to that innings' full batting / bowling / fall of
+         wickets / partnerships card. */
+      #cbPanel-scorecard{background:#212121}
+      .cb-sc-status{color:#f07a5f;font-size:16.5px;font-weight:500;line-height:1.4;padding:13px 16px;background:#383838}
+      .cb-sc-status:empty{display:none}
+      .cb-inn{background:#2b2b2b;border-bottom:1px solid #3d3d3d}
+      .cb-inn-head{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;color:#fff;padding:17px 16px;cursor:pointer;text-align:left;font:inherit}
+      .cb-inn-head:active{background:#333}
+      .cb-inn-team{flex:1;min-width:0;font-size:17.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cb-inn-score{font-size:17.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .cb-inn-score span{color:#cfcfcf;font-weight:500}
+      .cb-inn-chev{flex:none;display:flex;color:#a8a8a8;transition:transform .18s ease}
+      .cb-inn.open .cb-inn-chev{transform:rotate(180deg)}
+      @media (prefers-reduced-motion:reduce){.cb-inn-chev{transition:none}}
+      .cb-inn-body{display:none;border-top:1px solid #3d3d3d}
+      .cb-inn.open .cb-inn-body{display:block}
+      .cb-inn-body .sc-sub{color:#fff;padding-left:16px}
       .cb-main{background:#2b2b2b;padding:8px 16px 16px}
       .cb-main-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
       .cb-teamline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -2744,13 +2764,14 @@
             </div>
           </div>
 
-          <!-- SCORECARD -->
+          <!-- SCORECARD — per reference: the situation band, then
+               one collapsible row per innings (team name +
+               runs-wickets (overs) + chevron) that expands in place
+               to the innings' full card. Filled by
+               renderScorecardPanel. -->
           <div class="cb-panel" id="cbPanel-scorecard">
-            <div class="card"><h2>Batting Card</h2><div id="sbBatting"></div></div>
-            <div class="card"><h2>Bowling Card</h2><div id="sbBowling"></div></div>
-            <div class="card" id="sbFowWrap" style="display:none"><h2>Fall of Wickets</h2><div id="sbFow"></div></div>
-            <div class="card" id="sbPshipWrap" style="display:none"><h2>Partnerships</h2><div id="sbPship"></div></div>
-            <div class="card" id="sbPrevWrap" style="display:none"><h2>Previous Innings</h2><div id="sbPrev"></div></div>
+            <div class="cb-sc-status" id="sbScStatus"></div>
+            <div id="sbInnings"></div>
             <div class="card" id="sbSuperOverWrap" style="display:none"><h2>⚡ Super Over</h2><div id="sbSuperOver"></div></div>
           </div>
 
@@ -3527,7 +3548,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v165';
+      var APP_VERSION = 'v166';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16168,16 +16189,7 @@
         var realS = S; S = archiveView.state;
         try {
           var sl = $('sbLive'); if (sl) sl.innerHTML = scoreStripHTML();
-          var sb = $('sbBatting'); if (sb) sb.innerHTML = battingTableHTML(S.current);
-          var sw = $('sbBowling'); if (sw) sw.innerHTML = bowlingTableHTML(S.current);
-          fillFowPship(S.current);
-          var pw = $('sbPrevWrap'), pv = $('sbPrev');
-          if (pw && pv){
-            if (S.prevInnings){
-              pw.style.display = 'block';
-              pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
-            } else pw.style.display = 'none';
-          }
+          renderScorecardPanel();
           renderSuperOverSection();
           renderScoreboardCB();
         } catch(e){}
@@ -16351,24 +16363,12 @@
         var realS = S; S = matchView.state;
         try {
           var sl = $('sbLive'); if (sl) sl.innerHTML = scoreStripHTML();
-          var sb = $('sbBatting'), sw = $('sbBowling');
-          var pw = $('sbPrevWrap'), pv = $('sbPrev');
           if (matchView.kind === 'fixture'){
-            if (sb) sb.innerHTML = '<p class="cb-empty" style="padding-left:2px">Match is not started yet.</p>';
-            if (sw) sw.innerHTML = '';
-            fillFowPship(null);
-            if (pw) pw.style.display = 'none';
+            var si = $('sbInnings'); if (si) si.innerHTML = '<p class="cb-empty" style="padding-left:2px">Match is not started yet.</p>';
+            var ss = $('sbScStatus'); if (ss) ss.textContent = '';
             var soW = $('sbSuperOverWrap'); if (soW) soW.style.display = 'none';
           } else {
-            if (sb) sb.innerHTML = battingTableHTML(S.current);
-            if (sw) sw.innerHTML = bowlingTableHTML(S.current);
-            fillFowPship(S.current);
-            if (pw && pv){
-              if (S.prevInnings){
-                pw.style.display = 'block';
-                pv.innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
-              } else pw.style.display = 'none';
-            }
+            renderScorecardPanel();
             renderSuperOverSection();
           }
           renderScoreboardCB();
@@ -18923,19 +18923,65 @@
         }).join('');
         return '<table><tbody>' + rows + '</tbody></table>';
       }
-      /* Fill the Scorecard tab's two extra cards for one innings;
-         each card hides itself while its section has nothing to
-         show (no wicket yet / no stand yet / a fixture not started). */
-      function fillFowPship(inn){
-        var fw = $('sbFowWrap'), pw = $('sbPshipWrap');
-        var fowH = inn ? fowTableHTML(inn) : '';
-        var psH = inn ? partnershipsTableHTML(inn) : '';
-        if (fw){ fw.style.display = fowH ? '' : 'none'; var f = $('sbFow'); if (f) f.innerHTML = fowH; }
-        if (pw){ pw.style.display = psH ? '' : 'none'; var p = $('sbPship'); if (p) p.innerHTML = psH; }
+      /* ---------- Scorecard tab: innings rows (per reference) ----------
+         The tab opens with the match-situation band — the chase
+         equation in red while the match is live, the result once it
+         is finished — then ONE ROW PER INNINGS: batting team name,
+         the score as runs-wickets (overs), and a chevron. Tapping a
+         row expands that innings' full card in place (batting,
+         bowling, fall of wickets, partnerships), so the whole match
+         reads at a glance without opening every card. The latest
+         innings starts expanded and earlier ones collapsed; a
+         viewer's open / closed choices survive the ball-by-ball
+         re-renders and reset when a different match is shown.
+         Everything is built from the state on show, so the live
+         match, an archived match and a viewed match all render
+         identically. */
+      var scInnOpenState = {}, scInnOpenFor = '';
+      function toggleScInn(idx){
+        var sec = $('scInn' + idx); if (!sec) return;
+        var open = !sec.classList.contains('open');
+        sec.classList.toggle('open', open);
+        var head = sec.querySelector('.cb-inn-head');
+        if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+        scInnOpenState[scInnOpenFor + ':' + idx] = open;
       }
-      /* The same two sections for the Previous Innings card, which
-         prints both innings' cards stacked in one box: sub-headed
-         blocks appended after that innings' bowling card. */
+      function renderScorecardPanel(){
+        var host = $('sbInnings'); if (!host) return;
+        var stEl = $('sbScStatus');
+        if (stEl){
+          var txt = '';
+          if (S.status === 'finished'){ try { txt = summaryResultText(summaryInningsList()); } catch(e){ txt = ''; } }
+          else { try { txt = cbStatusText(); } catch(e){ txt = ''; } }
+          stEl.textContent = txt || '';
+        }
+        var inns = [];
+        if (S.prevInnings) inns.push(S.prevInnings);
+        if (S.current) inns.push(S.current);
+        inns = inns.filter(function(inn){ return !!inn && (((inn.batters || []).length > 0) || ((inn.bowlers || []).length > 0) || inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0); });
+        if (!inns.length){ host.innerHTML = '<p class="cb-empty">Match is not started yet.</p>'; return; }
+        var key = String(S.matchId || ((S.teamA || '') + ' v ' + (S.teamB || '')));
+        if (key !== scInnOpenFor){ scInnOpenFor = key; scInnOpenState = {}; }
+        host.innerHTML = inns.map(function(inn, i){
+          var open = Object.prototype.hasOwnProperty.call(scInnOpenState, key + ':' + i) ? scInnOpenState[key + ':' + i] : (i === inns.length - 1);
+          var fp = '';
+          try { fp = fowPshipSectionsHTML(inn); } catch(e){ fp = ''; }
+          return '<div class="cb-inn' + (open ? ' open' : '') + '" id="scInn' + i + '">'
+            + '<button type="button" class="cb-inn-head" onclick="toggleScInn(' + i + ')" aria-expanded="' + (open ? 'true' : 'false') + '">'
+            + '<span class="cb-inn-team">' + esc(inn.battingTeam || '') + '</span>'
+            + '<span class="cb-inn-score">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></span>'
+            + '<span class="cb-inn-chev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>'
+            + '</button>'
+            + '<div class="cb-inn-body">'
+            + '<div class="cb-table">' + battingTableHTML(inn) + '</div>'
+            + '<div class="cb-table">' + bowlingTableHTML(inn) + '</div>'
+            + (fp ? '<div class="cb-table">' + fp + '</div>' : '')
+            + '</div></div>';
+        }).join('');
+      }
+      /* The Fall of Wickets + Partnerships sections inside one
+         innings' expanded card: sub-headed blocks appended after
+         that innings' bowling card. */
       function fowPshipSectionsHTML(inn){
         var out = '';
         var fowH = fowTableHTML(inn);
@@ -19886,6 +19932,29 @@
       }
       window.addEventListener('resize', scheduleFitCbxNames);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ scheduleFitCbxNames(); });
+      /* The match-situation line ("X needs N runs to win in M
+         balls." and friends) — one computation shared by the Live
+         tab's orange line and the Scorecard tab's situation band,
+         so the two never disagree. A finished match returns ''
+         here; its result is shown by the callers instead. */
+      function cbStatusText(){
+        var inn = S.current;
+        var t = target();
+        var status = '';
+        if (S.status === 'finished') status = '';
+        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t + '.';
+        else if (S.inningsNo === 2 && S.prevInnings){
+          var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
+          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.';
+          else status = inn.battingTeam + ' have reached the target of ' + t + '.';
+        }
+        else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
+        else if (S.tossInfo) status = S.tossInfo;
+        else if (S.inningsNo === 1) status = inn.battingTeam ? inn.battingTeam + ' chose to bat.' : 'Teams not selected yet — the match has not started.';
+        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
+        if (freeHitPending(inn) && S.status === 'live') status = '⚡ FREE HIT — the next delivery is a free hit. ' + status;
+        return status;
+      }
       function renderScoreboardCB(){
         var inn = S.current;
         var titleEl = $('cbMatchTitle');
@@ -19900,20 +19969,8 @@
            the finished header below instead (blue, under both innings
            scores, like the reference), so the line stays empty then. */
         var finished = S.status === 'finished';
-        var status = '';
         var t = target();
-        if (finished) status = '';
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' • Target ' + t + '.';
-        else if (S.inningsNo === 2 && S.prevInnings){
-          var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
-          if (need > 0) status = inn.battingTeam + ' needs ' + need + (need === 1 ? ' run' : ' runs') + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballsLeft + (ballsLeft === 1 ? ' ball' : ' balls') : '') + '.';
-          else status = inn.battingTeam + ' have reached the target of ' + t + '.';
-        }
-        else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
-        else if (S.tossInfo) status = S.tossInfo;
-        else if (S.inningsNo === 1) status = inn.battingTeam ? inn.battingTeam + ' chose to bat.' : 'Teams not selected yet — the match has not started.';
-        else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
-        if (freeHitPending(inn) && S.status === 'live') status = '⚡ FREE HIT — the next delivery is a free hit. ' + status;
+        var status = cbStatusText();
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
@@ -20270,13 +20327,7 @@
           if (matchView){ renderMatchViewScoreboard(); return; }
           renderWithDisplayState(function(){
             $('sbLive').innerHTML = scoreStripHTML();
-            $('sbBatting').innerHTML = battingTableHTML(S.current);
-            $('sbBowling').innerHTML = bowlingTableHTML(S.current);
-            fillFowPship(S.current);
-            if (S.prevInnings){
-              $('sbPrevWrap').style.display='block';
-              $('sbPrev').innerHTML = '<p style="margin-top:0"><b>' + esc(S.prevInnings.battingTeam) + '</b> — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</p>' + battingTableHTML(S.prevInnings) + '<div class="divider"></div>' + bowlingTableHTML(S.prevInnings) + fowPshipSectionsHTML(S.prevInnings);
-            } else { $('sbPrevWrap').style.display='none'; }
+            renderScorecardPanel();
             renderSuperOverSection();
           });
         });
