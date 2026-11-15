@@ -104,8 +104,7 @@
       #linkBlocked{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
       html.hash-blocked #linkBlocked{display:flex}
       #linkBlocked .lb-box{max-width:420px;width:100%;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 22px;box-shadow:var(--shadow)}
-      #linkBlocked h2{margin:0 0 8px;font-size:22px;color:var(--ink)}
-      #linkBlocked p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+      #linkBlocked h2{margin:0;font-size:22px;color:var(--ink)}
       :root{
         --bg:#f2f5f1; --surface:#ffffff; --surface2:#e9efe9; --ink:#132018; --muted:#5c6d62;
         --line:#d7e0d7; --green:#0e5b3c; --green2:#0a4630; --gold:#e19a26; --gold-ink:#7a4d05;
@@ -2319,8 +2318,7 @@
          never opens from such a link. -->
     <div id="linkBlocked" role="alert">
       <div class="lb-box">
-        <h2>This link is not valid</h2>
-        <p>CricCast opens only from its exact Live Matches, Scorer Console or Broadcast Overlay link.</p>
+        <h2>This link is invalid.</h2>
       </div>
     </div>
     <header class="topbar">
@@ -3593,7 +3591,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v176';
+      var APP_VERSION = 'v177';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
