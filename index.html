@@ -249,11 +249,12 @@
          long for the cell is clipped with an ellipsis rather than
          breaking onto a second line or widening the page */
       .howout.dism{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      /* Extras row in the reference's style: one full-width line —
-         "Extras" on the left, the total and its breakdown together
-         on the right, never stacked or wrapped */
-      .exline{display:flex;justify-content:space-between;align-items:baseline;gap:12px;white-space:nowrap}
-      .exline .exbd{color:var(--muted);font-size:12.5px}
+      /* Extras row: a real row of the batting table, laid out in the
+         table's own columns — "Extras" under Batter, the Extras total
+         in the Runs column, directly under every batter's runs and
+         directly over the Total, so the column adds up at a glance;
+         the breakdown sits beside the total, muted, on the same line */
+      .exbd{color:var(--muted);font-size:12.5px;white-space:nowrap}
       .notout{font-weight:700}
 
       /* ---------- overlay ----------
@@ -3554,7 +3555,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v172';
+      var APP_VERSION = 'v174';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3562,7 +3563,7 @@
         return {
           battingTeam: battingTeam, bowlingTeam: bowlingTeam,
           runs: 0, wickets: 0, legalBalls: 0,
-          extras: { wide:0, noball:0, bye:0, legbye:0 },
+          extras: { wide:0, noball:0, bye:0, legbye:0, penalty:0 },
           batters: [], bowlers: [],
           striker: null, nonStriker: null, bowler: null,
           freeHit: false, /* true once a no-ball has been bowled and until the next legal delivery: that delivery is a FREE HIT. Lives on the innings, so it syncs through Firebase like the rest of the score — overlay, viewer scoreboard and scorer pad all read the same flag. */
@@ -5120,13 +5121,50 @@
         }
         inn.bowlers.forEach(function(bw){ if (bw && bw.name && seen[bw.name] && typeof bw.runs === 'number') bw.runs = sums[bw.name]; });
       }
+      /* ---------- Extras, penalty runs included ----------
+         Penalty runs ARE extras — the fifth kind, "Penalty extras"
+         (MCC Laws, Law 41.17): they are scored as extras, credited
+         to no batter and charged to no bowler, and they reach the
+         team total through the Extras line, exactly like wides,
+         no-balls, byes and leg-byes. They live on the innings as
+         extras.penalty, added when a penalty is awarded
+         (applyPenalty, and the innings-start credit of a held
+         penalty), and every Extras total and breakdown on every
+         surface — scorer centre, score strip, scorecard tab,
+         archived cards, overlay, PDFs — is built through
+         innExtras() so the 'p' component can never be dropped.
+         Innings scored before this field existed carry no
+         extras.penalty: their penalty is recovered from the
+         "Penalty: N runs awarded to …" line the award itself wrote
+         into that innings' feed, so an old scorecard shows its
+         penalty inside Extras too, with its total unchanged. */
+      function penaltyRunsFromFeed(inn){
+        var sum = 0;
+        ((inn && inn.balls) || []).forEach(function(b){
+          if (!b || !b.evt) return;
+          var m = /^Penalty:\s*(\d+)\s*runs?\s+awarded/.exec(String(b.text || ''));
+          if (m) sum += parseInt(m[1], 10) || 0;
+        });
+        return sum;
+      }
+      function innExtras(inn){
+        var ex = (inn && inn.extras) || {};
+        var pen = (typeof ex.penalty === 'number') ? ex.penalty : penaltyRunsFromFeed(inn);
+        var w = ex.wide || 0, nb = ex.noball || 0, by = ex.bye || 0, lb = ex.legbye || 0;
+        return { wide: w, noball: nb, bye: by, legbye: lb, penalty: pen, total: w + nb + by + lb + pen };
+      }
       function normalizeInningsShape(inn){
         if (!inn || typeof inn !== 'object') return inn;
         if (!Array.isArray(inn.balls)) inn.balls = [];
         if (!Array.isArray(inn.batters)) inn.batters = [];
         if (!Array.isArray(inn.bowlers)) inn.bowlers = [];
-        if (!inn.extras || typeof inn.extras !== 'object') inn.extras = { wide:0, noball:0, bye:0, legbye:0 };
+        if (!inn.extras || typeof inn.extras !== 'object') inn.extras = { wide:0, noball:0, bye:0, legbye:0, penalty:0 };
         ['wide','noball','bye','legbye'].forEach(function(k){ if (typeof inn.extras[k] !== 'number') inn.extras[k] = 0; });
+        /* Penalty extras: innings scored before the field existed
+           carry no extras.penalty — recover it from the award line
+           in the innings' own feed (see penaltyRunsFromFeed) so the
+           stored figure is right from here on, not just the render. */
+        if (typeof inn.extras.penalty !== 'number') inn.extras.penalty = penaltyRunsFromFeed(inn);
         if (typeof inn.runs !== 'number') inn.runs = 0;
         if (typeof inn.wickets !== 'number') inn.wickets = 0;
         if (typeof inn.legalBalls !== 'number') inn.legalBalls = 0;
@@ -6344,14 +6382,14 @@
         else if (S.inningsNo === 1 && S.tossWinner && S.tossDecision) status = S.tossWinner + ' chose to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '.';
         if (freeHitPending(inn) && S.status === 'live') status = '⚡ FREE HIT — next ball: only a run out can dismiss a batter.' + (status ? ' ' + status : '');
         $('mcStatus').textContent = status;
-        var ex = inn.extras.wide + inn.extras.noball + inn.extras.bye + inn.extras.legbye;
+        var ex = innExtras(inn).total;
         var pship = partnershipFigures(inn);
         var proj = projectedScore();
         var row2 = (S.inningsNo === 2 && t)
           ? '<span>Target - <b>' + t + '</b></span><span>REQ - <b>' + (rrr() !== null ? rrr().toFixed(2) : '—') + '</b></span>'
           : '<span>Proj. Score - <b>' + (proj === null ? '—' : proj) + '</b></span>';
         row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
-        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ')</span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
+        $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ', P ' + innExtras(inn).penalty + ')</span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
           + '<div class="mrow">' + row2 + '</div>';
         /* One Edit (✎) icon beside Batsman and one beside Bowler:
            the Batsman icon opens the Batters & Bowler popup (change
@@ -7004,6 +7042,7 @@
            credited to the new innings before it begins. */
         if (S.pendingPenalty && S.pendingPenalty.team === S.current.battingTeam && S.pendingPenalty.runs > 0){
           S.current.runs += S.pendingPenalty.runs;
+          S.current.extras.penalty = (S.current.extras.penalty || 0) + S.pendingPenalty.runs; /* held penalty lands as Penalty extras, like any other penalty */
           pushFeedEvent(S.current, 'note', '', 'Penalty: ' + S.pendingPenalty.runs + (S.pendingPenalty.runs === 1 ? ' run' : ' runs') + ' awarded to ' + S.current.battingTeam + (S.pendingPenalty.reason ? ' — ' + S.pendingPenalty.reason : '') + '.');
           S.pendingPenalty = null;
         }
@@ -7451,7 +7490,7 @@
         if (scoringLocked()) return;
         if (matchFinishedGuard()) return;
         openMoreModal('Penalty Runs',
-          'Penalty runs go straight onto that team’s innings score — no ball is bowled, and no batter or bowler is charged with them. If that team has not batted yet, the runs are held and credited the moment their innings starts.',
+          'Penalty runs go straight onto that team’s innings score as Penalty extras — they count inside the Extras total (shown as “p” in the breakdown). No ball is bowled, and no batter or bowler is charged with them. If that team has not batted yet, the runs are held and credited the moment their innings starts.',
           '<div class="grid2">'
           + '<div><label for="penTeam">Award runs to</label><select id="penTeam">' + selOptions([S.teamA, S.teamB], S.current.battingTeam) + '</select></div>'
           + '<div><label for="penRuns">Penalty runs</label><input id="penRuns" type="number" min="1" max="100" value="5" /></div>'
@@ -7472,6 +7511,8 @@
         var line = 'Penalty: ' + runs + (runs === 1 ? ' run' : ' runs') + ' awarded to ' + team + (reason ? ' — ' + reason : '') + '.';
         if (inn){
           inn.runs += runs;
+          if (!inn.extras || typeof inn.extras !== 'object') inn.extras = { wide:0, noball:0, bye:0, legbye:0, penalty:0 };
+          inn.extras.penalty = (inn.extras.penalty || 0) + runs; /* Penalty extras (Law 41.17): part of the Extras total, charged to no batter or bowler */
           pushFeedEvent(inn, 'note', '', line);
           closeMoreModal();
           commit('Penalty: ' + runs + (runs === 1 ? ' run' : ' runs') + ' to ' + team);
@@ -16067,9 +16108,9 @@
            the first (wickets limit + 1) of the squad — counts. */
         var ytb = (squad || []).slice(0, (typeof e.wicketsLimit === 'number' ? e.wicketsLimit : 10) + 1).filter(function(n){ return !batted[n]; });
         var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return plLinkIn(e, inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
-        var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
+        var ex = innExtras(inn);
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td colspan="6"><div class="exline"><span>Extras</span><span><b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b> <span class="exbd">b ' + (ex.bye || 0) + ', lb ' + (ex.legbye || 0) + ', w ' + (ex.wide || 0) + ', nb ' + (ex.noball || 0) + '</span></span></div></td></tr>'
+          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -17217,10 +17258,10 @@
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
           if (ytb.length) para((inn === S.current && !finished && !inningsDone(inn)) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispLead(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
-          var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
-          var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+          var ex = innExtras(inn);
+          var exTot = ex.total;
           d.rrect(MX, d.y, CW, 26, 5, MRC.tealSoft, null, 0);
-          d.text(mrFit('Extras: ' + exTot + ' (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')', 9, false, 248), MX + 10, d.y + 17, 1, 9, MRC.ink, 'l');
+          d.text(mrFit('Extras: ' + exTot + ' (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ', P ' + ex.penalty + ')', 9, false, 248), MX + 10, d.y + 17, 1, 9, MRC.ink, 'l');
           d.text('Overs: ' + oversText(inn.legalBalls || 0), MX + 266, d.y + 17, 1, 9, MRC.muted, 'l');
           d.text('TOTAL  ' + (inn.runs || 0) + '/' + (inn.wickets || 0) + '    RR ' + (inn.legalBalls > 0 ? (inn.runs / (inn.legalBalls / 6)).toFixed(2) : '0.00'), RX - 10, d.y + 17.5, 2, 10.5, MRC.tealTx, 'r');
           d.y += 34;
@@ -17679,10 +17720,10 @@
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
           if (ytb.length) para('Did not bat:', ytb.map(function(n){ return dispLead(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
-          var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
-          var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+          var ex = innExtras(inn);
+          var exTot = ex.total;
           d.rrect(MX, d.y, CW, 26, 5, MRC.tealSoft, null, 0);
-          d.text(mrFit('Extras: ' + exTot + ' (Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')', 9, false, 248), MX + 10, d.y + 17, 1, 9, MRC.ink, 'l');
+          d.text(mrFit('Extras: ' + exTot + ' (Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ', P ' + ex.penalty + ')', 9, false, 248), MX + 10, d.y + 17, 1, 9, MRC.ink, 'l');
           d.text('Overs: ' + oversText(inn.legalBalls || 0), MX + 266, d.y + 17, 1, 9, MRC.muted, 'l');
           d.text('TOTAL  ' + (inn.runs || 0) + '/' + (inn.wickets || 0) + '    RR ' + (inn.legalBalls > 0 ? (inn.runs / (inn.legalBalls / 6)).toFixed(2) : '0.00'), RX - 10, d.y + 17.5, 2, 10.5, MRC.tealTx, 'r');
           d.y += 34;
@@ -18778,7 +18819,7 @@
           var ballsLeftChip = effMaxBalls()-inn.legalBalls;
           chips += '<span class="ss-chip">Need <b>' + runW(t-inn.runs) + (isFinite(ballsLeftChip) ? ' off ' + ballW(ballsLeftChip) : '') + '</b></span>';
           if (r!==null) chips += '<span class="ss-chip">RRR <b>' + r.toFixed(2) + '</b></span>'; }
-        chips += '<span class="ss-chip">Extras <b>' + (inn.extras.wide+inn.extras.noball+inn.extras.bye+inn.extras.legbye) + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ')</span>';
+        chips += '<span class="ss-chip">Extras <b>' + innExtras(inn).total + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ', P ' + innExtras(inn).penalty + ')</span>';
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
         else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
         if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(fixResultText(S.resultText)) + '</b></span>';
@@ -18852,11 +18893,11 @@
             + (b.out ? '<span class="howout dism">' + esc(dispHowOut(inn.bowlingTeam, b.howOut||'out')) + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
-        var ex = inn.extras;
+        var ex = innExtras(inn);
         var ytb = yetToBatNames(inn);
         var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td colspan="6"><div class="exline"><span>Extras</span><span><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b> <span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + '</span></span></div></td></tr>'
+          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -19126,8 +19167,7 @@
          two info ticks, and the fixed bottom bar EXTRAS | score |
          OVERS. Every figure comes from the live innings record. */
       function overlayCardHTML(inn){
-        var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
-        var exTotal = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
+        var exTotal = innExtras(inn).total;
         var logo = teamLogoFor(inn.battingTeam);
         var headBadge = logo ? '<img src="' + esc(logo) + '" alt="Logo of ' + esc(inn.battingTeam || '') + '" />' : '<span class="ov-badge">' + esc(teamShort(inn.battingTeam)) + '</span>';
         var subParts = [];
