@@ -237,16 +237,24 @@
 
       /* ---------- overlay ----------
          Broadcast lower-third in the Abu Dhabi T10 style: one wide
-         bar floating over the picture — the batting team's logo on
-         the far left, the bowling team's on the far right, deep-navy
-         panels with orange lightning edges carrying the two batters
-         (left) and the bowler (right), and a white centre carrying
-         the match-up, the big score and the overs. The bowler panel
-         shows RUN-RATE in the 1st innings and this over's balls as
-         small squares in the chase, where the centre also carries
-         the TARGET line. Everything is driven by the live state in
-         overlayHTML(), so the OBS browser source updates ball by
-         ball with no refresh. */
+         bar floating over the picture — each team's logo centred on
+         a full-height X-shaped end-cap (maroon for the batting side,
+         gold for the bowling side, as in the reference), deep-navy
+         panels carrying the two batters (left) and the bowler
+         (right), the panels split by single thin orange lightning
+         bolts, and a white centre of exactly TWO rows in a 2-column
+         grid: batting-team abbreviation beside the score — the one
+         dominant element — over "v <opponents>" (1st innings) or
+         "TARGET <n>" (chase) beside the overs. Nothing else lives
+         in the centre: no innings badge, no partnership / run-rate
+         line (the run rate appears once only, in the bowler panel).
+         The bowler panel shows RUN-RATE in the 1st innings and this
+         over's balls as small squares in the chase, and the bowler
+         is always named — at an over change, before the next bowler
+         is picked, it falls back to the bowler of the last ball
+         bowled, with figures as "0-1 0.1" (no parentheses). Everything
+         is driven by the live state in overlayHTML(), so the OBS
+         browser source updates ball by ball with no refresh. */
       .overlay-stage{border-radius:var(--radius);padding:26px 14px;background:
         repeating-conic-gradient(#3a3f3a 0% 25%, #313631 0% 50%) 0 0/28px 28px;
         display:flex;align-items:flex-end;justify-content:center;min-height:230px;border:1px solid var(--line)}
@@ -264,15 +272,28 @@
       .ov-fit{position:relative;width:100%}
       .lowerthird{position:absolute;left:0;top:0;width:1240px;color:#fff;font-family:system-ui,sans-serif;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5));transform-origin:0 0}
       .ov-bar{display:flex;align-items:stretch;min-height:104px;background:#ffffff;box-shadow:inset 0 0 0 1px rgba(6,24,49,.12)}
-      .ov-flag{flex:none;width:96px;display:flex;align-items:center;justify-content:center;padding:8px 10px}
-      .ov-flag img{max-width:76px;max-height:64px;width:auto;height:auto;object-fit:contain;display:block}
-      .ov-flag .ov-badge{width:62px;height:62px;border-radius:50%;background:#0a2248;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.03em;border:3px solid #ff6a00;text-align:center;line-height:1.05;padding:4px}
+      /* Full-height X end-caps, as in the reference: the X is the
+         cap's whole background (maroon for the batting team, gold
+         for the bowling team) and the logo sits centred on top of
+         it, full height — never in a small inset white chip. */
+      .ov-flag{flex:none;width:148px;position:relative;display:flex;align-items:center;justify-content:center;padding:6px 20px}
+      .ov-flag::before{content:"";position:absolute;inset:0;clip-path:polygon(0 0,30% 0,50% 38%,70% 0,100% 0,64% 50%,100% 100%,70% 100%,50% 62%,30% 100%,0 100%,36% 50%)}
+      .ov-flag.bat::before{background:linear-gradient(135deg,#8e1f2f,#5f1220 70%)}
+      .ov-flag.bowl::before{background:linear-gradient(135deg,#ffc21f,#f5a400 70%)}
+      .ov-flag img{position:relative;z-index:1;max-width:106px;max-height:82px;width:auto;height:auto;object-fit:contain;display:block;filter:drop-shadow(0 3px 7px rgba(0,0,0,.45))}
+      .ov-flag .ov-badge{position:relative;z-index:1;color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:700;letter-spacing:.03em;text-align:center;line-height:1.05;padding:4px;text-shadow:0 2px 8px rgba(0,0,0,.6)}
       .ov-seg{position:relative;min-width:0}
-      .ov-seg::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;background:linear-gradient(180deg,#ff8a1e,#ff6a00 55%,#e85d00);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%)}
-      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#0e2c56,#081f42 60%,#061831);clip-path:polygon(12px 0,calc(100% - 12px) 0,calc(100% - 2px) 16%,calc(100% - 12px) 33%,calc(100% - 2px) 50%,calc(100% - 12px) 66%,calc(100% - 2px) 83%,calc(100% - 12px) 100%,12px 100%,2px 83%,12px 66%,2px 50%,12px 33%,2px 16%);display:flex;flex-direction:column;justify-content:center;padding:10px 30px 10px 34px}
+      /* One single thin orange lightning bolt per seam — the
+         batting panel's left seam, both centre seams and the
+         bowling panel's right seam — never a thick double zigzag. */
+      .ov-seg.bats::before,.ov-seg.bowl::after,.ov-centre::before,.ov-centre::after{content:"";position:absolute;top:-2px;bottom:-2px;width:20px;z-index:3;background:linear-gradient(180deg,#ff8a1e,#ff5f00);clip-path:polygon(58% 0,100% 0,62% 36%,96% 36%,38% 100%,0 100%,36% 58%,4% 58%);filter:drop-shadow(0 0 3px rgba(0,0,0,.25))}
+      .ov-seg.bats::before{left:-10px}
+      .ov-seg.bowl::after{right:-10px}
+      .ov-centre::before{left:-10px}
+      .ov-centre::after{right:-10px}
+      .ov-panel{position:relative;height:100%;background:linear-gradient(180deg,#0e2c56,#081f42 60%,#061831);display:flex;flex-direction:column;justify-content:center;padding:10px 28px}
       .ov-seg.bats{flex:1.08 1 0}
       .ov-seg.bowl{flex:1.2 1 0}
-      .ov-seg.bowl .ov-panel{padding:10px 34px 10px 30px}
       /* Both batters share ONE alignment: a fixed-width bat-icon
          slot leads every row — the icon itself moves into the slot
          of whoever is on strike, so the two names always start in
@@ -285,35 +306,38 @@
       .ov-bat .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden;min-width:0}
       .ov-bat .r{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
       .ov-bat .b{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#a9bce0;text-align:right;font-variant-numeric:tabular-nums}
-      .ov-centre{flex:1.15 1 0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:8px 26px;text-align:center}
-      .ov-top{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:nowrap;min-width:0}
-      .ov-vs{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;letter-spacing:.06em;color:#42506b;white-space:nowrap;min-width:0;overflow:hidden;text-transform:uppercase}
-      .ov-vs i{font-style:normal;color:#ff6a00;font-weight:700;padding:0 1px}
-      .ov-score{flex:none;color:#081f42;font-family:"Barlow Condensed",sans-serif;font-size:52px;font-weight:700;line-height:.95;letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums}
-      .ov-scoreline{display:flex;align-items:baseline;gap:14px;justify-content:center}
-      .ov-target{flex:none;font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.08em;color:#081f42;text-transform:uppercase;white-space:nowrap}
-      .ov-target b{color:#ff6a00;font-size:22px}
+      /* The centre is exactly two rows — a 2-column grid, as in
+         the reference close-up: row 1 is the batting team's
+         abbreviation beside the score (the single dominant
+         element, larger than everything else in the bar), row 2
+         is "v <opponents>" — or "TARGET <n>" in the chase —
+         beside the overs. No third line, no innings badge. */
+      .ov-centre{flex:1.05 1 0;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;padding:8px 36px;background:#fff}
+      .ov-cgrid{display:grid;grid-template-columns:minmax(0,auto) auto;column-gap:28px;row-gap:1px;align-items:baseline;justify-content:center}
+      .ov-cgrid .c-abbrcell{display:flex;align-items:center;gap:9px;min-width:0}
+      .ov-cgrid .c-abbr{font-family:"Barlow Condensed",sans-serif;font-size:41px;font-weight:700;letter-spacing:.03em;color:#081f42;text-transform:uppercase;line-height:1;white-space:nowrap;min-width:0;overflow:hidden}
+      .ov-cgrid .c-score{font-family:"Barlow Condensed",sans-serif;font-size:56px;font-weight:700;line-height:.95;letter-spacing:.01em;color:#081f42;white-space:nowrap;font-variant-numeric:tabular-nums}
+      .ov-cgrid .c-sub{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;letter-spacing:.07em;color:#081f42;text-transform:uppercase;white-space:nowrap;min-width:0;overflow:hidden}
+      .ov-cgrid .c-sub b{font-size:21px}
+      .ov-cgrid .c-overs{font-family:"Barlow Condensed",sans-serif;font-size:20px;font-weight:700;letter-spacing:.05em;color:#081f42;white-space:nowrap;font-variant-numeric:tabular-nums}
       .ov-inn{flex:none;background:#ff6a00;color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:3px 7px;text-transform:uppercase}
       .ov-freehit{flex:none;background:#f5b921;color:#241a02;font-size:13px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:3px 8px;text-transform:uppercase;animation:fhPulse 1s ease-in-out infinite}
       @keyframes fhPulse{0%,100%{opacity:1}50%{opacity:.55}}
       @media (prefers-reduced-motion: reduce){.ov-freehit{animation:none}}
-      .ov-overs{font-family:"Barlow Condensed",sans-serif;font-size:22px;font-weight:700;letter-spacing:.05em;color:#081f42;white-space:nowrap;min-width:0;overflow:hidden;font-variant-numeric:tabular-nums}
-      .ov-overs small{font-size:14px;color:#7d8aa5;font-weight:700;letter-spacing:.08em}
-      .ov-status{font-size:14.5px;font-weight:700;letter-spacing:.05em;color:#42506b;text-transform:uppercase;white-space:nowrap;overflow:hidden;max-width:100%}
-      .ov-status .dim{color:#ff6a00;font-weight:800}
       .ov-bowl-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px}
       .ov-bowl-head .nm{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:600;letter-spacing:.05em;color:#fff;text-transform:uppercase;white-space:nowrap;overflow:hidden}
-      .ov-bowl-head .fig{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#ffb066;font-variant-numeric:tabular-nums}
+      .ov-bowl-head .fig{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
       .ov-bowl-head .ov{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:500;color:#a9bce0;font-variant-numeric:tabular-nums}
-      .ov-balls{display:flex;gap:5px;margin-top:7px;flex-wrap:nowrap}
-      .ov-ballb{width:27px;height:27px;flex:none;border-radius:4px;background:#fff;color:#081f42;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:14.5px;font-weight:700;line-height:1}
+      .ov-balls{display:flex;gap:5px;margin-top:7px;flex-wrap:nowrap;align-items:center}
+      .ov-over-lab{font-family:"Barlow Condensed",sans-serif;font-size:16px;font-weight:700;letter-spacing:.09em;color:#dbe4f5;text-transform:uppercase;margin-right:2px}
+      .ov-ballb{width:27px;height:27px;flex:none;border-radius:3px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.75);color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Barlow Condensed",sans-serif;font-size:14.5px;font-weight:700;line-height:1}
       .ov-rr{display:flex;align-items:baseline;gap:9px;margin-top:8px;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;white-space:nowrap}
-      .ov-rr .lab{font-size:17px;font-weight:700;letter-spacing:.09em;color:#ff8a1e}
-      .ov-rr .val{font-size:24px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
-      .ov-ballb.wkt{background:#d21f3c;color:#fff}
-      .ov-ballb.bnd4{background:#ff6a00;color:#fff}
-      .ov-ballb.bnd6{background:#123a75;color:#ffa04d;box-shadow:inset 0 0 0 2px #ff6a00}
-      .ov-ballb.empty{background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.55)}
+      .ov-rr .lab{font-size:16px;font-weight:700;letter-spacing:.09em;color:#dbe4f5}
+      .ov-rr .val{font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+      .ov-ballb.wkt{background:#d21f3c;border-color:#d21f3c;color:#fff}
+      .ov-ballb.bnd4{background:#ff6a00;border-color:#ff6a00;color:#fff}
+      .ov-ballb.bnd6{background:#123a75;border-color:#ff6a00;color:#fff}
+      .ov-ballb.empty{background:transparent;border:2px solid rgba(255,255,255,.45)}
       /* ---------- overlay event animations ----------
          A broadcast celebration in the Abu Dhabi T10 style: a
          full-width deep-navy strip sweeps over the score bar with
@@ -3482,7 +3506,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v157';
+      var APP_VERSION = 'v158';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18606,13 +18630,15 @@
         if (/^(?:B|Lb)\d+$/.test(t)) return t;
         return t;
       }
-      /* One end of the overlay bar: the team's uploaded logo when
-         it has one, a round initials badge in the bar's colours
-         when it does not. */
-      function overlayFlagHTML(team){
+      /* One end of the overlay bar: a full-height X end-cap in the
+         reference's colours (maroon for the batting team, gold for
+         the bowling team) with the team's uploaded logo centred on
+         it at full height; without a logo, the team's short name
+         sits on the X instead. */
+      function overlayFlagHTML(team, side){
         var logo = teamLogoFor(team);
-        if (logo) return '<div class="ov-flag"><img src="' + esc(logo) + '" alt="Logo of ' + esc(team || '') + '" /></div>';
-        return '<div class="ov-flag"><span class="ov-badge">' + esc(teamShort(team)) + '</span></div>';
+        if (logo) return '<div class="ov-flag ' + side + '"><img src="' + esc(logo) + '" alt="Logo of ' + esc(team || '') + '" /></div>';
+        return '<div class="ov-flag ' + side + '"><span class="ov-badge">' + esc(teamShort(team)) + '</span></div>';
       }
       /* Split a dismissal line into the reference card's two
          columns: the catching / fielding part and the bowler part
@@ -18791,25 +18817,30 @@
       function overlayHTML(){
         var inn=S.current, t=target();
         var bat1=getBatterPeek(inn, inn.striker), bat2=getBatterPeek(inn, inn.nonStriker);
-        var bowlerRec = cbBowlerFull(inn, inn.bowler);
-        var ballsLeftLt = effMaxBalls()-inn.legalBalls;
-        /* Centre status line, in the reference's place (the toss
-           line under the score): the result once the match is
-           finished, the chase equation in the 2nd innings, the
-           toss line in the 1st — always with the run rate the
-           scorers track beside it. */
-        var statusMain, statusDim = '';
-        if (S.status==='finished' && S.resultText){ statusMain = esc(fixResultText(S.resultText)); }
-        else if (S.superOver && S.superOver.active){ statusMain = 'Super Over'; if (t) statusDim = 'Target ' + t; }
-        else if (t){
-          statusMain = 'Need ' + runW(Math.max(0, t-inn.runs)) + (isFinite(ballsLeftLt) ? ' off ' + ballW(Math.max(0, ballsLeftLt)) : '');
-          var rNow = rrr(); statusDim = 'Target ' + t + (rNow !== null ? ' • RRR ' + rNow.toFixed(2) : '');
+        /* The bowler is always named, as in the reference: when no
+           bowler is picked for the over in progress (the moment at
+           an over change where the bar used to show a bare "—"),
+           fall back to the bowler of the last ball actually bowled,
+           with that bowler's figures. A dash remains only when no
+           one has bowled a ball yet. */
+        var bowlName = inn.bowler || '';
+        if (!bowlName){
+          var allBalls = inn.balls || [];
+          for (var bi = allBalls.length - 1; bi >= 0; bi--){
+            if (allBalls[bi] && !allBalls[bi].evt && allBalls[bi].bowler){ bowlName = allBalls[bi].bowler; break; }
+          }
         }
-        else if (S.tossWinner){ statusMain = esc(S.tossWinner) + ' won the toss'; statusDim = 'CRR ' + crr().toFixed(2); }
-        else if (S.tossInfo){ statusMain = esc(S.tossInfo); statusDim = 'CRR ' + crr().toFixed(2); }
-        else { statusMain = esc(inn.battingTeam || '—') + ' batting'; statusDim = 'CRR ' + crr().toFixed(2); }
-        var vsA = teamShort(S.teamA || inn.battingTeam), vsB = teamShort(S.teamB || inn.bowlingTeam);
-        var innTag = (S.superOver && S.superOver.active) ? 'SO' : (S.inningsNo === 2 ? '2nd' : '1st');
+        var bowlerRec = cbBowlerFull(inn, bowlName);
+        /* Centre row 2, exactly as in the reference: the result
+           once the match is finished, TARGET in the chase, and
+           "v <opponents>" in the 1st innings. The centre carries
+           nothing else — no partnership line, no run rate (that
+           lives once, in the bowler panel). */
+        var centreSub;
+        if (S.status==='finished' && S.resultText){ centreSub = esc(fixResultText(S.resultText)); }
+        else if (S.superOver && S.superOver.active){ centreSub = 'Super Over' + (t ? ' • Target <b>' + t + '</b>' : ''); }
+        else if (t){ centreSub = 'Target <b>' + t + '</b>'; }
+        else { centreSub = 'v ' + esc(teamShort(inn.bowlingTeam || S.teamB || '')); }
         var batIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 2.6a2.35 2.35 0 0 0-3.3 0L8.2 12l3.3 3.3 9.4-9.4a2.35 2.35 0 0 0 0-3.3ZM7.1 13.1 3.2 17a2.1 2.1 0 1 0 3 3l3.9-3.9-3-3Z"/></svg>';
         /* Fixed rows, moving icon: the pair renders in batting
            order (creasePairOrdered), each row leads with the same
@@ -18824,22 +18855,6 @@
         var pairFig = {}; pairFig[inn.striker] = bat1; pairFig[inn.nonStriker] = bat2;
         var pairRowsHTML = pairOrdered.map(function(nm){ return batRow(nm, pairFig[nm] || { runs:0, balls:0 }, nm === inn.striker); }).join('');
         if (!pairRowsHTML) pairRowsHTML = batRow(null, { runs:0, balls:0 }, false) + batRow(null, { runs:0, balls:0 }, false);
-        /* The centre's lower line ROTATES through the live
-           information (see the rotation timer below): the main
-           status line first, then the partnership, this over's
-           runs and — in the 1st innings — the projected score,
-           each with the run rate beside it. Every line is built
-           from the live figures only. */
-        var statusLines = [{ main: statusMain, dim: statusDim }];
-        if (S.status === 'live' && inn.legalBalls > 0){
-          var pshipLt = partnershipFigures(inn);
-          if (pshipLt.balls > 0) statusLines.push({ main: 'Partnership ' + pshipLt.runs + ' (' + pshipLt.balls + ')', dim: 'CRR ' + crr().toFixed(2) });
-          var groupsLt = groupOvers(inn).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
-          if (groupsLt.length) statusLines.push({ main: 'This over: ' + runW(groupsLt[groupsLt.length - 1].runs), dim: 'CRR ' + crr().toFixed(2) });
-          if (!t){ var projLt = projectedScore(); if (projLt !== null && projLt !== undefined) statusLines.push({ main: 'Projected: ' + projLt, dim: 'CRR ' + crr().toFixed(2) }); }
-        }
-        var statusPick = statusLines[ovInfoIdx % statusLines.length];
-        statusMain = statusPick.main; statusDim = statusPick.dim;
         /* This over's deliveries for the ball circles: the last
            over group (the over in progress, or the one just
            completed at an over break), then empty circles for the
@@ -18864,26 +18879,25 @@
         var cardHTML = '';
         if (overlayCardVisible(inn)) cardHTML = overlayCardHTML(inn);
         return '<div class="ov-fit"><div class="lowerthird"><div class="ov-bar">'
-          + overlayFlagHTML(inn.battingTeam)
+          + overlayFlagHTML(inn.battingTeam, 'bat')
           + '<div class="ov-seg bats"><div class="ov-panel">'
           + pairRowsHTML
           + '</div></div>'
-          + '<div class="ov-centre"><div class="ov-top">'
-          + '<span class="ov-vs ov-fit-txt"><span>' + esc(vsA) + ' <i>v</i> ' + esc(vsB) + '</span></span>'
-          + '<span class="ov-inn">' + innTag + '</span>'
+          + '<div class="ov-centre"><div class="ov-cgrid">'
+          + '<span class="c-abbrcell"><span class="c-abbr ov-fit-txt"><span>' + esc(teamShort(inn.battingTeam)) + '</span></span>'
           + (freeHitPending(inn) && S.status === 'live' ? '<span class="ov-freehit">Free Hit</span>' : '')
-          + '</div>'
-          + '<div class="ov-scoreline"><span class="ov-score">' + inn.runs + '-' + inn.wickets + '</span>'
-          + '<span class="ov-overs ov-fit-txt"><span>' + oversText(inn.legalBalls) + ' <small>OVERS</small></span></span></div>'
-          + (t ? '<div class="ov-target">Target <b>' + t + '</b></div>' : '')
-          + '<div class="ov-status ov-fit-txt"><span>' + statusMain + (statusDim ? ' <span class="dim">• ' + esc(statusDim) + '</span>' : '') + '</span></div></div>'
-          + '<div class="ov-seg bowl"><div class="ov-panel">'
-          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt"><span>' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span></span>'
-          + '<span class="fig">' + bowlerRec.wickets + '-' + bowlerRec.runs + '</span>'
-          + '<span class="ov">(' + oversText(bowlerRec.balls) + ')</span></div>'
-          + (t ? '<div class="ov-balls">' + ballsHTML + '</div>' : '<div class="ov-rr"><span class="lab">Run-Rate</span><span class="val">' + crr().toFixed(2) + '</span></div>')
+          + '</span>'
+          + '<span class="c-score">' + inn.runs + '-' + inn.wickets + '</span>'
+          + '<span class="c-sub ov-fit-txt"><span>' + centreSub + '</span></span>'
+          + '<span class="c-overs">' + oversText(inn.legalBalls) + ' OVERS</span>'
           + '</div></div>'
-          + overlayFlagHTML(inn.bowlingTeam)
+          + '<div class="ov-seg bowl"><div class="ov-panel">'
+          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt"><span>' + esc(bowlName ? dispName(inn.bowlingTeam, bowlName) : '—') + '</span></span>'
+          + '<span class="fig">' + bowlerRec.wickets + '-' + bowlerRec.runs + '</span>'
+          + '<span class="ov">' + oversText(bowlerRec.balls) + '</span></div>'
+          + (t ? '<div class="ov-balls"><span class="ov-over-lab">Over</span>' + ballsHTML + '</div>' : '<div class="ov-rr"><span class="lab">Run-Rate</span><span class="val">' + crr().toFixed(2) + '</span></div>')
+          + '</div></div>'
+          + overlayFlagHTML(inn.bowlingTeam, 'bowl')
           + '</div>' + cardHTML + '</div></div>';
       }
       /* Whether the overlay's full scorecard panel is on screen:
@@ -18981,9 +18995,12 @@
         }
         if (fx) showOverlayFx(fx.cls, fx.txt, fx.sub);
       }
-      /* Rotate the centre's lower info line every few seconds.
-         A celebration banner on screen pauses the rotation, so
-         the two never fight over the bar. */
+      /* Re-render every few seconds so the full scorecard panel
+         rotates through its Batting / Bowling / Partnerships
+         sections (ovInfoIdx drives the section pick in
+         overlayCardHTML). The score bar itself is fixed two-row
+         geometry and never rotates. A celebration banner on
+         screen pauses the cycle, so the two never fight. */
       setInterval(function(){
         try {
           var main = $('overlayMain'); if (!main || !main.querySelector('.ov-fit')) return;
