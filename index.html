@@ -233,6 +233,16 @@
       td.r,th.r{text-align:right}
       tr.out td{color:var(--muted)}
       .howout{font-size:12px;color:var(--muted);display:block}
+      /* a dismissal line never wraps: it stays on ONE line under the
+         batter's name, like the reference scorecard — anything too
+         long for the cell is clipped with an ellipsis rather than
+         breaking onto a second line or widening the page */
+      .howout.dism{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      /* Extras row in the reference's style: one full-width line —
+         "Extras" on the left, the total and its breakdown together
+         on the right, never stacked or wrapped */
+      .exline{display:flex;justify-content:space-between;align-items:baseline;gap:12px;white-space:nowrap}
+      .exline .exbd{color:var(--muted);font-size:12.5px}
       .notout{font-weight:700}
 
       /* ---------- overlay ----------
@@ -1562,7 +1572,7 @@
       #view-scoreboard .cb-panel .card h2{color:#fff;border-bottom-color:#3a3a3a}
       #view-scoreboard .cb-panel th{color:#a8a8a8;border-bottom-color:#3d3d3d}
       #view-scoreboard .cb-panel td{border-bottom-color:#333}
-      #view-scoreboard .cb-panel .note,#view-scoreboard .cb-panel .sub,#view-scoreboard .cb-panel .howout{color:#a8a8a8}
+      #view-scoreboard .cb-panel .note,#view-scoreboard .cb-panel .sub,#view-scoreboard .cb-panel .howout,#view-scoreboard .cb-panel .exbd{color:#a8a8a8}
       #view-scoreboard .cb-panel tr.out td{color:#9a9a9a}
       #view-scoreboard .cb-panel .squad-box{background:#2b2b2b;border-color:#3a3a3a}
       #view-scoreboard .cb-panel .sq-num{background:#2eaa6b}
@@ -3510,7 +3520,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v159';
+      var APP_VERSION = 'v162';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4229,6 +4239,36 @@
       function dispName(team, name){
         if (!name) return name;
         return nickOf(team, name) || name;
+      }
+      /* ---------- dismissal lines: nicknames resolved at render time ----------
+         A batter's howOut string is baked when the wicket falls, so a
+         match scored before the nickname fix (or before a nickname
+         was set) stores the bowler's / fielder's FULL name in it —
+         "lbw b Md. Billal Hossain". Re-resolve the names inside the
+         string every time it is printed, so the scoreboard shows
+         "lbw b BILLAL" for old and new matches alike. The stored
+         string itself is NEVER rewritten: history keeps exactly
+         what was recorded, and a string that already carries a
+         nickname passes through untouched (a nickname never matches
+         a full-name entry, so resolving it is a no-op). Any shape
+         the parser does not recognise is returned as stored. */
+      function howOutWithNames(howOut, resolve){
+        var h = String(howOut || '');
+        if (!h) return h;
+        var m;
+        if ((m = /^c & b (.+)$/.exec(h))) return 'c & b ' + resolve(m[1]);
+        if ((m = /^(c|st) (.+) b (.+)$/.exec(h))) return m[1] + ' ' + resolve(m[2]) + ' b ' + resolve(m[3]);
+        if ((m = /^lbw b (.+)$/.exec(h))) return 'lbw b ' + resolve(m[1]);
+        if ((m = /^hit wicket b (.+)$/.exec(h))) return 'hit wicket b ' + resolve(m[1]);
+        if ((m = /^b (.+)$/.exec(h))) return 'b ' + resolve(m[1]);
+        if ((m = /^run out \((.+)\)$/.exec(h))) return 'run out (' + resolve(m[1]) + ')';
+        return h;
+      }
+      function dispHowOut(team, howOut){
+        return howOutWithNames(howOut, function(n){ return dispName(team, n); });
+      }
+      function dispHowOutIn(nicks, team, howOut){
+        return howOutWithNames(howOut, function(n){ return dispIn(nicks, team, n); });
       }
       function setNickname(team, name, nick){
         if (!Array.isArray(S.nicknames)) S.nicknames = [];
@@ -6291,8 +6331,8 @@
           var b = cbBatterFull(inn, name);
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
           var nameHtml = isStriker
-            ? '<span class="mc-striker-pill">' + plLink(inn.battingTeam, name) + ' *</span>'
-            : '<span class="pname">' + plLink(inn.battingTeam, name) + '</span>';
+            ? '<span class="mc-striker-pill">' + plLink(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) + ' *</span>'
+            : '<span class="pname">' + plLink(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) + '</span>';
           return '<tr><td>' + nameHtml + '</td><td>' + b.runs + '</td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td></tr>';
         }
         /* Batting order, not strike order: the pair keeps the
@@ -6308,7 +6348,7 @@
         if (inn.bowler){
           var bw = cbBowlerFull(inn, inn.bowler);
           var eco = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
+          $('mcBowler').innerHTML = bwHead + '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + leadSuffix(inn.bowlingTeam, inn.bowler) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + bowlerMaidens(inn, inn.bowler) + '</td><td>' + bw.runs + '</td><td>' + bw.wickets + '</td><td>' + eco + '</td></tr></tbody></table>';
         } else {
           $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
         }
@@ -15926,8 +15966,8 @@
         if (!(inn.batters || []).length) return '<p class="note">No batting recorded.</p>';
         var rows = inn.batters.map(function(b){
           var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-          return '<tr class="' + (b.out ? 'out' : '') + '"><td><span class="pname">' + plLinkIn(e, inn.battingTeam, b.name) + '</span>'
-            + (b.out ? '<span class="howout">' + esc(b.howOut || 'out') + '</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '<span class="howout">not out</span>'))
+          return '<tr class="' + (b.out ? 'out' : '') + '"><td><span class="pname">' + plLinkIn(e, inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name) + '</span>'
+            + (b.out ? '<span class="howout dism">' + esc(dispHowOutIn(e.nicknames, inn.bowlingTeam, b.howOut || 'out')) + '</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '<span class="howout">not out</span>'))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var squad = inn.battingTeam === e.teamA ? e.squadA : (inn.battingTeam === e.teamB ? e.squadB : []);
@@ -15935,10 +15975,10 @@
         /* Archived innings are finished, and only the Playing XI —
            the first (wickets limit + 1) of the squad — counts. */
         var ytb = (squad || []).slice(0, (typeof e.wicketsLimit === 'number' ? e.wicketsLimit : 10) + 1).filter(function(n){ return !batted[n]; });
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)); }).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras <b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b> <span class="howout">(Wd ' + (ex.wide || 0) + ', Nb ' + (ex.noball || 0) + ', B ' + (ex.bye || 0) + ', Lb ' + (ex.legbye || 0) + ')</span></td><td colspan="5"></td></tr>'
+          + '<tr><td colspan="6"><div class="exline"><span>Extras</span><span><b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b> <span class="exbd">b ' + (ex.bye || 0) + ', lb ' + (ex.legbye || 0) + ', w ' + (ex.wide || 0) + ', nb ' + (ex.noball || 0) + '</span></span></div></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -15946,7 +15986,7 @@
         if (!(inn.bowlers || []).length) return '<p class="note">No bowling recorded.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-          return '<tr><td><span class="pname">' + plLinkIn(e, inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><span class="pname">' + plLinkIn(e, inn.bowlingTeam, b.name) + leadSuffix(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -16021,6 +16061,14 @@
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
         base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        /* The archive entry stores no leadership picks, but the
+           scoreboard tables resolve the (c) / (vc) / (wk) suffix from
+           the (swapped) state's stores — carry this device's current
+           picks for the two teams into the display state so an
+           archived scorecard marks its captain, vice-captain and
+           wicket-keeper exactly like the live one. */
+        base.myTeams.leadership = deep(((S.myTeams && S.myTeams.leadership) || []).filter(function(x){ return x && (x.t === e.teamA || x.t === e.teamB); }));
+        base.tournament.leadership = deep(((S.tournament && S.tournament.leadership) || []).filter(function(x){ return x && (x.t === e.teamA || x.t === e.teamB); }));
         base.status = 'finished'; base.inningsNo = innNo;
         base.current = cur; base.prevInnings = prev;
         base.squadA = deep(e.squadA || []); base.squadB = deep(e.squadB || []);
@@ -17009,7 +17057,7 @@
           d.rrect(MX, d.y, CW, 30, 6, MRC.goldBg, null, 0);
           d.fill(MX, d.y, 4, 30, MRC.goldBar);
           d.text('PLAYER OF THE MATCH', MX + 14, d.y + 19, 2, 8, MRC.goldTx, 'l', 1.2);
-          var potm = dispName(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
+          var potm = dispLead(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
           var lx = MX + 14 + mrTextW('PLAYER OF THE MATCH', 8, true) + 1.2 * 18 + 12;
           d.text(mrFit(potm, 11.5, true, RX - 10 - lx), lx, d.y + 19.5, 2, 11.5, MRC.ink, 'l');
           d.y += 42;
@@ -17078,7 +17126,7 @@
             if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
             var dism = b.out ? (b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out');
-            var nm = dispName(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
+            var nm = dispLead(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
             var cells = [nm, dism, String(b.runs), String(b.balls), String(b.fours || 0), String(b.sixes || 0), sr];
             cells.forEach(function(v, ci){
               var c = BC[ci];
@@ -17094,7 +17142,7 @@
           d.y += 6;
           var ytb = [];
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
-          if (ytb.length) para((inn === S.current && !finished && !inningsDone(inn)) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
+          if (ytb.length) para((inn === S.current && !finished && !inningsDone(inn)) ? 'Yet to bat:' : 'Did not bat:', ytb.map(function(n){ return dispLead(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
           var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
           var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
@@ -17106,7 +17154,7 @@
           var fow = mrFallOfWickets(inn);
           if (fow.length){
             para('Fall of Wickets:', fow.map(function(f){
-              return f.score + '-' + f.n + (f.name ? ' (' + dispName(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
+              return f.score + '-' + f.n + (f.name ? ' (' + dispLead(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
             }).join(',  '), 8.5, MRC.muted);
           }
           subhead('BOWLING');
@@ -17131,7 +17179,7 @@
             if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
             var s = stats[b.name] || { dots: 0, fours: 0, sixes: 0, wides: 0, noballs: 0, maidens: 0 };
             var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-            var cells = [dispName(inn.bowlingTeam, b.name), oversText(b.balls || 0), String(s.maidens), String(b.runs), String(b.wickets), econ, String(s.dots), String(s.fours), String(s.sixes), String(s.wides), String(s.noballs)];
+            var cells = [dispLead(inn.bowlingTeam, b.name), oversText(b.balls || 0), String(s.maidens), String(b.runs), String(b.wickets), econ, String(s.dots), String(s.fours), String(s.sixes), String(s.wides), String(s.noballs)];
             cells.forEach(function(v, ci){
               var c = WC[ci];
               var bold = ci === 4;
@@ -17434,7 +17482,7 @@
           d.rrect(MX, d.y, CW, 30, 6, MRC.goldBg, null, 0);
           d.fill(MX, d.y, 4, 30, MRC.goldBar);
           d.text('PLAYER OF THE MATCH', MX + 14, d.y + 19, 2, 8, MRC.goldTx, 'l', 1.2);
-          var potm = dispName(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
+          var potm = dispLead(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
           var lx = MX + 14 + mrTextW('PLAYER OF THE MATCH', 8, true) + 1.2 * 18 + 12;
           d.text(mrFit(potm, 11.5, true, RX - 10 - lx), lx, d.y + 19.5, 2, 11.5, MRC.ink, 'l');
           d.y += 42;
@@ -17504,8 +17552,8 @@
             d.text((inn.runs || 0) + '/' + (inn.wickets || 0) + ' (' + oversText(inn.legalBalls || 0) + ' overs)', RX, d.y + 11, 2, 10.5, MRC.tealTx, 'r');
             d.y += 17;
             var bats = summaryTopBatters(inn), bowls = summaryTopBowlers(inn);
-            if (bats.length) para('Batting:', bats.map(function(b){ return dispName(inn.battingTeam, b.name) + ' ' + b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')'; }).join(',  '), 9, MRC.muted);
-            if (bowls.length) para('Bowling:', bowls.map(function(w){ return dispName(inn.bowlingTeam, w.name) + ' ' + w.wickets + '-' + w.runs; }).join(',  '), 9, MRC.muted);
+            if (bats.length) para('Batting:', bats.map(function(b){ return dispLead(inn.battingTeam, b.name) + ' ' + b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')'; }).join(',  '), 9, MRC.muted);
+            if (bowls.length) para('Bowling:', bowls.map(function(w){ return dispLead(inn.bowlingTeam, w.name) + ' ' + w.wickets + '-' + w.runs; }).join(',  '), 9, MRC.muted);
             if (ii < inns.length - 1){ d.line(MX, d.y + 1, RX, MRC.line, 0.5); d.y += 8; }
           });
           d.y += 8;
@@ -17540,7 +17588,7 @@
             if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
             var dism = b.out ? (b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out');
-            var nm = dispName(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
+            var nm = dispLead(inn.battingTeam, b.name) + ((b.name === inn.striker && !b.out) ? ' *' : '');
             var cells = [nm, dism, String(b.runs), String(b.balls), String(b.fours || 0), String(b.sixes || 0), sr];
             cells.forEach(function(v, ci){
               var c = BC[ci];
@@ -17556,7 +17604,7 @@
           d.y += 6;
           var ytb = [];
           try { ytb = yetToBatNames(inn); } catch(e){ ytb = []; }
-          if (ytb.length) para('Did not bat:', ytb.map(function(n){ return dispName(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
+          if (ytb.length) para('Did not bat:', ytb.map(function(n){ return dispLead(inn.battingTeam, n); }).join(', '), 8.5, MRC.muted, 3);
           d.need(28);
           var ex = inn.extras || { wide: 0, noball: 0, bye: 0, legbye: 0 };
           var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0);
@@ -17568,7 +17616,7 @@
           var fow = mrFallOfWickets(inn);
           if (fow.length){
             para('Fall of Wickets:', fow.map(function(f){
-              return f.score + '-' + f.n + (f.name ? ' (' + dispName(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
+              return f.score + '-' + f.n + (f.name ? ' (' + dispLead(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
             }).join(',  '), 8.5, MRC.muted);
           }
           subhead('BOWLING');
@@ -17593,7 +17641,7 @@
             if (ri % 2) d.fill(MX, d.y, CW, 15, MRC.zebra);
             var s = stats[b.name] || { dots: 0, fours: 0, sixes: 0, wides: 0, noballs: 0, maidens: 0 };
             var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-            var cells = [dispName(inn.bowlingTeam, b.name), oversText(b.balls || 0), String(s.maidens), String(b.runs), String(b.wickets), econ, String(s.dots), String(s.fours), String(s.sixes), String(s.wides), String(s.noballs)];
+            var cells = [dispLead(inn.bowlingTeam, b.name), oversText(b.balls || 0), String(s.maidens), String(b.runs), String(b.wickets), econ, String(s.dots), String(s.fours), String(s.sixes), String(s.wides), String(s.noballs)];
             cells.forEach(function(v, ci){
               var c = WC[ci];
               var bold = ci === 4;
@@ -17843,8 +17891,8 @@
               c.font = '700 35px ' + COND;
               var bfW = c.measureText(bFig).width;
               c.fillStyle = INK;
-              mcFitFont(c, dispName(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 30, 21, '600', SANS);
-              c.fillText(mcWrap(c, dispName(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 1)[0] || '', PAD + 24, ry);
+              mcFitFont(c, dispLead(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 30, 21, '600', SANS);
+              c.fillText(mcWrap(c, dispLead(inn.battingTeam, b.name), (midX - PAD - 48) - bfW - 16, 1)[0] || '', PAD + 24, ry);
               c.fillStyle = '#ffffff'; c.font = '700 35px ' + COND; c.textAlign = 'right';
               c.fillText(bFig, midX - 24, ry);
               c.textAlign = 'left';
@@ -17854,8 +17902,8 @@
               c.font = '700 35px ' + COND;
               var wfW = c.measureText(wFig).width;
               c.fillStyle = INK;
-              mcFitFont(c, dispName(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 30, 21, '600', SANS);
-              c.fillText(mcWrap(c, dispName(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 1)[0] || '', midX + 24, ry);
+              mcFitFont(c, dispLead(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 30, 21, '600', SANS);
+              c.fillText(mcWrap(c, dispLead(inn.bowlingTeam, w.name), (W - PAD - midX - 48) - wfW - 16, 1)[0] || '', midX + 24, ry);
               c.fillStyle = '#ffffff'; c.font = '700 35px ' + COND; c.textAlign = 'right';
               c.fillText(wFig, W - PAD - 24, ry);
               c.textAlign = 'left';
@@ -17898,7 +17946,7 @@
         c.moveTo(wx + 26, fy - 44); c.lineTo(wx + wedgeW - 26, fy - 44); c.lineTo(wx + wedgeW, fy + 44); c.lineTo(wx, fy + 44);
         c.closePath(); c.fill();
         c.fillStyle = '#0a2320'; c.textAlign = 'center';
-        var potmTxt = S.potmName ? dispName(S.potmTeam, S.potmName) : 'Not Decided Yet';
+        var potmTxt = S.potmName ? dispLead(S.potmTeam, S.potmName) : 'Not Decided Yet';
         mcFitFont(c, potmTxt, wedgeW - 70, 36, 24, '700', COND);
         c.fillText(mcWrap(c, potmTxt, wedgeW - 70, 1)[0] || '', W / 2, fy + 2);
         c.font = '600 21px ' + SANS; c.fillStyle = 'rgba(10,35,32,0.75)';
@@ -18037,31 +18085,31 @@
         inns.forEach(function(inn){
           (inn.batters || []).forEach(function(b){
             if (!b || !b.name || !(b.balls > 0)) return;
-            if (!topBat || b.runs > topBat.runs) topBat = { name: dispName(inn.battingTeam, b.name), team: inn.battingTeam, runs: b.runs, text: b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')' };
+            if (!topBat || b.runs > topBat.runs) topBat = { name: dispLead(inn.battingTeam, b.name), team: inn.battingTeam, runs: b.runs, text: b.runs + (b.out ? '' : '*') + ' (' + b.balls + ')' };
           });
           (inn.bowlers || []).forEach(function(b){
             if (!b || !b.name || !(b.balls > 0)) return;
-            if (!topBowl || b.wickets > topBowl.wickets || (b.wickets === topBowl.wickets && b.runs < topBowl.runs)) topBowl = { name: dispName(inn.bowlingTeam, b.name), team: inn.bowlingTeam, wickets: b.wickets, runs: b.runs, text: b.wickets + '/' + b.runs + ' (' + oversText(b.balls) + ' ov)' };
+            if (!topBowl || b.wickets > topBowl.wickets || (b.wickets === topBowl.wickets && b.runs < topBowl.runs)) topBowl = { name: dispLead(inn.bowlingTeam, b.name), team: inn.bowlingTeam, wickets: b.wickets, runs: b.runs, text: b.wickets + '/' + b.runs + ' (' + oversText(b.balls) + ' ov)' };
           });
         });
         var potm = null;
         if (S.potmName){
           var pf = '';
           try { pf = potmFigures(S.potmName, S.potmTeam); } catch(e){}
-          potm = { name: dispName(S.potmTeam, S.potmName), team: S.potmTeam || '', text: pf || '' };
+          potm = { name: dispLead(S.potmTeam, S.potmName), team: S.potmTeam || '', text: pf || '' };
         }
         var livePair = null;
         if (!finished && started && S.current && S.current.striker){
           var batLines = [S.current.striker, S.current.nonStriker].filter(Boolean).map(function(nm){
             var b = { runs: 0, balls: 0 };
             (S.current.batters || []).forEach(function(x){ if (x.name === nm) b = x; });
-            return dispName(S.current.battingTeam, nm) + (nm === S.current.striker ? '*' : '') + ' ' + b.runs + ' (' + b.balls + ')';
+            return dispLead(S.current.battingTeam, nm) + (nm === S.current.striker ? '*' : '') + ' ' + b.runs + ' (' + b.balls + ')';
           });
           var bowlLine = '';
           if (S.current.bowler){
             var bw = null;
             (S.current.bowlers || []).forEach(function(x){ if (x.name === S.current.bowler) bw = x; });
-            bowlLine = dispName(S.current.bowlingTeam, S.current.bowler) + (bw ? ' ' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')' : '');
+            bowlLine = dispLead(S.current.bowlingTeam, S.current.bowler) + (bw ? ' ' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')' : '');
           }
           livePair = { batLines: batLines, bowlLine: bowlLine };
         }
@@ -18671,10 +18719,10 @@
           + '<div class="ss-bats">' + (creasePairOrdered(inn).map(function(nm){
               var fig = nm === inn.striker ? bat1 : bat2;
               return nm === inn.striker
-                ? '<div><span class="onstrike">' + esc(dispName(inn.battingTeam, nm)) + ' *</span> — ' + fig.runs + ' (' + fig.balls + ')</div>'
-                : '<div><span class="pname">' + esc(dispName(inn.battingTeam, nm)) + '</span> — ' + fig.runs + ' (' + fig.balls + ')</div>';
+                ? '<div><span class="onstrike">' + esc(dispName(inn.battingTeam, nm) + leadSuffix(inn.battingTeam, nm)) + ' *</span> — ' + fig.runs + ' (' + fig.balls + ')</div>'
+                : '<div><span class="pname">' + esc(dispName(inn.battingTeam, nm) + leadSuffix(inn.battingTeam, nm)) + '</span> — ' + fig.runs + ' (' + fig.balls + ')</div>';
             }).join('') || '<div>— — 0 (0)</div><div>— — 0 (0)</div>')
-          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: <span class="pname">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) : '—') + '</span> • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
+          + '<div style="color:#bfe3cf;font-size:13.5px">Bowling: <span class="pname">' + esc(inn.bowler ? dispName(inn.bowlingTeam, inn.bowler) + leadSuffix(inn.bowlingTeam, inn.bowler) : '—') + '</span> • ' + bowlerFig(inn, inn.bowler) + '</div></div>'
           + '<div class="ss-meta">' + chips + '</div>'
           + (ballsHtml ? '<div class="balls-row"><span class="over-label">Recent balls:</span>' + ballsHtml + '</div>' : '')
           + '</div>';
@@ -18687,20 +18735,47 @@
         for (var i=0;i<inn.bowlers.length;i++) if (inn.bowlers[i].name===name){ var b=inn.bowlers[i]; return oversText(b.balls) + (b.balls === 6 ? ' over, ' : ' overs, ') + runW(b.runs) + ', ' + wicketW(b.wickets); }
         return '—';
       }
+      /* Leadership suffix for scoreboard names — the same
+         " (c)" / " (vc)" / " (wk)" text the Squads tab prints after
+         a player's name, resolved from the team's C / VC / WK picks
+         (tournament store first, then the All Teams pool, via
+         cbxLeadership). Empty when no pick names this player, so a
+         team with no leadership picked renders exactly as before. */
+      function leadSuffix(team, name){
+        if (!team || !name) return '';
+        var L = cbxLeadership(team);
+        var s = '';
+        if (L.c === name) s += ' (c)';
+        if (L.vc === name) s += ' (vc)';
+        if (L.wk === name) s += ' (wk)';
+        return s;
+      }
+      /* Display name WITH the leadership suffix, for the places
+         that print a name as one plain string rather than HTML —
+         the Scorecard PDF, the Match Report PDF, the Match
+         Summary JPG and the shareable Match Card. The suffix is
+         resolved from the FULL stored name (the picks hold full
+         names), then appended to the nickname the PDFs and images
+         print, so a captain shows as "RIASAT (c)" there exactly
+         as on the scoreboard. */
+      function dispLead(team, name){
+        if (!name) return '';
+        return dispName(team, name) + leadSuffix(team, name);
+      }
       function battingTableHTML(inn){
         if (!inn.batters.length) return '<p class="note">No one has batted yet.</p>';
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
-          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout pname':'pname')+'">' + plLink(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
-            + (b.out ? '<span class="howout">' + esc(b.howOut||'out') + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
+          return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout pname':'pname')+'">' + plLink(inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
+            + (b.out ? '<span class="howout dism">' + esc(dispHowOut(inn.bowlingTeam, b.howOut||'out')) + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
             + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = inn.extras;
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras <b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b> <span class="howout">(Wd ' + ex.wide + ', Nb ' + ex.noball + ', B ' + ex.bye + ', Lb ' + ex.legbye + ')</span></td><td colspan="5"></td></tr>'
+          + '<tr><td colspan="6"><div class="exline"><span>Extras</span><span><b>' + (ex.wide+ex.noball+ex.bye+ex.legbye) + '</b> <span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + '</span></span></div></td></tr>'
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
@@ -18708,7 +18783,7 @@
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + leadSuffix(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -18851,15 +18926,15 @@
           if (!inn.batters.length) body = '<p class="ovc-note">No one has batted yet.</p>';
           else body = inn.batters.map(function(b){
             var isBat = (b.name === inn.striker || b.name === inn.nonStriker) && !b.out;
-            var parts = b.out ? overlayDismissalParts(b.howOut) : ['', ''];
+            var parts = b.out ? overlayDismissalParts(dispHowOut(inn.bowlingTeam, b.howOut)) : ['', ''];
             var d1 = b.out ? parts[0] : '';
             var d2 = b.out ? parts[1] : (isBat ? 'not out' : (b.retiredHurt ? 'retired hurt' : ''));
-            return '<div class="ovc-row ovc-bat-row' + (isBat ? ' notout' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, b.name)) + '</span></span>'
+            return '<div class="ovc-row ovc-bat-row' + (isBat ? ' notout' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name)) + '</span></span>'
               + '<span class="d1">' + esc(d1) + '</span><span class="d2">' + esc(d2) + '</span>'
               + '<span class="r">' + b.runs + '</span><span class="b">' + b.balls + '</span></div>';
           }).join('');
           var ytbB = yetToBatNames(inn);
-          if (ytbB.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbB.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
+          if (ytbB.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbB.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
         } else if (sec === 'bowling'){
           if (!inn.bowlers.length) body = '<p class="ovc-note">No one has bowled yet.</p>';
           else {
@@ -18867,7 +18942,7 @@
             body = '<div class="ovc-bowl-head"><span>Bowler</span><span>Overs</span><span>Dots</span><span>Runs</span><span>Wickets</span><span>Economy</span></div>'
               + inn.bowlers.map(function(b){
                 var econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(1) : '0.0';
-                return '<div class="ovc-bowl-row"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.bowlingTeam, b.name)) + '</span></span><span class="v">' + oversText(b.balls) + '</span><span class="v">' + (dots[b.name] || 0) + '</span><span class="v">' + b.runs + '</span><span class="v">' + b.wickets + '</span><span class="v">' + econ + '</span></div>';
+                return '<div class="ovc-bowl-row"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.bowlingTeam, b.name) + leadSuffix(inn.bowlingTeam, b.name)) + '</span></span><span class="v">' + oversText(b.balls) + '</span><span class="v">' + (dots[b.name] || 0) + '</span><span class="v">' + b.runs + '</span><span class="v">' + b.wickets + '</span><span class="v">' + econ + '</span></div>';
               }).join('');
           }
           var fow = mrFallOfWickets(inn);
@@ -18882,10 +18957,10 @@
             var tot = pp.r1 + pp.r2;
             var w1 = tot > 0 ? Math.round(pp.r1 / tot * 100) : 0;
             var bar = tot > 0 ? '<span class="ovc-ps-bar"><i style="width:' + w1 + '%"></i><i class="alt" style="width:' + (100 - w1) + '%"></i></span>' : '<span class="ovc-ps-bar"></span>';
-            return '<div class="ovc-row ovc-ps-row' + (pp.current ? ' current' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p1)) + '</span></span>' + bar + '<span class="nm2 ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p2)) + '</span></span><span class="r">' + pp.runs + '</span><span class="b">' + pp.balls + '</span></div>';
+            return '<div class="ovc-row ovc-ps-row' + (pp.current ? ' current' : '') + '"><span class="nm ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p1) + leadSuffix(inn.battingTeam, pp.p1)) + '</span></span>' + bar + '<span class="nm2 ov-fit-txt"><span>' + esc(dispName(inn.battingTeam, pp.p2) + leadSuffix(inn.battingTeam, pp.p2)) + '</span></span><span class="r">' + pp.runs + '</span><span class="b">' + pp.balls + '</span></div>';
           }).join('');
           var ytbP = yetToBatNames(inn);
-          if (ytbP.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbP.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
+          if (ytbP.length) body += '<div class="ovc-sec-lab">Still to Bat</div><div class="ovc-ytb">' + ytbP.map(function(n){ return '<span class="nm">' + esc(dispName(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n)) + '</span>'; }).join('') + '</div>';
         }
         var prevLine = S.prevInnings ? '<div class="ovc-note">' + esc(S.prevInnings.battingTeam) + ' — ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ' overs)</div>' : '';
         return '<div class="ov-card"><div class="ovc-head">' + headBadge + '<div class="tt"><div class="t ov-fit-txt"><span>' + esc(inn.battingTeam || '—') + '</span></div><span class="sub">' + esc(subParts.join(' — ')) + '</span></div><div class="ovc-tabs">' + tabs + '</div></div>'
@@ -18943,7 +19018,7 @@
            of whoever is on strike — so the names share one
            alignment and the striker is not always the top row. */
         function batRow(name, fig, onStrike){
-          return '<div class="ov-bat"><span class="ov-batslot">' + (onStrike ? batIcon : '') + '</span><span class="nm ov-fit-txt"><span>' + esc(name ? dispName(inn.battingTeam, name) : '—') + '</span></span>'
+          return '<div class="ov-bat"><span class="ov-batslot">' + (onStrike ? batIcon : '') + '</span><span class="nm ov-fit-txt"><span>' + esc(name ? dispName(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) : '—') + '</span></span>'
             + '<span class="r">' + fig.runs + '</span><span class="b">' + fig.balls + '</span></div>';
         }
         var pairOrdered = creasePairOrdered(inn);
@@ -18987,7 +19062,7 @@
           + '<span class="c-overs">' + oversText(inn.legalBalls) + ' OVERS</span>'
           + '</div></div>'
           + '<div class="ov-seg bowl"><div class="ov-panel">'
-          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt"><span>' + esc(bowlName ? dispName(inn.bowlingTeam, bowlName) : '—') + '</span></span>'
+          + '<div class="ov-bowl-head"><span class="nm ov-fit-txt"><span>' + esc(bowlName ? dispName(inn.bowlingTeam, bowlName) + leadSuffix(inn.bowlingTeam, bowlName) : '—') + '</span></span>'
           + '<span class="fig">' + bowlerRec.wickets + '-' + bowlerRec.runs + '</span>'
           + '<span class="ov">' + oversText(bowlerRec.balls) + '</span></div>'
           + (t ? '<div class="ov-balls"><span class="ov-over-lab">Over</span>' + ballsHTML + '</div>' : '<div class="ov-rr"><span class="lab">Run-Rate</span><span class="val">' + crr().toFixed(2) + '</span></div>')
@@ -19270,8 +19345,8 @@
           html += '<div class="sum-grid">';
           for (var i = 0; i < 3; i++){
             var b = bats[i], w = bowls[i];
-            html += '<div class="sum-cell">' + (b ? '<span class="sum-pname">' + esc(dispName(inn.battingTeam, b.name)) + '</span><span class="sum-pfig">' + b.runs + (b.out ? '' : '*') + '(' + b.balls + ')</span>' : '<span></span>') + '</div>';
-            html += '<div class="sum-cell">' + (w ? '<span class="sum-pname">' + esc(dispName(inn.bowlingTeam, w.name)) + '</span><span class="sum-pfig">' + w.wickets + '-' + w.runs + '</span>' : '<span></span>') + '</div>';
+            html += '<div class="sum-cell">' + (b ? '<span class="sum-pname">' + esc(dispName(inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name)) + '</span><span class="sum-pfig">' + b.runs + (b.out ? '' : '*') + '(' + b.balls + ')</span>' : '<span></span>') + '</div>';
+            html += '<div class="sum-cell">' + (w ? '<span class="sum-pname">' + esc(dispName(inn.bowlingTeam, w.name) + leadSuffix(inn.bowlingTeam, w.name)) + '</span><span class="sum-pfig">' + w.wickets + '-' + w.runs + '</span>' : '<span></span>') + '</div>';
           }
           html += '</div>';
         });
@@ -19507,10 +19582,10 @@
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
         var leftCol = snap.batters.map(function(bt){
-          return '<div class="og-row"><span>' + plLink(batTeam, bt.name) + '</span><b>' + bt.runs + ' (' + bt.balls + ')</b></div>';
+          return '<div class="og-row"><span>' + plLink(batTeam, bt.name) + leadSuffix(batTeam, bt.name) + '</span><b>' + bt.runs + ' (' + bt.balls + ')</b></div>';
         }).join('');
         var rightCol = snap.bowlers.map(function(bw){
-          return '<div class="og-row"><span>' + plLink(bowlTeam, bw.name) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
+          return '<div class="og-row"><span>' + plLink(bowlTeam, bw.name) + leadSuffix(bowlTeam, bw.name) + '</span><b>' + bw.wickets + '-' + bw.runs + ' (' + oversText(bw.balls) + ')</b></div>';
         }).join('');
         rightCol += '<div class="og-row"><span>Extras this over</span><b>' + snap.extrasOver + '</b></div>';
         var grid = (leftCol || snap.bowlers.length)
@@ -19756,7 +19831,7 @@
           var pairRows = creasePairOrdered(inn).map(function(name){
             var b = cbBatterFull(inn, name);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-            return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
+            return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
           }).join('');
           if (btEl) btEl.innerHTML = '<table><thead><tr><th>Batter</th><th class="r">R</th><th class="r">B</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + (pairRows || '<tr><td colspan="6">No batters yet.</td></tr>') + '</tbody></table>';
           /* bowler table — current bowler */
@@ -19764,7 +19839,7 @@
             if (inn.bowler){
               var bw = cbBowlerFull(inn, inn.bowler);
               var er = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
+              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + leadSuffix(inn.bowlingTeam, inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
             } else bwEl.innerHTML = '';
           }
         }
