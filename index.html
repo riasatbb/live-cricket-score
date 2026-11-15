@@ -76,7 +76,36 @@
         window.__fbLoadLib();
       })();
     </script>
+    <script>
+      /* Strict link gate: this page opens ONLY through its three exact
+         hash links — #live (Live Matches), #scorer (Scorer Console)
+         and #overlay (Broadcast Overlay). Any other hash — #home, a
+         doubled hash like #live#scorer, or anything else — never
+         opens the page: the app stays hidden behind the "link not
+         valid" notice (the CSS below keys off the hash-blocked class
+         set here, before first paint) and the app init refuses to
+         run, so no view is shown and Firebase never connects. Links
+         with no hash at all (the ?view= doors and the bare address)
+         are not affected by this gate. */
+      window.__hashBlocked = false;
+      (function(){
+        var h = '';
+        try { h = location.hash || ''; } catch(e){}
+        if (h && h !== '#live' && h !== '#scorer' && h !== '#overlay'){
+          window.__hashBlocked = true;
+          try { document.documentElement.classList.add('hash-blocked'); } catch(e){}
+        }
+      })();
+    </script>
     <style>
+      /* Strict link gate (head script): with a blocked hash the whole
+         app stays hidden and only the invalid-link notice shows. */
+      html.hash-blocked .topbar, html.hash-blocked main{display:none !important}
+      #linkBlocked{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+      html.hash-blocked #linkBlocked{display:flex}
+      #linkBlocked .lb-box{max-width:420px;width:100%;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 22px;box-shadow:var(--shadow)}
+      #linkBlocked h2{margin:0 0 8px;font-size:22px;color:var(--ink)}
+      #linkBlocked p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
       :root{
         --bg:#f2f5f1; --surface:#ffffff; --surface2:#e9efe9; --ink:#132018; --muted:#5c6d62;
         --line:#d7e0d7; --green:#0e5b3c; --green2:#0a4630; --gold:#e19a26; --gold-ink:#7a4d05;
@@ -2285,6 +2314,15 @@
     </style>
   </head>
   <body>
+    <!-- Shown only when the link's hash is not exactly #live, #scorer
+         or #overlay (the strict link gate in <head>): the app itself
+         never opens from such a link. -->
+    <div id="linkBlocked" role="alert">
+      <div class="lb-box">
+        <h2>This link is not valid</h2>
+        <p>CricCast opens only from its exact Live Matches, Scorer Console or Broadcast Overlay link.</p>
+      </div>
+    </div>
     <header class="topbar">
       <div class="topbar-in">
         <div class="brand">
@@ -3555,7 +3593,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v174';
+      var APP_VERSION = 'v176';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4102,7 +4140,14 @@
           fbConfirmedState = pushedDelete;
           hideResetRetry();
           applyDeletedState(candidate);
-          toast('✓ Match deleted — viewers now see no live match. Set up the next match from the beginning in Match Setup.');
+          /* The match is gone, so the scorer leaves the scoring
+             screen altogether: landing back on the blank 0-0 centre,
+             pad and Batters & Bowler card (the old behaviour) reads
+             as leftover debris from the deleted match. Go straight
+             to the Scorer Console home instead — the next match
+             starts from there via Start Single Match. */
+          try { setView('console'); } catch(e){}
+          toast('✓ Match deleted — viewers now see no live match.');
         }).catch(function(err){
           deleteInFlight = false;
           /* Firebase did not confirm, so nothing is deleted: the
@@ -13140,7 +13185,17 @@
          is backed up on this device, and is rendered (render brings the
          form inputs in line with it — names included). */
       function adoptRemoteState(v){
+        /* Remember whether a real match was on screen before this
+           state lands: if the incoming state is the blank left by a
+           delete (done on another device / tab) while this device
+           sits on the scoring screen, the scorer is taken straight
+           to the Scorer Console home — the same landing as a local
+           Delete Match — instead of being left on the empty 0-0
+           centre and pad. Guarded to the scorer view only, so
+           viewers and every other screen are untouched. */
+        var hadMatch = false; try { hadMatch = liveMatchExists(); } catch(e){}
         fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbConfirmedState = deep(S); fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
+        if (hadMatch && typeof currentViewName !== 'undefined' && currentViewName === 'scorer'){ var hasMatch = false; try { hasMatch = liveMatchExists(); } catch(e){} if (!hasMatch){ try { setView('console'); } catch(e){} } }
         /* A remote match with no owner yet is claimed by the account
            already signed in on this control side (see ownership). */
         try { maybeClaimOwnership(); } catch(e){}
@@ -21820,6 +21875,12 @@
 
       /* ---------- init from URL ---------- */
       (function init(){
+        /* Strict link gate: a hash that is not exactly #live, #scorer
+           or #overlay never opens the page — the head script has
+           already hidden the app behind the invalid-link notice, so
+           stop here: no backup is loaded, no view is routed and
+           Firebase never connects. */
+        if (window.__hashBlocked) return;
         /* Viewer sessions are SERVER-ONLY: a session that arrives
            through the viewer link (or on a device remembered as a
            viewer, without the control link) never loads ANY
@@ -21874,8 +21935,13 @@
         } else {
           try { syncPlayersFromInputs(); } catch(e){}
         }
+        /* Link checks read the QUERY STRING only. The hash is never
+           substring-matched — that is how a doubled hash such as
+           #live#scorer used to slip in as a door; it is matched
+           exactly further below, and any other hash never reaches
+           this code at all (the link gate stopped it). */
         var q = '';
-        try { q = (location.search||'') + ' ' + (location.hash||''); } catch(e){}
+        try { q = location.search || ''; } catch(e){}
         if (q.indexOf('viewer')>-1){
           document.body.classList.add('viewer-mode');
           document.body.classList.add('viewer-inpage');
@@ -21890,59 +21956,28 @@
            VIEWER link (?view=live, ?view=viewer or ?view=scoreboard) —
            opens the Live Matches list / read-only scoreboard, and the
            page shows no way into the controls at all (link-viewer). */
-        var isControlLink = q.indexOf('view=control')>-1 || q.indexOf('view=scorer')>-1 || q.indexOf('#control')>-1 || q.indexOf('#scorer')>-1 || q.indexOf('control=1')>-1;
-        var isViewerLink = q.indexOf('view=live')>-1 || q.indexOf('view=viewer')>-1 || q.indexOf('#live')>-1 || q.indexOf('#viewer')>-1 || q.indexOf('viewer=1')>-1;
-        /* The hash names the exact page the user is on (setView writes it
-           on every navigation), so on a refresh it wins over the ?view=
-           link the user originally arrived through. Without this, opening
-           ?view=live and tapping into the scoreboard (#scoreboard) bounced
-           back to the Live Matches list (#live) on every refresh. */
+        var isControlLink = q.indexOf('view=control')>-1 || q.indexOf('view=scorer')>-1 || q.indexOf('control=1')>-1;
+        var isViewerLink = q.indexOf('view=live')>-1 || q.indexOf('view=viewer')>-1 || q.indexOf('viewer=1')>-1;
+        /* The hash is a door, and it is matched EXACTLY: only #live,
+           #scorer and #overlay open the page — the link gate above
+           has already stopped every other hash, so no other value
+           can reach this chain. In-page navigation still writes the
+           current view's name into the hash as the user moves around
+           (that is what the browser Back button walks), but a fresh
+           open or a refresh from such an inner hash no longer
+           restores the inner page: the three hash links above are
+           the only doors in. The ?view= links carry no hash and keep
+           working through the query-string checks below. */
         var hashView = '';
         try { hashView = (location.hash || '').replace(/^#/, ''); } catch(e){}
-        if (hashView === 'scoreboard'){
-          setDeviceViewerFlag(true);
-          document.body.classList.add('viewer-mode');
-          document.body.classList.add('viewer-inpage');
-          document.body.classList.add('viewer-flow');
-          document.body.classList.add('link-viewer');
-          setView('scoreboard');
-        }
-        else if (hashView === 'live' || hashView === 'viewer') enterViewerHome(true);
-        else if (hashView === 'scorer' || hashView === 'control' || hashView === 'console') enterControlMode();
-        else if (hashView === 'resume') setView('resume');
-        else if (hashView === 'myteams') setView('myteams');
-        else if (hashView === 'tournaments') setView('tournaments');
+        if (hashView === 'live') enterViewerHome(true);
+        else if (hashView === 'scorer') enterControlMode();
         else if (hashView === 'overlay'){
           setDeviceViewerFlag(true);
           document.body.classList.add('viewer-mode');
           document.body.classList.add('link-viewer');
           setView('overlay');
         }
-        else if (hashView === 'history'){
-          /* A plain #history link carries no ?view= of its own: on a
-             device remembered as a viewer it must STILL open
-             read-only (no Delete) — the viewer flag decides. But the
-             CONTROL link (?view=scorer#history) is the scorer's own
-             door even with the hash on it: the control chrome is
-             applied (viewer flag cleared), so the owner's History
-             shows Delete and syncs like any other control page —
-             before this, that exact link opened in viewer mode and
-             the owner could neither see nor delete the record. */
-          if (isViewerLink || (deviceViewerFlag() && !isControlLink)) enterViewerHistory();
-          else { if (isControlLink) enterControlChrome(); setView('history'); }
-        }
-        else if (hashView === 'tournament'){
-          /* Same rule for #tournament: a viewer device gets the
-             read-only in-page tournament viewer, never the editor.
-             The control link keeps the editor, flag cleared. */
-          if (isViewerLink || (deviceViewerFlag() && !isControlLink)){
-            setDeviceViewerFlag(true);
-            document.body.classList.add('link-viewer');
-            openTournamentViewerInPage();
-          }
-          else { if (isControlLink) enterControlChrome(); setView('tournament'); }
-        }
-        else if (hashView === 'home') setView('home');
         else if (q.indexOf('overlay')>-1){
           setDeviceViewerFlag(true);
           document.body.classList.add('viewer-mode');
@@ -21979,7 +22014,7 @@
            until the control link is opened on it. */
         else enterViewerHome(deviceViewerFlag());
         /* First render comes AFTER routing: the page the link names
-           (?view=live#live → Live Matches, #scoreboard → the scoreboard)
+           (?view=live or #live → Live Matches, #scorer → the console)
            is already selected even if a render section misbehaves, and
            the Firebase auto-connect below always runs — previously an
            early render ran first and a failure there left the viewer
