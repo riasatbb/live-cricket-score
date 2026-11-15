@@ -3554,7 +3554,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v170';
+      var APP_VERSION = 'v172';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16066,7 +16066,7 @@
         /* Archived innings are finished, and only the Playing XI —
            the first (wickets limit + 1) of the squad — counts. */
         var ytb = (squad || []).slice(0, (typeof e.wicketsLimit === 'number' ? e.wicketsLimit : 10) + 1).filter(function(n){ return !batted[n]; });
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return esc(dispIn(e.nicknames, inn.battingTeam, n)) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">Did not bat: ' + ytb.map(function(n){ return plLinkIn(e, inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
         var ex = inn.extras || { wide:0, noball:0, bye:0, legbye:0 };
         return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
           + '<tr><td colspan="6"><div class="exline"><span>Extras</span><span><b>' + ((ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0)) + '</b> <span class="exbd">b ' + (ex.bye || 0) + ', lb ' + (ex.legbye || 0) + ', w ' + (ex.wide || 0) + ', nb ' + (ex.noball || 0) + '</span></span></div></td></tr>'
@@ -18814,11 +18814,12 @@
          (tournament store first, then the All Teams pool, via
          cbxLeadership). Empty when no pick names this player, so a
          team with no leadership picked renders exactly as before.
-         BATTER NAMES ONLY (the user's rule): this is appended
-         beside batting-side names — the batting card, the crease
-         pair, yet-to-bat / did-not-bat, fall of wickets and
-         partnerships — and NEVER beside a bowler's name, on screen
-         or in the PDF / JPG outputs. */
+         BATTER SIDE ONLY (the user's rule, corrected): on the
+         scoreboard this is appended beside a name in the Batter
+         table's own rows AND in the Yet to bat / Did not bat
+         line — NOT in Fall of Wickets, NOT in Partnerships —
+         and NEVER beside a bowler's name, on screen or in the
+         PDF / JPG outputs. */
       function leadSuffix(team, name){
         if (!team || !name) return '';
         var L = cbxLeadership(team);
@@ -18881,7 +18882,7 @@
         try { fow = mrFallOfWickets(inn); } catch(e){}
         if (!fow.length) return '';
         var rows = fow.map(function(f){
-          return '<tr><td><span class="pname">' + (f.name ? plLink(inn.battingTeam, f.name) + leadSuffix(inn.battingTeam, f.name) : '—') + '</span></td><td class="r">' + f.score + ' - ' + f.n + '</td><td class="r">' + esc(f.over || '') + '</td></tr>';
+          return '<tr><td><span class="pname">' + (f.name ? plLink(inn.battingTeam, f.name) : '—') + '</span></td><td class="r">' + f.score + ' - ' + f.n + '</td><td class="r">' + esc(f.over || '') + '</td></tr>';
         }).join('');
         return '<table><thead><tr><th>Fall of Wickets</th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
@@ -18932,8 +18933,8 @@
         try { segs = inningsPartnerships(inn); } catch(e){}
         if (!segs.length) return '';
         var rows = segs.map(function(p){
-          var left = '<span class="pname">' + plLink(inn.battingTeam, p.a) + leadSuffix(inn.battingTeam, p.a) + '</span> ' + p.perA.runs + '(' + p.perA.balls + ')';
-          var right = p.b ? '<span class="pname">' + plLink(inn.battingTeam, p.b) + leadSuffix(inn.battingTeam, p.b) + '</span> ' + p.perB.runs + '(' + p.perB.balls + ')' : '';
+          var left = '<span class="pname">' + plLink(inn.battingTeam, p.a) + '</span> ' + p.perA.runs + '(' + p.perA.balls + ')';
+          var right = p.b ? '<span class="pname">' + plLink(inn.battingTeam, p.b) + '</span> ' + p.perB.runs + '(' + p.perB.balls + ')' : '';
           return '<tr><td>' + left + '</td><td class="c pship-c">' + p.runs + '(' + p.balls + ')</td><td class="r">' + right + '</td></tr>';
         }).join('');
         return '<table class="pship-table"><colgroup><col style="width:42%"><col style="width:16%"><col style="width:42%"></colgroup><tbody>' + rows + '</tbody></table>';
