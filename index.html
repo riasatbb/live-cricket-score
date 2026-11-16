@@ -1516,6 +1516,38 @@
       .cb-archivebar .ab-btns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
       .cb-archivebar .ab-btns button{background:#262626;border:1px solid #4a4a4a;color:#e9e9e9;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:600;cursor:pointer}
       .cb-archivebar .ab-btns button.ab-del{border-color:#7a3a34;color:#ffab9e}
+      /* ---------- ball-by-ball scorecard editor (finished matches) ----------
+         The owner/admin correction mode opened from the archived
+         match bar's Edit Balls button: every delivery of every
+         innings is listed by over; tapping one opens its edit form
+         (correct player, correct outcome, correct dismissal), and
+         saving replays the whole innings from the corrected record
+         so the scorecard, statistics and result rebuild themselves. */
+      .be-modal{max-width:640px}
+      .be-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+      .be-tab{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+      .be-tab.on{border-color:var(--green);background:var(--green);color:#fff}
+      .be-over{margin:18px 0 8px;text-align:center;color:var(--green);font-weight:800;font-size:15.5px;letter-spacing:.02em}
+      .be-ball{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 7px;cursor:pointer;font-family:inherit;color:var(--ink)}
+      .be-ball:active{transform:scale(.99)}
+      .be-ball .be-lab{flex:none;font-weight:800;font-variant-numeric:tabular-nums;color:var(--muted);min-width:38px}
+      .be-ball .be-main{flex:1;min-width:0}
+      .be-ball .be-who{display:block;font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .be-ball .be-out{display:block;font-size:14.5px;margin-top:1px}
+      .be-ball .be-tok{flex:none;font-weight:800;font-size:14px;border:1.5px solid var(--line);border-radius:8px;padding:3px 9px;font-variant-numeric:tabular-nums}
+      .be-ball.be-changed{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+      .be-evt{padding:6px 12px;color:var(--muted);font-size:13.5px;font-style:italic}
+      .be-add{display:block;width:100%;border:1.5px dashed var(--line);background:none;color:var(--green);border-radius:10px;padding:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin:2px 0 10px}
+      .be-form{border:1.5px solid var(--green);border-radius:12px;padding:14px;margin-top:14px;background:var(--surface)}
+      .be-form h3{margin:0 0 4px;text-align:center;color:var(--green);font-size:17px}
+      .be-form .be-fsub{text-align:center;color:var(--muted);font-size:13.5px;margin:0 0 12px}
+      .be-form label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+      .be-form select,.be-form input{width:100%;box-sizing:border-box}
+      .be-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      @media (max-width:480px){.be-grid2{grid-template-columns:1fr}}
+      .be-summary{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:14.5px;line-height:1.55}
+      .be-summary .be-res{font-weight:800;color:var(--green)}
+      .be-del{border-color:#7a3a34 !important;color:#ffab9e !important}
       /* ---------- shareable match card ---------- */
       .cb-sharebar{padding:12px 16px 16px;background:#2b2b2b;display:flex;flex-direction:column;gap:10px}
       .cb-sharebtn{width:100%;border:1.5px solid var(--gold);background:#3a2c10;color:#ffd98a;border-radius:11px;padding:12px 14px;font-size:15.5px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -2283,6 +2315,67 @@
       .ins-back{margin-bottom:14px}
       /* Sign-in popup reuses the shared auth bar; drop its outer margin */
       #signinModal .authbar{margin:12px 0 0}
+      /* ---------- headings: centred + accent colour (everywhere) ----------
+         Every section heading sits in the MIDDLE and wears the field
+         green, so a heading is identifiable at a glance anywhere —
+         viewer, scorer console, team / player pages, tournaments,
+         history, modals and the overlay page. Body text, table
+         columns, player / team name rows and the broadcast bar keep
+         their own alignment; headings on dark or coloured bands
+         (scoreboard panels, profile stat bands, the tournament-edit
+         header) keep their white through their own higher-specificity
+         rules above and only pick up the centring from here. */
+      main h2,main h3,main h4,main h5,
+      .modal h2,.modal h3,.modal h4,.modal h5{text-align:center;color:var(--green)}
+      .card h2{border-bottom-color:rgba(225,154,38,.55)}
+      /* Headings that share a flex row with a count, a badge or a
+         close button grow to fill the row, so the centred text sits
+         in the middle of the row instead of hugging the left edge. */
+      .modal-head h2{flex:1;text-align:center}
+      .squad-head h3{flex:1;text-align:center}
+      .tp-cmp-pick-head h3,.tp-set-head h3{flex:1;text-align:center}
+      /* Collapsible section titles (Match Setup, Team Squads,
+         Batters & Bowler, Add Fixture…) centre as a group with
+         their chevron. */
+      .fold-sum{justify-content:center;text-align:center;color:var(--green)}
+      .fold-sum::after{border-right-color:var(--green);border-bottom-color:var(--green)}
+      /* The small note directly under a profile section heading
+         follows it into the middle. */
+      .pf-sec + .note{text-align:center}
+      /* Entity headers stay left: a team / tournament NAME beside
+         its logo, with its count / meta lines under it, is a name
+         block, not a section heading — centring the name alone
+         would detach it from the lines that belong to it. They
+         still take the green, so they read as titles. */
+      .sb-detail-head h3,.tn-team-players-head h3,.tn-info h3{text-align:left}
+      /* Recent Matches group labels are headings too (a div, not
+         an h-tag): middle + green like the rest. */
+      .ml-group{text-align:center;color:var(--green)}
+      /* ---------- headings the h-tag rules cannot reach ----------
+         The scorecard's two sub-sections are not h-tags: Fall of
+         Wickets is the first header cell of its table and
+         Partnerships is a plain div (.sc-sub), both inside the
+         always-dark innings card — so they take the middle and a
+         bright green that reads on that dark panel (the panel is
+         dark in both colour schemes, hence the fixed tint instead
+         of var(--green)). The Score / Over header cells stay
+         right-aligned over their numbers: they are data columns,
+         not headings. */
+      .sc-sub{text-align:center;color:var(--green)}
+      .cb-inn-body .sc-sub{text-align:center;padding-left:0;color:#4cc38a}
+      .fow-table thead th:first-child{text-align:center;padding-left:10px;color:#4cc38a;font-size:15px;font-weight:800}
+      /* Overlay scorecard section labels (Fall of Wickets, Still
+         to Bat) already wear the broadcast orange — they only
+         needed the middle. */
+      .ovc-sec-lab{text-align:center}
+      /* Tournament Statistics drill-in heads already wear their
+         category colour (green / blue / gold) — middle, too. */
+      .tns-list-head{text-align:center}
+      .tns-detail-head{text-align:center}
+      /* Commentary compare section band: centred already, on an
+         always-dark band — the same bright green as the other
+         dark-panel headings. */
+      .cbx-sec{color:#4cc38a}
     </style>
   </head>
   <body>
@@ -3454,12 +3547,40 @@
           </div>
           <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /></div>
           <div><label for="hePotm">Player of the Match</label><select id="hePotm"></select></div>
+          <div><button type="button" class="btn gold" style="width:100%" onclick="openBallEditorFromDetails()">🏏 Edit Scorecard — Ball by Ball</button></div>
         </div>
         <div class="rowflex" style="margin-top:16px">
           <button type="button" class="btn" onclick="saveHistoryEdit()">Save Changes</button>
           <button type="button" class="btn ghost" onclick="closeHistoryEdit()">Cancel</button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Ball-by-ball scorecard editor: the owner/admin correction mode
+         for a FINISHED match. Tapping Edit Balls on the archived match
+         (or Edit Scorecard inside Edit Match) opens this in editing
+         mode: every ball of every innings, grouped by over. A ball
+         can be corrected (player, outcome, dismissal), deleted, or a
+         missing ball added; saving replays each innings from its
+         corrected ball record, so the score, scorecard, partnerships,
+         statistics and result all rebuild from the corrected balls. -->
+    <div class="modal-back" id="ballEditModal">
+      <div class="modal be-modal" role="dialog" aria-modal="true" aria-labelledby="beTitle">
+        <div class="modal-head">
+          <h2 id="beTitle">✏️ Edit Scorecard</h2>
+          <button class="sq-x big" onclick="closeBallEditor()" aria-label="Close scorecard editor">×</button>
+        </div>
+        <p class="sub" id="beSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div class="be-tabs" id="beTabs"></div>
+        <div id="beBody"></div>
+        <div id="beFoot">
+          <div class="be-summary" id="beSummary"></div>
+          <div class="rowflex" style="margin-top:12px">
+            <button type="button" class="btn" onclick="saveBallEdits()">Save Corrections</button>
+            <button type="button" class="btn ghost" onclick="closeBallEditor()">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3531,7 +3652,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v184';
+      var APP_VERSION = 'v187';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16325,7 +16446,7 @@
         bar.innerHTML = '<span class="ab-lab">📜 Archived match</span>'
           + (meta ? '<span class="ab-meta">' + esc(meta) + '</span>' : '')
           + '<span class="ab-btns"><button type="button" onclick="downloadScorecardPdfCurrent()">📄 Scorecard PDF</button>'
-          + (can ? '<button type="button" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button><button type="button" class="ab-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
+          + (can ? '<button type="button" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + esc(e.id) + '\')">🏏 Edit Balls</button><button type="button" class="ab-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
           + '</span>';
       }
       function renderArchiveScoreboard(){
@@ -17368,6 +17489,15 @@
               return f.score + '-' + f.n + (f.name ? ' (' + dispLead(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
             }).join(',  '), 8.5, MRC.muted);
           }
+          var psh = [];
+          try { psh = inningsPartnerships(inn); } catch(e){ psh = []; }
+          if (psh.length){
+            para('Partnerships:', psh.map(function(p){
+              var l = dispName(inn.battingTeam, p.a) + ' ' + p.perA.runs + ' (' + p.perA.balls + ')';
+              var r = p.b ? (dispName(inn.battingTeam, p.b) + ' ' + p.perB.runs + ' (' + p.perB.balls + ')') : '';
+              return l + (r ? ' & ' + r : '') + ' — ' + p.runs + ' (' + p.balls + ')';
+            }).join(',  '), 8.5, MRC.muted);
+          }
           subhead('BOWLING');
           var WC = [
             { h: 'Bowler', x: 0, w: 146, a: 'l' }, { h: 'O', x: 146, w: 38, a: 'r' },
@@ -17828,6 +17958,15 @@
           if (fow.length){
             para('Fall of Wickets:', fow.map(function(f){
               return f.score + '-' + f.n + (f.name ? ' (' + dispLead(inn.battingTeam, f.name) + (f.over ? ', ' + f.over + ' ov' : '') + ')' : '');
+            }).join(',  '), 8.5, MRC.muted);
+          }
+          var psh = [];
+          try { psh = inningsPartnerships(inn); } catch(e){ psh = []; }
+          if (psh.length){
+            para('Partnerships:', psh.map(function(p){
+              var l = dispName(inn.battingTeam, p.a) + ' ' + p.perA.runs + ' (' + p.perA.balls + ')';
+              var r = p.b ? (dispName(inn.battingTeam, p.b) + ' ' + p.perB.runs + ' (' + p.perB.balls + ')') : '';
+              return l + (r ? ' & ' + r : '') + ' — ' + p.runs + ' (' + p.balls + ')';
             }).join(',  '), 8.5, MRC.muted);
           }
           subhead('BOWLING');
@@ -18751,6 +18890,670 @@
           toast('✓ Match details updated — everywhere');
         }
       }
+      /* ============================================================
+         BALL-BY-BALL SCORECARD EDITOR — correcting a FINISHED match
+         The match owner (admin) opens editing mode from the archived
+         match bar (Edit Balls) or from Edit Match (Edit Scorecard).
+         Every delivery of every innings is listed by over; a ball
+         can be corrected — the WRONG PLAYER replaced by the correct
+         one (batter, bowler, the batter who was out, the fielder),
+         the outcome fixed, a wrong ball deleted, a missing ball
+         added. Nothing is patched incrementally: on every change the
+         innings is REPLAYED from its corrected ball record through
+         the same recording primitives live scoring uses (pushBall,
+         the milestone checks, the free-hit rule, penalty lines), so
+         the score, batting / bowling cards, extras, fall of wickets,
+         partnerships, over summaries, player statistics and the
+         result all rebuild from the corrected balls — one source of
+         truth, no figure left inconsistent. Saving writes the
+         corrected innings to the History entry and propagates them
+         to every other copy of the match: the live state when this
+         match is still on the pad, the tournament's saved result
+         (points, statistics, bracket and podium read from it) and
+         the Recent Results slice. Viewers never see this editor —
+         it is gated by the same owner check as Edit / Delete.
+         ============================================================ */
+      var beCtx = null;   /* { id, entry, items:[{key,kind,idx,label,work,orig}], tab, edit, form, dirty, changedKey, changedIdx } */
+
+      function openBallEditorFromDetails(){
+        var id = histEditId;
+        if (!id) return;
+        closeHistoryEdit();
+        openBallEditor(id);
+      }
+      function openBallEditor(id){
+        id = String(id);
+        var e = HIST[id]; if (!e) return;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        var items = [];
+        (e.innings || []).forEach(function(inn, i){
+          items.push({ key: 'm' + i, kind: 'main', idx: i, label: (i === 0 ? '1st' : '2nd') + ' Innings — ' + (inn.battingTeam || ''), work: deep(inn), orig: inn });
+        });
+        if (e.superOver && Array.isArray(e.superOver.innings)){
+          e.superOver.innings.forEach(function(inn, i){
+            items.push({ key: 'so' + i, kind: 'so', idx: i, label: 'Super Over ' + (i + 1) + ' — ' + (inn.battingTeam || ''), work: deep(inn), orig: inn });
+          });
+        }
+        if (!items.length){ toast('This match has no innings to edit'); return; }
+        beCtx = { id: id, entry: e, items: items, tab: 0, edit: null, form: null, dirty: false, changedKey: '', changedIdx: -1 };
+        var sub = $('beSub'); if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
+        beRender();
+        var m = $('ballEditModal'); if (m) m.classList.add('show');
+      }
+      function closeBallEditor(){
+        if (beCtx && beCtx.dirty){
+          askVerify('Discard corrections?', 'The corrections made in this editing session have not been saved yet.', function(){
+            beCtx = null;
+            var m = $('ballEditModal'); if (m) m.classList.remove('show');
+          });
+          return;
+        }
+        beCtx = null;
+        var m2 = $('ballEditModal'); if (m2) m2.classList.remove('show');
+      }
+      function beSetTab(i){
+        if (!beCtx) return;
+        beCtx.tab = i; beCtx.edit = null; beCtx.form = null;
+        beRender();
+      }
+      function beRender(){
+        if (!beCtx) return;
+        var tabs = $('beTabs');
+        if (tabs) tabs.innerHTML = beCtx.items.map(function(it, i){
+          return '<button type="button" class="be-tab' + (i === beCtx.tab ? ' on' : '') + '" onclick="beSetTab(' + i + ')">' + esc(it.label) + '</button>';
+        }).join('');
+        var foot = $('beFoot'); if (foot) foot.style.display = beCtx.edit ? 'none' : '';
+        var body = $('beBody'); if (!body) return;
+        var item = beCtx.items[beCtx.tab];
+        body.innerHTML = beCtx.edit ? beFormHTML(item) : beListHTML(item);
+        beRenderSummary();
+      }
+      function beRenderSummary(){
+        if (!beCtx) return;
+        var e = beCtx.entry, mainInns = [], soInns = null;
+        beCtx.items.forEach(function(it){
+          var r = beReplayInnings(e, it.work, it.orig);
+          if (it.kind === 'main') mainInns.push(r); else { soInns = soInns || []; soInns.push(r); }
+        });
+        var lines = mainInns.map(function(inn, i){
+          return (i === 0 ? '1st' : '2nd') + ': <b>' + esc(inn.battingTeam || '') + ' ' + inn.runs + '/' + inn.wickets + '</b> (' + oversText(inn.legalBalls) + ' ov)';
+        });
+        if (soInns) soInns.forEach(function(inn, i){
+          lines.push('Super Over ' + (i + 1) + ': <b>' + esc(inn.battingTeam || '') + ' ' + inn.runs + '/' + inn.wickets + '</b>');
+        });
+        var res = '';
+        if (e.abandoned) res = e.resultText || 'Match abandoned.';
+        else if (mainInns.length >= 2){
+          var soRec = null;
+          if (soInns){ soRec = { winner: '', resultText: '', innings: soInns }; var c = beSuperOverResult(soRec); soRec.winner = c.winner; soRec.resultText = c.resultText; }
+          res = beResultPair(e, mainInns, soRec).auto;
+        }
+        var el = $('beSummary');
+        if (el) el.innerHTML = lines.join(' &nbsp;•&nbsp; ') + (res ? '<br><span class="be-res">' + esc(res) + '</span>' : '');
+      }
+      /* ---------- the ball list of one innings, grouped by over ---------- */
+      function beListHTML(item){
+        var inn = item.work, e = beCtx.entry;
+        var balls = inn.balls || [];
+        if (!balls.length) return '<p style="padding:16px 4px;color:var(--muted)">No ball-by-ball record for this innings.</p>';
+        var groups = [], cur = null, legalBefore = 0;
+        function groupFor(no){ if (!cur || cur.no !== no){ cur = { no: no, rows: [], runs: 0 }; groups.push(cur); } return cur; }
+        balls.forEach(function(rec, idx){
+          if (rec.evt){
+            var ab = (typeof rec.atBalls === 'number') ? rec.atBalls : legalBefore;
+            groupFor(Math.floor(ab / 6) + 1).rows.push({ evt: rec });
+            return;
+          }
+          var g = groupFor(Math.floor(legalBefore / 6) + 1);
+          g.rows.push({ rec: rec, idx: idx });
+          g.runs += parseBallRuns(rec.text);
+          if (isLegalDelivery(rec.text)) legalBefore++;
+        });
+        var html = '<button type="button" class="be-add" onclick="beAddBall(-1)">＋ Add a ball at the start</button>';
+        groups.forEach(function(g){
+          html += '<div class="be-over">Over ' + g.no + ' — ' + runW(g.runs) + '</div>';
+          var lastIdx = -1;
+          g.rows.forEach(function(r){
+            if (r.evt){ html += '<div class="be-evt">' + esc(r.evt.text || '') + '</div>'; return; }
+            lastIdx = r.idx;
+            var rec = r.rec;
+            var who = esc(dispIn(e.nicknames, inn.bowlingTeam, rec.bowler)) + ' to ' + esc(dispIn(e.nicknames, inn.battingTeam, rec.batter));
+            html += '<button type="button" class="be-ball' + ((beCtx.changedKey === item.key && beCtx.changedIdx === r.idx) ? ' be-changed' : '') + '" onclick="beEditBall(' + r.idx + ')">'
+              + '<span class="be-lab">' + esc(rec.over || '') + '</span>'
+              + '<span class="be-main"><span class="be-who">' + who + '</span><span class="be-out">' + ballOutcomeHTML(rec.text)
+              + (rec.wkt && rec.howOut ? ' <span style="color:var(--muted)">(' + esc(rec.howOut) + ')</span>' : '')
+              + '</span></span>'
+              + '<span class="be-tok">' + esc(rec.text) + '</span></button>';
+          });
+          html += '<button type="button" class="be-add" onclick="beAddBall(' + lastIdx + ')">＋ Add a ball in this over</button>';
+        });
+        return html;
+      }
+      /* ---------- crease-pair simulation ----------
+         Who was at the crease (and who was on strike) around any
+         ball, rebuilt from the record itself: each delivery names
+         its striker, wickets name who was out, and the crossing /
+         over-end flips follow the same rules applyWicket uses.
+         Used for the run-out "who was out" choice and for the
+         replay's final not-out pair. Best-effort on legacy records
+         whose balls lack names — the aggregates never depend on it. */
+      function beCrossRuns(t){
+        t = String(t || '');
+        if (/^\d+$/.test(t)) return parseInt(t, 10);
+        var m = t.match(/^(?:Nb|Wd)\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^(?:B|Lb)(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^(?:W|WdW|NbW|ByeW|LbW)\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        return 0;
+      }
+      function beFindPartner(inn, name){
+        var found = null;
+        (inn.balls || []).forEach(function(b){
+          if (found || !b) return;
+          if (b.evt === 'start'){ if (b.ns && b.ns !== name) found = b.ns; else if (b.who && b.who !== name) found = b.who; return; }
+          if (b.evt) return;
+          if (b.batter && b.batter !== name) found = b.batter;
+          else if (b.outName && b.outName !== name) found = b.outName;
+        });
+        if (found) return found;
+        var bs = inn.batters || [];
+        for (var i = 0; i < bs.length; i++) if (bs[i].name && bs[i].name !== name) return bs[i].name;
+        return null;
+      }
+      function bePairAdvance(st, rec, inn){
+        if (!rec) return st;
+        if (rec.evt){
+          if (rec.evt === 'start'){ if (rec.who) st.s = rec.who; if (rec.ns) st.ns = rec.ns; }
+          else if (rec.evt === 'crease'){
+            if (rec.who && rec.who !== st.s && rec.who !== st.ns){ if (!st.s) st.s = rec.who; else if (!st.ns) st.ns = rec.who; }
+          } else if (rec.evt === 'note'){
+            var rm = /^(.+) retired hurt\.$/.exec(String(rec.text || ''));
+            if (rm){ if (st.s === rm[1]) st.s = null; if (st.ns === rm[1]) st.ns = null; }
+          }
+          return st;
+        }
+        var t = String(rec.text || '');
+        if (!st.s && !st.ns){ st.s = rec.batter || null; st.ns = beFindPartner(inn, rec.batter); }
+        else if (rec.batter){
+          if (rec.batter === st.ns){ var sw = st.s; st.s = st.ns; st.ns = sw; }
+          else if (rec.batter !== st.s){ if (!st.s) st.s = rec.batter; else if (!st.ns) st.ns = rec.batter; else st.ns = rec.batter; }
+        }
+        var legal = isLegalDelivery(t);
+        var parity = beCrossRuns(t) % 2;
+        if (isWicketBall(rec)){
+          var outName = rec.outName || rec.batter;
+          var notOut = (outName === st.s) ? st.ns : ((outName === st.ns) ? st.s : (rec.batter === st.s ? st.ns : st.s));
+          var legalAfter = st.legal + (legal ? 1 : 0);
+          if (notOut){
+            var wasStriker = (notOut === st.s);
+            var flips = parity + ((legal && legalAfter % 6 === 0) ? 1 : 0);
+            var endsStriker = (flips % 2 === 0) ? wasStriker : !wasStriker;
+            st.s = endsStriker ? notOut : null;
+            st.ns = endsStriker ? null : notOut;
+          } else {
+            if (st.s === outName) st.s = null;
+            if (st.ns === outName) st.ns = null;
+          }
+          st.legal = legalAfter;
+        } else {
+          if (parity === 1){ var sw2 = st.s; st.s = st.ns; st.ns = sw2; }
+          if (legal){ st.legal++; if (st.legal % 6 === 0){ var sw3 = st.s; st.s = st.ns; st.ns = sw3; } }
+        }
+        return st;
+      }
+      function bePairAt(inn, idx){
+        var st = { s: null, ns: null, legal: 0 };
+        var balls = inn.balls || [];
+        for (var i = 0; i < idx && i < balls.length; i++) bePairAdvance(st, balls[i], inn);
+        return st;
+      }
+      /* ---------- the replay ----------
+         Rebuild one innings from a (corrected) ball record. The
+         aggregate effects mirror applyBatRuns / completeExtra /
+         applyWicket line for line, and the record itself is written
+         with the same primitives (pushBall, the milestone checks,
+         updateFreeHitAfterBall), so a corrected innings is built
+         exactly the way live scoring built the original — including
+         regenerated milestone lines and over labels. Event lines
+         (innings start, crease, attack, notes) are carried over
+         verbatim; penalty lines re-credit their runs and retired
+         hurt lines re-mark their batter. An innings with NO ball
+         record (a manual result) is returned untouched — there is
+         nothing to replay it from. */
+      function beReplayInnings(entry, srcInn, origInn){
+        if (!srcInn || !Array.isArray(srcInn.balls) || !srcInn.balls.length) return deep(srcInn || {});
+        var out = blankInnings(srcInn.battingTeam, srcInn.bowlingTeam);
+        var batPid = {}, bowlPid = {};
+        ((origInn && origInn.batters) || []).forEach(function(b){ if (b && b.name && b.pid) batPid[b.name] = b.pid; });
+        ((origInn && origInn.bowlers) || []).forEach(function(b){ if (b && b.name && b.pid) bowlPid[b.name] = b.pid; });
+        function getBat(name){
+          for (var i = 0; i < out.batters.length; i++) if (out.batters[i].name === name) return out.batters[i];
+          if (isPlaceholderName(name)) return { name: name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false, howOut: '' };
+          var b = { name: name, pid: batPid[name] || entryPlayerId(entry, out.battingTeam, name), runs: 0, balls: 0, fours: 0, sixes: 0, out: false, howOut: '' };
+          out.batters.push(b); return b;
+        }
+        function getBowl(name){
+          for (var i = 0; i < out.bowlers.length; i++) if (out.bowlers[i].name === name) return out.bowlers[i];
+          if (isPlaceholderName(name)) return { name: name, balls: 0, runs: 0, wickets: 0 };
+          var b = { name: name, pid: bowlPid[name] || entryPlayerId(entry, out.bowlingTeam, name), balls: 0, runs: 0, wickets: 0 };
+          out.bowlers.push(b); return b;
+        }
+        var st = { s: null, ns: null, legal: 0 };
+        var lastBowler = '';
+        srcInn.balls.forEach(function(rec){
+          if (!rec) return;
+          if (rec.evt){
+            if (rec.evt === 'milestone') return; /* regenerated by the checks below */
+            var copy = deep(rec); delete copy._be;
+            out.balls.push(copy);
+            var pm = /^Penalty:\s*(\d+)\s*runs?\s+awarded/.exec(String(rec.text || ''));
+            if (pm) out.runs += parseInt(pm[1], 10) || 0;
+            var rm = /^(.+) retired hurt\.$/.exec(String(rec.text || ''));
+            if (rm && rec.evt === 'note'){ var rb = getBat(rm[1]); rb.retiredHurt = true; if (!rb.out) rb.howOut = 'retired hurt'; }
+            bePairAdvance(st, rec, srcInn);
+            return;
+          }
+          var t = String(rec.text || '');
+          var bat = getBat(rec.batter), bowl = getBowl(rec.bowler);
+          var overNo = Math.floor(out.legalBalls / 6) + 1;
+          var fhBefore = !!out.freeHit;
+          var batBefore = bat.runs, bowlWBefore = bowl.wickets;
+          var m = null, legal = false;
+          out.striker = rec.batter || null; out.bowler = rec.bowler || null;
+          if (rec.bowler) lastBowler = rec.bowler;
+          if (isWicketBall(rec)){
+            var kind = beWicketKind(t), r = kind.runs, teamRuns = 0;
+            if (kind.extra === 'wide'){ teamRuns = 1 + r; out.extras.wide += teamRuns; bowl.runs += teamRuns; }
+            else if (kind.extra === 'noball'){ teamRuns = 1 + r; out.extras.noball += 1; bowl.runs += teamRuns; bat.runs += r; if (r === 4) bat.fours++; if (r === 6) bat.sixes++; }
+            else if (kind.extra === 'bye' || kind.extra === 'legbye'){ teamRuns = r; out.extras[kind.extra === 'bye' ? 'bye' : 'legbye'] += r; legal = true; }
+            else { teamRuns = r; bowl.runs += r; bat.runs += r; if (r === 4) bat.fours++; if (r === 6) bat.sixes++; legal = true; }
+            if (legal || kind.extra === 'noball'){ bat.balls++; if (legal){ bowl.balls++; out.legalBalls++; } }
+            out.runs += teamRuns;
+            out.wickets++;
+            var outBat = getBat(rec.outName || rec.batter);
+            outBat.out = true; outBat.howOut = rec.howOut || 'out';
+            var credited = (typeof rec.bowlerWicket === 'boolean') ? rec.bowlerWicket : bowlerCredited(rec.dismissal || '');
+            if (credited) bowl.wickets++;
+            pushBall(out, t, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: rec.dismissal || '', howOut: rec.howOut || '', outName: rec.outName || rec.batter || '', fh: fhBefore });
+            updateFreeHitAfterBall(out, t, legal);
+            checkBatterMilestones(out, bat, batBefore, legal);
+            if (credited) checkBowlerMilestones(out, bowl, bowlWBefore, legal);
+          } else if (/^\d+$/.test(t)){
+            var n = parseInt(t, 10);
+            out.runs += n; bat.runs += n; bat.balls++; bowl.runs += n; bowl.balls++;
+            if (n === 4) bat.fours++; if (n === 6) bat.sixes++;
+            out.legalBalls++;
+            pushBall(out, t, n === 4 ? 'b4' : (n === 6 ? 'b6' : ''), overNo, fhBefore ? { fh: true } : null);
+            updateFreeHitAfterBall(out, t, true);
+            checkBatterMilestones(out, bat, batBefore, true);
+            legal = true;
+          } else if ((m = t.match(/^Nb\+(\d+)$/))){
+            var n2 = parseInt(m[1], 10);
+            out.runs += 1 + n2; out.extras.noball += 1; bowl.runs += 1 + n2;
+            bat.runs += n2; bat.balls++;
+            if (n2 === 4) bat.fours++; if (n2 === 6) bat.sixes++;
+            pushBall(out, t, 'bx', overNo, fhBefore ? { fh: true } : null);
+            out.freeHit = true;
+            checkBatterMilestones(out, bat, batBefore, false);
+          } else if (t === 'Wd' || (m = t.match(/^Wd\+(\d+)$/))){
+            var tot = 1 + (m ? parseInt(m[1], 10) : 0);
+            out.runs += tot; out.extras.wide += tot; bowl.runs += tot;
+            pushBall(out, t, 'bx', overNo, fhBefore ? { fh: true } : null);
+            /* a wide leaves the free-hit flag exactly as it was */
+          } else if ((m = t.match(/^(B|Lb)(\d+)$/))){
+            var n4 = parseInt(m[2], 10);
+            out.runs += n4; out.extras[m[1] === 'B' ? 'bye' : 'legbye'] += n4;
+            bowl.balls++; bat.balls++; out.legalBalls++;
+            pushBall(out, t, 'bx', overNo, fhBefore ? { fh: true } : null);
+            updateFreeHitAfterBall(out, t, true);
+            legal = true;
+          } else {
+            out.balls.push(deep(rec)); /* an unknown token is kept verbatim — never silently dropped */
+          }
+          bePairAdvance(st, rec, srcInn);
+        });
+        out.extras.penalty = penaltyRunsFromFeed(out);
+        out.striker = st.s; out.nonStriker = st.ns;
+        out.bowler = lastBowler || srcInn.bowler || null;
+        out.awaitingBowler = false;
+        if (st.s) getBat(st.s);
+        if (st.ns) getBat(st.ns);
+        try { normalizeInningsShape(out); } catch(e){}
+        return out;
+      }
+      function beWicketKind(t){
+        var m;
+        if ((m = t.match(/^WdW\+(\d+)$/))) return { extra: 'wide', runs: parseInt(m[1], 10) };
+        if (t === 'WdW') return { extra: 'wide', runs: 0 };
+        if ((m = t.match(/^NbW\+(\d+)$/))) return { extra: 'noball', runs: parseInt(m[1], 10) };
+        if (t === 'NbW') return { extra: 'noball', runs: 0 };
+        if ((m = t.match(/^ByeW\+(\d+)$/))) return { extra: 'bye', runs: parseInt(m[1], 10) };
+        if (t === 'ByeW') return { extra: 'bye', runs: 0 };
+        if ((m = t.match(/^LbW\+(\d+)$/))) return { extra: 'legbye', runs: parseInt(m[1], 10) };
+        if (t === 'LbW') return { extra: 'legbye', runs: 0 };
+        if ((m = t.match(/^W\+(\d+)$/))) return { extra: 'none', runs: parseInt(m[1], 10) };
+        return { extra: 'none', runs: 0 };
+      }
+      function beSuperOverResult(so){
+        var inns = (so && so.innings) || [];
+        if (inns.length < 2) return { winner: (so && so.winner) || '', resultText: (so && so.resultText) || '' };
+        var so1 = inns[0], so2 = inns[1], winner = '';
+        if (so2.runs > so1.runs) winner = so2.battingTeam;
+        else if (so1.runs > so2.runs) winner = so1.battingTeam;
+        var scoreStr = so1.battingTeam + ' ' + so1.runs + '/' + so1.wickets + ' — ' + so2.battingTeam + ' ' + so2.runs + '/' + so2.wickets;
+        var rt = winner
+          ? winner + ' won the Super Over by ' + ((winner === so2.battingTeam) ? ((2 - so2.wickets) + ((2 - so2.wickets) === 1 ? ' wicket' : ' wickets')) : ((so1.runs - so2.runs) + ((so1.runs - so2.runs) === 1 ? ' run' : ' runs'))) + ' (' + scoreStr + ').'
+          : 'Super Over tied (' + scoreStr + ').';
+        return { winner: winner, resultText: rt };
+      }
+      /* The result a set of innings produces on its own — display
+         form and the form the live match stores (with the 🏆 a
+         Super Over finish adds). Compared against the stored text
+         to tell an automatic result line from one the scorer
+         worded themselves: only the automatic one is rewritten. */
+      function beResultPair(e, inns, so){
+        if (so && so.winner && so.resultText){
+          return { auto: asSentence('Match tied — ' + fixPlurals(so.resultText)), stored: 'Match tied — ' + so.resultText + ' 🏆' };
+        }
+        var t = matchResultText({ innings: inns, wicketsLimit: e.wicketsLimit, resultText: '', superOver: null });
+        return { auto: t, stored: t };
+      }
+      /* ---------- the ball edit form ---------- */
+      function beNameList(item, side){
+        var e = beCtx.entry, inn = item.work, seen = {}, out = [];
+        function add(n){ if (n && !seen[n]){ seen[n] = 1; out.push(n); } }
+        var team = side === 'bat' ? inn.battingTeam : inn.bowlingTeam;
+        var squad = (team === e.teamA) ? (e.squadA || []) : ((team === e.teamB) ? (e.squadB || []) : []);
+        squad.forEach(add);
+        if (side === 'bat'){
+          (inn.batters || []).forEach(function(b){ add(b.name); });
+          (inn.balls || []).forEach(function(b){ if (!b.evt) add(b.batter); if (b.outName) add(b.outName); });
+        } else {
+          (inn.bowlers || []).forEach(function(b){ add(b.name); });
+          (inn.balls || []).forEach(function(b){ if (!b.evt) add(b.bowler); });
+        }
+        return out;
+      }
+      function beFielderFromHowOut(howOut){
+        var h = String(howOut || ''), m;
+        if ((m = h.match(/^c (.+) b /)) && m[1] !== '&') return m[1].indexOf('not recorded') > -1 ? '' : m[1];
+        if ((m = h.match(/^run out \((.+)\)$/))) return m[1];
+        if ((m = h.match(/^st (.+) b /))) return m[1].indexOf('not recorded') > -1 ? '' : m[1];
+        return '';
+      }
+      function beParseForm(item, rec, idx){
+        var t = String(rec.text || '0'), m;
+        var f = { batter: rec.batter || '', bowler: rec.bowler || '', batterTxt: '', bowlerTxt: '', type: 'runs', runs: 0, wType: 'bowled', wExtra: 'none', wRuns: 0, wOut: 'striker', wFielder: '', wOther: '' };
+        var pair = bePairAt(item.work, idx);
+        f.pairS = pair.s; f.pairNs = pair.ns;
+        if (/^\d+$/.test(t)){ f.type = 'runs'; f.runs = parseInt(t, 10); }
+        else if ((m = t.match(/^Nb\+(\d+)$/))){ f.type = 'noball'; f.runs = parseInt(m[1], 10); }
+        else if (t === 'Wd'){ f.type = 'wide'; f.runs = 0; }
+        else if ((m = t.match(/^Wd\+(\d+)$/))){ f.type = 'wide'; f.runs = parseInt(m[1], 10); }
+        else if ((m = t.match(/^B(\d+)$/))){ f.type = 'bye'; f.runs = parseInt(m[1], 10); }
+        else if ((m = t.match(/^Lb(\d+)$/))){ f.type = 'legbye'; f.runs = parseInt(m[1], 10); }
+        else if (isWicketBall(rec)){
+          f.type = 'wicket';
+          var kind = beWicketKind(t);
+          f.wExtra = kind.extra; f.wRuns = kind.runs;
+          f.wType = rec.dismissal || 'bowled';
+          var outName = rec.outName || rec.batter || '';
+          f.wOut = (pair.ns && outName === pair.ns && outName !== rec.batter) ? 'nonStriker' : 'striker';
+          f.wOther = pair.ns || '';
+          f.wFielder = beFielderFromHowOut(rec.howOut);
+        }
+        return f;
+      }
+      function beEditBall(idx){
+        if (!beCtx) return;
+        var item = beCtx.items[beCtx.tab];
+        var rec = (item.work.balls || [])[idx];
+        if (!rec || rec.evt) return;
+        beCtx.edit = { isNew: false, idx: idx };
+        beCtx.form = beParseForm(item, rec, idx);
+        beRender();
+      }
+      function beAddBall(afterIdx){
+        if (!beCtx) return;
+        var item = beCtx.items[beCtx.tab];
+        if (!item.work.balls || !item.work.balls.length){ toast('This innings has no ball-by-ball record'); return; }
+        var pair = bePairAt(item.work, afterIdx + 1);
+        var bowler = '';
+        for (var i = afterIdx; i >= 0; i--){ var r = item.work.balls[i]; if (r && !r.evt && r.bowler){ bowler = r.bowler; break; } }
+        if (!bowler){ var dl = item.work.balls.filter(function(b){ return b && !b.evt; }); bowler = dl.length ? (dl[dl.length - 1].bowler || '') : ''; }
+        beCtx.edit = { isNew: true, afterIdx: afterIdx };
+        beCtx.form = { batter: pair.s || '', bowler: bowler, batterTxt: '', bowlerTxt: '', type: 'runs', runs: 0, wType: 'bowled', wExtra: 'none', wRuns: 0, wOut: 'striker', wFielder: '', wOther: pair.ns || '', pairS: pair.s, pairNs: pair.ns };
+        beRender();
+      }
+      function beFormHTML(item){
+        var f = beCtx.form, e = beCtx.entry, inn = item.work;
+        function opts(list, sel, team){
+          var all = list.slice();
+          if (sel && all.indexOf(sel) === -1) all.unshift(sel);
+          return all.map(function(n){ return '<option value="' + esc(n) + '"' + (n === sel ? ' selected' : '') + '>' + esc(dispIn(e.nicknames, team, n)) + '</option>'; }).join('');
+        }
+        var ed = beCtx.edit;
+        var title = ed.isNew ? 'Add a Ball' : 'Edit Ball';
+        var sub = '';
+        if (!ed.isNew){
+          var rec = (inn.balls || [])[ed.idx];
+          sub = (rec && rec.over ? 'Ball ' + rec.over + ' — ' : '') + esc(dispIn(e.nicknames, inn.bowlingTeam, rec ? rec.bowler : '')) + ' to ' + esc(dispIn(e.nicknames, inn.battingTeam, rec ? rec.batter : ''));
+        }
+        var runsLabel = f.type === 'wide' ? 'Extra runs run (on top of the wide)' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : 'Runs off the bat'));
+        var h = '<div class="be-form"><h3>' + title + '</h3>' + (sub ? '<p class="be-fsub">' + sub + '</p>' : '')
+          + '<label for="beBatterSel">Batter facing</label><select id="beBatterSel">' + opts(beNameList(item, 'bat'), f.batter, inn.battingTeam) + '</select>'
+          + '<label for="beBatterTxt">Correct batter name</label><input id="beBatterTxt" value="' + esc(f.batterTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
+          + '<label for="beBowlerSel">Bowler</label><select id="beBowlerSel">' + opts(beNameList(item, 'bowl'), f.bowler, inn.bowlingTeam) + '</select>'
+          + '<label for="beBowlerTxt">Correct bowler name</label><input id="beBowlerTxt" value="' + esc(f.bowlerTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
+          + '<label for="beTypeSel">Outcome</label><select id="beTypeSel" onchange="beFormTypeChanged()">'
+          + [['runs', 'Runs off the bat'], ['wide', 'Wide'], ['noball', 'No ball'], ['bye', 'Bye'], ['legbye', 'Leg bye'], ['wicket', 'Wicket']].map(function(o){ return '<option value="' + o[0] + '"' + (f.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+          + '</select>';
+        if (f.type !== 'wicket'){
+          h += '<label for="beRuns">' + runsLabel + '</label><input id="beRuns" type="number" min="0" max="36" step="1" value="' + (f.runs || 0) + '" />';
+        } else {
+          h += '<label for="beWExtra">Wicket fell on</label><select id="beWExtra">'
+            + [['none', 'A legal delivery'], ['wide', 'A wide'], ['noball', 'A no ball'], ['bye', 'A bye'], ['legbye', 'A leg bye']].map(function(o){ return '<option value="' + o[0] + '"' + (f.wExtra === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+            + '</select>'
+            + '<label for="beWType">How out</label><select id="beWType">'
+            + [['bowled', 'Bowled'], ['caught', 'Caught'], ['candbowled', 'Caught & bowled'], ['lbw', 'LBW'], ['runout', 'Run out'], ['stumped', 'Stumped'], ['hitwicket', 'Hit wicket'], ['retired', 'Retired out']].map(function(o){ return '<option value="' + o[0] + '"' + (f.wType === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+            + '</select>'
+            + '<label for="beWOut">Batter out</label><select id="beWOut">'
+            + '<option value="striker"' + (f.wOut === 'striker' ? ' selected' : '') + '>Facing batter' + (f.pairS ? ' — ' + esc(dispIn(e.nicknames, inn.battingTeam, f.pairS)) : '') + '</option>'
+            + '<option value="nonStriker"' + (f.wOut === 'nonStriker' ? ' selected' : '') + (f.pairNs ? '' : ' disabled') + '>Other batter' + (f.pairNs ? ' — ' + esc(dispIn(e.nicknames, inn.battingTeam, f.pairNs)) : '') + '</option>'
+            + '</select>'
+            + '<label for="beWOther">Other batter\'s correct name</label><input id="beWOther" value="' + esc(f.wOther || '') + '" placeholder="The other batter at the crease" autocomplete="off" />'
+            + '<label for="beWFielder">Fielder (as shown on the card)</label><input id="beWFielder" value="' + esc(f.wFielder || '') + '" placeholder="Catcher / fielder / keeper — blank if none" autocomplete="off" />'
+            + '<label for="beWRuns">Runs completed on the ball</label><input id="beWRuns" type="number" min="0" max="36" step="1" value="' + (f.wRuns || 0) + '" />';
+        }
+        h += '<div class="rowflex" style="margin-top:14px">'
+          + '<button type="button" class="btn" onclick="beSaveBallForm()">' + (ed.isNew ? 'Add Ball' : 'Save Ball') + '</button>'
+          + '<button type="button" class="btn ghost" onclick="beCancelForm()">Back to Balls</button>'
+          + (ed.isNew ? '' : '<button type="button" class="btn ghost be-del" onclick="beDeleteBall()">Delete This Ball</button>')
+          + '</div></div>';
+        return h;
+      }
+      function beHarvestForm(){
+        if (!beCtx || !beCtx.form) return;
+        var f = beCtx.form;
+        function v(id){ var el = $(id); return el ? el.value : null; }
+        var x;
+        if ((x = v('beBatterSel')) !== null) f.batter = x;
+        if ((x = v('beBatterTxt')) !== null) f.batterTxt = x;
+        if ((x = v('beBowlerSel')) !== null) f.bowler = x;
+        if ((x = v('beBowlerTxt')) !== null) f.bowlerTxt = x;
+        if ((x = v('beTypeSel')) !== null) f.type = x;
+        if ((x = v('beRuns')) !== null) f.runs = x;
+        if ((x = v('beWExtra')) !== null) f.wExtra = x;
+        if ((x = v('beWType')) !== null) f.wType = x;
+        if ((x = v('beWOut')) !== null) f.wOut = x;
+        if ((x = v('beWOther')) !== null) f.wOther = x;
+        if ((x = v('beWFielder')) !== null) f.wFielder = x;
+        if ((x = v('beWRuns')) !== null) f.wRuns = x;
+      }
+      function beFormTypeChanged(){ beHarvestForm(); beRender(); }
+      function beCancelForm(){ if (!beCtx) return; beCtx.edit = null; beCtx.form = null; beRender(); }
+      function beRefreshWork(item){ item.work = beReplayInnings(beCtx.entry, item.work, item.orig); }
+      function beSaveBallForm(){
+        if (!beCtx || !beCtx.edit) return;
+        var item = beCtx.items[beCtx.tab], e = beCtx.entry, inn = item.work;
+        beHarvestForm();
+        var f = beCtx.form;
+        var batter = String(f.batterTxt || '').trim() || f.batter || '';
+        var bowler = String(f.bowlerTxt || '').trim() || f.bowler || '';
+        if (!batter || !bowler){ toast('Pick the batter and the bowler for this ball'); return; }
+        var runs = Math.max(0, Math.min(36, parseInt(f.runs, 10) || 0));
+        var token = '', cls = '', extra = null;
+        if (f.type === 'runs'){ token = String(runs); cls = runs === 4 ? 'b4' : (runs === 6 ? 'b6' : ''); }
+        else if (f.type === 'wide'){ token = runs > 0 ? 'Wd+' + runs : 'Wd'; cls = 'bx'; }
+        else if (f.type === 'noball'){ token = 'Nb+' + runs; cls = 'bx'; }
+        else if (f.type === 'bye'){ token = 'B' + runs; cls = 'bx'; }
+        else if (f.type === 'legbye'){ token = 'Lb' + runs; cls = 'bx'; }
+        else {
+          var wr = Math.max(0, Math.min(36, parseInt(f.wRuns, 10) || 0));
+          var pre = f.wExtra === 'wide' ? 'WdW' : (f.wExtra === 'noball' ? 'NbW' : (f.wExtra === 'bye' ? 'ByeW' : (f.wExtra === 'legbye' ? 'LbW' : 'W')));
+          token = wr > 0 ? pre + '+' + wr : pre;
+          cls = 'bw';
+          var howOut = dismissalHowOut(f.wType, String(f.wFielder || '').trim(), dispIn(e.nicknames, inn.bowlingTeam, bowler));
+          var outName = f.wOut === 'nonStriker' ? (String(f.wOther || '').trim() || f.pairNs || batter) : batter;
+          extra = { wkt: true, bowlerWicket: bowlerCredited(f.wType), dismissal: f.wType, howOut: howOut, outName: outName };
+        }
+        var rec = { over: '', overNo: 0, text: token, cls: cls, bowler: bowler, batter: batter };
+        if (extra) for (var k in extra) rec[k] = extra[k];
+        var ed = beCtx.edit;
+        if (ed.isNew){ item.work.balls.splice(ed.afterIdx + 1, 0, rec); beCtx.changedIdx = ed.afterIdx + 1; }
+        else { item.work.balls[ed.idx] = rec; beCtx.changedIdx = ed.idx; }
+        beCtx.changedKey = item.key;
+        beCtx.dirty = true;
+        beCtx.edit = null; beCtx.form = null;
+        beRefreshWork(item);
+        beRender();
+      }
+      function beDeleteBall(){
+        if (!beCtx || !beCtx.edit || beCtx.edit.isNew) return;
+        var item = beCtx.items[beCtx.tab];
+        var rec = (item.work.balls || [])[beCtx.edit.idx];
+        if (!rec) return;
+        askVerify('Delete this ball?', (rec.over ? 'Ball ' + rec.over + ' — ' : '') + 'this delivery is removed and the innings is rebuilt without it.', function(){
+          item.work.balls.splice(beCtx.edit.idx, 1);
+          beCtx.dirty = true;
+          beCtx.edit = null; beCtx.form = null;
+          beCtx.changedKey = item.key; beCtx.changedIdx = -1;
+          beRefreshWork(item);
+          beRender();
+        });
+      }
+      /* ---------- saving: history entry + every other copy ---------- */
+      function saveBallEdits(){
+        if (!beCtx) return;
+        var e = beCtx.entry, id = beCtx.id;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!beCtx.dirty){ toast('No corrections yet — tap any ball to fix it'); return; }
+        var mainInns = [], soInns = null;
+        beCtx.items.forEach(function(it){
+          var r = beReplayInnings(e, it.work, it.orig);
+          if (it.kind === 'main') mainInns.push(r); else { soInns = soInns || []; soInns.push(r); }
+        });
+        var wlim = (typeof e.wicketsLimit === 'number') ? e.wicketsLimit : 10;
+        for (var i = 0; i < mainInns.length; i++){
+          if (mainInns[i].wickets > wlim){ toast('⚠️ The corrected ' + (i === 0 ? '1st' : '2nd') + ' innings has ' + mainInns[i].wickets + ' wickets — more than this match\'s ' + wlim + '. Fix the extra wicket ball first.'); return; }
+        }
+        if (soInns) for (var j = 0; j < soInns.length; j++){
+          if (soInns[j].wickets > 2){ toast('⚠️ A Super Over innings cannot have more than 2 wickets.'); return; }
+        }
+        var soRec = null;
+        if (soInns && e.superOver){
+          soRec = { id: e.superOver.id, batFirst: e.superOver.batFirst || '', winner: '', resultText: '', innings: soInns, attempts: deep(e.superOver.attempts || []) };
+          var c0 = beSuperOverResult(soRec); soRec.winner = c0.winner; soRec.resultText = c0.resultText;
+        }
+        function line(inn){ return inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)'; }
+        var oldLines = (e.innings || []).map(line).join('  •  ');
+        var newLines = mainInns.map(line).join('  •  ');
+        var newRes = e.abandoned ? '' : beResultPair(e, mainInns, soRec).auto;
+        askVerify('Save corrections?', 'Before: ' + oldLines + '\nAfter: ' + newLines + (newRes ? '\nResult: ' + newRes : ''), function(){
+          beApplySave(mainInns, soRec);
+        });
+      }
+      function beApplySave(mainInns, soRec){
+        if (!beCtx) return;
+        var e = beCtx.entry, id = beCtx.id;
+        var oldPair = beResultPair(e, e.innings || [], e.superOver || null);
+        e.innings = mainInns;
+        if (soRec && e.superOver){ e.superOver.innings = soRec.innings; e.superOver.winner = soRec.winner; e.superOver.resultText = soRec.resultText; }
+        if (!e.abandoned){
+          var newPair = beResultPair(e, e.innings, e.superOver || null);
+          var curNorm = fixResultText(e.resultText || '').replace(/\s*🏆\s*$/, '');
+          var oldNorm = (oldPair.auto || '').replace(/\s*🏆\s*$/, '');
+          if (!e.resultText || curNorm === oldNorm) e.resultText = newPair.stored;
+        }
+        /* A correction can take the Player of the Match out of the
+           match altogether (their only entry was the wrong one) —
+           an award naming a player who no longer appears in the
+           corrected scorecard is cleared everywhere, like a POTM
+           edit (see saveHistoryEdit). */
+        if (e.potmName){
+          var potmFound = false;
+          e.innings.forEach(function(inn){
+            (inn.batters || []).concat(inn.bowlers || []).forEach(function(p){ if (p && p.name === e.potmName) potmFound = true; });
+          });
+          if (!potmFound){
+            e.potmName = ''; e.potmTeam = ''; e.potmPid = '';
+            syncPotmToTournamentCopy(id, '', '', '');
+            if (S.matchId && String(S.matchId) === String(id) && S.status === 'finished'){ S.potmName = ''; S.potmTeam = ''; S.potmPid = ''; }
+          }
+        }
+        e._sig = JSON.stringify([e.innings, e.resultText, e.potmName, e.potmTeam, e.potmPid, e.abandoned, e.targetOverride, e.dlTarget, e.dlOvers, e.superOver]);
+        saveHistLocal();
+        pushHistoryEntry(e);
+        /* Propagate to every other live copy of this match, exactly
+           as a POTM edit does: the match on the pad (when it is this
+           one) takes the corrected innings and re-files its result
+           into the tournament; otherwise the stored tournament
+           copies and the Recent Results slice are corrected in
+           place. Points, statistics, the bracket and the podium all
+           read those copies, so they follow the correction. */
+        var touched = false;
+        if (S.matchId && String(S.matchId) === String(id) && S.status === 'finished'){
+          if (e.innings.length >= 2){ S.prevInnings = deep(e.innings[0]); S.current = deep(e.innings[e.innings.length - 1]); }
+          else if (e.innings.length === 1){ S.prevInnings = null; S.current = deep(e.innings[0]); }
+          S.resultText = e.resultText || '';
+          if (e.superOver && S.superOver){ S.superOver.innings = deep(e.superOver.innings || []); S.superOver.winner = e.superOver.winner || ''; S.superOver.resultText = e.superOver.resultText || ''; }
+          try { saveResultToTournamentCore(); } catch(err){}
+          try { captureLastFinishedSingle(); } catch(err){}
+          touched = true;
+        }
+        function fixCopy(m){
+          if (m && String(m.id) === String(id)){
+            m.innings = deep(e.innings);
+            m.resultText = e.resultText || '';
+            if (e.superOver) m.superOver = deep(e.superOver);
+            m.winner = matchWinner(m);
+            touched = true;
+          }
+        }
+        if (S.tournament && Array.isArray(S.tournament.matches)) S.tournament.matches.forEach(fixCopy);
+        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn && Array.isArray(tn.matches)) tn.matches.forEach(fixCopy); });
+        if (S.lastFinishedSingle && String(S.lastFinishedSingle.id) === String(id)){
+          S.lastFinishedSingle.innings = deep(e.innings);
+          S.lastFinishedSingle.resultText = e.resultText || '';
+          touched = true;
+        }
+        if (touched) commit('Scorecard corrected', true);
+        beCtx = null;
+        var m = $('ballEditModal'); if (m) m.classList.remove('show');
+        if (archiveView && String(archiveView.id) === String(id)){
+          archiveView.entry = e;
+          archiveView.state = archiveDisplayState(e);
+          try { renderArchiveScoreboard(); } catch(err){}
+        }
+        try { renderHistory(); } catch(err){}
+        if (!histEntrySyncable(e)){
+          toast('⚠️ Saved on this device only — this match belongs to another account, so the correction cannot be published. Sign in as the match owner to sync it everywhere.');
+        } else if (!fbHistRef){
+          toast('⚠️ Saved on this device — it will sync to Firebase as soon as the connection is ready');
+        } else {
+          toast('✓ Scorecard corrected — score, statistics and result updated everywhere');
+        }
+      }
+
       /* ---------- History & Reports view ---------- */
       function renderHistory(){
         renderHistStatus();
@@ -19022,7 +19825,7 @@
         var rows = fow.map(function(f){
           return '<tr><td><span class="pname">' + (f.name ? plLink(inn.battingTeam, f.name) : '—') + '</span></td><td class="r">' + f.score + ' - ' + f.n + '</td><td class="r">' + esc(f.over || '') + '</td></tr>';
         }).join('');
-        return '<table><thead><tr><th>Fall of Wickets</th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        return '<table class="fow-table"><thead><tr><th>Fall of Wickets</th><th class="r">Score</th><th class="r">Over</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
       /* Partnership stands of one innings, split at every wicket.
          The survivor of a stand is the batter the ball record does
