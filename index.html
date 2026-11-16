@@ -2430,7 +2430,6 @@
         </div>
         <div class="card">
           <input id="searchBox" type="text" placeholder="Type a player, team or tournament — name or ID" autocomplete="off" aria-label="Search players, teams and tournaments by name or ID" oninput="renderSearch()" />
-          <p class="note" style="margin:8px 0 0">Tap a result to open it — a player&rsquo;s profile and career stats, a team&rsquo;s page, or the tournament.</p>
         </div>
         <div id="searchResults"></div>
       </section>
@@ -2541,7 +2540,6 @@
           <button type="button" class="sc-pop-x" onclick="closeScorerPop()" aria-label="Close">✕</button>
           <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Team Squads</button>
           <div class="fold-body" hidden>
-          <p class="note" style="margin:0 0 10px">Drag a player by their number to drop them into position — the first 11 in the order are the Playing XI — then tap Confirm Squad.</p>
           <div class="grid2">
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
@@ -2603,7 +2601,6 @@
             <div class="pending-note" id="pendingNote"></div>
           </div>
           <div class="mc-finish" id="mcEndInnBar" hidden>
-            <p class="note" style="margin:0 0 8px">1st innings is complete — scoring is paused, and Undo still works if the last ball was wrong.</p>
             <button type="button" class="btn gold mc-finish-btn" onclick="endInnings()">End Innings</button>
           </div>
           <div class="mc-finish" id="mcFinishBar" hidden>
@@ -2914,7 +2911,7 @@
               <div class="tn-banner-main">
                 <p class="tn-banner-kicker">Tournament</p>
                 <p class="tn-banner-title" id="tnBannerTitle">Tournament</p>
-                <p class="tn-banner-sub" id="tnBannerSub">Teams, matches, points &amp; statistics — all in one place</p>
+                <p class="tn-banner-sub" id="tnBannerSub"></p>
               </div>
               </div>
             </div>
@@ -3007,7 +3004,6 @@
           <div class="tn-panel" id="tnPanel-matches">
             <div class="card" id="tnGroupsCard">
               <h2>Groups</h2>
-              <p class="note">Create the groups first — Group A, Group B, Group C… — then open a group and add its teams. Group teams are picked only from the teams added on the Teams tab, and a team can be in one group only. Each group gets its own points table on the Points tab.</p>
               <div class="grp-actions" style="margin-top:12px">
                 <label for="grpNewName">New group name</label>
                 <div class="rowflex"><input id="grpNewName" placeholder="e.g. Group A" style="flex:1;min-width:0" /><button class="btn sm" onclick="createGroup()">Create Group</button></div>
@@ -3030,15 +3026,13 @@
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Auto Fixture Generator</button>
               <div class="fold-body" hidden>
-              <p class="note">Round-robin league: pick the teams and one tap creates every fixture — each team plays each other team once (4 teams = 6 matches). Every generated fixture gets its own unique ID; tap the ID on any fixture to copy it.</p>
-              <div style="margin-top:10px"><label for="fxgGroup">Group</label><select id="fxgGroup" class="tn-select" onchange="fxGenGroupChange()"><option value="">All teams — one league</option></select><p class="note" style="margin-top:6px">Pick a group to generate that group's fixtures only — the teams below become that group's teams, and every fixture is stamped with the group.</p></div>
+              <div style="margin-top:10px"><label for="fxgGroup">Group</label><select id="fxgGroup" class="tn-select" onchange="fxGenGroupChange()"><option value="">All teams — one league</option></select></div>
               <div style="margin-top:10px"><label>Teams</label><div class="fxg-teams" id="fxgTeams"></div>
               <div class="rowflex" style="margin-top:8px"><button type="button" class="btn ghost sm" onclick="fxGenSelectAll()">Select All</button><button type="button" class="btn ghost sm" onclick="fxGenClearSel()">Clear</button><span class="note" id="fxgCount"></span></div></div>
               <div class="grid2" style="margin-top:12px">
                 <div><label for="fxgDate">Start date — Round 1</label><input id="fxgDate" type="date" /></div>
                 <div><label for="fxgVenue">Venue</label><input id="fxgVenue" placeholder="Venue for every fixture" /></div>
               </div>
-              <p class="note" style="margin-top:8px">One round per day from the start date. A pairing already in the fixture list is skipped, never duplicated.</p>
               <div class="rowflex" style="margin-top:12px"><button class="btn gold" onclick="generateRoundRobin()">Generate Fixtures</button></div>
               </div>
             </div>
@@ -3181,7 +3175,6 @@
               <label for="tnwPlayer">Player of the Tournament</label>
               <select id="tnwPlayer"></select>
             </div>
-            <p class="tne-note">Your picks are shown on the tournament Home podium for everyone. Leave a field on Automatic to let it follow the Final's result and the tournament statistics instead.</p>
             <button type="button" class="tne-save" onclick="saveTnWinner()">Save</button>
           </div>
         </div>
@@ -3200,7 +3193,6 @@
             <button class="btn ghost sm" id="ovCardBtn" onclick="toggleOverlayCard()">📋 Show Scorecard on Overlay</button>
             <button class="btn ghost sm" id="ovCardAutoBtn" onclick="toggleOverlayCardAuto()">Over-End Scorecard: On</button>
           </div>
-          <p class="note" style="margin:10px 0 0">The full scorecard appears under the overlay bar automatically at the end of every over (and at the innings break / end of the match), and hides again when the next over starts. While it is on screen it rotates through Batting, Bowling and Partnerships, like a broadcast graphic. “Show Scorecard on Overlay” puts it on screen — or takes it off — whenever you want. Both switches sync to every open overlay, including the OBS browser source.</p>
         </div>
         <div class="overlay-stage" id="overlayStage"><div id="overlayMain" style="width:100%;display:flex;justify-content:center"></div></div>
       </section>
@@ -3257,17 +3249,7 @@
 
         <div class="ins-panel" id="insPanel-firebase" hidden>
           <button type="button" class="btn ghost sm ins-back" onclick="insPanelBack()">← Back to Instructions</button>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Create a Firebase project</h3><p>Go to console.firebase.google.com, open a project on the free plan, then go to <b>Build → Realtime Database → Create Database</b> (Start in test mode). The live score syncs at <span class="mono">liveMatch</span>, every finished match is archived permanently under <span class="mono">matchHistory</span>, and history deletes are made final everywhere by tombstones under <span class="mono">matchHistoryDeleted</span>. All three paths stay publicly <b>readable</b> (guests and viewers can watch without logging in), but <b>writes require the owner</b>: publish these Rules in <b>Realtime Database → Rules</b> — see step 5 below for exactly what they enforce and when they take effect.</p></div></div>
-            <div class="step"><div class="step-n">2</div><div><h3>Turn on Google sign-in</h3><p>In the Firebase Console go to <b>Build → Authentication → Sign-in method</b> and enable <b>Google</b>. Then open <b>Authentication → Settings → Authorized domains</b> and make sure the domain this page is hosted on (e.g. <span class="mono">riasatbb.github.io</span>) is in the list — Google sign-in is refused from any domain that is not listed. The "Sign in with Google" button in the Scorer Console then works: whoever signs in and creates a match or tournament becomes its owner/admin, and only that account can score, edit or delete it. Everyone else — signed in or not — is read-only for it, and guests can watch everything without logging in.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div><h3>Add a web app and copy the config</h3><p>Project Settings → <b>Add app → Web (&lt;/&gt;)</b> — you will get an object called <span class="mono">firebaseConfig</span> (with apiKey, databaseURL, and more). Copy it and paste it into the box below.</p></div></div>
-            <div class="step"><div class="step-n">4</div><div><h3>Connect here</h3><p>Paste the config below and tap “Connect to Firebase” — this page then links to the live database. Every ball from the scorer goes to the database, and anyone with the scoreboard or overlay open receives it instantly.</p></div></div>
-            <div class="step"><div class="step-n">5</div><div><h3>Two separate links — one for you, one for viewers</h3><p>This page is hosted on GitHub Pages, so the same address with a different ending opens a different page. <b>Your control link</b> ends in <span class="mono">…/?view=scorer</span> and opens the Scorer Console — score only from there, and keep that link to yourself. <b>The viewer link</b> ends in <span class="mono">…/?view=live</span> — share that one with everyone: viewers land on the Live Matches list, tap a match, and watch its Public Scoreboard read-only, with no controls on the page. The OBS overlay link ends in <span class="mono">…/?view=overlay</span>. All three read the same Firebase data.</p></div></div>
-            <div class="step"><div class="step-n">6</div><div><h3>Publish the owner Rules (server-side lock)</h3><p>The app already enforces ownership on screen — guests and other accounts see everything read-only, with no add, edit or delete controls shown to them at all; the controls appear only when the Google account that created the tournament, match, team or player is signed in. For the database itself to enforce it too, publish these Rules in <b>Realtime Database → Rules</b>. They keep every path publicly readable, but a write is accepted only from a signed-in account that owns the record: the live match (and the tournament inside it) can be written only by the account whose UID is stored in its <span class="mono">ownerUid</span> — or claimed by a signed-in account when it has no owner yet — a NEW history entry can be filed by any signed-in account (so a match finished while signed out, offline, or by the designated scorer still reaches Firebase and shows on every device — it keeps its recorded owner), while an entry already in Firebase can be rewritten or deleted only by its owner (or its designated scorer), and a delete tombstone can be written only by the account that owns that history entry (or its designated scorer, or anyone signed in when the entry has no owner or is already gone). A match can also name a <b>designated scorer</b> by Gmail (Select Scorer on the Open Match screen). The address itself never enters the public match record — the match stores only a one-way hash of it, and the address lives in the separate <span class="mono">matchScorer</span> record, which these Rules make readable only by the owner and by that scorer; they also let that account write the live match and its history entry, without ever changing the owner. Re-publish them if you published an older copy:<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid ) && newData.child('ownerUid').val() == auth.uid || ( root.child('matchScorer').child('email').val() == auth.token.email && newData.child('ownerUid').val() == data.child('ownerUid').val() && newData.child('scorerEmailHash').val() == data.child('scorerEmailHash').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child('ownerUid').val() || auth.token.email == data.child('email').val() )", ".write": "auth != null && newData.child('ownerUid').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child('ownerUid').exists() || data.child('ownerUid').val() == '' || data.child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child('matchHistory').child($matchId).exists() || !root.child('matchHistory').child($matchId).child('ownerUid').exists() || root.child('matchHistory').child($matchId).child('ownerUid').val() == '' || root.child('matchHistory').child($matchId).child('ownerUid').val() == auth.uid || root.child('matchScorer').child('email').val() == auth.token.email )" } } } }</span></p></div></div>
-          </div>
-          <div class="warn" style="margin-top:12px"><b>⚠️ Honest security note:</b> ownership is enforced <b>in this app</b> right away — the scoring pad, editors and delete buttons lock for everyone except the signed-in owner, and guests are view-only. <b>Server-side</b> enforcement starts only when the step-6 Rules above are published in the Firebase Console: until then the database itself still accepts public writes, so someone writing to it directly (outside this app) could still change data. Once those Rules are published, keep scoring from the account that owns the match — writes from any other account, signed in or not, are rejected by Firebase itself.</div>
-          <div class="divider"></div>
-          <label for="fbConfig">Firebase config (paste JSON or the firebaseConfig object)</label>
+          <label for="fbConfig">Firebase config</label>
           <textarea id="fbConfig" placeholder='{"apiKey":"…","authDomain":"…","databaseURL":"https://….firebaseio.com","projectId":"…"}'></textarea>
           <div class="rowflex" style="margin-top:10px">
             <button class="btn" onclick="connectFirebase()">Connect to Firebase</button>
@@ -3278,11 +3260,7 @@
 
         <div class="ins-panel" id="insPanel-obs" hidden>
           <button type="button" class="btn ghost sm ins-back" onclick="insPanelBack()">← Back to Instructions</button>
-          <div class="steps">
-            <div class="step"><div class="step-n">1</div><div><h3>Add a Browser Source</h3><p>In OBS, go to Sources → <b>+ → Browser</b> and paste your page's overlay link as the URL (after hosting it on GitHub Pages):</p><div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div></div></div>
-            <div class="step"><div class="step-n">2</div><div><h3>Set the size</h3><p>Set Width <b>1920</b> and Height <b>1080</b>. The overlay page background is transparent, so the score bar floats directly over the video — preview it below in “transparent background” mode.</p></div></div>
-            <div class="step"><div class="step-n">3</div><div><h3>Score once, update in two places</h3><p>Now score a ball on the Scorer page from your phone or laptop and both the Public Scoreboard and the OBS score bar change instantly. No refresh needed.</p></div></div>
-          </div>
+          <div class="urlbox"><span class="mono">https://riasatbb.github.io/live-cricket-score/?view=overlay</span></div>
         </div>
       </div>
     </div>
@@ -3351,7 +3329,6 @@
           <h2 id="soTitle">⚡ Super Over — Who Bats First?</h2>
           <button class="sq-x big" onclick="closeSuperOverModal()" aria-label="Close">×</button>
         </div>
-        <p class="sub" style="color:var(--muted);font-size:14px;margin:6px 0 0">The match is tied. Each side bats one over (2 wickets), with batters and a bowler picked fresh for both teams. The Super Over result is joined to this match's result.</p>
         <div class="pick-list" id="soTeamBtns" style="margin-top:12px"></div>
         <div class="rowflex" style="margin-top:16px">
           <button class="btn ghost" onclick="closeSuperOverModal()">Cancel</button>
@@ -3386,7 +3363,6 @@
         </div>
         <div class="om-opt">
           <h3>Option 3</h3>
-          <p class="note" style="margin:0 0 8px">Select one from your existing teams</p>
           <input id="tpSearch" placeholder="Search teams…" autocomplete="off" oninput="renderTeamPickerList()" aria-label="Search teams" />
           <div class="tp-list" id="tpList"></div>
         </div>
@@ -3476,7 +3452,7 @@
             <div><label for="heDate">Match date</label><input id="heDate" type="date" /></div>
             <div><label for="heTime">Match time</label><input id="heTime" type="time" /></div>
           </div>
-          <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /><p class="note" style="margin:6px 0 0">Leave blank to use the automatic result worked out from the scores.</p></div>
+          <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /></div>
           <div><label for="hePotm">Player of the Match</label><select id="hePotm"></select></div>
         </div>
         <div class="rowflex" style="margin-top:16px">
@@ -3504,7 +3480,6 @@
           <a class="btn ghost sm share-ext wa" id="shareWaLink" href="#" target="_blank" rel="noopener">WhatsApp</a>
           <a class="btn ghost sm share-ext fb" id="shareFbLink" href="#" target="_blank" rel="noopener">Facebook</a>
         </div>
-        <p class="note" style="margin:10px 0 0">WhatsApp and Facebook open with the caption and viewer link ready — attach the downloaded card image there to post it with the picture.</p>
       </div>
     </div>
 
@@ -3556,7 +3531,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v182';
+      var APP_VERSION = 'v184';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5670,7 +5645,7 @@
       function battingSquad(){ return squadForTeam(S.current.battingTeam); }
       function bowlingSquad(){ return squadForTeam(S.current.bowlingTeam); }
       function squadListHTML(arr, which){
-        if (!arr.length) return '<p class="note">No players yet — add the squad with the box above.</p>';
+        if (!arr.length) return '<p class="note">No players yet.</p>';
         var team = which === 'A' ? S.teamA : S.teamB;
         return arr.map(function(n,i){
           /* One row per player, built for setting the order before
@@ -5704,14 +5679,14 @@
         var cBtn = $('btnConfirmSquad'), cStatus = $('squadConfirmStatus'), fsEl = $('finalSquadDisplay');
         if (S.squadConfirmed){
           if (cBtn) cBtn.textContent = '✓ Squad Confirmed';
-          if (cStatus) cStatus.textContent = '✓ Squad confirmed — the final squad for this match is shown below and in the scoreboard\'s Squads tab.';
+          if (cStatus) cStatus.textContent = '✓ Squad confirmed';
           if (fsEl) fsEl.innerHTML = '<div class="grid2">' + [[S.teamA || 'Team 1', S.finalSquadA],[S.teamB || 'Team 2', S.finalSquadB]].map(function(pair){
             var rows = pair[1].length ? pair[1].map(function(n, i){ return '<div class="sq-row"><span class="sq-num">' + (i + 1) + '</span><span class="sq-name">' + plLink(pair[0], n, n) + '</span>' + playerMetaHTML(pair[0], n) + '</div>'; }).join('') : '<p class="note">No players.</p>';
             return '<div class="squad-box"><div class="squad-head"><h3>' + esc(pair[0]) + ' — Final Squad</h3><span class="note">' + pair[1].length + (pair[1].length === 1 ? ' player' : ' players') + '</span></div>' + rows + '</div>';
           }).join('') + '</div>';
         } else {
           if (cBtn) cBtn.textContent = 'Confirm Squad';
-          if (cStatus) cStatus.textContent = 'Players are loaded — tap Confirm Squad to lock the final squad for this match.';
+          if (cStatus) cStatus.textContent = '';
           if (fsEl) fsEl.innerHTML = '';
         }
       }
@@ -5901,24 +5876,21 @@
         var note = $('pickerNote');
         if (mode === 'bowler'){
           $('pickerTitle').textContent = opts.title || 'Over Complete — New Bowler';
-          $('pickerSub').textContent = opts.sub || ('Over ' + (inn.legalBalls/6) + ' is complete. Pick who bowls over ' + (inn.legalBalls/6 + 1) + ' for ' + inn.bowlingTeam + '.');
-          if (pickerExclude.length){
-            note.textContent = pickerExclude.join(' and ') + ' bowled the previous over and cannot bowl two overs in a row — pick someone else.';
-            note.style.display = 'block';
-          } else { note.style.display = 'none'; }
+          $('pickerSub').textContent = '';
+          note.style.display = 'none';
           var list = bowlingSquad().filter(function(n){ return pickerExclude.indexOf(n) === -1; });
           $('pickerList').innerHTML = list.length
             ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n), lookupPlayerId(inn.bowlingTeam, n)); }).join('')
-            : '<p class="note">No squad players to pick from — type a name below, or add the bowling team\'s squad first.</p>';
+            : '<p class="note">No squad players to pick from.</p>';
         } else {
           $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
-          $('pickerSub').textContent = 'Pick the next batter for ' + inn.battingTeam + '.';
+          $('pickerSub').textContent = '';
           note.style.display = 'none';
           var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
           var cands = batterCandidates(otherEnd);
           $('pickerList').innerHTML = cands.length
             ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n), lookupPlayerId(inn.battingTeam, n)); }).join('')
-            : '<p class="note">No squad players left to pick — type a name below.</p>';
+            : '<p class="note">No squad players left to pick.</p>';
         }
         $('pickerModal').classList.add('show');
       }
@@ -6234,10 +6206,8 @@
         var note=$('pendingNote');
         ['btnWide','btnNB','btnBye','btnLB'].forEach(function(id){ $(id).classList.remove('pending'); });
         if (pendingExtra){
-          note.textContent = pendingExtra==='wide'
-            ? '⏳ Wide (1 run) — now tap the extra runs the batters ran (0–6). Total added = 1 + those runs.'
-            : '⏳ ' + pendingLabel() + ' — now tap the runs for this ball (0–6).';
-          note.classList.add('show');
+          note.textContent = '';
+          note.classList.remove('show');
           $(pendingExtra==='wide'?'btnWide':(pendingExtra==='noball'?'btnNB':(pendingExtra==='bye'?'btnBye':'btnLB'))).classList.add('pending');
         } else { note.classList.remove('show'); note.textContent=''; }
       }
@@ -6454,7 +6424,7 @@
            the pad carries the one action left, and after completion
            the result line above says everything. */
         if (S.status === 'finished') msg = '';
-        else if (inn.awaitingBowler) msg = 'Pick the bowler for the next over to continue scoring.';
+        else if (inn.awaitingBowler) msg = '';
         else {
           var miss = [];
           if (!inn.striker) miss.push('striker batter');
@@ -6583,9 +6553,7 @@
            stumped off a wide, run out off a no-ball, and so on — the
            panel records the wicket on that pending delivery. */
         var ctx = $('wktContext');
-        if (ctx) ctx.textContent = pendingExtra
-          ? ('This wicket falls on the pending ' + pendingLabel() + ' ball. “Runs on this ball” = the extra runs run on top of the ' + pendingLabel() + ' itself.')
-          : 'Pick how the batter was out. “Runs on this ball” = runs completed before the dismissal (e.g. run out going for a second run).';
+        if (ctx) ctx.textContent = '';
         /* Free hit: on this delivery a batter can only be run out
            (or retired out) — every other dismissal type is disabled
            in the picker before the panel even opens. */
@@ -6598,7 +6566,7 @@
           }
           if (fhNow && typeSel.value !== 'runout' && typeSel.value !== 'retired') typeSel.value = 'runout';
         }
-        if (fhNow && ctx) ctx.textContent = '⚡ FREE HIT — on this ball a batter can only be Run Out (or Retired Out). ' + ctx.textContent;
+        if (fhNow && ctx) ctx.textContent = '⚡ FREE HIT — on this ball a batter can only be Run Out (or Retired Out).';
         var outSel = $('wktOutWho'); if (outSel) outSel.value = 'striker';
         var runsSel = $('wktRuns'); if (runsSel) runsSel.value = '0';
         /* Fielder / catcher is a DROPDOWN, not a typing box: the
@@ -7317,7 +7285,7 @@
         if (mainMatchTied()){
           wrap.hidden = false;
           wrap.innerHTML = '<label>⚡ Match Tied — Super Over</label>'
-            + '<p class="note" style="margin-top:0">The scores are level. Settle it with a one-over Super Over — each side bats one over (2 wickets), with batters and a bowler picked fresh for both teams. Its result joins this match\'s result.</p>'
+            + '<p class="note" style="margin-top:0">The scores are level.</p>'
             + '<div class="rowflex" style="margin-top:8px"><button type="button" class="btn gold sm" onclick="openSuperOverModal()">Play Super Over</button></div>';
           return;
         }
@@ -7409,9 +7377,7 @@
         }
         var curEl = $('potmCurrent');
         if (curEl){
-          curEl.textContent = S.potmName
-            ? 'Current: ' + dispName(S.potmTeam, S.potmName) + ' — shown on the public scoreboard. Pick someone else and tap Set to change it.'
-            : 'Not decided yet — the scoreboard shows “Not Decided Yet” until you pick the Player of the Match here.';
+          curEl.textContent = S.potmName ? 'Current: ' + dispName(S.potmTeam, S.potmName) : '';
         }
       }
       function applyPotm(){
@@ -7489,7 +7455,7 @@
         if (scoringLocked()) return;
         if (S.status === 'finished'){ toast('This match is already finished'); return; }
         openMoreModal('Abandon Match',
-          'The match ends now with no result. The score stays on record and everyone watching sees “Match abandoned”. Undo can still take this back.',
+          '',
           '<label for="abReason">Reason (optional)</label><input id="abReason" placeholder="e.g. Rain, bad light, wet outfield" />',
           applyAbandon, 'Abandon Match');
       }
@@ -7514,7 +7480,7 @@
         if (scoringLocked()) return;
         if (matchFinishedGuard()) return;
         openMoreModal('Penalty Runs',
-          'Penalty runs go straight onto that team’s innings score as Penalty extras — they count inside the Extras total (shown as “p” in the breakdown). No ball is bowled, and no batter or bowler is charged with them. If that team has not batted yet, the runs are held and credited the moment their innings starts.',
+          '',
           '<div class="grid2">'
           + '<div><label for="penTeam">Award runs to</label><select id="penTeam">' + selOptions([S.teamA, S.teamB], S.current.battingTeam) + '</select></div>'
           + '<div><label for="penRuns">Penalty runs</label><input id="penRuns" type="number" min="1" max="100" value="5" /></div>'
@@ -7564,7 +7530,7 @@
           return !batterIsOut(inn, n);
         });
         openMoreModal('Retired Hurt',
-          'The batter leaves the field hurt. No wicket falls and the bowler gets no credit — the score does not change. A retired-hurt batter is NOT out: they may bat again later in this innings (pick them again in Batters & Bowler).',
+          '',
           '<div class="grid2">'
           + '<div><label for="rhWho">Batter retiring hurt</label><select id="rhWho">' + selOptions(atCrease, inn.striker || atCrease[0]) + '</select></div>'
           + '<div><label for="rhNew">Replacement batter</label><select id="rhNew"><option value="">Decide later — leave the slot empty</option>' + selOptions(repls, '') + '</select></div>'
@@ -7599,7 +7565,7 @@
         if (matchFinishedGuard()) return;
         if (S.inningsNo !== 2 || !S.prevInnings){ toast('D/L applies to a 2nd-innings chase — use it after the innings break, when the target is known'); return; }
         openMoreModal('D / L — Revised Target',
-          'For a rain-shortened chase, enter the revised target and overs from the Duckworth-Lewis calculation. The target, overs left, required rate and the “needs …” line update on the Scorer Console, the Public Scoreboard and the overlay at once.',
+          '',
           '<p class="note" style="margin:0 0 10px">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + '</b> • Current target: <b>' + target() + '</b> • ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + ' in ' + oversText(S.current.legalBalls) + ' overs.</p>'
           + '<div class="grid2">'
           + '<div><label for="dlTargetInput">Revised target (runs)</label><input id="dlTargetInput" type="number" min="1" value="' + target() + '" /></div>'
@@ -7630,7 +7596,7 @@
         var how = (typeof S.dlTarget === 'number' && S.dlTarget > 0) ? 'set by D/L'
           : ((typeof S.targetOverride === 'number' && S.targetOverride > 0) ? 'changed earlier' : '1st innings ' + runW(S.prevInnings.runs) + ' + 1');
         openMoreModal('Change Target',
-          'Sets a new target for the chase. Everything that reads the target — the “needs …” line, Target and required rate on both outputs and the overlay — follows the new number.',
+          '',
           '<p class="note" style="margin:0 0 10px">Current target: <b>' + target() + '</b> (' + how + '). ' + esc(S.current.battingTeam) + ' are ' + S.current.runs + '/' + S.current.wickets + '.</p>'
           + '<label for="ctTargetInput">New target (runs)</label><input id="ctTargetInput" type="number" min="1" value="' + target() + '" />',
           applyChangeTarget, 'Change Target');
@@ -7652,7 +7618,7 @@
         if (scoringLocked()) return;
         if (S.status === 'finished'){ toast('This match is finished — start a new match to change the format'); return; }
         openMoreModal('Overs / Format / Wickets',
-          'Change the match format from now on: overs per innings and how many wickets end an innings (10 for 11-a-side, fewer for short-sided games). Overs already bowled stay bowled — if the new limit is already reached, the innings ends.',
+          '',
           '<div><label for="fmtPreset">Format</label><select id="fmtPreset" onchange="fmtPresetChanged(this)"><option value="">Custom</option><option value="20">T20 — 20 overs</option><option value="10">T10 — 10 overs</option><option value="40">40 overs</option><option value="50">ODI — 50 overs</option></select></div>'
           + '<div class="grid2" style="margin-top:10px">'
           + '<div><label for="fmtOvers">Overs per innings</label><input id="fmtOvers" type="number" min="1" max="50" value="' + (S.oversLimit || '') + '" /></div>'
@@ -8219,17 +8185,17 @@
                 + (lg ? '<img class="pt-logo" src="' + esc(lg) + '" alt="" loading="lazy" />' : '')
                 + '<span class="grp-teamname">' + esc(n) + '</span>'
                 + '<button type="button" class="sq-x grp-actions" title="Remove ' + esc(n) + ' from ' + esc(g.name) + '" aria-label="Remove ' + esc(n) + ' from ' + esc(g.name) + '" onclick="removeTeamFromGroup(' + fxIdArg(g.id) + ',' + fxIdArg(n) + ')">🗑</button></div>';
-            }).join('') : '<p class="note">No teams in ' + esc(g.name) + ' yet — add them from the dropdown below.</p>';
+            }).join('') : '<p class="note">No teams in ' + esc(g.name) + ' yet.</p>';
             var addHTML;
             if (!tn.teams.length){
-              addHTML = '<p class="note">No teams in this tournament yet — add teams on the Teams tab first, then add them to this group here.</p>';
+              addHTML = '<p class="note">No teams in this tournament yet.</p>';
             } else if (!avail.length){
               addHTML = '<p class="note">Every team in this tournament is already in a group.</p>';
             } else {
               addHTML = '<div class="rowflex"><select id="grpAddTeamSel" class="tn-select" style="flex:1;min-width:0" onchange="grpPickChange(this.value)"><option value="">— Pick a team —</option>'
                 + avail.map(function(n){ return '<option value="' + esc(n) + '"' + (grpPickValue === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('')
                 + '</select><button class="btn sm" onclick="addTeamToGroup()">Add Team</button></div>'
-                + '<p class="note" style="margin-top:6px">Only teams not already in a group are listed — a team can be in one group only.</p>';
+               ;
             }
             box.innerHTML = '<div class="bk-stage">' + esc(g.name) + ' — ' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + '</div>'
               + teamRows
@@ -8241,7 +8207,7 @@
           }
         }
         if (!groups.length){
-          box.innerHTML = '<p class="note">No groups yet — this tournament runs as one single group, with one points table. Create a group above to split the teams into groups.</p>';
+          box.innerHTML = '<p class="note">No groups yet.</p>';
           return;
         }
         var html = groups.map(function(g){
@@ -8398,10 +8364,10 @@
         tn.teams.forEach(function(n){ totalPlayers += (Array.isArray(tn.squads[n]) ? tn.squads[n].length : 0); });
         var summary = tn.teams.length
           ? tn.teams.length + (tn.teams.length === 1 ? ' team' : ' teams') + ' • ' + totalPlayers + (totalPlayers === 1 ? ' player' : ' players') + ' in total'
-          : 'No teams yet — add your first team above.';
+          : 'No teams yet.';
         var sumEl = $('mtSummary'); if (sumEl) sumEl.textContent = summary;
         var consoleSub = $('consoleMyTeamsSub');
-        if (consoleSub) consoleSub.textContent = tn.teams.length ? summary + ' — tap to add teams or manage players.' : 'Add teams and manage their players.';
+        if (consoleSub) consoleSub.textContent = tn.teams.length ? summary : '';
         /* Teams are listed alphabetically (like the reference Teams
            page); each tile keeps its real index for the actions. While
            the user types in the entry bar, the grid live-filters to the
@@ -8414,7 +8380,7 @@
         var html = '';
         mtRegHits = [];
         if (!tn.teams.length && !q){
-          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. Every team you add — here, in Open Match or inside a tournament — collects in All Teams.</p></div>';
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet.</p></div>';
         } else if (!shown.length && q){
           /* Nothing in the pool matches — but the team may still be
              in the SERVER REGISTRY (removed earlier, or only ever in
@@ -8429,19 +8395,19 @@
             }).slice(0, 8);
           } catch(e){ mtRegHits = []; }
           if (mtRegHits.length){
-            html = '<div class="card"><p class="note" style="margin:0 0 10px">This team is in the server registry — tap it to re-add it to All Teams with its original Team ID:</p>'
+            html = '<div class="card"><p class="note" style="margin:0 0 10px">This team is in the server registry:</p>'
               + mtRegHits.map(function(t, i){
                   return '<button type="button" class="tp-row" style="width:100%;margin-bottom:6px" onclick="mtReaddRegistryIdx(' + i + ')">'
                     + '<span class="tp-main"><span class="tp-name">' + esc(t.name) + '</span>'
-                    + '<span class="tp-id">Team ID: ' + esc(t.id) + ' • Tap to re-add</span></span></button>';
+                    + '<span class="tp-id">Team ID: ' + esc(t.id) + '</span></span></button>';
                 }).join('') + '</div>';
           } else if (!teamRegLoaded()){
-            html = '<div class="card"><p class="note" style="margin:0">⏳ The team registry has not loaded from the server yet — wait until the app is connected, then type again. Your team may already be registered; it is not shown as a new team until the registry arrives, so its Team ID is never duplicated.</p></div>';
+            html = '<div class="card"><p class="note" style="margin:0">⏳ The team registry has not loaded from the server yet.</p></div>';
           } else {
-            html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing — tap Add Team to add it as a new team.</p></div>';
+            html = '<div class="card"><p class="note" style="margin:0">No added team matches your typing.</p></div>';
           }
         } else if (!shown.length){
-          html = '<div class="card"><p class="note" style="margin:0">No teams yet — type a name above and tap Add Team, then tap the team to add its players. Every team you add — here, in Open Match or inside a tournament — collects in All Teams.</p></div>';
+          html = '<div class="card"><p class="note" style="margin:0">No teams yet.</p></div>';
         } else {
           html = '<div class="sb-teams-grid">' + shown.map(function(o){
               var players = Array.isArray(tn.squads[o.name]) ? tn.squads[o.name] : [];
@@ -8918,7 +8884,7 @@
         box.innerHTML = teams.length ? teams.map(function(n, i){
           var sel = fxGenIsSel(n);
           return '<button type="button" class="fxg-team' + (sel ? ' sel' : '') + '" aria-pressed="' + (sel ? 'true' : 'false') + '" onclick="fxGenToggleIdx(' + i + ')">' + (sel ? '✓ ' : '') + esc(n) + '</button>';
-        }).join('') : '<p class="note">' + (fxGenGroup ? 'No teams in ' + esc(fxGenGroup) + ' yet — add teams to the group first (open the group above).' : 'No teams yet — add teams under Teams &amp; Players first.') + '</p>';
+        }).join('') : '<p class="note">' + (fxGenGroup ? 'No teams in ' + esc(fxGenGroup) + ' yet.' : 'No teams yet.') + '</p>';
         var selTeams = fxGenSelectedTeams();
         var matchCount = selTeams.length * (selTeams.length - 1) / 2;
         var cnt = $('fxgCount');
@@ -9454,7 +9420,7 @@
       }
       function bkCustomHTML(){
         bkEnsureCustom();
-        var html = '<p class="note" style="margin-top:10px">Matches play in the order listed — a match can only take the winner or loser of a match ABOVE it. Mark one match as the 🏆 Final: its winner becomes the champion on the podium.</p>';
+        var html = '';
         bkCustomRows.forEach(function(row, i){
           html += '<div class="bk-crow">'
             + '<div class="bk-crow-top"><span class="bk-seed">' + (i + 1) + '</span>'
@@ -9476,16 +9442,13 @@
         var changing = !!tn.bracket;
         var html = '';
         if (tn.teams.length < 2){
-          return '<p class="note">The knockout bracket needs at least 2 teams in the tournament. Pick the format that matches this tournament\'s rules once the teams are in — every format seeds its opening matches from the points table.</p>';
+          return '<p class="note">The knockout bracket needs at least 2 teams in the tournament.</p>';
         }
-        html += '<p class="note">' + (changing
-          ? 'Pick a new format for this bracket — no knockout match has been played yet, so the draw can be replaced. Opening matches are seeded from the points table as it stands now.'
-          : 'No bracket yet. Pick the format that matches this tournament\'s rules — opening matches are seeded from the points table as it stands now, and the draw is then fixed.') + (tn.groups && tn.groups.length ? ' With groups, the seeds come from the group standings — group winners first, then runners-up, then the rest.' : '') + '</p>';
+        
         html += '<div class="bk-actions" style="margin-top:10px">';
         BK_FORMATS.forEach(function(f){
           html += '<button type="button" class="bk-fmt' + (bkSelFormat === f.id ? ' sel' : '') + '" onclick="bkPickFormat(\'' + f.id + '\')">'
             + '<span class="bk-fmt-name">' + esc(f.name) + '</span>'
-            + '<span class="bk-fmt-desc">' + esc(f.desc) + '</span>'
             + (f.need ? '<span class="bk-fmt-need">Top ' + f.need + ' qualify</span>' : '<span class="bk-fmt-need">Any format you need</span>')
             + '</button>';
         });
@@ -9761,7 +9724,7 @@
       }
       function pointsTableHTML(filter){
         var arr = computePoints(filter || undefined);
-        if (!arr.length) return filter ? '<p class="note">No teams in this group yet.</p>' : '<p class="note">No teams entered yet — add teams in Team Entry above.</p>';
+        if (!arr.length) return filter ? '<p class="note">No teams in this group yet.</p>' : '<p class="note">No teams entered yet.</p>';
         var body = arr.map(function(r,i){
           var ptLogo = teamLogoFor(r.team);
           return '<tr class="' + (i < 2 ? 'toprow' : '') + '"><td class="teamcell">' + (i < 2 ? '<span class="qdot"></span>' : '') + (ptLogo ? '<img class="pt-logo" src="' + esc(ptLogo) + '" alt="" loading="lazy" />' : '') + esc(r.team) + '</td>'
@@ -9815,7 +9778,7 @@
       }
       function battingStatsHTML(){
         var st = computePlayerStats().batting;
-        if (!st.length) return '<p class="note">No batting statistics yet — statistics build up ball by ball as tournament matches are scored.</p>';
+        if (!st.length) return '<p class="note">No batting statistics yet.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var sr = s.balls > 0 ? (s.runs/s.balls*100).toFixed(1) : '0.0';
           var ave = s.outs > 0 ? (s.runs/s.outs).toFixed(1) : '—';
@@ -9825,7 +9788,7 @@
       }
       function bowlingStatsHTML(){
         var st = computePlayerStats().bowling;
-        if (!st.length) return '<p class="note">No bowling statistics yet — statistics build up ball by ball as tournament matches are scored.</p>';
+        if (!st.length) return '<p class="note">No bowling statistics yet.</p>';
         var rows = st.slice(0,10).map(function(s,i){
           var econ = s.balls > 0 ? (s.runs/(s.balls/6)).toFixed(2) : '0.00';
           return '<tr><td><b>' + plLink(s.team, s.name, null, s.pid) + '</b>' + (i===0 ? '<span class="stat-cap purple">TOP</span>' : '') + '<span class="howout">' + esc(s.teams.join(' / ')) + '</span></td><td class="r">' + oversText(s.balls) + '</td><td class="r">' + s.runs + '</td><td class="r"><b>' + s.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
@@ -10259,7 +10222,7 @@
       }
       function tnPartnershipHTML(cat, data){
         var list = cat.list(data).slice(0, 10);
-        if (!list.length) return '<p class="tns-empty">No partnerships recorded yet — they are built from the ball-by-ball record as tournament matches are scored.</p>';
+        if (!list.length) return '<p class="tns-empty">No partnerships recorded yet.</p>';
         function wktLabel(n){
           var sfx = ['th', 'st', 'nd', 'rd'], v = n % 100;
           return n + (sfx[(v - 20) % 10] || sfx[v] || sfx[0]);
@@ -10279,7 +10242,7 @@
       function tnStatTableHTML(cat, data){
         if (cat.id === 'partnership') return tnPartnershipHTML(cat, data);
         var list = cat.list(data).slice(0, 10);
-        if (!list.length) return '<p class="tns-empty">No figures in this category yet — they build up ball by ball as tournament matches are scored.</p>';
+        if (!list.length) return '<p class="tns-empty">No figures in this category yet.</p>';
         var rows = list.map(function(s, i){
           var cells = cat.cells(s).map(function(c, ci){ return '<td' + (ci === 0 ? ' class="val"' : '') + '>' + c + '</td>'; }).join('');
           var nameHTML = cat.plain ? '<b>' + esc(s.name) + '</b>' : '<b>' + plLink(s.team, s.name, null, s.pid) + '</b>';
@@ -10294,9 +10257,9 @@
         if (!el) return;
         var cats = tnStatCategories();
         var secs = [
-          { id:'bat', icon:'🏏', title:'Batting', sub:'Runs, scores, averages and more' },
-          { id:'bowl', icon:'🎯', title:'Bowling', sub:'Wickets, figures, economy and more' },
-          { id:'field', icon:'🧤', title:'Fielding', sub:'Catches, run outs and stumpings' }
+          { id:'bat', icon:'🏏', title:'Batting', sub:'' },
+          { id:'bowl', icon:'🎯', title:'Bowling', sub:'' },
+          { id:'field', icon:'🧤', title:'Fielding', sub:'' }
         ];
         function secMeta(id){
           for (var i = 0; i < secs.length; i++) if (secs[i].id === id) return secs[i];
@@ -10807,7 +10770,7 @@
         var title = $('tpTitle');
         if (!teamPageCtx || !teamPageCtx.team){
           if (title) title.textContent = 'Team';
-          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Pick a team from All Teams or a tournament\u2019s Teams tab to open its page.</p></div>';
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">No team selected.</p></div>';
           return;
         }
         if (title) title.textContent = teamPageCtx.team;
@@ -10830,7 +10793,7 @@
         var teams = (store && store.teams) || [];
         var ti = teams.indexOf(team);
         if (ti === -1 && src !== 'sb'){
-          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">This team is no longer in the list — go back and pick another team.</p></div>';
+          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">This team is no longer in the list.</p></div>';
           return;
         }
         /* Keep text already typed into the add-player / compare
@@ -10946,7 +10909,7 @@
             + (tops[2] ? tpJerseyHTML(tops[2], 'r') : '')
             + '</div>';
         } else {
-          h += '<div class="card"><p class="note" style="margin:0">No recorded performances yet — top performers appear once this team plays recorded matches.</p></div>';
+          h += '<div class="card"><p class="note" style="margin:0">No recorded performances yet.</p></div>';
         }
         var fx = [];
         try { fx = fx.concat(S.tournament.fixtures || []); } catch(e){}
@@ -11023,7 +10986,7 @@
             + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div></div>';
         }
         if (!players.length){
-          h += '<div class="card"><div class="tn-empty">No players yet for this team' + (editable ? ' — add them with the box above.' : '.') + '</div></div>';
+          h += '<div class="card"><div class="tn-empty">No players yet for this team.</div></div>';
         } else if (tpSortMode === 'role'){
           var TP_GROUPS = [['Batter', 'Batters'], ['Wicket-keeper Batter', 'Wicketkeeping Batters'], ['Wicket-keeper', 'Wicket-keepers'], ['All-rounder', 'All Rounders'], ['Bowler', 'Bowlers'], ['', 'Unspecified']];
           var grouped = {};
@@ -11306,8 +11269,7 @@
           + '<button type="button" class="' + (tpCmpMode === 'compare' ? 'on' : '') + '" onclick="tpSetCmpMode(\'compare\')">COMPARE</button>'
           + '<button type="button" class="' + (tpCmpMode === 'h2h' ? 'on' : '') + '" onclick="tpSetCmpMode(\'h2h\')">HEAD TO HEAD</button></div>';
         if (!tpCmpTeam){
-          h += '<p class="note" style="text-align:center;margin:14px 0">Search a team to compare or click the below button to select one of your teams.</p>'
-            + '<div style="text-align:center"><button type="button" class="btn ghost" onclick="tpCmpPick()">Select one of my teams</button></div>';
+                      + '<div style="text-align:center"><button type="button" class="btn ghost" onclick="tpCmpPick()">Select one of my teams</button></div>';
           return h + '</div>';
         }
         return h + tpCmpResultHTML(team, tpCmpTeam) + '</div>';
@@ -11363,7 +11325,7 @@
         function field(label, input){ return '<div class="tp-set-field"><label>' + label + '</label>' + input + '</div>'; }
         function textInp(id, val, ph){ return '<input id="' + id + '" value="' + esc(val || '') + '" placeholder="' + (ph || '') + '" autocomplete="off" />'; }
         function toggle(id, on, title, sub){
-          return '<div class="tp-switch-row"><span class="tp-switch-txt"><b>' + title + '</b><small>' + sub + '</small></span>'
+          return '<div class="tp-switch-row"><span class="tp-switch-txt"><b>' + title + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span>'
             + '<label class="tp-switch"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + ' /><span class="tp-slider"></span></label></div>';
         }
         return '<div class="card tp-card">'
@@ -11375,8 +11337,8 @@
           + field('Instagram ID', textInp('tpSetIg', meta.ig))
           + field('Twitter ID', textInp('tpSetTw', meta.tw))
           + field('Youtube ID', textInp('tpSetYt', meta.yt))
-          + toggle('tpSetShowId', meta.showId !== false, 'Show Team ID', 'Team ID will be visible to everyone.')
-          + toggle('tpSetRestrict', !!meta.restrict, 'Restrict Edit Access', 'Disable the edit access of team members — only the admin who created this team can edit it.')
+          + toggle('tpSetShowId', meta.showId !== false, 'Show Team ID', '')
+          + toggle('tpSetRestrict', !!meta.restrict, 'Restrict Edit Access', '')
           + (admin ? '<p class="note" style="margin:12px 0 0">Admin - ' + esc(admin) + '</p>' : '')
           + '<button type="button" class="btn" style="width:100%;margin-top:14px" onclick="tpSaveSettings()">SAVE</button>'
           + '</div>';
@@ -11842,7 +11804,7 @@
         var idLine = $('tnIdLine');
         if (idLine){ var tidNow = tourIdFor(displayName); idLine.innerHTML = 'Tour ID : <span class="id-tap" title="Tap to copy the full Tournament ID" onclick="copyIdTap(event,' + fxIdArg(tidNow) + ',\'Tournament ID\')">' + esc(tidNow) + '</span>'; }
         var sub = $('tnBannerSub');
-        if (sub) sub.textContent = tn.teams.length ? (tn.teams.join('  •  ')) : 'Teams, matches, points & statistics — all in one place';
+        if (sub) sub.textContent = tn.teams.length ? (tn.teams.join('  •  ')) : '';
         /* The uploaded banner image heads the Home tab when one is
            set; without one the standard illustrated header shows.
            The Tournament Details controls (preview + Remove button)
@@ -12212,7 +12174,7 @@
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         var vSub = document.querySelector('#tnPanel-teams .card .sub');
-        if (vSub) vSub.textContent = 'All teams at a glance — tap a team to see its players.';
+        if (vSub) vSub.textContent = '';
         var vH = document.querySelector('#tnPanel-teams .card h2');
         if (vH) vH.textContent = 'Teams';
         try { renderTournament(); } catch(e){}
@@ -12970,7 +12932,7 @@
           if (tm.upcoming.length){
             parts.push('<p class="note" style="margin:10px 0 6px"><b>Upcoming</b></p>' + tm.upcoming.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join(''));
           }
-          body = parts.length ? parts.join('') : '<p class="note">No matches for this team yet — no fixtures or results involve ' + esc(team) + '.</p>';
+          body = parts.length ? parts.join('') : '<p class="note">No matches for this team yet.</p>';
         } else {
           var st = computePlayerStats();
           var teamBat = st.batting.filter(function(s){ return s.teams.indexOf(team) > -1; });
@@ -12992,7 +12954,7 @@
               return '<div class="hist-item"><span>' + plLink(s.team, s.name, null, s.pid) + '</span><b>' + wktW(s.wickets) + ' • ' + oversText(s.balls) + ' ov • Econ ' + econ + '</b></div>';
             }).join(''));
           }
-          if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet — statistics build up from matches saved to the tournament.</p>');
+          if (!teamBat.length && !teamBowl.length) sParts.push('<p class="note" style="margin-top:10px">No player statistics for this team yet.</p>');
           body = sParts.join('');
         }
         wrap.innerHTML = '<div class="sb-team-detail">'
@@ -13124,7 +13086,7 @@
             + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
             + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>');
         });
-        return out.length ? out.join('') : '<p class="note">No matches yet — add a fixture and it appears here; finished matches join the same list with their result.</p>';
+        return out.length ? out.join('') : '<p class="note">No matches yet.</p>';
       }
 
       function renderTournament(){
@@ -13689,7 +13651,7 @@
         slots.forEach(function(s){
           s.innerHTML = '<div class="authbar"><div class="ab-main"><span class="ab-avatar" aria-hidden="true">🌐</span>'
             + '<div><div class="ab-name">Open the control link in Chrome</div>'
-            + '<div class="ab-sub">This app build cannot open the browser by itself yet. Long-press the link below to copy it, paste it into Chrome, and sign in with Google there — same account, same matches.<br><span class="mono" style="user-select:all;-webkit-user-select:all;word-break:break-all">' + esc(url) + '</span></div></div></div>'
+            + '<div class="ab-sub"><span class="mono" style="user-select:all;-webkit-user-select:all;word-break:break-all">' + esc(url) + '</span></div></div></div>'
             + '<button type="button" class="btn ghost sm" onclick="renderAuthBar()">Back</button></div>';
         });
         toast('⚠️ This app build cannot open the browser by itself — long-press the control link shown above to copy it, then open it in Chrome.');
@@ -13699,7 +13661,7 @@
         slots.forEach(function(s){
           s.innerHTML = '<div class="authbar"><div class="ab-main"><span class="ab-avatar" aria-hidden="true">👤</span>'
             + '<div><div class="ab-name">Guest mode<span class="ab-badge" style="background:var(--chip);color:var(--muted);border:1px solid var(--line)">View only</span></div>'
-            + '<div class="ab-sub">In-app Google sign-in is not working in this app build yet. Sign in from your browser instead — same account, same matches.</div></div></div>'
+            + '</div></div>'
             + '<button type="button" class="btn primary" onclick="openControlInBrowser()">Open in browser to sign in</button>'
             + '<button type="button" class="btn ghost sm" onclick="renderAuthBar()">Back</button></div>';
         });
@@ -14779,23 +14741,20 @@
         var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === ctx.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
           + (ctx.role && PROFILE_ROLES.indexOf(ctx.role) === -1 ? '<option value="' + esc(ctx.role) + '" selected>' + esc(ctx.role) + '</option>' : '');
         return '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(ctx.name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
-          + '<div style="margin-top:10px"><label for="pfNick">Nickname</label><input id="pfNick" value="' + esc(ctx.nickname || '') + '" autocomplete="off" placeholder="e.g. Miraz" oninput="pfMarkDirty()" />'
-          + '<p class="note" style="margin:6px 0 0">Shown on the scoreboard and the broadcast overlay instead of the full name, so a long name never gets cut off there. This profile always shows the full name.</p></div>'
+          + '<div style="margin-top:10px"><label for="pfNick">Nickname</label><input id="pfNick" value="' + esc(ctx.nickname || '') + '" autocomplete="off" placeholder="e.g. Riasat" oninput="pfMarkDirty()" /></div>'
           + '<div class="grid2" style="margin-top:10px">'
           + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
-          + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 7" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
+          + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 23" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
           + '</div>'
           + '<div style="margin-top:12px"><label>Photo</label><div class="pf-photo-row">'
           + '<span class="pf-photo-prev" id="pfPhotoPrev">' + (shownPhoto ? '<img src="' + esc(shownPhoto) + '" alt="" />' : esc(initialsOf(ctx.name))) + '</span>'
           + '<button type="button" class="btn ghost sm" onclick="document.getElementById(\'pfPhotoFile\').click()">' + (shownPhoto ? 'Change Photo' : 'Add Photo') + '</button>'
           + '<button type="button" class="btn ghost sm" id="pfPhotoRemove" onclick="pfPhotoRemoveTap()"' + (shownPhoto ? '' : ' hidden') + '>Remove Photo</button>'
           + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
-          + '</div><p class="note" style="margin:6px 0 0">The photo is shrunk to a small size before it is saved, so it syncs quickly.</p></div>'
+          + '</div></div>'
           + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
-          + '<p class="note" style="margin:8px 0 0">Renaming updates this player\u2019s name in the squads, the live match and their recorded history — it all follows their Player ID, so another player with the same name is never affected.</p>'
           + '<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
-          + '<div style="font-weight:700;color:var(--red)">Delete Profile</div>'
-          + '<p class="note" style="margin:6px 0 10px">Permanently deletes this player\u2019s profile — photo, role, jersey number and nickname — together with their Player ID, and removes them from every squad. The deletion syncs to the server like a save, so the profile is deleted for everyone, not just on this device. Scorecards of matches already recorded in History belong to those matches and stay as they are.</p>'
+          + '<div style="font-weight:700;color:var(--red);margin-bottom:10px">Delete Profile</div>'
           + '<button type="button" class="btn red" onclick="pfDeleteProfile()">🗑 Delete Profile</button></div>';
       }
       function pfMarkDirty(){ pfDirty = true; }
@@ -18700,7 +18659,7 @@
         histEditId = id;
         try { closeHistoryMatch(); } catch(err){}
         var sub = $('histEditSub');
-        if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—') + ' — the scores and ball-by-ball stay exactly as recorded; only these details change.';
+        if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
         var vEl = $('heVenue'); if (vEl) vEl.value = e.venue || '';
         var tEl = $('heTournament'); if (tEl) tEl.value = e.tournamentName || '';
         var dEl = $('heDate'); if (dEl) dEl.value = e.matchDate || '';
@@ -18936,11 +18895,11 @@
         var all = allRecordMatches();
         var matches = all.filter(matchInFilter).filter(histSearchMatch).filter(histMonthMatch);
         if (!all.length){
-          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No matches recorded yet. When a match finishes it appears here automatically — and stays.</p></div>';
+          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No matches recorded yet.</p></div>';
           return;
         }
         if (!matches.length){
-          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No past matches match the current search, month and filters. Clear the search, set the month back to All months, or clear a filter to see them all.</p></div>';
+          el.innerHTML = '<div class="card"><p class="note" style="margin:0">No past matches match the current search, month and filters.</p></div>';
           return;
         }
         el.innerHTML = matches.map(histMatchCardHTML).join('');
@@ -20695,7 +20654,7 @@
           if (sub){
             sub.textContent = count === 1 && live && !parked
               ? (S.teamA + ' vs ' + S.teamB + ' — ' + S.current.battingTeam + ' ' + S.current.runs + '/' + S.current.wickets + ' (' + oversText(S.current.legalBalls) + ' ov)')
-              : count + (count === 1 ? ' match' : ' matches') + ' in progress — tap to choose which one to score.';
+              : count + (count === 1 ? ' match' : ' matches') + ' in progress.';
           }
         }
         renderResumeList();
@@ -21089,7 +21048,7 @@
             + tpBadgeHTML(n, i)
             + '<span class="tp-main"><span class="tp-name">' + esc(n) + '</span>'
             + '<span class="tp-id">Team ID: <span class="id-tap" title="Tap to copy the full Team ID" onclick="copyIdTap(event,' + fxIdArg(teamIdFor(n)) + ',\'Team ID\')">' + esc(teamIdFor(n)) + '</span>' + (taken ? ' • Already picked' : '') + '</span></span></button>';
-        }).join('') : '<p class="note">No teams found — create a new team above.</p>';
+        }).join('') : '<p class="note">No teams found.</p>';
       }
       function pickTeamIdx(i){ var n = tpCurrentList[i]; if (n) pickTeam(n); }
       function pickTeam(name){
@@ -21621,7 +21580,7 @@
         if (tn.present === false){
           html = '<div class="tn-row"><div class="tn-pick" style="cursor:default">'
             + '<span><span class="tp-name">No tournament yet — Create Tournament</span>'
-            + '<span class="tp-meta">There is no current tournament. Tap Create Tournament above to start one.</span></span>'
+            + '<span class="tp-meta">There is no current tournament.</span></span>'
             + '</div></div>';
         } else {
           html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
@@ -21707,7 +21666,7 @@
         var qid = q.replace(/[\s\-]/g, '');
         searchHits = { players: [], teams: [], tournaments: [] };
         if (q.length < 2){
-          wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Start typing — matching players, teams and tournaments appear here.</p></div>';
+          wrap.innerHTML = '';
           return;
         }
         /* Players: name, nickname or Player ID. */
@@ -22009,7 +21968,7 @@
           document.body.classList.add('viewer-mode');
           document.body.classList.add('viewer-inpage');
           var vSub = document.querySelector('#tnPanel-teams .card .sub');
-          if (vSub) vSub.textContent = 'All teams at a glance — tap a team to see its players.';
+          if (vSub) vSub.textContent = '';
           var vH = document.querySelector('#tnPanel-teams .card h2');
           if (vH) vH.textContent = 'Teams';
         }
