@@ -665,6 +665,11 @@
       .mc-pad button:active{background:rgba(0,0,0,.28)}
       .mc-pad button.lbl{font-size:16.5px}
       .mc-pad button.darklbl{color:#f5c877;font-size:16.5px}
+      /* The three scoring actions carry their own colours on the pad:
+         4 blue, 6 green, Out red — readable at a glance mid-over. */
+      .mc-pad button.pad4{color:#6cb8ff}
+      .mc-pad button.pad6{color:#4ade80}
+      .mc-pad button.padout{color:#ff7a6b}
       .mc-pad button.pending{background:#e19a26;box-shadow:inset 0 0 0 3px rgba(36,26,2,.35);color:#241a02}
       .mc-pad button:disabled{opacity:.45;cursor:not-allowed}
       .mc-pad button svg{display:block;margin:0 auto}
@@ -1446,6 +1451,17 @@
       .cb-comm-row.banner .cb-comm-text{color:#cfe6f7;font-size:16px}
       .cb-comm-row.banner.result{background:#3d3413;border-top-color:#6b5a1e;border-bottom-color:#6b5a1e}
       .cb-comm-row.banner.result .cb-comm-text{color:#f5e3ae}
+      /* The innings-break banner's fixed lines: title, the first
+         innings score, the target, the chase equation, the required
+         rate and the chase call — team names and figures follow the
+         match being shown. */
+      .cb-ib{display:flex;flex-direction:column;gap:7px}
+      .cb-ib-title{font-size:19px;font-weight:800;color:#fff;letter-spacing:.02em}
+      .cb-ib-score{font-size:16.5px;color:#eaf4fb}
+      .cb-ib-target{font-size:16.5px;font-weight:800;color:#ffd98a}
+      .cb-ib-need{font-size:15.5px}
+      .cb-ib-rrr{font-size:15.5px}
+      .cb-ib-chase{font-size:16.5px;font-weight:800;color:#ffb35c}
       /* Milestone lines in the commentary feed (fifty / century /
          five-wicket haul / hat-trick): gold, so they stand out from
          ordinary balls, green announcement lines and blue banners,
@@ -1460,6 +1476,7 @@
       .cb-overcard-title span{color:#8a8a8a;font-weight:400;margin:0 4px}
       .cb-overballs{font-size:15.5px;letter-spacing:.14em;color:#d8d8d8;font-variant-numeric:tabular-nums}
       .cb-overballs .ob4{color:#64b5e8;font-weight:700}
+      .cb-overballs .ob6{color:#4cc38a;font-weight:700}
       .cb-overballs .obw{color:#ff8a7a;font-weight:700}
       /* Over Summary alignment (per reference): the ball sequence sits
          right-aligned on the title row, and below it the batters form
@@ -1592,11 +1609,21 @@
       .sum-cell{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:3px 0;font-size:14.5px;min-width:0}
       .sum-pname{color:#cfcfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .sum-pfig{font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
-      .sum-winner{border-top:1px solid #3a3a3a;margin-top:12px;padding:13px 0 3px}
-      .sum-wlab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:5px}
+      .sum-winner{border-top:1px solid #3a3a3a;margin-top:12px;padding:13px 0 3px;text-align:center}
+      .sum-wlab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#e8b64c;text-transform:uppercase;margin-bottom:5px}
       .sum-wtext{font-size:17.5px;font-weight:700;color:#fff;line-height:1.3}
+      /* Player of the Match on the Summary tab: centred like the
+         Winner block, its heading in the same gold. */
+      .sum-potm{margin-top:14px;text-align:center}
+      .sum-potm .cb-potm-lab{color:#e8b64c;margin-bottom:6px}
+      /* Toss coin beside the toss-winning team's name. */
+      .sum-coin{font-size:15px;margin-left:7px;letter-spacing:0}
       .sum-dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
       .sum-dl .btn{flex:1 1 150px}
+      /* Second button row: Match Report alone, centred under the
+         Match Summary / Scorecard pair. */
+      .sum-dl2{display:flex;justify-content:center;margin-top:10px}
+      .sum-dl2 .btn{flex:0 1 230px}
       @media (max-width:400px){.sum-grid{column-gap:12px}.sum-cell{font-size:13px}.sum-tname,.sum-tscore{font-size:15px}}
       /* nickname chip in the squad MANAGEMENT lists — the full name
          stays; the chip only shows the scorer that a nickname is set */
@@ -1646,6 +1673,14 @@
       #view-scoreboard .cb-panel .btn.ghost{background:#2b2b2b;color:#e9e9e9;border-color:#4a4a4a}
       #view-scoreboard .viewer-backbar{background:#262626;border-color:#3a3a3a;color:#e9e9e9;box-shadow:none}
       #view-scoreboard .viewer-backbar .note{color:#a8a8a8}
+      /* Info tab head: the two teams face to face — logo (or the
+         initials badge) with the team name under it, VS between
+         the two logos. */
+      .cb-info-head{display:flex;align-items:flex-start;gap:6px;padding:4px 0 14px;border-bottom:1px solid #333;margin-bottom:2px}
+      .cb-info-team{flex:1;min-width:0;text-align:center}
+      .cb-info-team .sb-team-logo{margin-bottom:8px}
+      .cb-info-tname{font-size:15px;font-weight:700;color:#fff;line-height:1.3;overflow-wrap:break-word}
+      .cb-info-vs{flex:none;margin-top:44px;font-size:15px;font-weight:800;color:#e8b64c;letter-spacing:.06em}
       .cb-info-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #333;font-size:14.5px}
       .cb-info-row span:first-child{color:#a8a8a8}
       .cb-info-row b{color:#fff;text-align:right}
@@ -2721,8 +2756,8 @@
             <button onclick="scoreRuns(1)">1</button>
             <button onclick="scoreRuns(2)">2</button>
             <button onclick="scoreRuns(3)">3</button>
-            <button onclick="scoreRuns(4)">4</button>
-            <button onclick="scoreRuns(6)">6</button>
+            <button class="pad4" onclick="scoreRuns(4)">4</button>
+            <button class="pad6" onclick="scoreRuns(6)">6</button>
             <button class="lbl" id="btnLB" onclick="setPending('legbye')">LB</button>
             <button class="lbl" id="btnBye" onclick="setPending('bye')">Bye</button>
             <button class="lbl" id="btnWide" onclick="setPending('wide')">Wide</button>
@@ -2732,7 +2767,7 @@
             <button onclick="scrollToHistory()" aria-label="Ball-by-ball history"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><path d="M6.5 5.5c3 3.5 3 9.5 0 13M17.5 5.5c-3 3.5-3 9.5 0 13" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.5 2.2"/></svg></button>
             <button class="lbl" onclick="toggleMcOther()" aria-label="More run values — 0, 5, 7, 8">4 5 6 7</button>
             <button class="lbl" onclick="undoBall()">Undo</button>
-            <button class="lbl" onclick="scoreWicket()">Out</button>
+            <button class="lbl padout" onclick="scoreWicket()">Out</button>
           </div>
           <div class="mc-more" id="mcMore">
             <div class="mc-more-head"><button type="button" class="x" onclick="toggleMcMore()" aria-label="Close More menu">✕</button><span class="t">More</span></div>
@@ -3669,7 +3704,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v192';
+      var APP_VERSION = 'v193';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14547,6 +14582,11 @@
           tournamentId: (S.matchKind === 'tournament' && S.tournament) ? (S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : '')) : '',
           matchKind: (S.matchKind === 'tournament') ? 'tournament' : 'single',
           tossInfo: S.tossInfo || '',
+          /* The group and the tournament season ride into the
+             archive too, so an archived match's Info tab can show
+             its Match Title ("Group A Match") and Season rows. */
+          group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
+          season: (S.matchKind === 'tournament' && S.tournament && S.tournament.season) ? S.tournament.season : '',
           matchFormat: S.matchFormat || '', ballType: S.ballType || '',
           matchDate: S.matchDate || '', matchTime: S.matchTime || '',
           scorerEmailHash: S.scorerEmailHash || '',
@@ -16704,11 +16744,12 @@
         base.abandoned = !!e.abandoned;
         base.venue = e.venue || '';
         base.tossInfo = e.tossInfo || '';
+        base.matchGroup = e.group || '';
         base.matchFormat = e.matchFormat || ''; base.ballType = e.ballType || '';
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
-        base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        base.tournament = { name: e.tournamentName || '', season: e.season || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
         /* Team logos live in the global store (v191): carry this
            device's logos for the two teams into the display state,
            so an archived scorecard shows the real logos exactly like
@@ -16750,7 +16791,7 @@
         bar.hidden = false;
         bar.innerHTML = '<span class="ab-lab">📜 Archived match</span>'
           + (meta ? '<span class="ab-meta">' + esc(meta) + '</span>' : '')
-          + '<span class="ab-btns"><button type="button" onclick="downloadScorecardPdfCurrent()">📄 Scorecard PDF</button>'
+          + '<span class="ab-btns">'
           + (can ? '<button type="button" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + esc(e.id) + '\')">🏏 Edit Balls</button><button type="button" class="ab-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
           + '</span>';
       }
@@ -20771,8 +20812,9 @@
          straight onto it. Layout follows the reference: each team's
          score line, its top three batters beside the innings' top
          three bowlers (wickets-runs), the Winner line, Player of
-         the Match, and the two downloads — the Match Summary JPG
-         image and the full Match Report PDF. Everything is read from the state
+         the Match (both centred, headings in gold), and the
+         downloads — Match Summary JPG and Scorecard PDF side by
+         side, Match Report centred below them. Everything is read from the state
          the scoreboard is currently showing (live-confirmed,
          scorer's own, or an archived match's display state), so the
          summary always matches the match on screen. */
@@ -20808,9 +20850,17 @@
         }
         if (!body) return;
         var inns = summaryInningsList();
+        /* The toss winner's name carries the coin: S.tossWinner on
+           the live state, parsed out of the stored toss line on an
+           archived display state (which keeps only the sentence). */
+        var tossWin = S.tossWinner || '';
+        if (!tossWin && S.tossInfo){
+          var twm = String(S.tossInfo).match(/^(.+?) won the toss/i);
+          if (twm) tossWin = twm[1];
+        }
         var html = '<div class="sum-wrap">';
         inns.forEach(function(inn){
-          html += '<div class="sum-team"><span class="sum-tname">' + esc(inn.battingTeam || '—') + '</span><span class="sum-tscore">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></span></div>';
+          html += '<div class="sum-team"><span class="sum-tname">' + esc(inn.battingTeam || '—') + (tossWin && inn.battingTeam === tossWin ? '<span class="sum-coin" title="Won the toss" aria-label="Won the toss">🪙</span>' : '') + '</span><span class="sum-tscore">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></span></div>';
           var bats = summaryTopBatters(inn), bowls = summaryTopBowlers(inn);
           html += '<div class="sum-grid">';
           for (var i = 0; i < 3; i++){
@@ -20823,12 +20873,17 @@
         html += '<div class="sum-winner"><div class="sum-wlab">' + (S.abandoned ? 'Result' : 'Winner') + '</div><div class="sum-wtext">' + esc(summaryResultText(inns)) + '</div></div>';
         var pFig = '';
         if (S.potmName){ try { pFig = potmFigures(S.potmName, S.potmTeam); } catch(e){ pFig = ''; } }
-        html += '<div style="margin-top:14px"><div class="cb-potm-lab">Player of the Match</div>'
+        html += '<div class="sum-potm"><div class="cb-potm-lab">Player of the Match</div>'
           + (S.potmName
             ? '<div class="cb-potm-name">' + esc(dispName(S.potmTeam, S.potmName)) + '</div>' + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
             : '<div class="cb-potm-name" style="color:#bdbdbd">Not Decided Yet</div>')
           + '</div>';
-        html += '<div class="sum-dl"><button type="button" class="btn" onclick="downloadMatchSummaryJpgCurrent()">🖼 Match Summary</button><button type="button" class="btn gold" onclick="downloadMatchReportPdfCurrent()">📄 Match Report</button></div>';
+        /* Buttons: Match Summary bottom-left and Scorecard on the
+           right in one row (the Scorecard PDF lives here now, not
+           on the archived-match bar at the top), then Match Report
+           centred underneath them. */
+        html += '<div class="sum-dl"><button type="button" class="btn" onclick="downloadMatchSummaryJpgCurrent()">🖼 Match Summary</button><button type="button" class="btn" onclick="downloadScorecardPdfCurrent()">📄 Scorecard</button></div>';
+        html += '<div class="sum-dl2"><button type="button" class="btn gold" onclick="downloadMatchReportPdfCurrent()">📄 Match Report</button></div>';
         html += '</div>';
         body.innerHTML = html;
       }
@@ -21059,7 +21114,7 @@
          instead of a long full name. */
       function overSummaryCardHTML(snap, showFoot, batTeam, bowlTeam){
         var seq = snap.balls.filter(function(b){ return !b.evt; }).map(function(b){
-          var cls = b.text === '4' ? ' class="ob4"' : (isWicketBall(b) ? ' class="obw"' : '');
+          var cls = b.text === '4' ? ' class="ob4"' : (b.text === '6' ? ' class="ob6"' : (isWicketBall(b) ? ' class="obw"' : ''));
           return '<span' + cls + '>' + esc(b.text) + '</span>';
         }).join(' ');
         var leftCol = snap.batters.map(function(bt){
@@ -21428,11 +21483,13 @@
              innings break or ever. The feed reads top-down as the
              story of the whole match: a finished match opens with its
              result line; the innings being played now comes next,
-             ball by ball; and underneath a permanent banner —
-             "1st Innings Completed — <team> <runs>/<wkts> (<overs>
-             overs). <team> set a target of <target> runs in
-             <oversLimit> overs — <chasing team> need <target> runs
-             to win." — the ENTIRE 1st innings stays in the feed, over
+             ball by ball; and underneath a permanent INNINGS BREAK
+             banner in its fixed format — title, the first innings'
+             score, the target, the chase equation ("<chasing team>
+             need <target> runs off <overs> overs to win."), the
+             required run rate and "THE CHASE IS ON!" — with the team
+             names and figures taken from the match on show. The
+             ENTIRE 1st innings stays in the feed under it, over
              cards, announcements and all. Everything is derived from
              the stored ball records at render time, so a match whose
              1st innings was scored before this rule existed gets its
@@ -21445,10 +21502,22 @@
           if (S.prevInnings){
             var pv = S.prevInnings;
             var natT = pv.runs + 1;
-            var effT = target();
-            var bannerTxt = '1st Innings Completed — <b>' + esc(pv.battingTeam) + '</b> ' + pv.runs + '/' + pv.wickets + ' (' + oversText(pv.legalBalls) + ' overs). <b>' + esc(pv.battingTeam) + '</b> set a target of <b>' + natT + (natT === 1 ? ' run</b>' : ' runs</b>') + ' in ' + S.oversLimit + (S.oversLimit === 1 ? ' over' : ' overs') + ' — <b>' + esc(pv.bowlingTeam) + '</b> need ' + natT + (natT === 1 ? ' run' : ' runs') + ' to win.';
-            if (effT && effT !== natT) bannerTxt += ' (Revised target: ' + effT + '.)';
-            feedAll += '<div class="cb-comm-row banner"><span class="cb-comm-over"></span><span class="cb-comm-text">' + bannerTxt + '</span></div>';
+            var effT = target() || natT;
+            /* The chase overs: a D/L shortening counts, so the
+               equation and the required rate use the overs the
+               chasing side actually has (effOversLimit reads the
+               D/L overs now that inningsNo is 2). No overs limit
+               (an unlimited-overs match) drops the overs phrases. */
+            var chaseOv = effOversLimit();
+            var ibHtml = '<div class="cb-ib">'
+              + '<div class="cb-ib-title">🏏 INNINGS BREAK!</div>'
+              + '<div class="cb-ib-score"><b>' + esc(pv.battingTeam) + '</b>: ' + pv.runs + '/' + pv.wickets + ' (' + oversText(pv.legalBalls) + ' Overs)</div>'
+              + '<div class="cb-ib-target">🎯 TARGET: ' + effT + (effT === 1 ? ' RUN' : ' RUNS') + (effT !== natT ? ' (Revised)' : '') + '</div>'
+              + '<div class="cb-ib-need"><b>' + esc(pv.bowlingTeam) + '</b> need ' + effT + (effT === 1 ? ' run' : ' runs') + (chaseOv ? ' off ' + chaseOv + (chaseOv === 1 ? ' over' : ' overs') : '') + ' to win.</div>'
+              + (chaseOv ? '<div class="cb-ib-rrr">📊 Required Run Rate: ' + (effT / chaseOv).toFixed(2) + ' RPO</div>' : '')
+              + '<div class="cb-ib-chase">🔥 THE CHASE IS ON!</div>'
+              + '</div>';
+            feedAll += '<div class="cb-comm-row banner"><span class="cb-comm-over"></span><span class="cb-comm-text">' + ibHtml + '</span></div>';
             feedAll += feedHTMLFor(pv);
           }
           commEl.innerHTML = feedAll
@@ -21513,24 +21582,55 @@
             + cbSquadsHTML();
           scheduleFitCbxNames();
         }
-        /* info panel */
+        /* info panel — head: the two teams face to face, logo (or
+           initials badge) and name with VS between the logos; then
+           the match-information rows in their fixed order (a row
+           shows only when the match carries that fact), then the
+           live-state rows, then the ID chips below. */
         var infoEl = $('cbInfoBody');
         if (infoEl){
+          var infoHead = '<div class="cb-info-head">'
+            + '<div class="cb-info-team">' + teamBadgeHTML(S.teamA || '—', 0) + '<div class="cb-info-tname">' + esc(S.teamA || '—') + '</div></div>'
+            + '<div class="cb-info-vs">VS</div>'
+            + '<div class="cb-info-team">' + teamBadgeHTML(S.teamB || '—', 1) + '<div class="cb-info-tname">' + esc(S.teamB || '—') + '</div></div>'
+            + '</div>';
           var rows = [];
-          rows.push(['Match', (S.teamA || '—') + ' vs ' + (S.teamB || '—')]);
+          function irow2(k, v){ if (v) rows.push([k, String(v)]); }
+          var isTnMatch = S.matchKind === 'tournament' && S.tournament && S.tournament.name;
+          if (isTnMatch) irow2('Tournament', S.tournament.name);
+          irow2('Match Title', S.matchGroup ? (S.matchGroup + ' Match') : ((S.teamA || '—') + ' vs ' + (S.teamB || '—')));
+          irow2('Format', S.matchFormat || '');
+          irow2('Ball Type', S.ballType || '');
+          if (isTnMatch) irow2('Season', S.tournament.season || '');
+          irow2('Playing', ((typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10) + 1) + ' Per Side');
+          irow2('Overs', S.oversLimit ? String(S.oversLimit) : '');
+          irow2('Venue', S.venue || '');
+          var whenTxt = '';
+          if (S.matchDate){
+            var dmm = String(S.matchDate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            var mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            whenTxt = dmm ? (dmm[3] + ' ' + (mons[parseInt(dmm[2], 10) - 1] || '') + ' ' + dmm[1]) : fmtDateShort(S.matchDate);
+            if (S.matchTime) whenTxt += '  ' + S.matchTime;
+          } else if (S.matchTime) whenTxt = S.matchTime;
+          irow2('Date & Time', whenTxt);
+          /* Toss Won By / Decided To: the live state carries the two
+             picks; an archived display state keeps only the combined
+             toss sentence, so the picks are read back out of it. */
+          var twName = S.tossWinner || '', tdName = S.tossDecision || '';
+          if ((!twName || !tdName) && S.tossInfo){
+            var tmm = String(S.tossInfo).match(/^(.+?) won the toss and chose to (bat|bowl)/i);
+            if (tmm){ if (!twName) twName = tmm[1]; if (!tdName) tdName = tmm[2].toLowerCase(); }
+          }
+          irow2('Toss Won By', twName);
+          irow2('Decided To', tdName ? (tdName === 'bat' ? 'Bat' : 'Bowl') : '');
+          irow2('Scorer', S.ownerName || '');
           rows.push(['Batting', inn.battingTeam || '—']);
           rows.push(['Bowling', inn.bowlingTeam || '—']);
-          if (S.venue) rows.push(['Venue / Match', S.venue]);
-          if (S.tossInfo) rows.push(['Toss', S.tossInfo]);
-          if (S.matchDate || S.matchTime) rows.push(['Scheduled', [S.matchDate ? fmtDateShort(S.matchDate) : '', S.matchTime || ''].filter(Boolean).join(' • ')]);
-          if (S.matchFormat || S.ballType) rows.push(['Format', [S.matchFormat || '', S.ballType || ''].filter(Boolean).join(' • ')]);
-          if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) rows.push(['Tournament', S.tournament.name]);
-          rows.push(['Overs per innings', S.oversLimit ? String(S.oversLimit) : '—']);
           rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
           if (t) rows.push(['Target', String(t)]);
           var pr = projectedScore(); if (pr !== null) rows.push(['Projected Score', String(pr) + ' (at CRR ' + crr().toFixed(2) + ')']);
           if (S.status === 'finished' && S.resultText) rows.push(['Result', fixResultText(S.resultText)]);
-          infoEl.innerHTML = rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
+          infoEl.innerHTML = infoHead + rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
           if (S.superOver && S.superOver.id){
             infoEl.innerHTML += '<div class="cb-info-row"><span>Super Over</span><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>' + esc(S.superOver.active ? 'In progress — 1 over a side' : (S.superOver.resultText || 'Played')) + '</b>' + superOverIdChipHTML(S.superOver) + '</span></div>';
           }
