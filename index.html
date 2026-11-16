@@ -1527,17 +1527,17 @@
       .ov-runs{display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
       .ov-empty{padding:18px 16px;color:#a8a8a8;font-size:14.5px;margin:0}
       @media (max-width:400px){.ov-head,.ov-row{grid-template-columns:74px 1fr 44px}.ov-left{padding-left:10px}.ov-no{font-size:15px}}
-      /* archived match bar — sits at the top of the scoreboard when a
-         History match is opened in the live-match interface */
-      .cb-archivebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#262626;border-bottom:1px solid #3a3a3a;padding:10px 14px;color:#e9e9e9;font-size:14px}
-      .cb-archivebar .ab-lab{font-weight:700;color:#fff}
-      .cb-archivebar .ab-meta{color:#a8a8a8}
-      .cb-archivebar .ab-btns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-      .cb-archivebar .ab-btns button{background:#262626;border:1px solid #4a4a4a;color:#e9e9e9;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:600;cursor:pointer}
-      .cb-archivebar .ab-btns button.ab-del{border-color:#7a3a34;color:#ffab9e}
+      /* Owner controls for an archived match, at the foot of the
+         Summary tab — there is no bar at the top of the scoreboard
+         any more. Edit / Edit Balls / Delete render only for the
+         match owner (see renderSummaryPanel). */
+      .sum-manage{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid #3a3a3a}
+      .sum-manage button{flex:1 1 100px;background:#262626;border:1px solid #4a4a4a;color:#e9e9e9;border-radius:8px;padding:9px 10px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+      .sum-manage button.sum-del{border-color:#7a3a34;color:#ffab9e}
+      body.viewer-mode .sum-manage,body.link-viewer .sum-manage{display:none !important}
       /* ---------- ball-by-ball scorecard editor (finished matches) ----------
-         The owner/admin correction mode opened from the archived
-         match bar's Edit Balls button: every delivery of every
+         The owner/admin correction mode opened from the Edit Balls
+         button at the foot of an archived match's Summary tab: every delivery of every
          innings is listed by over; tapping one opens its edit form
          (correct player, correct outcome, correct dismissal), and
          saving replays the whole innings from the corrected record
@@ -2840,7 +2840,6 @@
       <section class="view" id="view-scoreboard">
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
-          <div class="cb-archivebar" id="cbArchiveBar" hidden></div>
           <div class="cb-top">
             <button type="button" class="cb-back" onclick="backToLiveMatches()" aria-label="Back to recent matches">🔙</button>
             <div class="cb-title" id="cbMatchTitle">Match</div>
@@ -3704,7 +3703,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v193';
+      var APP_VERSION = 'v195';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16699,7 +16698,8 @@
          uses for the confirmed live state) and restores it after.
          Back returns to wherever the match was opened from (History,
          a home History section, a player profile), and the owner's
-         Edit / Delete stay reachable in the bar above the match.
+         Edit / Edit Balls / Delete stay reachable at the foot of
+         the Summary tab.
          A D/L or Change-Target revision is stored in the entry
          (targetOverride / dlTarget / dlOvers) and restored onto the
          display state, so a revised chase target shows as the real
@@ -16780,21 +16780,6 @@
         base.updatedAt = e.at || Date.now();
         return base;
       }
-      function renderArchiveBar(){
-        var bar = $('cbArchiveBar'); if (!bar) return;
-        if (!archiveView){ bar.hidden = true; bar.innerHTML = ''; return; }
-        var e = archiveView.entry;
-        var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
-        var meta = [e.tournamentName, e.venue, date].filter(Boolean).join(' • ');
-        var can = false;
-        try { can = histEntryDeletable(e); } catch(err){}
-        bar.hidden = false;
-        bar.innerHTML = '<span class="ab-lab">📜 Archived match</span>'
-          + (meta ? '<span class="ab-meta">' + esc(meta) + '</span>' : '')
-          + '<span class="ab-btns">'
-          + (can ? '<button type="button" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + esc(e.id) + '\')">🏏 Edit Balls</button><button type="button" class="ab-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
-          + '</span>';
-      }
       function renderArchiveScoreboard(){
         if (!archiveView) return;
         var realS = S; S = archiveView.state;
@@ -16805,7 +16790,6 @@
           renderScoreboardCB();
         } catch(e){}
         S = realS;
-        try { renderArchiveBar(); } catch(e){}
       }
       /* ---------- read-only match view: any other match on the
          Recent Matches list ----------
@@ -16990,7 +16974,6 @@
           if (matchView.kind === 'fixture') applyFixtureNotStarted();
         } catch(e){}
         S = realS;
-        try { renderMatchViewBar(); } catch(e){}
       }
       /* An upcoming match has no score yet: wherever the live page
          would show the match's play — the big score, the current
@@ -17017,18 +17000,6 @@
         var cm = $('cbCommentary'); if (cm) cm.innerHTML = '<p class="cb-empty">Match is not started yet.</p>';
         var ov = $('cbOversList'); if (ov) ov.innerHTML = '<p class="ov-empty">Match is not started yet.</p>';
         var sw = $('cbOversSwitch'); if (sw) sw.innerHTML = '';
-      }
-      function renderMatchViewBar(){
-        /* Match views carry NO header bar: the blue "In Progress …
-           This match is being scored — read-only" strip is gone for
-           good. The page speaks for itself — the LIVE / UPCOMING
-           pill, the score, and (for a fixture) "Match is not started
-           yet." in the content. The bar element belongs to archived
-           matches only (renderArchiveBar). */
-        var bar = $('cbArchiveBar'); if (!bar) return;
-        if (!matchView) return; /* renderArchiveBar owns the bar in every other mode */
-        bar.hidden = true;
-        bar.innerHTML = '';
       }
       /* Keep an open match view following its match: on every render
          the display state is rebuilt from the latest confirmed
@@ -19242,8 +19213,9 @@
       }
       /* ============================================================
          BALL-BY-BALL SCORECARD EDITOR — correcting a FINISHED match
-         The match owner (admin) opens editing mode from the archived
-         match bar (Edit Balls) or from Edit Match (Edit Scorecard).
+         The match owner (admin) opens editing mode from Edit Balls
+         at the foot of the archived match's Summary tab, or from
+         Edit Match (Edit Scorecard).
          Every delivery of every innings is listed by over; a ball
          can be corrected — the WRONG PLAYER replaced by the correct
          one (batter, bowler, the batter who was out, the fielder),
@@ -20879,11 +20851,24 @@
             : '<div class="cb-potm-name" style="color:#bdbdbd">Not Decided Yet</div>')
           + '</div>';
         /* Buttons: Match Summary bottom-left and Scorecard on the
-           right in one row (the Scorecard PDF lives here now, not
-           on the archived-match bar at the top), then Match Report
-           centred underneath them. */
+           right in one row, then Match Report centred underneath
+           them. */
         html += '<div class="sum-dl"><button type="button" class="btn" onclick="downloadMatchSummaryJpgCurrent()">🖼 Match Summary</button><button type="button" class="btn" onclick="downloadScorecardPdfCurrent()">📄 Scorecard</button></div>';
         html += '<div class="sum-dl2"><button type="button" class="btn gold" onclick="downloadMatchReportPdfCurrent()">📄 Match Report</button></div>';
+        /* An archived match opened from History carries its owner
+           controls here, at the foot of the Summary tab — the bar
+           that used to sit at the top of the scoreboard is gone.
+           Only the match owner sees them, and only when the match
+           has a real History entry behind it (the entry the Edit /
+           Edit Balls / Delete actions work on). */
+        if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
+          var avCan = false;
+          try { avCan = histEntryDeletable(archiveView.entry); } catch(e){ avCan = false; }
+          if (avCan){
+            var avId = esc(String(archiveView.id));
+            html += '<div class="sum-manage"><button type="button" onclick="editHistoryMatch(\'' + avId + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + avId + '\')">🏏 Edit Balls</button><button type="button" class="sum-del" onclick="deleteHistoryMatch(\'' + avId + '\')">🗑 Delete</button></div>';
+          }
+        }
         html += '</div>';
         body.innerHTML = html;
       }
@@ -21586,7 +21571,7 @@
            initials badge) and name with VS between the logos; then
            the match-information rows in their fixed order (a row
            shows only when the match carries that fact), then the
-           live-state rows, then the ID chips below. */
+           result row when finished, then the ID chips below. */
         var infoEl = $('cbInfoBody');
         if (infoEl){
           var infoHead = '<div class="cb-info-head">'
@@ -21623,12 +21608,6 @@
           }
           irow2('Toss Won By', twName);
           irow2('Decided To', tdName ? (tdName === 'bat' ? 'Bat' : 'Bowl') : '');
-          irow2('Scorer', S.ownerName || '');
-          rows.push(['Batting', inn.battingTeam || '—']);
-          rows.push(['Bowling', inn.bowlingTeam || '—']);
-          rows.push(['Innings', S.inningsNo === 1 ? '1st innings' : '2nd innings']);
-          if (t) rows.push(['Target', String(t)]);
-          var pr = projectedScore(); if (pr !== null) rows.push(['Projected Score', String(pr) + ' (at CRR ' + crr().toFixed(2) + ')']);
           if (S.status === 'finished' && S.resultText) rows.push(['Result', fixResultText(S.resultText)]);
           infoEl.innerHTML = infoHead + rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
           if (S.superOver && S.superOver.id){
@@ -21663,9 +21642,6 @@
            the Follow Tournament card above. (Past Matches keeps its
            own entries — the Recent Matches landing and the History
            & Reports home — just not a card here.) */
-        /* The archived-match bar follows whichever match the
-           scoreboard is showing: visible only in archive mode. */
-        try { renderArchiveBar(); } catch(e){}
       }
 
       function renderAll(){
@@ -22676,7 +22652,6 @@
         if (S.lastFinishedSingle && ids[String(S.lastFinishedSingle.id)]) S.lastFinishedSingle = null;
         if (typeof archiveView !== 'undefined' && archiveView && ids[String(archiveView.id)]){
           archiveView = null; cbOversInnSel = -1;
-          var abEl2 = $('cbArchiveBar'); if (abEl2){ abEl2.hidden = true; abEl2.innerHTML = ''; }
         }
         try { renderHistory(); } catch(e){}
         return ids;
@@ -23002,7 +22977,6 @@
            so it is never cleared by its own navigation.) */
         if (v !== 'scoreboard' && typeof archiveView !== 'undefined' && archiveView){
           archiveView = null; cbOversInnSel = -1;
-          var abEl = $('cbArchiveBar'); if (abEl){ abEl.hidden = true; abEl.innerHTML = ''; }
         }
         /* Leaving the scoreboard also ends a match view (another
            in-progress match, or a fixture, opened from the Recent
@@ -23012,7 +22986,6 @@
            navigation. */
         if (v !== 'scoreboard' && typeof matchView !== 'undefined' && matchView){
           matchView = null; cbOversInnSel = -1;
-          var mvEl = $('cbArchiveBar'); if (mvEl){ mvEl.hidden = true; mvEl.innerHTML = ''; }
         }
         /* Leaving the scoreboard also forgets where the plain live
            scoreboard was opened from (see liveSbReturn): the next
