@@ -3669,7 +3669,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v190';
+      var APP_VERSION = 'v191';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3762,6 +3762,19 @@
              second ID. A name typed without picking a suggestion is
              a NEW team and is registered with a NEW unique ID. */
           teamRegistry: [],
+          /* Team logos — the GLOBAL store (v191). A logo belongs to
+             the TEAM, not to whichever tournament happens to be open:
+             an ARRAY of {id: Team ID, t: team name, logo: data URL}
+             entries keyed by the team's permanent Team ID (the name
+             rides along for display and as a fallback match). This
+             store lives at the top level of the state — beside the
+             team registry — so it syncs with everything else, survives
+             match resets and tournament switches, and is never dropped
+             when a team is removed from a list (exactly like its Team
+             ID). The old per-tournament copies (S.tournament.teamLogos)
+             are kept only as a legacy mirror / migration source — see
+             migrateTeamLogos(). */
+          teamLogos: [],
           /* Player of the Match — chosen BY THE SCORER after the match
              finishes (never auto-picked). Empty until chosen; the
              scoreboard then shows "Not Decided Yet". */
@@ -4155,6 +4168,7 @@
         ns.players = deep(S.players || []);
         ns.playerIds = deep(S.playerIds || []);
         ns.teamRegistry = deep(S.teamRegistry || []); /* deleting the match never deletes a Team ID — the registry stays on the server */
+        ns.teamLogos = deep(S.teamLogos || []); /* deleting the match never deletes a team's logo either (v191) */
         ns.pausedMatches = deep(S.pausedMatches || []);
         ns.tournamentsArchive = deep(S.tournamentsArchive || []);
         ns.lastFinishedSingle = deep(S.lastFinishedSingle || null);
@@ -5359,6 +5373,26 @@
           else S.teamRegistry = [];
         }
         S.teamRegistry = S.teamRegistry.filter(function(e){ return e && typeof e === 'object' && e.n && e.id; });
+        /* Global team logos (v191): same Firebase array-as-object
+           coercion as the registries. Entries are {id, t, logo};
+           states saved before the global store existed carry no
+           field at all — migrateTeamLogos() (below) then recovers
+           their logos from the per-tournament copies. De-duplicated
+           by Team ID (falling back to the team name), first wins. */
+        if (!Array.isArray(S.teamLogos)){
+          if (S.teamLogos && typeof S.teamLogos === 'object') S.teamLogos = Object.keys(S.teamLogos).sort().map(function(key){ return S.teamLogos[key]; });
+          else S.teamLogos = [];
+        }
+        var glSeen = {};
+        S.teamLogos = S.teamLogos.filter(function(e){
+          if (!e || typeof e !== 'object' || typeof e.logo !== 'string' || !e.logo) return false;
+          if (typeof e.t !== 'string') e.t = '';
+          if (typeof e.id !== 'string') e.id = '';
+          var key = e.id || e.t.toLowerCase();
+          if (!key || glSeen[key]) return false;
+          glSeen[key] = 1;
+          return true;
+        });
         try {
           var teamSeed = {};
           if (S.myTeams && Array.isArray(S.myTeams.teams)) S.myTeams.teams.forEach(function(n){ if (n) teamSeed[n] = 1; });
@@ -5449,6 +5483,10 @@
            registry entry, so its name typed again found no
            suggestion and minted a second Team ID. */
         try { migrateTeamIds(); } catch(e){}
+        /* Global team-logo recovery — runs after the registry
+           backfill above, so every recovered logo can be keyed by
+           its team's permanent Team ID. */
+        try { migrateTeamLogos(); } catch(e){}
       }
       function syncPlayersFromInputs(){
         /* The dropdowns start empty on purpose: no batter or bowler is
@@ -7112,6 +7150,7 @@
         var keepPlayers = deep(S.players || []);
         var keepPlayerIds = deep(S.playerIds || []);
         var keepTeamReg = deep(S.teamRegistry || []);
+        var keepTeamLogos = deep(S.teamLogos || []);
         var keepPaused = deep(S.pausedMatches || []);
         var keepLastFin = deep(S.lastFinishedSingle || null);
         var keepTnArc = deep(S.tournamentsArchive || []);
@@ -7125,6 +7164,7 @@
         S.nicknames = keepNick; /* nicknames belong to the teams, not to one match — they carry over */
         S.players = keepPlayers; S.playerIds = keepPlayerIds; /* the player registry is permanent — Player IDs never reset with a match */
         S.teamRegistry = keepTeamReg; /* the team registry is permanent too — Team IDs never reset with a match */
+        S.teamLogos = keepTeamLogos; /* team logos belong to the teams, not to one match — they carry over too (v191) */
         S.pausedMatches = keepPaused; /* parked live matches survive a new match starting */
         S.lastFinishedSingle = keepLastFin; /* the last finished Single Match stays on the viewer home */
         S.tournamentsArchive = keepTnArc;
@@ -8263,11 +8303,14 @@
                ever holds teams that are in the tournament. */
             if (Array.isArray(S.tournament.groups)) S.tournament.groups.forEach(function(g){ if (g && Array.isArray(g.teams)) g.teams = g.teams.filter(function(n){ return n !== name; }); });
             dropLeadershipTeam('tn', name);
-            /* Logo / nicknames are shared by team name — drop them
-               only when the team is gone from All Teams too. */
+            /* Nicknames are shared by team name — drop them only
+               when the team is gone from All Teams too. The LOGO is
+               never dropped here (v191): it is the team's own, held
+               in the global store, and survives leaving a tournament
+               exactly like its Team ID does. */
             var inPool = false;
             try { normalizeMyTeams(); inPool = S.myTeams.teams.indexOf(name) > -1; } catch(e){}
-            if (!inPool){ dropTeamLogo(name); dropNicknamesFor(name, null); }
+            if (!inPool){ dropNicknamesFor(name, null); }
             commit('Team removed', true); toast(name + ' removed');
           });
       }
@@ -8763,12 +8806,15 @@
             S.myTeams.teams.splice(idx, 1);
             if (S.myTeams.squads) delete S.myTeams.squads[name];
             dropLeadershipTeam('mt', name);
-            /* The logo and nicknames are shared by team name: they
-               are dropped only when the team is gone from the
-               tournament's list too. */
+            /* Nicknames are shared by team name: they are dropped
+               only when the team is gone from the tournament's list
+               too. The LOGO is never dropped here (v191): it belongs
+               to the team itself in the global store, so removing the
+               team from this list cannot delete it — only the team's
+               own Remove Logo control can. */
             var inTn = false;
             try { normalizeTournament(); inTn = S.tournament.teams.indexOf(name) > -1; } catch(e){}
-            if (!inTn){ dropTeamLogo(name); dropNicknamesFor(name, null); }
+            if (!inTn){ dropNicknamesFor(name, null); }
             if (mtSelectedTeam === name) mtSelectedTeam = null;
             commit('Team removed', true); toast(name + ' removed from All Teams');
           });
@@ -11668,6 +11714,7 @@
         });
         try { (S.nicknames || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
         try { (S.tournament.teamLogos || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
+        try { (S.teamLogos || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){} /* the global logo follows the rename; its Team ID key is unchanged (v191) */
         try { (S.tournament.teamMeta || []).forEach(function(e){ if (e && e.t === oldName) e.t = newName; }); } catch(e){}
         function fixFx(list){
           (list || []).forEach(function(f){
@@ -11841,34 +11888,124 @@
       /* ---------- team logos & tournament banner ----------
          Every team may carry ONE uploaded logo image and the
          tournament ONE banner image. Both are compressed data URLs
-         stored in the synced state (logos in S.tournament.teamLogos
-         as {t, logo} entries, the banner in S.tournament.banner), so
-         they travel through Firebase and the on-device backup with
-         everything else and every device — scorer and viewers —
-         shows the same real logo. Wherever a team used to appear as
-         an initials badge, the logo now renders instead; a team
-         without a logo keeps its initials badge exactly as before. */
+         stored in the synced state, so they travel through Firebase
+         and the on-device backup with everything else and every
+         device — scorer and viewers — shows the same real logo.
+         Wherever a team used to appear as an initials badge, the
+         logo now renders instead; a team without a logo keeps its
+         initials badge exactly as before.
+         LOGO STORAGE (v191): a logo belongs to the TEAM. It lives in
+         the GLOBAL store S.teamLogos as {id: Team ID, t: name, logo}
+         entries — never inside a tournament. Before v191 logos lived
+         only in S.tournament.teamLogos, so opening or creating
+         another tournament (which swaps S.tournament for one with an
+         empty list) made every logo vanish at once, even though the
+         images still sat inside the set-aside tournament's copy; and
+         removing a team from All Teams while it was not in the open
+         tournament deleted its logo outright. The per-tournament
+         lists now survive only as legacy copies: reads fall back to
+         them, saves mirror into the open tournament's copy, and
+         migrateTeamLogos() folds every legacy copy (current +
+         archived tournaments) into the global store exactly once —
+         so logos uploaded before this fix come back on their own,
+         with no re-upload. Removing a team from any list no longer
+         touches its logo at all (like its Team ID, the logo is the
+         team's own); only the explicit Remove Logo control deletes
+         one, and it purges every legacy copy too, so a removed logo
+         can never be resurrected by the migration. */
+      function teamLogoEntryFor(name){
+        if (!name || !Array.isArray(S.teamLogos)) return null;
+        var id = '';
+        try { id = teamIdFor(name); } catch(e){}
+        var lower = String(name).toLowerCase(), byName = null;
+        for (var i = 0; i < S.teamLogos.length; i++){
+          var e = S.teamLogos[i];
+          if (!e || !e.logo) continue;
+          if (id && e.id === id) return e;
+          if (!byName && e.t && (e.t === name || String(e.t).toLowerCase() === lower)) byName = e;
+        }
+        return byName;
+      }
       function teamLogoFor(name){
-        if (!name || !S.tournament || !Array.isArray(S.tournament.teamLogos)) return '';
-        for (var i = 0; i < S.tournament.teamLogos.length; i++){
-          var e = S.tournament.teamLogos[i];
-          if (e && e.t === name && e.logo) return e.logo;
+        if (!name) return '';
+        var g = teamLogoEntryFor(name);
+        if (g && g.logo) return g.logo;
+        /* Legacy fallback: a logo that still lives only in the open
+           tournament's old per-tournament list (a state the migration
+           has not folded in yet, e.g. a display state). */
+        if (S.tournament && Array.isArray(S.tournament.teamLogos)){
+          for (var i = 0; i < S.tournament.teamLogos.length; i++){
+            var e = S.tournament.teamLogos[i];
+            if (e && e.t === name && e.logo) return e.logo;
+          }
         }
         return '';
       }
+      /* One-time recovery (idempotent, safe on every load): fold
+         every logo still held in a per-tournament list — the open
+         tournament's and every set-aside (archived) tournament's —
+         into the global store, keyed by Team ID. A team that already
+         has a global logo keeps it: the global store always wins, so
+         a logo the user changed or removed is never overwritten or
+         brought back by an older tournament copy (Remove Logo purges
+         those copies — see purgeTeamLogo). */
+      function migrateTeamLogos(){
+        if (!S || typeof S !== 'object') return;
+        if (!Array.isArray(S.teamLogos)) S.teamLogos = [];
+        function fold(list){
+          if (!Array.isArray(list)) return;
+          list.forEach(function(e){
+            if (!e || typeof e !== 'object' || !e.t || typeof e.logo !== 'string' || !e.logo) return;
+            if (teamLogoEntryFor(e.t)) return;
+            var id = '';
+            try { id = teamIdFor(e.t); } catch(err){}
+            S.teamLogos.push({ id: id || '', t: e.t, logo: e.logo });
+          });
+        }
+        try { if (S.tournament) fold(S.tournament.teamLogos); } catch(e){}
+        try {
+          (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){
+            if (a && a.data) fold(a.data.teamLogos);
+          });
+        } catch(e){}
+      }
       function setTeamLogo(name, url){
         if (!name) return;
-        normalizeTournament();
-        var arr = S.tournament.teamLogos;
-        var idx = -1;
-        for (var i = 0; i < arr.length; i++) if (arr[i] && arr[i].t === name){ idx = i; break; }
-        if (!url){ if (idx > -1) arr.splice(idx, 1); return; }
-        if (idx > -1) arr[idx].logo = url; else arr.push({ t: name, logo: url });
+        if (!url){ purgeTeamLogo(name); return; }
+        if (!Array.isArray(S.teamLogos)) S.teamLogos = [];
+        var id = '';
+        try { id = registerTeam(name); } catch(e){ try { id = teamIdFor(name); } catch(e2){} }
+        var ex = teamLogoEntryFor(name);
+        if (ex){ ex.logo = url; ex.t = name; if (id) ex.id = id; }
+        else S.teamLogos.push({ id: id || '', t: name, logo: url });
+        /* Mirror into the open tournament's legacy list, so the copy
+           that gets archived with this tournament carries it too. */
+        try {
+          normalizeTournament();
+          var arr = S.tournament.teamLogos, idx = -1;
+          for (var i = 0; i < arr.length; i++) if (arr[i] && arr[i].t === name){ idx = i; break; }
+          if (idx > -1) arr[idx].logo = url; else arr.push({ t: name, logo: url });
+        } catch(e){}
       }
-      function dropTeamLogo(name){
-        if (!name || !S.tournament || !Array.isArray(S.tournament.teamLogos)) return;
-        S.tournament.teamLogos = S.tournament.teamLogos.filter(function(e){ return !e || e.t !== name; });
+      /* Delete a team's logo EVERYWHERE: the global store, the open
+         tournament's legacy list and every archived tournament's
+         copy — so the migration can never bring it back. Used only
+         by the explicit Remove Logo control. */
+      function purgeTeamLogo(name){
+        if (!name) return;
+        var id = '';
+        try { id = teamIdFor(name); } catch(e){}
+        var lower = String(name).toLowerCase();
+        function isIt(e){ return !!e && ((id && e.id === id) || (e.t && (e.t === name || String(e.t).toLowerCase() === lower))); }
+        if (Array.isArray(S.teamLogos)) S.teamLogos = S.teamLogos.filter(function(e){ return !isIt(e); });
+        try { if (S.tournament && Array.isArray(S.tournament.teamLogos)) S.tournament.teamLogos = S.tournament.teamLogos.filter(function(e){ return !e || e.t !== name; }); } catch(e){}
+        try {
+          (Array.isArray(S.tournamentsArchive) ? S.tournamentsArchive : []).forEach(function(a){
+            if (a && a.data && Array.isArray(a.data.teamLogos)) a.data.teamLogos = a.data.teamLogos.filter(function(e){ return !e || e.t !== name; });
+          });
+        } catch(e){}
       }
+      function dropTeamLogo(name){ purgeTeamLogo(name); }
       /* The round badge in its three sizes (gallery tile, detail
          head, team picker row): the real logo when one is uploaded,
          the coloured initials badge otherwise. */
@@ -16572,6 +16709,13 @@
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
         base.tournament = { name: e.tournamentName || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        /* Team logos live in the global store (v191): carry this
+           device's logos for the two teams into the display state,
+           so an archived scorecard shows the real logos exactly like
+           the live one. */
+        base.teamRegistry = deep(S.teamRegistry || []);
+        base.teamLogos = deep((S.teamLogos || []).filter(function(x){ return x && (x.t === e.teamA || x.t === e.teamB); }));
+        base.tournament.teamLogos = base.teamLogos.map(function(x){ return { t: x.t, logo: x.logo }; });
         /* The archive entry stores no leadership picks, but the
            scoreboard tables resolve the (c) / (vc) / (wk) suffix from
            the (swapped) state's stores — carry this device's current
@@ -16656,6 +16800,8 @@
         base.players = deep(ds.players || []);
         base.playerIds = deep(ds.playerIds || []);
         base.nicknames = deep(ds.nicknames || []);
+        base.teamRegistry = deep(ds.teamRegistry || []); /* Team IDs + global team logos ride along, so badges resolve in this view too (v191) */
+        base.teamLogos = deep(ds.teamLogos || []);
         base.singleFixtures = []; base.pausedMatches = []; base.tournamentsArchive = []; base.lastFinishedSingle = null;
         try { normalizeInningsShape(base.current); } catch(e){}
         try { if (base.prevInnings) normalizeInningsShape(base.prevInnings); } catch(e){}
@@ -16702,6 +16848,8 @@
         base.players = deep(ds.players || []);
         base.playerIds = deep(ds.playerIds || []);
         base.nicknames = deep(ds.nicknames || []);
+        base.teamRegistry = deep(ds.teamRegistry || []); /* Team IDs + global team logos ride along, so badges resolve in this view too (v191) */
+        base.teamLogos = deep(ds.teamLogos || []);
         base.singleFixtures = []; base.pausedMatches = []; base.tournamentsArchive = []; base.lastFinishedSingle = null;
         return base;
       }
