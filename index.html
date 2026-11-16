@@ -997,6 +997,7 @@
       .tne-head h2{flex:1;min-width:0;text-align:center;margin:0;font-size:19px;font-weight:800;color:#fff;font-family:system-ui,sans-serif;text-transform:none;letter-spacing:0;border:none;padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .tne-head-btn{flex:none;width:38px;height:38px;border-radius:50%;border:none;background:transparent;color:#fff;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
       .tne-head-btn:active{background:rgba(255,255,255,.18)}
+      .tne-head-btn[hidden]{display:none}
       .tne-body{padding:0 16px 20px;text-align:left}
       .tne-banner{margin:0 -16px;position:relative;background:var(--surface2)}
       .tne-banner img{width:100%;height:auto;object-fit:contain;display:block}
@@ -3098,8 +3099,8 @@
         <div class="tne-shell">
           <div class="tne-head">
             <button type="button" class="tne-head-btn" onclick="closeTnEdit()" aria-label="Close — back to the tournament">✕</button>
-            <h2>Edit Tournament Info.</h2>
-            <button type="button" class="tne-head-btn" onclick="tnEditDelete()" aria-label="Delete this tournament">🗑</button>
+            <h2 id="tneTitle">Edit Tournament Info.</h2>
+            <button type="button" class="tne-head-btn" id="tnEditDeleteBtn" onclick="tnEditDelete()" aria-label="Delete this tournament">🗑</button>
           </div>
           <div class="tne-body">
             <div class="tne-banner">
@@ -3118,7 +3119,7 @@
             </div>
             <div class="tne-change-row">
               <button type="button" class="tne-remove" id="tnBannerRemoveBtn" onclick="removeTournamentBanner()" hidden>Remove</button>
-              <button type="button" class="tne-change" onclick="pickTournamentBanner()">Change Image</button>
+              <button type="button" class="tne-change" onclick="pickTournamentBanner()">Tournament Logo</button>
             </div>
             <div class="tne-field">
               <label for="tneName">Tournament Name*</label>
@@ -3555,7 +3556,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v179';
+      var APP_VERSION = 'v180';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11738,8 +11739,32 @@
             toast('Logo removed for ' + name + ' — the initials badge is back');
           });
       }
+      /* Create-mode draft for the Edit Tournament Info page: while
+         tneCreateMode is on, the page is a NEW tournament that does
+         not exist yet — nothing about it (fields or logo) touches
+         S.tournament or Firebase until Save. The logo picked in
+         create mode is staged in tneDraftBanner and only becomes
+         the new tournament's banner when saveTnEditInfo() creates
+         it; Cancel throws the draft away. In edit mode the logo
+         keeps its old behaviour (saved to the current tournament
+         at once). The logo is optional in both modes — Save never
+         requires one. */
+      var tneCreateMode = false;
+      var tneDraftBanner = '';
+      function tneSyncBannerPreview(){
+        var url = tneCreateMode ? (tneDraftBanner || '') : ((S.tournament && S.tournament.banner) || '');
+        var eImg = $('tneBannerImg');
+        if (eImg){
+          eImg.hidden = !url;
+          if (url){ if (eImg.getAttribute('src') !== url) eImg.src = url; }
+          else eImg.removeAttribute('src');
+        }
+        var eArt = $('tneBannerArt'); if (eArt) eArt.hidden = !!url;
+        var bRm = $('tnBannerRemoveBtn'); if (bRm) bRm.hidden = !url;
+      }
       function pickTournamentBanner(){
-        if (!requireTnOwner('edit this tournament')) return;
+        if (tneCreateMode){ if (!requireSignIn('create a tournament')) return; }
+        else if (!requireTnOwner('edit this tournament')) return;
         imgPickCtx = { kind: 'banner' };
         var inp = $('tnBannerFile');
         if (inp){ inp.value = ''; inp.click(); }
@@ -11749,6 +11774,11 @@
         var ctx = imgPickCtx; imgPickCtx = null;
         if (!file || !ctx || ctx.kind !== 'banner') return;
         processPickedImage(file, 'banner', function(url){
+          if (tneCreateMode){
+            tneDraftBanner = url;
+            tneSyncBannerPreview();
+            return;
+          }
           normalizeTournament();
           S.tournament.banner = url;
           commit('Tournament banner updated', true);
@@ -11757,6 +11787,11 @@
         if (inp) inp.value = '';
       }
       function removeTournamentBanner(){
+        if (tneCreateMode){
+          tneDraftBanner = '';
+          tneSyncBannerPreview();
+          return;
+        }
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
         if (!S.tournament.banner) return;
@@ -11829,16 +11864,13 @@
            banner the illustrated row shows as before. */
         var bRow = $('tnBannerRow'); if (bRow) bRow.hidden = !!tn.banner;
         /* The Edit Info page's banner preview follows the saved
-           banner too (its Change Image / Remove controls live there
-           now, not in a Home-tab fold). */
-        var eImg = $('tneBannerImg');
-        if (eImg){
-          eImg.hidden = !tn.banner;
-          if (tn.banner){ if (eImg.getAttribute('src') !== tn.banner) eImg.src = tn.banner; eImg.alt = displayName + ' banner'; }
-          else eImg.removeAttribute('src');
-        }
-        var eArt = $('tneBannerArt'); if (eArt) eArt.hidden = !!tn.banner;
-        var bRm = $('tnBannerRemoveBtn'); if (bRm) bRm.hidden = !tn.banner;
+           banner too (its Tournament Logo / Remove controls live
+           there now, not in a Home-tab fold). In create mode it
+           follows the unsaved draft logo instead, so a re-render
+           here never replaces the draft with the current
+           tournament's banner. */
+        try { tneSyncBannerPreview(); } catch(e){}
+        var eImg2 = $('tneBannerImg'); if (eImg2 && tn.banner) eImg2.alt = displayName + ' banner';
         /* The podium is the tournament's honours board, and it
            fills itself ONLY when the Final is decided: Winner and
            Runner come from the Final's result (never from the
@@ -11996,9 +12028,16 @@
         var lb = $('tneBallLeather'); if (lb) lb.classList.toggle('sel', tneBallSel === 'Leather Ball');
         var tb = $('tneBallTennis'); if (tb) tb.classList.toggle('sel', tneBallSel === 'Tennis Ball');
       }
+      function tneSetChrome(create){
+        var t = $('tneTitle'); if (t) t.textContent = create ? 'Create Tournament' : 'Edit Tournament Info.';
+        var d = $('tnEditDeleteBtn'); if (d) d.hidden = !!create;
+      }
       function openTnEditInfo(){
         closeTnMore();
         if (!requireTnOwner('edit this tournament')) return;
+        tneCreateMode = false;
+        tneDraftBanner = '';
+        tneSetChrome(false);
         normalizeTournament();
         var tn = S.tournament;
         var parsed = (tn.startDate || tn.endDate) ? [] : parseTnDateText(tn.dates);
@@ -12011,16 +12050,44 @@
         set('tneEnd', tn.endDate || parsed[1] || parsed[0] || '');
         tnEditSetBall(tn.ballType);
         try { renderTournamentHome(); } catch(e){}
+        tneSyncBannerPreview();
+        setView('tnedit');
+      }
+      /* Create Tournament opens THIS form, blank — it does not
+         create anything. Only Save (saveTnEditInfo) creates the
+         tournament: the previous tournament is archived then, the
+         new one gets its id and owner, and the app opens its Home
+         tab. Closing the form (✕) discards the draft and returns
+         to the Tournaments list, so repeated taps can never pile
+         up unnamed "Current Tournament" entries. */
+      function openTnCreate(){
+        if (!requireSignIn('create a tournament')) return;
+        tneCreateMode = true;
+        tneDraftBanner = '';
+        tneSetChrome(true);
+        var set = function(id, val){ var el = $(id); if (el) el.value = val || ''; };
+        set('tneName', '');
+        set('tneSeason', '');
+        set('tneVenue', '');
+        set('tneStart', '');
+        set('tneEnd', '');
+        tnEditSetBall('');
+        tneSyncBannerPreview();
         setView('tnedit');
       }
       function closeTnEdit(){
+        if (tneCreateMode){
+          tneCreateMode = false;
+          tneDraftBanner = '';
+          tneSetChrome(false);
+          try { renderTournamentList(); } catch(e){}
+          setView('tournaments');
+          return;
+        }
         setView('tournament');
         setTnTab('home');
       }
       function saveTnEditInfo(){
-        if (!requireTnOwner('edit this tournament')) return;
-        normalizeTournament();
-        var tn = S.tournament;
         var name = ($('tneName') ? $('tneName').value : '').trim();
         if (!name){ toast('Type the Tournament Name first'); var nEl = $('tneName'); if (nEl) nEl.focus(); return; }
         var season = ($('tneSeason') ? $('tneSeason').value : '').trim();
@@ -12029,9 +12096,41 @@
         var start = $('tneStart') ? $('tneStart').value : '';
         var end = $('tneEnd') ? $('tneEnd').value : '';
         if (start && end && end < start){ toast('The End Date is before the Start Date — check the dates'); return; }
+        var venue = ($('tneVenue') ? $('tneVenue').value : '').trim();
+        if (tneCreateMode){
+          if (!requireSignIn('create a tournament')) return;
+          /* The one moment a new tournament is created: archive
+             the previous one (it stays in the Tournaments list —
+             nothing is deleted), then build the new tournament
+             from the form, logo included when one was picked
+             (a logo is optional — blank is fine). */
+          archiveCurrentTournament();
+          var fresh = deep(freshState().tournament);
+          fresh.id = 'tn' + Date.now();
+          fresh.ownerUid = currentUid(); fresh.ownerName = authDisplayName();
+          fresh.name = name;
+          fresh.season = season;
+          fresh.venue = venue;
+          fresh.startDate = start || '';
+          fresh.endDate = end || '';
+          fresh.ballType = tneBallSel;
+          fresh.banner = tneDraftBanner || '';
+          fresh.dates = tnDatesText(fresh);
+          S.tournament = fresh;
+          tneCreateMode = false;
+          tneDraftBanner = '';
+          tneSetChrome(false);
+          commit('New tournament created', true);
+          setView('tournament');
+          setTnTab('home');
+          return;
+        }
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var tn = S.tournament;
         tn.name = name;
         tn.season = season;
-        tn.venue = ($('tneVenue') ? $('tneVenue').value : '').trim();
+        tn.venue = venue;
         tn.startDate = start || '';
         tn.endDate = end || '';
         tn.ballType = tneBallSel;
@@ -12041,6 +12140,9 @@
         closeTnEdit();
       }
       function tnEditDelete(){
+        /* In create mode there is no tournament to delete yet —
+           the button is hidden then; this guard is belt and braces. */
+        if (tneCreateMode) return;
         /* The shared delete flow (owner check + name confirmation);
            it returns here to the Tournaments list when it runs from
            this page — see deleteCurrentTournament. */
@@ -21265,23 +21367,13 @@
       function createTournament(){
         /* Creating a tournament requires an account: the creator
            becomes the tournament's admin, and only that account can
-           edit or delete it afterwards. */
-        if (!requireSignIn('create a tournament')) return;
-        var doIt = function(){
-          archiveCurrentTournament();
-          var fresh = deep(freshState().tournament);
-          fresh.id = 'tn' + Date.now();
-          fresh.ownerUid = currentUid(); fresh.ownerName = authDisplayName();
-          S.tournament = fresh;
-          commit('New tournament created', true);
-          setView('tournament');
-          toast('🏆 New tournament created — tap More → Edit Info on its Home tab to set its name, season, venue, dates and ball type, then add teams.');
-        };
-        if (tournamentHasContent(S.tournament)){
-          askVerify('Create a new tournament?',
-            'The current tournament' + (S.tournament.name ? ' (“' + S.tournament.name + '”)' : '') + ' will be kept in your tournament list — nothing is deleted, and you can reopen it any time. Continue?',
-            doIt);
-        } else doIt();
+           edit or delete it afterwards. Tapping Create Tournament
+           only OPENS the blank Tournament form (the Edit Tournament
+           Info page in create mode) — no tournament is created, the
+           current one is not archived and nothing is committed
+           until the form's Save is tapped; closing the form
+           discards the draft. See openTnCreate / saveTnEditInfo. */
+        openTnCreate();
       }
       function openArchivedTournament(id){
         if (S.tournament && S.tournament.id === id){ setView('tournament'); return; }
