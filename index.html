@@ -658,24 +658,24 @@
       .mc-other .lab{font-size:13.5px;font-weight:700;color:var(--muted);margin-right:2px}
       .mc-other button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;min-width:52px;padding:10px 6px;font-size:18px;font-weight:700;font-family:"Barlow Condensed",sans-serif}
       .mc-other button:active{transform:scale(.96)}
-      .mc-pad{display:grid;grid-template-columns:repeat(5,1fr);background:#f59e0b;margin-top:12px}
-      .mc-pad button{background:none;border:none;border-right:1px solid rgba(122,62,0,.35);border-bottom:1px solid rgba(122,62,0,.35);color:#fff;font-size:22px;font-weight:700;min-height:62px;padding:10px 2px;font-family:inherit;-webkit-tap-highlight-color:transparent}
+      .mc-pad{display:grid;grid-template-columns:repeat(5,1fr);background:linear-gradient(180deg,#0f6242,#0a4530);margin-top:12px}
+      .mc-pad button{background:none;border:none;border-right:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);color:#fff;font-size:22px;font-weight:700;min-height:62px;padding:10px 2px;font-family:inherit;-webkit-tap-highlight-color:transparent}
       .mc-pad button:nth-child(5n){border-right:none}
       .mc-pad button:nth-child(n+11){border-bottom:none}
-      .mc-pad button:active{background:rgba(122,62,0,.25)}
+      .mc-pad button:active{background:rgba(0,0,0,.28)}
       .mc-pad button.lbl{font-size:16.5px}
-      .mc-pad button.darklbl{color:#241a02;font-size:16.5px}
-      .mc-pad button.pending{background:#b45309;box-shadow:inset 0 0 0 3px #fde68a;color:#fff}
+      .mc-pad button.darklbl{color:#f5c877;font-size:16.5px}
+      .mc-pad button.pending{background:#e19a26;box-shadow:inset 0 0 0 3px rgba(36,26,2,.35);color:#241a02}
       .mc-pad button:disabled{opacity:.45;cursor:not-allowed}
       .mc-pad button svg{display:block;margin:0 auto}
-      .mc-more{display:none;background:#f59e0b;padding:6px 16px 20px}
+      .mc-more{display:none;background:linear-gradient(180deg,#0a4530,#083a26);padding:6px 16px 20px}
       .mc-more.show{display:block}
       .mc-more-head{display:flex;align-items:center;gap:14px;padding:8px 0 14px}
-      .mc-more-head .x{background:none;border:none;font-size:24px;line-height:1;color:#241a02;cursor:pointer;padding:2px 4px}
-      .mc-more-head .t{font-size:21px;font-weight:800;color:#241a02}
+      .mc-more-head .x{background:none;border:none;font-size:24px;line-height:1;color:#fff;cursor:pointer;padding:2px 4px}
+      .mc-more-head .t{font-size:21px;font-weight:800;color:#fff}
       .mc-more-grid{display:flex;flex-wrap:wrap;gap:10px}
-      .mc-more-grid button{background:none;border:1.5px solid rgba(84,42,0,.6);color:#241a02;border-radius:10px;padding:11px 15px;font-size:15.5px;font-weight:700;cursor:pointer}
-      .mc-more-grid button:active{background:rgba(122,62,0,.18)}
+      .mc-more-grid button{background:none;border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:10px;padding:11px 15px;font-size:15.5px;font-weight:700;cursor:pointer}
+      .mc-more-grid button:active{background:rgba(0,0,0,.25)}
       .mc-more-grid button:disabled{opacity:.4;cursor:not-allowed}
       .mc-wktwrap{padding:0 14px 14px}
       .mc-wktwrap:empty{display:none}
@@ -3669,7 +3669,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v189';
+      var APP_VERSION = 'v190';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7705,7 +7705,7 @@
       }
 
       /* ---------- More menu: Abandon / Penalty / Retired Hurt / D/L / Change Target / Overs-Format-Wickets ----------
-         The six match-management actions from the pad's orange More
+         The six match-management actions from the pad's More
          menu. Each opens the shared More dialog, validates its input,
          snapshots first (so Undo can take the action back), writes a
          'note' line into the innings feed (so the Public Scoreboard
