@@ -3556,7 +3556,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v180';
+      var APP_VERSION = 'v181';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3572,15 +3572,11 @@
           balls: [] /* {over, overNo, text, cls, bowler, batter} newest last */
         };
       }
-      /* Built-in default tournament teams & squads — seeded automatically so
-         they never have to be typed in again. */
-      var DEFAULT_TOURNAMENT_TEAMS = ['BB YOUNG BLOODS','BB POWER STRIKERS','BB LIONS','THE BLUE BLOODS'];
-      var DEFAULT_TOURNAMENT_SQUADS = {
-        'BB YOUNG BLOODS': ['A. K. M. Faisal Ahammed','Avijit Roy','Bakul Hossain','Bhabotosh Bairagi','Md. Billal Hossain','Md. Masum Bellal','Md. Riaz Uddin Moral','Md. Rubel Hossain','Md. Shafikul Islam','Md. Shahadat Hossain','Md. Shohanur Rahman','Nipesh Mondal','Palash Kumar Saha','Rajib','Ripan Kumar Bachar','Shibaji Mandal','Shovan Saha','Sk. Abdullah Al Mamun','Subrata Kumar Biswas'],
-        'BB POWER STRIKERS': ['Alif Islam','Mohin Chakravarty','Manash Biswas','Md. Asaduzaaman','Md. Ashraful Alam','Md. Ashrafuzzaman','Md. Atiqur Rahman','Md. Masudur Rahman','Md. Muzibul Kamal','Md. Rabbi Islam Anik','Md. Saiful Islam','Md. Shariful Islam','Md. Touhidul Islam','Md. Yeasin Hossain','Mohan Kumar Das','Partho Dutta','Pradip Kumar Roy','Saleh Ahmed','Sudipto Kumar Dey'],
-        'BB LIONS': ['Ambarish Mondal','Balai Kumar Das','Chayan Kumar Bala','Dabashis Roy','Md. Abdur Rahman','Md. Ali Gias','Md. Ashraful Alam','Md. Bayezid Hossain','M.A. Mamun Khan','Md. Moniruzzaman Mintu','Md. Nafiul Karim','Md. Nuralam Hawladar','Partha Pratim Biswas','Prashit Kumar Mondal','Shacchidananda Bachar','Shaikh A. Karim','Soumitra Kumar Roy','Suman Kumar Sikder'],
-        'THE BLUE BLOODS': ['Al Amin','Amit Kumar Biswas','Ar Labib Siddiqui','Harun-Or-Rashid','Md. Faruk Hossain','Md. Khairul Islam','Md. Mahafujur Rahman','Md. Mahbubul Hasan (Miraz)','Md. Raju Ahmed','Md. Rasel Ahmed','Md. Rezowan','Md. Sazzadul Islam','Md. Tanzil Hossain','Md. Wahiduzzaman','Riasat Ali','S. M. Rayhanul Islam','Satyajit Roy','Shahjada Sabuj','Tonmoy Kumar Debnath']
-      };
+      /* No built-in teams or squads are seeded anywhere (v181): a new
+         tournament starts with NO teams and NO players, and opening an
+         existing tournament never adds teams back. Teams and players
+         appear only where the user adds them — in All Teams, or inside
+         a tournament for that tournament only. */
       function freshState(){
         return {
           /* No team and no overs are pre-selected: Team 1, Team 2 and
@@ -3700,7 +3696,7 @@
              split (see normalizeMyTeams), so no team or player is
              lost by the split. */
           myTeams: { teams: [], squads: {}, seeded: false, leadership: [] },
-          tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: DEFAULT_TOURNAMENT_TEAMS.slice(), matches: [], fixtures: [], groups: [], squads: deep(DEFAULT_TOURNAMENT_SQUADS), defaultsSeeded: true, present: true, ownerUid: '', ownerName: '' },
+          tournament: { name: '', venue: '', dates: '', season: '', startDate: '', endDate: '', ballType: '', honours: { winner: '', runner: '', player: '', playerTeam: '' }, banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, present: true, ownerUid: '', ownerName: '' },
           updatedAt: Date.now()
         };
       }
@@ -5522,7 +5518,6 @@
         var tn = tnSquads ? tnSquads[teamName] : null;
         if (Array.isArray(tn) && tn.length) return deep(tn);
         if (teamName === prevTeam && Array.isArray(prevSquad)) return deep(prevSquad);
-        if (DEFAULT_TOURNAMENT_SQUADS[teamName]) return DEFAULT_TOURNAMENT_SQUADS[teamName].slice();
         return [];
       }
       /* By default NO batter or bowler is selected: the three dropdowns
@@ -7929,16 +7924,12 @@
            syncMatchSquadToTournament. (An older migration that filled
            empty tournament squads from the match squads is gone — it
            could carry All Teams pool players into a tournament.) */
-        /* Seed the built-in default teams & squads once, so they are already
-           there on every device / saved state and never need re-adding.
-           A team the user later removes stays removed (flag is kept). */
-        if (!S.tournament.defaultsSeeded){
-          DEFAULT_TOURNAMENT_TEAMS.forEach(function(name){
-            if (S.tournament.teams.indexOf(name) === -1) S.tournament.teams.push(name);
-            if (!Array.isArray(S.tournament.squads[name]) || !S.tournament.squads[name].length) S.tournament.squads[name] = DEFAULT_TOURNAMENT_SQUADS[name].slice();
-          });
-          S.tournament.defaultsSeeded = true;
-        }
+        /* No teams or players are ever added here automatically (v181):
+           a tournament holds exactly the teams the user added inside it,
+           and a team the user removed stays removed. The legacy
+           defaultsSeeded flag is only normalised so older saved states
+           keep a consistent shape — it no longer triggers any seeding. */
+        S.tournament.defaultsSeeded = true;
       }
       function tournamentSquad(name){
         normalizeTournament();
