@@ -3556,7 +3556,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v181';
+      var APP_VERSION = 'v182';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6516,7 +6516,8 @@
         if (type==='noball'){
           var batRunsBefore = bat.runs;
           inn.runs += 1+n; inn.extras.noball+=1; bowl.runs += 1+n;
-          bat.runs+=n; if (n===4) bat.fours++; if (n===6) bat.sixes++;
+          bat.runs+=n; bat.balls++; /* a no-ball is not a legal delivery for the over or the bowler, but the batter DID face it — it counts as a ball faced (unlike a wide) */
+          if (n===4) bat.fours++; if (n===6) bat.sixes++;
           pushBall(inn, 'Nb+'+n, 'bx', overNo, fhBall ? { fh: true } : null);
           inn.freeHit = true; /* a no-ball arms the free hit for the next delivery */
           /* Runs off the bat on a no-ball count towards a fifty /
@@ -6683,10 +6684,15 @@
           if (runs === 4) strikerBat.fours++; if (runs === 6) strikerBat.sixes++;
           legal = true;
         }
-        if (legal){
-          /* The striker faces a legal delivery (a bye / leg-bye counts
-             as a ball faced; a wide / no-ball does not). */
-          strikerBat.balls++; bowl.balls++; inn.legalBalls++;
+        if (legal || extra === 'noball'){
+          /* The striker faced this delivery: a legal ball counts as a
+             ball faced (a bye / leg-bye wicket ball included), and so
+             does a NO-BALL — the batter plays it, exactly like a run
+             scored off a no-ball. Only a legal delivery advances the
+             bowler's balls and the over count, so those stay behind
+             the legal flag. A wide is never a ball faced. */
+          strikerBat.balls++;
+          if (legal){ bowl.balls++; inn.legalBalls++; }
         }
         inn.runs += teamRuns;
         inn.wickets++;
@@ -9970,9 +9976,9 @@
             if (hasBalls){
               /* ---- figures only the ball-by-ball record knows ----
                  Fastest 30 / 50 / 100 (the balls a batter had faced
-                 when their score crossed the mark — a no-ball adds
-                 runs but no ball faced, exactly as the scorer's own
-                 balls-faced count treats it), dot balls, maidens,
+                 when their score crossed the mark — a no-ball counts
+                 as a ball faced, exactly as the scorer's own
+                 balls-faced count treats it; a wide does not), dot balls, maidens,
                  wides and no-balls per bowler (the same derivations
                  the Match Report uses), hat-tricks (three bowler-
                  credited wickets in three consecutive balls of the
@@ -9993,7 +9999,7 @@
                 if (bl.batter){
                   var rb = simBat[bl.batter] || (simBat[bl.batter] = { runs:0, balls:0, g30:false, g50:false, g100:false });
                   rb.runs += batterRunsOnBall(t);
-                  if (isLegalDelivery(t)) rb.balls++;
+                  if (isLegalDelivery(t) || /^Nb/.test(t)) rb.balls++;
                   [[30, 'f30', 'g30'], [50, 'f50', 'g50'], [100, 'f100', 'g100']].forEach(function(th){
                     if (!rb[th[2]] && rb.runs >= th[0]){
                       rb[th[2]] = true;
@@ -10076,7 +10082,8 @@
                 if (x.batter){
                   if (!stand.bat[x.batter]) stand.bat[x.batter] = { runs:0, balls:0 };
                   stand.bat[x.batter].runs += batterRunsOnBall(t2);
-                  if (isLegalDelivery(t2)){ stand.bat[x.batter].balls++; stand.balls++; }
+                  if (isLegalDelivery(t2) || /^Nb/.test(t2)) stand.bat[x.batter].balls++; /* a no-ball is a ball faced by the batter… */
+                  if (isLegalDelivery(t2)) stand.balls++; /* …but the stand's ball count stays legal deliveries only, as in the scorecard partnership figures */
                 }
                 if (isWicketBall(x)){
                   wktsDown++;
@@ -19850,8 +19857,9 @@
          Each ball stores its bowler / batter and outcome, so the state of
          the innings at the end of any over can be rebuilt exactly: the
          score then, each batter's runs (balls) then, and the bowler's
-         figures then. Wides and no-balls are not legal deliveries and do
-         not count as a ball faced. */
+         figures then. Wides and no-balls are not legal deliveries;
+         a no-ball still counts as a ball faced by the batter (he
+         plays it), a wide does not. */
       function isLegalDelivery(text){
         var t = String(text || '');
         return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t) || t === 'NbW' || /^NbW\+\d+$/.test(t));
@@ -19917,7 +19925,7 @@
             if (batName){
               if (!batMap[batName]) batMap[batName] = { name: batName, runs: 0, balls: 0 };
               batMap[batName].runs += batterRunsOnBall(b.text);
-              if (isLegalDelivery(b.text)) batMap[batName].balls++;
+              if (isLegalDelivery(b.text) || /^Nb/.test(b.text)) batMap[batName].balls++; /* a no-ball counts as a ball faced by the batter, though it is not a legal delivery */
               if (overBatters.indexOf(batName) < 0) overBatters.push(batName);
             }
             var bowlName = b.bowler || '';
