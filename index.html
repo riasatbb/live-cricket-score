@@ -2544,25 +2544,25 @@
           <div class="grid2">
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadAName">Team 1</h3><span class="note" id="squadACount"></span></div>
-              <div id="squadAList"></div>
-              <div class="rowflex names-row" style="margin-top:10px">
+              <div class="rowflex names-row">
                 <div class="ac-wrap grow"><textarea id="addPlayerA" data-ac="pick" data-ac-ctx="A" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div>
                 <button class="btn sm" onclick="addPlayer('A')">Add</button>
               </div>
-              <div class="rowflex" style="margin-top:8px">
+              <div class="rowflex" style="margin:8px 0 10px">
                 <input id="addNickA" class="grow nick-inp" placeholder="Nickname (optional)" />
               </div>
+              <div id="squadAList"></div>
             </div>
             <div class="squad-box">
               <div class="squad-head"><h3 id="squadBName">Team 2</h3><span class="note" id="squadBCount"></span></div>
-              <div id="squadBList"></div>
-              <div class="rowflex names-row" style="margin-top:10px">
+              <div class="rowflex names-row">
                 <div class="ac-wrap grow"><textarea id="addPlayerB" data-ac="pick" data-ac-ctx="B" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div>
                 <button class="btn sm" onclick="addPlayer('B')">Add</button>
               </div>
-              <div class="rowflex" style="margin-top:8px">
+              <div class="rowflex" style="margin:8px 0 10px">
                 <input id="addNickB" class="grow nick-inp" placeholder="Nickname (optional)" />
               </div>
+              <div id="squadBList"></div>
             </div>
           </div>
           <div class="rowflex" style="margin-top:12px">
@@ -3555,7 +3555,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v178';
+      var APP_VERSION = 'v179';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4176,7 +4176,13 @@
       }
       function fixResultText(s){ return asSentence(fixPlurals(s)); }
       function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-      function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2400); }
+      /* No pop-up messages anywhere (owner's rule): the floating
+         confirmation toast is retired — actions speak through the
+         page itself (the updated list, the score, the screen the tap
+         lands on), never through a message that floats up on screen.
+         The function stays as a no-op so every existing call site is
+         silent without being rewritten. */
+      function toast(msg){ }
 
       /* ---------- update notice ----------
          This page is a fixed snapshot: once a newer build is
@@ -5495,19 +5501,25 @@
       function openSetupFold(){ openFoldById('setupCard'); }
 
       /* ---------- fresh squads for a (possibly new) pair of teams ----------
-         A team's players always come from that team's own tournament
-         squad. The previous match's squad is kept only when it is the
-         same team in the same slot — players never carry across to a
-         different team. */
+         The two squad stores are strictly separate (owner's rule):
+         a TOURNAMENT match fields ONLY the players added for that
+         team inside that tournament — its tournament squad — and a
+         team entered in a tournament starts with none, however many
+         players it has in All Teams; a SINGLE Match picked from All
+         Teams fields that team's All Teams (pool) players. The
+         previous match's squad is kept only for a Single Match when
+         it is the same team in the same slot — players never carry
+         across to a different team, and never from the pool into a
+         tournament. */
       function squadForMatch(teamName, tnSquads, prevTeam, prevSquad){
-        var tn = tnSquads ? tnSquads[teamName] : null;
-        if (Array.isArray(tn) && tn.length) return deep(tn);
-        /* A team kept only in the All Teams pool brings its pool squad
-           into the match the same way — the pool is READ here, never
-           written, so starting a match cannot leak a team or a squad
-           into any tournament. */
+        if (pendingMatchKind === 'tournament'){
+          var tnOnly = tnSquads ? tnSquads[teamName] : null;
+          return Array.isArray(tnOnly) ? deep(tnOnly) : [];
+        }
         var pool = (S.myTeams && S.myTeams.squads) ? S.myTeams.squads[teamName] : null;
         if (Array.isArray(pool) && pool.length) return deep(pool);
+        var tn = tnSquads ? tnSquads[teamName] : null;
+        if (Array.isArray(tn) && tn.length) return deep(tn);
         if (teamName === prevTeam && Array.isArray(prevSquad)) return deep(prevSquad);
         if (DEFAULT_TOURNAMENT_SQUADS[teamName]) return DEFAULT_TOURNAMENT_SQUADS[teamName].slice();
         return [];
@@ -5662,7 +5674,7 @@
       function battingSquad(){ return squadForTeam(S.current.battingTeam); }
       function bowlingSquad(){ return squadForTeam(S.current.bowlingTeam); }
       function squadListHTML(arr, which){
-        if (!arr.length) return '<p class="note">No players yet — add the squad below.</p>';
+        if (!arr.length) return '<p class="note">No players yet — add the squad with the box above.</p>';
         var team = which === 'A' ? S.teamA : S.teamB;
         return arr.map(function(n,i){
           /* One row per player, built for setting the order before
@@ -6892,8 +6904,11 @@
         pendingMatchKind = null;
         if (S.matchKind === 'tournament'){
           ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
-          if (!S.tournament.squads[S.teamA].length && S.squadA.length) S.tournament.squads[S.teamA] = deep(S.squadA);
-          if (!S.tournament.squads[S.teamB].length && S.squadB.length) S.tournament.squads[S.teamB] = deep(S.squadB);
+          /* The tournament squads are NOT seeded from the match
+             squads here: a tournament team's players are only the
+             ones added for it inside the tournament (its Teams tab /
+             team page, or the squad editor during one of its own
+             tournament matches via syncMatchSquadToTournament). */
         }
         clearUndoStack();
         /* The creator owns the match: this account — and only this
@@ -7725,21 +7740,18 @@
          from inside Open Match or from inside a tournament ALSO
          lands in All Teams, so every team the user keeps is listed
          there. Mirroring never mints a new Team ID (the registry
-         owns IDs) and never duplicates a team already in the pool;
-         when the pool has no squad for the team yet but the
-         tournament does, that squad comes with it so the team does
-         not show up in All Teams with 0 players. The reverse is NOT
-         true: adding a team in All Teams does not put it inside any
-         tournament — a tournament's own list still changes only
-         from inside that tournament. */
+         owns IDs) and never duplicates a team already in the pool.
+         Only the team NAME travels — never its players: the pool
+         squad and a tournament squad are separate lists, each added
+         to in its own place (owner's rule), so players added for a
+         team inside a tournament stay that tournament's, and All
+         Teams players are added on the All Teams side. The reverse
+         is NOT true either: adding a team in All Teams does not put
+         it inside any tournament — a tournament's own list still
+         changes only from inside that tournament. */
       function mirrorTeamToPool(name){
         if (!name) return;
-        try {
-          ensurePoolTeam(name);
-          try { normalizeTournament(); } catch(e){}
-          var ts = (S.tournament && S.tournament.squads) ? S.tournament.squads[name] : null;
-          if (Array.isArray(ts) && ts.length && Array.isArray(S.myTeams.squads[name]) && !S.myTeams.squads[name].length) S.myTeams.squads[name] = deep(ts);
-        } catch(e){}
+        try { ensurePoolTeam(name); } catch(e){}
       }
       /* Every team the user can pick anywhere: the All Teams pool
          first, then any team that exists only inside the current
@@ -7909,13 +7921,13 @@
         S.tournament.teams.forEach(function(n){
           if (!Array.isArray(S.tournament.squads[n])) S.tournament.squads[n] = [];
         });
-        /* Migrate players saved before tournament squads existed: the two
-           match squads become their teams' tournament squads. Never for
-           a Single Match — its squads must not enter any tournament. */
-        if (S.matchKind !== 'single'){
-          if (S.teamA && Array.isArray(S.squadA) && S.squadA.length && Array.isArray(S.tournament.squads[S.teamA]) && !S.tournament.squads[S.teamA].length) S.tournament.squads[S.teamA] = S.squadA.slice();
-          if (S.teamB && Array.isArray(S.squadB) && S.squadB.length && Array.isArray(S.tournament.squads[S.teamB]) && !S.tournament.squads[S.teamB].length) S.tournament.squads[S.teamB] = S.squadB.slice();
-        }
+        /* A live match's squads are NEVER copied into tournament
+           squads here: a tournament team's players are only the ones
+           added for it inside that tournament, and the one deliberate
+           write-back from a tournament match's own squad editor is
+           syncMatchSquadToTournament. (An older migration that filled
+           empty tournament squads from the match squads is gone — it
+           could carry All Teams pool players into a tournament.) */
         /* Seed the built-in default teams & squads once, so they are already
            there on every device / saved state and never need re-adding.
            A team the user later removes stays removed (flag is kept). */
@@ -10466,7 +10478,7 @@
         tpWlMode = 'both'; tpStatSub = 'team'; tpTeamMode = 'overall'; tpSortMode = 'role';
         tpCmpDataCache = {};
         if (src === 'sb'){ sbSelectedTeam = team; sbTeamDetailTab = 'players'; }
-        teamPageCtx = { src: src, team: team, back: back || (src === 'mt' ? 'myteams' : (src === 'sb' ? 'scoreboard' : 'tournament')) };
+        teamPageCtx = { src: src, team: team, back: back || (src === 'mt' ? 'myteams' : (src === 'sb' ? 'scoreboard' : 'tournament')), fromSearch: back === 'search' };
         setView('teampage');
       }
       function openTeamPageIdx(src, idx){
@@ -10871,16 +10883,22 @@
       }
       function tpTabsHTML(){
         var tabs = [['overview', 'Team Overview'], ['players', 'Players'], ['matches', 'Matches'], ['tournaments', 'Tournaments'], ['stats', 'Statistics'], ['compare', 'Compare']];
+        /* A team opened from Search shows every tab EXCEPT Players
+           (owner's rule) — the squad is seen from All Teams or from
+           inside the team's tournament, not from a search result. */
+        if (teamPageCtx && teamPageCtx.fromSearch) tabs = tabs.filter(function(tb){ return tb[0] !== 'players'; });
         return '<div class="pf-tabs">'
           + tabs.map(function(tb){ return '<button type="button" class="pf-tab' + (tpTab === tb[0] ? ' on' : '') + '" onclick="tpSetTab(\'' + tb[0] + '\')">' + tb[1] + '</button>'; }).join('')
           + '</div>';
       }
       function tpTabBodyHTML(team, ti, src, players, editable, meta){
-        if (tpTab === 'players') return tpPlayersHTML(team, src, players, editable);
-        if (tpTab === 'matches') return tpMatchesTabHTML(team);
-        if (tpTab === 'tournaments') return tpTournamentsTabHTML(team);
-        if (tpTab === 'stats') return tpStatsHTML(team);
-        if (tpTab === 'compare') return tpCompareHTML(team);
+        var tab = tpTab;
+        if (tab === 'players' && teamPageCtx && teamPageCtx.fromSearch) tab = 'overview';
+        if (tab === 'players') return tpPlayersHTML(team, src, players, editable);
+        if (tab === 'matches') return tpMatchesTabHTML(team);
+        if (tab === 'tournaments') return tpTournamentsTabHTML(team);
+        if (tab === 'stats') return tpStatsHTML(team);
+        if (tab === 'compare') return tpCompareHTML(team);
         return tpOverviewHTML(team);
       }
       function tpBarsHTML(list, key, color){
@@ -10998,8 +11016,15 @@
           + '<div class="pf-seg" style="margin:0">' + [['role', 'ROLE'], ['az', 'A-Z'], ['mat', 'MAT'], ['squad', 'SQUAD']].map(function(sm){
               return '<button type="button" class="' + (tpSortMode === sm[0] ? 'on' : '') + '" onclick="tpSetSort(\'' + sm[0] + '\')">' + sm[1] + '</button>';
             }).join('') + '</div></div>';
+        /* The Add Player box ALWAYS sits above the player list
+           (owner's rule): it used to render under the list, so every
+           player added pushed it further down the page. */
+        if (editable){
+          h += '<div class="card" style="margin-bottom:12px"><div class="rowflex names-row"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
+            + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div></div>';
+        }
         if (!players.length){
-          h += '<div class="card"><div class="tn-empty">No players yet for this team' + (editable ? ' — add players below.' : '.') + '</div></div>';
+          h += '<div class="card"><div class="tn-empty">No players yet for this team' + (editable ? ' — add them with the box above.' : '.') + '</div></div>';
         } else if (tpSortMode === 'role'){
           var TP_GROUPS = [['Batter', 'Batters'], ['Wicket-keeper Batter', 'Wicketkeeping Batters'], ['Wicket-keeper', 'Wicket-keepers'], ['All-rounder', 'All Rounders'], ['Bowler', 'Bowlers'], ['', 'Unspecified']];
           var grouped = {};
@@ -11022,10 +11047,6 @@
             entries.sort(function(a, b){ return ((byName[b[0]] || 0) - (byName[a[0]] || 0)) || a[0].localeCompare(b[0]); });
           }
           h += '<div class="card tp-card">' + entries.map(function(pr){ return tpPlayerRowHTML(team, src, pr[0], pr[1], editable, L); }).join('') + '</div>';
-        }
-        if (editable){
-          h += '<div class="card" style="margin-top:12px"><div class="rowflex names-row"><div class="ac-wrap grow"><textarea id="tpPlayerBox" data-ac="pick" data-ac-team="' + esc(team) + '" class="namebox" rows="1" placeholder="Player names — one per line"></textarea></div><button type="button" class="btn sm" onclick="tpAddPlayer()">Add Players</button></div>'
-            + '<div class="rowflex" style="margin-top:8px"><input id="tpNickBox" class="grow nick-inp" placeholder="Nickname (optional)" /></div></div>';
         }
         return h;
       }
