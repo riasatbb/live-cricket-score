@@ -3669,7 +3669,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v191';
+      var APP_VERSION = 'v192';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -21082,9 +21082,9 @@
          the reference: a header bar with both team names, a Playing
          XI section (the first eleven of each squad, in squad order)
          and a Bench section for everyone past eleven. A player's
-         (c) / (vc) / (wk) suffix comes from the team's leadership
-         picks (tournament store first, then the All Teams pool), and
-         the (wk) suffix also follows a Wicket-keeper profile role.
+         (c) / (vc) / (wk) suffix comes ONLY from the team's leadership
+         picks (tournament store first, then the All Teams pool) —
+         the (wk) suffix never follows the profile playing role alone.
          The role line uses the reference labels (WK-Batter /
          Allrounder) for the stored profile roles, in small type,
          with no jersey number. Row tints are read from THIS match
@@ -21120,7 +21120,7 @@
       }
       function cbxRowHTML(team, name, side, L, played, isXI, started, matchDone){
         var d = profileDataFor(team, name, '');
-        var isWk = (L.wk === name) || d.role === 'Wicket-keeper' || d.role === 'Wicket-keeper Batter';
+        var isWk = (L.wk === name);
         var sfx = '';
         if (L.c === name) sfx += ' (c)';
         if (L.vc === name) sfx += ' (vc)';
