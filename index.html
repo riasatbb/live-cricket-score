@@ -553,6 +553,8 @@
       .pick:active{transform:scale(.98)}
       .pick-name{font-weight:700}
       .pick-det{font-size:12.5px;color:var(--muted);text-align:right;flex:none}
+      .pick-add{border-style:dashed;border-color:var(--green);color:var(--green);justify-content:center}
+      #addPlayerModal{z-index:130}
 
       /* ---------- compact layout & collapsible sections ---------- */
       .card.fold{padding:0}
@@ -2765,7 +2767,7 @@
               <div><label for="wktOutWho">Batter out</label><select id="wktOutWho"><option value="striker">Striker</option><option value="nonStriker">Non-Striker (run out)</option></select></div>
               <div><label for="wktRuns">Runs on this ball</label><select id="wktRuns"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
             </div>
-            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><select id="wktFielder"><option value="">— None —</option></select></div>
+            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><select id="wktFielder" onchange="onFielderSelChanged(this)"><option value="">— None —</option></select></div>
             <div class="rowflex" style="margin-top:12px">
               <button class="btn red sm" onclick="confirmWicket()">Confirm Wicket</button>
               <button class="btn ghost sm" onclick="cancelWicket()">Cancel</button>
@@ -3377,6 +3379,21 @@
       </div>
     </div>
 
+    <div class="modal-back" id="addPlayerModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addPlayerTitle">
+        <div class="modal-head">
+          <h2 id="addPlayerTitle">Add New Player</h2>
+          <button class="sq-x big" onclick="cancelAddPlayer()" aria-label="Close">×</button>
+        </div>
+        <p class="sub" id="addPlayerTeam" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div style="margin-top:12px"><label for="addPlayerName">Player name</label><input id="addPlayerName" placeholder="Type the player's full name" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddPlayer();}" /></div>
+        <div class="rowflex" style="margin-top:14px">
+          <button class="btn" onclick="confirmAddPlayer()">Add &amp; Select</button>
+          <button class="btn ghost" onclick="cancelAddPlayer()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-back" id="verifyModal">
       <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="verifyTitle">
         <div class="modal-head"><h2 id="verifyTitle">Please confirm</h2></div>
@@ -3652,7 +3669,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v187';
+      var APP_VERSION = 'v189';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5438,9 +5455,10 @@
            ever auto-selected or invented. A name enters the state only
            when the controller actually picks it. */
         var inn = S.current;
-        inn.striker = $('strikerName').value.trim() || null;
-        inn.nonStriker = $('nonStrikerName').value.trim() || null;
-        inn.bowler = $('bowlerName').value.trim() || null;
+        var sv = $('strikerName').value.trim(), nv = $('nonStrikerName').value.trim(), bv = $('bowlerName').value.trim();
+        inn.striker = (sv && sv !== ADD_PLAYER_VALUE) ? sv : null;
+        inn.nonStriker = (nv && nv !== ADD_PLAYER_VALUE) ? nv : null;
+        inn.bowler = (bv && bv !== ADD_PLAYER_VALUE) ? bv : null;
         if (inn.striker) getBatter(inn, inn.striker);
         if (inn.nonStriker) getBatter(inn, inn.nonStriker);
         if (inn.bowler) getBowler(inn, inn.bowler);
@@ -5547,6 +5565,17 @@
          whole, exactly as picked. A name settled here can announce the
          player in the public commentary feed. */
       function onPlayerNameSettled(el){
+        /* The dropdown's bottom "＋ Add new player…" entry: open the
+           Add New Player dialog instead of settling a name — the
+           sentinel must never reach the state as a player. */
+        if (el && el.value === ADD_PLAYER_VALUE){
+          var addTeam = el.id === 'bowlerName' ? (S.current ? S.current.bowlingTeam : '') : (S.current ? S.current.battingTeam : '');
+          var prevVal = '';
+          if (S.current) prevVal = el.id === 'bowlerName' ? (S.current.bowler || '') : (el.id === 'strikerName' ? (S.current.striker || '') : (S.current.nonStriker || ''));
+          el.value = prevVal;
+          openAddPlayerModal({ kind: 'main', selId: el.id, team: addTeam || '', prev: prevVal });
+          return;
+        }
         if (!requireLiveOwner('change players')){ try { renderAll(false); } catch(e){} return; }
         var inn = S.current; if (!inn) return;
         if (el && el.value) el.classList.remove('req-missing');
@@ -5631,12 +5660,139 @@
         for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === name) return;
         var o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o);
       }
+      /* ---------- add a player from inside a player dropdown ----------
+         Every Batter / Bowler / Fielder dropdown carries one extra
+         entry at the very bottom — "＋ Add new player…". It is purely
+         optional: the dropdowns work exactly as before when it is
+         never touched. Picking it opens the Add New Player dialog;
+         confirming adds the player to that team's squad for this
+         match (so they appear in every other dropdown, the squad
+         lists and Yet to bat, with a Player ID like any squad entry)
+         and selects them in the dropdown the scorer came from.
+         Cancelling restores the dropdown's previous value. The
+         sentinel value is never a player: syncPlayersFromInputs and
+         every apply handler treat it as "nothing picked". */
+      var ADD_PLAYER_VALUE = '__add_new_player__';
+      var addPlayerCtx = null;
+      var wktFielderLast = '';
+      function addPlayerOptionHTML(){ return '<option value="' + ADD_PLAYER_VALUE + '">＋ Add new player…</option>'; }
+      function addPlayerToMatchSquad(team, name){
+        normalizeSquads();
+        var which = team === S.teamA ? 'A' : (team === S.teamB ? 'B' : null);
+        if (!which){ try { playerIdFor(team, name); } catch(e){} return false; }
+        var arr = which === 'A' ? S.squadA : S.squadB;
+        var res = applyNameEntries(arr, team, [{ name: name, nick: '' }], '');
+        if (res.added){ S.squadConfirmed = false; syncMatchSquadToTournament(which); }
+        return res.added > 0;
+      }
+      function openAddPlayerModal(ctx){
+        if (ctx.kind !== 'be' && !requireLiveOwner('add a player')){ restoreAddPlayerOrigin(ctx); return; }
+        addPlayerCtx = ctx;
+        $('addPlayerTeam').textContent = ctx.team ? ('Team: ' + ctx.team) : '';
+        $('addPlayerName').value = '';
+        $('addPlayerModal').classList.add('show');
+        try { $('addPlayerName').focus(); } catch(e){}
+      }
+      function restoreAddPlayerOrigin(ctx){
+        if (!ctx) return;
+        if (ctx.kind === 'main'){ var el = $(ctx.selId); if (el) el.value = ctx.prev || ''; }
+        else if (ctx.kind === 'fielder'){ var f = $('wktFielder'); if (f) f.value = wktFielderLast || ''; }
+        else if (ctx.kind === 'rh'){ var r = $('rhNew'); if (r) r.value = ctx.prev || ''; }
+        else if (ctx.kind === 'be'){ try { beRender(); } catch(e){} }
+      }
+      function cancelAddPlayer(){
+        var ctx = addPlayerCtx; addPlayerCtx = null;
+        $('addPlayerModal').classList.remove('show');
+        restoreAddPlayerOrigin(ctx);
+      }
+      function confirmAddPlayer(){
+        var ctx = addPlayerCtx; if (!ctx) return;
+        var name = $('addPlayerName').value.trim().replace(/\s+/g, ' ');
+        if (!name){ toast('Type the player name first'); return; }
+        if (isPlaceholderName(name)){ toast('That is a placeholder, not a player name'); return; }
+        addPlayerCtx = null;
+        $('addPlayerModal').classList.remove('show');
+        if (ctx.kind === 'be'){
+          var e = beCtx && beCtx.entry;
+          if (e){
+            var arr = ctx.team === e.teamA ? e.squadA : (ctx.team === e.teamB ? e.squadB : null);
+            if (Array.isArray(arr) && arr.indexOf(name) === -1) arr.push(name);
+          }
+          if (beCtx && beCtx.form){ if (ctx.side === 'bat') beCtx.form.batter = name; else beCtx.form.bowler = name; }
+          try { beRender(); } catch(err){}
+          return;
+        }
+        var addedNew = addPlayerToMatchSquad(ctx.team, name);
+        commit(addedNew ? ('Player added: ' + name) : null, true);
+        if (ctx.kind === 'main'){
+          try { renderSquads(); } catch(e2){}
+          var sel = $(ctx.selId);
+          if (sel){ ensureSelectOption(sel, name); sel.value = name; onPlayerNameSettled(sel); }
+        } else if (ctx.kind === 'fielder'){
+          var fSel = $('wktFielder');
+          if (fSel){
+            var fTeam = S.current ? (S.current.bowlingTeam || '') : '';
+            var fList = [];
+            try { fList = displaySquadForTeam(fTeam) || []; } catch(e3){}
+            if (!fList.length){ try { fList = bowlingSquad() || []; } catch(e4){} }
+            var fSeen = {};
+            fSel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
+              return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
+            }).join('') + addPlayerOptionHTML();
+            fSel.value = name; wktFielderLast = name;
+          }
+        } else if (ctx.kind === 'rh'){
+          var rSel = $('rhNew');
+          if (rSel){
+            var inn2 = S.current;
+            var atCrease = inn2 ? [inn2.striker, inn2.nonStriker].filter(Boolean) : [];
+            var repls = battingSquad().filter(function(n){
+              if (atCrease.indexOf(n) > -1) return false;
+              return !batterIsOut(inn2, n);
+            });
+            if (repls.indexOf(name) === -1) repls.push(name);
+            rSel.innerHTML = '<option value="">Decide later — leave the slot empty</option>' + selOptions(repls, name) + addPlayerOptionHTML();
+            rSel.value = name;
+          }
+        } else if (ctx.kind === 'picker'){
+          pickPlayer(name);
+          return;
+        }
+      }
+      function onFielderSelChanged(el){
+        if (!el) return;
+        if (el.value === ADD_PLAYER_VALUE){
+          if (!S.current) return;
+          openAddPlayerModal({ kind: 'fielder', team: S.current.bowlingTeam || '', prev: wktFielderLast || '' });
+          return;
+        }
+        wktFielderLast = el.value || '';
+      }
+      function onRhNewChanged(el){
+        if (!el) return;
+        if (el.value === ADD_PLAYER_VALUE){
+          if (!S.current) return;
+          openAddPlayerModal({ kind: 'rh', team: S.current.battingTeam || '', prev: '' });
+        }
+      }
+      function openAddPlayerFromPicker(){
+        if (!S.current) return;
+        var team = pickerMode === 'bowler' ? (S.current.bowlingTeam || '') : (S.current.battingTeam || '');
+        openAddPlayerModal({ kind: 'picker', team: team, prev: '' });
+      }
+      function bePlayerSelChanged(el, side){
+        if (!el || el.value !== ADD_PLAYER_VALUE || !beCtx) return;
+        beHarvestForm();
+        var item = beCtx.items[beCtx.tab]; if (!item) return;
+        var inn = item.work;
+        openAddPlayerModal({ kind: 'be', side: side, team: side === 'bat' ? (inn.battingTeam || '') : (inn.bowlingTeam || ''), prev: '' });
+      }
       function buildPlayerOptions(sel, squad, current, placeholder){
         if (!sel) return;
         var names = [];
         (squad || []).forEach(function(n){ if (n && names.indexOf(n) === -1) names.push(n); });
         if (current && names.indexOf(current) === -1) names.push(current);
-        sel.innerHTML = '<option value="">' + esc(placeholder) + '</option>' + names.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+        sel.innerHTML = '<option value="">' + esc(placeholder) + '</option>' + names.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('') + addPlayerOptionHTML();
         sel.value = current || '';
       }
       function populatePlayerSelects(){
@@ -6000,18 +6156,20 @@
           $('pickerSub').textContent = '';
           note.style.display = 'none';
           var list = bowlingSquad().filter(function(n){ return pickerExclude.indexOf(n) === -1; });
-          $('pickerList').innerHTML = list.length
+          $('pickerList').innerHTML = (list.length
             ? list.map(function(n){ return pickerItem(n, bowlerDetail(inn, n), lookupPlayerId(inn.bowlingTeam, n)); }).join('')
-            : '<p class="note">No squad players to pick from.</p>';
+            : '<p class="note">No squad players to pick from.</p>')
+            + '<button type="button" class="pick pick-add" onclick="openAddPlayerFromPicker()"><span class="pick-name">＋ Add New Player</span></button>';
         } else {
           $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
           $('pickerSub').textContent = '';
           note.style.display = 'none';
           var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
           var cands = batterCandidates(otherEnd);
-          $('pickerList').innerHTML = cands.length
+          $('pickerList').innerHTML = (cands.length
             ? cands.map(function(n){ return pickerItem(n, batterDetail(inn, n), lookupPlayerId(inn.battingTeam, n)); }).join('')
-            : '<p class="note">No squad players left to pick.</p>';
+            : '<p class="note">No squad players left to pick.</p>')
+            + '<button type="button" class="pick pick-add" onclick="openAddPlayerFromPicker()"><span class="pick-name">＋ Add New Player</span></button>';
         }
         $('pickerModal').classList.add('show');
       }
@@ -6706,8 +6864,9 @@
           var fSeen = {};
           fSel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
             return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
-          }).join('');
+          }).join('') + addPlayerOptionHTML();
           fSel.value = '';
+          wktFielderLast = '';
         }
         var panel = $('wicketPanel'); if (panel){ panel.hidden = false; try { panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
       }
@@ -6724,6 +6883,7 @@
         }
         var outWhich = $('wktOutWho').value === 'nonStriker' ? 'nonStriker' : 'striker';
         var fielder = $('wktFielder').value.trim();
+        if (fielder === ADD_PLAYER_VALUE) fielder = '';
         var runs = Math.max(0, Math.min(6, parseInt($('wktRuns').value, 10) || 0));
         var extra = pendingExtra;
         cancelWicket();
@@ -7654,7 +7814,7 @@
           '',
           '<div class="grid2">'
           + '<div><label for="rhWho">Batter retiring hurt</label><select id="rhWho">' + selOptions(atCrease, inn.striker || atCrease[0]) + '</select></div>'
-          + '<div><label for="rhNew">Replacement batter</label><select id="rhNew"><option value="">Decide later — leave the slot empty</option>' + selOptions(repls, '') + '</select></div>'
+          + '<div><label for="rhNew">Replacement batter</label><select id="rhNew" onchange="onRhNewChanged(this)"><option value="">Decide later — leave the slot empty</option>' + selOptions(repls, '') + addPlayerOptionHTML() + '</select></div>'
           + '</div>',
           applyRetiredHurt, 'Retire Batter Hurt');
       }
@@ -7662,6 +7822,7 @@
         var inn = S.current;
         var who = $('rhWho').value;
         var repl = $('rhNew').value;
+        if (repl === ADD_PLAYER_VALUE) repl = '';
         if (!who || (who !== inn.striker && who !== inn.nonStriker)){ toast('Pick the batter who is retiring hurt'); return; }
         if (repl && batterIsOut(inn, repl)){ toast('⚠️ ' + repl + ' is already out in this innings — pick another batter'); return; }
         if (repl && (repl === inn.striker || repl === inn.nonStriker)){ toast('⚠️ ' + repl + ' is already at the crease — pick someone else'); return; }
@@ -19340,9 +19501,9 @@
         }
         var runsLabel = f.type === 'wide' ? 'Extra runs run (on top of the wide)' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : 'Runs off the bat'));
         var h = '<div class="be-form"><h3>' + title + '</h3>' + (sub ? '<p class="be-fsub">' + sub + '</p>' : '')
-          + '<label for="beBatterSel">Batter facing</label><select id="beBatterSel">' + opts(beNameList(item, 'bat'), f.batter, inn.battingTeam) + '</select>'
+          + '<label for="beBatterSel">Batter facing</label><select id="beBatterSel" onchange="bePlayerSelChanged(this,\'bat\')">' + opts(beNameList(item, 'bat'), f.batter, inn.battingTeam) + addPlayerOptionHTML() + '</select>'
           + '<label for="beBatterTxt">Correct batter name</label><input id="beBatterTxt" value="' + esc(f.batterTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
-          + '<label for="beBowlerSel">Bowler</label><select id="beBowlerSel">' + opts(beNameList(item, 'bowl'), f.bowler, inn.bowlingTeam) + '</select>'
+          + '<label for="beBowlerSel">Bowler</label><select id="beBowlerSel" onchange="bePlayerSelChanged(this,\'bowl\')">' + opts(beNameList(item, 'bowl'), f.bowler, inn.bowlingTeam) + addPlayerOptionHTML() + '</select>'
           + '<label for="beBowlerTxt">Correct bowler name</label><input id="beBowlerTxt" value="' + esc(f.bowlerTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
           + '<label for="beTypeSel">Outcome</label><select id="beTypeSel" onchange="beFormTypeChanged()">'
           + [['runs', 'Runs off the bat'], ['wide', 'Wide'], ['noball', 'No ball'], ['bye', 'Bye'], ['legbye', 'Leg bye'], ['wicket', 'Wicket']].map(function(o){ return '<option value="' + o[0] + '"' + (f.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
@@ -19399,6 +19560,8 @@
         var f = beCtx.form;
         var batter = String(f.batterTxt || '').trim() || f.batter || '';
         var bowler = String(f.bowlerTxt || '').trim() || f.bowler || '';
+        if (batter === ADD_PLAYER_VALUE) batter = '';
+        if (bowler === ADD_PLAYER_VALUE) bowler = '';
         if (!batter || !bowler){ toast('Pick the batter and the bowler for this ball'); return; }
         var runs = Math.max(0, Math.min(36, parseInt(f.runs, 10) || 0));
         var token = '', cls = '', extra = null;
