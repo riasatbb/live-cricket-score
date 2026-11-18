@@ -620,6 +620,15 @@
       .mc table th:last-child,.mc table td:last-child{padding-right:14px}
       .mc table tr:last-child td{border-bottom:none}
       .mc-edit{background:none;border:none;color:#d97706;font-size:15px;padding:0 2px;cursor:pointer;vertical-align:middle;line-height:1}
+      /* Swap batters button in the Batsman table header: sits
+         immediately AFTER the word "Batsman" (the spot the scorer
+         pointed at), as a small tappable pill so it reads as a
+         button, not just an icon. Dimmed while a batter slot is
+         still empty — tapping it then explains both batters must
+         be selected first (swapBatters guards that). */
+      .mc-swap{background:var(--surface2);border:1.5px solid #d97706;color:#d97706;font-size:16px;font-weight:800;padding:2px 9px;margin-left:7px;border-radius:999px;cursor:pointer;vertical-align:middle;line-height:1.2;font-family:inherit}
+      .mc-swap:active{transform:scale(.94)}
+      .mc-swap.dim{opacity:.45}
       .mc-pname{font-weight:600;color:var(--muted)}
       .mc-pname.on{color:var(--ink)}
       .mc-striker-pill{display:inline-block;background:#f59e0b;color:#241a02;border-radius:7px;padding:3px 10px;font-weight:700}
@@ -2824,6 +2833,7 @@
           <datalist id="dlTeams"></datalist>
           <div class="rowflex" style="margin-top:12px">
             <button class="btn" onclick="confirmBattersBowler()">OK</button>
+            <button class="btn ghost sm" onclick="swapBatters()">⇄ Swap Batters</button>
             <button class="btn ghost sm" onclick="changeBowler()">🔄 Change Bowler Now</button>
           </div>
           </div>
@@ -3703,7 +3713,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v195';
+      var APP_VERSION = 'v197';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6349,6 +6359,29 @@
       function swapStrike(inn){ var t=inn.striker; inn.striker=inn.nonStriker; inn.nonStriker=t;
         $('strikerName').value = inn.striker || ''; $('nonStrikerName').value = inn.nonStriker || ''; }
 
+      /* Manual Swap Batters (scorer only): the two batters at the
+         crease change ends WITHOUT a ball being scored — the
+         short-run case: the pair ran 2, the umpire called one run
+         short, so the scorer enters the 1 completed run (which
+         crosses the pair) and then swaps them back, leaving the
+         batter who was on strike still on strike. Only the ends
+         change: no runs, balls or figures move between the two
+         batters (their records are keyed by name), the partnership
+         is untouched (it is rebuilt from the ball record), and no
+         wicket logic is involved. Like every scoring change it goes
+         through commit(), so the swap syncs to Firebase and viewers
+         see the corrected strike at once. */
+      function swapBatters(){
+        if (!requireLiveOwner('swap the batters')) return;
+        if (matchFinishedGuard()) return;
+        var inn = S.current; if (!inn) return;
+        if (S.status !== 'live'){ toast('Batters can be swapped only while the innings is live.'); return; }
+        if (!inn.striker || !inn.nonStriker){ toast('Select both batters first — then they can be swapped.'); return; }
+        swapStrike(inn);
+        commit('Batters swapped', true);
+        toast('⇄ Batters swapped — ' + inn.striker + ' is now on strike');
+      }
+
       function ballLabel(inn){ return oversText(inn.legalBalls); }
       function pushBall(inn, text, cls, overNo, extraFields){
         /* Record who bowled and who faced this ball, so the ball-by-ball
@@ -6733,6 +6766,19 @@
            bowler picker popup directly (change the bowler). Neither
            needs a card on the scoring screen itself. */
         var batPencil = '<button type="button" class="mc-edit" onclick="editPlayers()" aria-label="Edit batters — change the striker or non-striker">✎</button>';
+        /* Swap (⇄) in the Batsman table header, immediately AFTER
+           the word "Batsman" — exactly the spot the scorer pointed
+           at in his screenshot (cursor just right of "Batsman"),
+           NOT beside the ✎ on the left of the word. It is always
+           rendered in the header so the scorer can see where it
+           lives even while a batter slot is still empty (e.g.
+           "Select striker batter" after a wicket); in that state
+           it is dimmed and swapBatters() explains that both
+           batters must be selected first. Once both batters are
+           at the crease one tap exchanges the ends — the short-run
+           correction (1 run entered, pair swapped back so the
+           original striker keeps strike). */
+        var batSwap = '<button type="button" class="mc-swap' + ((inn.striker && inn.nonStriker) ? '' : ' dim') + '" onclick="swapBatters()" aria-label="Swap batters — striker and non-striker change ends" title="Swap batters">⇄</button>';
         var bowlPencil = '<button type="button" class="mc-edit" onclick="changeBowler()" aria-label="Edit bowler — change the bowler">✎</button>';
         function batRow(name, isStriker){
           if (!name) return '<tr><td><span class="mc-missing">' + (isStriker ? 'Select striker batter' : 'Select non-striker') + '</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>';
@@ -6750,7 +6796,7 @@
         var mcRows = mcPair.length === 2
           ? mcPair.map(function(nm){ return batRow(nm, nm === inn.striker); }).join('')
           : batRow(inn.striker, true) + batRow(inn.nonStriker, false);
-        $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
+        $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batsman' + batSwap + '</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
           + mcRows + '</tbody></table>';
         var bwHead = '<table><thead><tr><th>' + bowlPencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
         if (inn.bowler){
