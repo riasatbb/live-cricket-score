@@ -1670,6 +1670,10 @@
       /* in the picker modal the type-a-name box sits near the bottom,
          so its suggestions open upwards over the picker list */
       .ac-list.ac-up{top:auto;bottom:calc(100% + 4px)}
+      /* the Add New Player dialog grows while its suggestions are
+         open, so the list stays inside the dialog instead of running
+         past its bottom edge (the dialog scrolls its own content) */
+      #addPlayerModal.ac-open .modal{padding-bottom:292px}
       /* scorecard / squads / info panels inside the dark scoreboard */
       #view-scoreboard .cb-panel .card{background:#262626;border-color:#3a3a3a;color:#e9e9e9;box-shadow:none;margin:12px}
       #view-scoreboard .cb-panel .card h2{color:#fff;border-bottom-color:#3a3a3a}
@@ -3430,7 +3434,7 @@
           <button class="sq-x big" onclick="cancelAddPlayer()" aria-label="Close">×</button>
         </div>
         <p class="sub" id="addPlayerTeam" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
-        <div style="margin-top:12px"><label for="addPlayerName">Player name</label><input id="addPlayerName" placeholder="Type the player's full name" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddPlayer();}" /></div>
+        <div style="margin-top:12px"><label for="addPlayerName">Player name</label><div class="ac-wrap"><input id="addPlayerName" data-ac="pick" placeholder="Type the player's full name" autocomplete="off" onkeydown="addPlayerNameKey(event, this)" /></div></div>
         <div class="rowflex" style="margin-top:14px">
           <button class="btn" onclick="confirmAddPlayer()">Add &amp; Select</button>
           <button class="btn ghost" onclick="cancelAddPlayer()">Cancel</button>
@@ -3713,7 +3717,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v197';
+      var APP_VERSION = 'v200';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4870,8 +4874,8 @@
       /* ---------- player-name autocomplete ----------
          While a player name is being typed — in the Scorer Console
          squad boxes, the tournament team player boxes, the batter /
-         bowler picker's "type a name" box, and the Reports player
-         filter — a suggestion list appears under the field with the
+         bowler picker's "type a name" box, the Add New Player dialog,
+         and the Reports player filter — a suggestion list appears under the field with the
          known players whose names match what was typed (from the
          registry: match history, squads and tournament rosters).
          Tapping a suggestion fills in that player AND reuses their
@@ -4885,6 +4889,8 @@
       function acClose(){
         if (acBox && acBox.parentNode) acBox.parentNode.removeChild(acBox);
         acBox = null; acEl = null; acItems = []; acIdx = -1;
+        var amb = document.getElementById('addPlayerModal');
+        if (amb) amb.classList.remove('ac-open');
       }
       function acContextTeam(el){
         var ctx = el.getAttribute('data-ac-ctx');
@@ -4918,7 +4924,10 @@
         var mode = el.getAttribute('data-ac');
         var items = hits.slice(0, 8).map(function(p){ return { person: p }; });
         var exact = hits.some(function(p){ return p.name.toLowerCase() === q; });
-        if (mode === 'pick' && !exact) items.push({ isNew: true, name: f.frag });
+        /* No "➕ New player" row inside the Add New Player dialog:
+           that dialog IS the create-new path (its Add & Select button),
+           so with no matching player the list simply stays closed. */
+        if (mode === 'pick' && !exact && el.id !== 'addPlayerName') items.push({ isNew: true, name: f.frag });
         if (!items.length){ acClose(); return; }
         acClose();
         acEl = el; acItems = items; acIdx = 0;
@@ -4936,6 +4945,7 @@
         }).join('');
         wrap.appendChild(box);
         acBox = box;
+        if (el.id === 'addPlayerName'){ var mb = document.getElementById('addPlayerModal'); if (mb) mb.classList.add('ac-open'); }
       }
       function acHighlight(){
         if (!acBox) return;
@@ -5772,6 +5782,12 @@
         addPlayerCtx = ctx;
         $('addPlayerTeam').textContent = ctx.team ? ('Team: ' + ctx.team) : '';
         $('addPlayerName').value = '';
+        /* The name box carries the player autocomplete (data-ac="pick"):
+           its suggestions resolve against THIS dialog's team, so a
+           picked player reuses their existing Player ID for the team
+           instead of minting a duplicate. */
+        $('addPlayerName').setAttribute('data-ac-team', ctx.team || '');
+        acClose();
         $('addPlayerModal').classList.add('show');
         try { $('addPlayerName').focus(); } catch(e){}
       }
@@ -5784,8 +5800,20 @@
       }
       function cancelAddPlayer(){
         var ctx = addPlayerCtx; addPlayerCtx = null;
+        acClose();
         $('addPlayerModal').classList.remove('show');
         restoreAddPlayerOrigin(ctx);
+      }
+      /* Enter in the Add New Player name box: while the suggestion
+         list is open, a highlighted suggestion wins the key — it picks
+         the existing player — instead of confirming the half-typed
+         name as a brand-new one (the same rule the team autocomplete
+         follows). With no list open, Enter confirms as before. */
+      function addPlayerNameKey(ev, el){
+        if (!ev || ev.key !== 'Enter') return;
+        ev.preventDefault();
+        if (acBox && acEl === el && acIdx > -1){ acChoose(acIdx); return; }
+        confirmAddPlayer();
       }
       function confirmAddPlayer(){
         var ctx = addPlayerCtx; if (!ctx) return;
@@ -5793,6 +5821,7 @@
         if (!name){ toast('Type the player name first'); return; }
         if (isPlaceholderName(name)){ toast('That is a placeholder, not a player name'); return; }
         addPlayerCtx = null;
+        acClose();
         $('addPlayerModal').classList.remove('show');
         if (ctx.kind === 'be'){
           var e = beCtx && beCtx.entry;
@@ -6235,7 +6264,7 @@
         var note = $('pickerNote');
         if (mode === 'bowler'){
           $('pickerTitle').textContent = opts.title || 'Over Complete — New Bowler';
-          $('pickerSub').textContent = '';
+          $('pickerSub').textContent = opts.sub || '';
           note.style.display = 'none';
           var list = bowlingSquad().filter(function(n){ return pickerExclude.indexOf(n) === -1; });
           $('pickerList').innerHTML = (list.length
@@ -6243,8 +6272,8 @@
             : '<p class="note">No squad players to pick from.</p>')
             + '<button type="button" class="pick pick-add" onclick="openAddPlayerFromPicker()"><span class="pick-name">＋ Add New Player</span></button>';
         } else {
-          $('pickerTitle').textContent = 'Wicket! Choose the New Batter';
-          $('pickerSub').textContent = '';
+          $('pickerTitle').textContent = opts.title || 'Wicket! Choose the New Batter';
+          $('pickerSub').textContent = opts.sub || '';
           note.style.display = 'none';
           var otherEnd = pickerTargetSlot === 'striker' ? inn.nonStriker : inn.striker;
           var cands = batterCandidates(otherEnd);
@@ -6261,7 +6290,12 @@
         pickerMode = null; pickerAfter = null; pickerExclude = null;
         $('pickerModal').classList.remove('show');
         if (!picked && mode === 'batter'){ try { $('strikerName').focus(); } catch(e){} }
-        if (after) after();
+        /* The after step receives whether a pick was actually made,
+           so a chained picker (innings change: Striker → Non-Striker
+           → Bowler) advances only on a real pick; closing a picker
+           without picking falls through to the missing-slots fold
+           below instead of dragging the scorer through the chain. */
+        if (after) after(picked);
         /* Closed without everything picked (e.g. "Decide Later" on
            the innings-break opening-bowler picker): if any of
            striker / non-striker / bowler is still missing, open the
@@ -6301,17 +6335,25 @@
           if (batterIsOut(inn, name)){ toast('⚠️ ' + name + ' is already out in this innings — pick another batter'); return; }
         }
         var slot = pickerTargetSlot;
-        closePicker(true);
+        /* Apply the pick to the state BEFORE closing the picker:
+           closePicker runs the picker's `after` step, and a chained
+           picker (innings change: Striker → Non-Striker → Bowler)
+           builds its candidate list from the state — the non-striker
+           list must already exclude the striker picked a moment ago. */
         if (mode === 'bowler'){
           ensureSelectOption($('bowlerName'), name);
           $('bowlerName').value = name; S.current.bowler = name; S.current.awaitingBowler = false; getBowler(S.current, name);
-          announceCurrentPlayers();
-          commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl');
         } else if (mode === 'batter'){
           var selId = slot === 'nonStriker' ? 'nonStrikerName' : 'strikerName';
           ensureSelectOption($(selId), name);
           $(selId).value = name;
           S.current[slot] = name; getBatter(S.current, name);
+        }
+        closePicker(true);
+        if (mode === 'bowler'){
+          announceCurrentPlayers();
+          commit('Bowler changed', true); toast('🏏 ' + name + ' to bowl');
+        } else if (mode === 'batter'){
           announceCurrentPlayers();
           commit('New batter in', true); toast('🏏 ' + name + ' comes in to bat');
         }
@@ -7447,7 +7489,20 @@
            last ball of the innings. Clearing the stack here used to
            make that ball impossible to undo. */
         commit(auto ? 'Innings ended — Target ' + (S.prevInnings.runs+1) : 'Innings ended — Target ' + (S.prevInnings.runs+1));
-        openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
+        /* The 2nd-innings picks come up on their own, in the order
+           the scorer works: Striker first, then Non-Striker, then
+           the opening bowler — each pick opens the next picker via
+           its `after` step (which advances only on an actual pick).
+           Closing any step without picking lands on the Batters &
+           Bowler fold with the still-missing slots marked, exactly
+           as closing the old bowler-only picker did. */
+        openPicker('batter', { slot:'striker', title:'New Innings — Opening Striker', sub:'Pick the striker for ' + S.current.battingTeam + ' in innings 2.', after:function(pickedStriker){
+          if (!pickedStriker) return;
+          openPicker('batter', { slot:'nonStriker', title:'New Innings — Opening Non-Striker', sub:'Pick the non-striker for ' + S.current.battingTeam + ' in innings 2.', after:function(pickedNonStriker){
+            if (!pickedNonStriker) return;
+            openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
+          }});
+        }});
       }
       function finishMatch(auto){
         if (!auto && scoringLocked()) return;
@@ -22987,13 +23042,16 @@
       var cleanMode=false;
       var currentSegment=null; /* 'single' | 'tournament' | null (home) */
       /* Browser-history navigation: every REAL screen change pushes a
-         history entry, so the phone / browser Back button retraces
-         the screens the user actually visited (Live Matches →
-         Scoreboard → History → …) instead of doing nothing. During
-         the initial routing (navInitDone false) and while handling a
-         popstate (navFromPop true) the URL is only replaced, never
-         pushed. Sub-view tab switches (tournament tabs, scoreboard
-         tabs) push entries too, carrying the tab in the entry state. */
+         history entry, so there is always an entry for the phone /
+         browser Back button to land on. The entries' state is NOT
+         what Back follows, though — the popstate handler (below)
+         runs appGoBack(), the same dispatch the on-screen 🔙
+         controls use, and re-arms one entry for the screen it lands
+         on. During the initial routing (navInitDone false) and while
+         handling a popstate (navFromPop true) the URL is only
+         replaced, never pushed. Sub-view tab switches (tournament
+         tabs, scoreboard tabs) push entries too, carrying the tab in
+         the entry state. */
       var currentViewName=null, navInitDone=false, navFromPop=false;
       function navStateFor(v){
         return { view: v,
@@ -23084,46 +23142,99 @@
         if (v==='scorer'){ try { updateScoringOnly(); } catch(e){} } else { try { closeScorerPop(); } catch(e){} }
         window.scrollTo({ top:0, behavior:'smooth' });
       }
-      /* System / browser Back: follow the same path as the in-page
-         back controls. An open dialog (player profile, scorecard,
-         picker, confirm) closes first; otherwise the view named by
-         the history entry (or the hash) is shown, including its
-         tournament / scoreboard tab where the entry carries one. */
+      /* ---------- phone / browser Back = the on-screen 🔙 ----------
+         The phone's Back button and the Android back gesture must
+         do EXACTLY what the on-screen 🔙 on the current screen does
+         — never exit the app mid-flow, never jump to whatever stale
+         screen a raw history entry happens to name. So popstate
+         ignores the entry's state entirely and instead runs
+         appGoBack(), which dispatches to the very same functions
+         the on-screen back controls call, in the same priority:
+         a popup card over the scoring pad closes first, then the
+         topmost open dialog (through its OWN close function, so a
+         picker still falls through to the missing-slots card, the
+         Add New Player dialog still restores its origin field, and
+         the confirm dialog is CANCELLED, never confirmed), then the
+         current page's own back step — including the steps that
+         live INSIDE a page and never pushed a history entry of
+         their own (tournament group page, Statistics drill-in,
+         History's Past Matches / Reports panels). After each Back
+         press exactly one fresh entry is pushed for the screen now
+         shown, so the next press is caught the same way; on a
+         landing page (Home / Live Matches / Scorer Console — the
+         pages with no on-screen 🔙) Back simply stays, instead of
+         leaving the app. */
+      function closeTopModalForBack(){
+        var open = document.querySelectorAll('.modal-back.show');
+        if (!open.length) return false;
+        /* The last shown dialog in DOM order is the topmost one:
+           the stacked pairs (picker → Add New Player, profile →
+           Edit Profile, history match → Edit / Ball Editor) are all
+           declared in opening order in the markup. */
+        var top = open[open.length - 1];
+        try {
+          if (top.id === 'pfEditModal') pfCloseEdit();
+          else if (top.id === 'pickerModal') closePicker(false);
+          else if (top.id === 'addPlayerModal') cancelAddPlayer();
+          else if (top.id === 'verifyModal') closeVerify(false);
+          else if (top.id === 'playerModal') closePlayerProfile();
+          else if (top.id === 'signinModal') closeSignIn();
+          else if (top.id === 'instructionsModal') closeInstructions();
+          else if (top.id === 'moreModal') closeMoreModal();
+          else if (top.id === 'soModal') closeSuperOverModal();
+          else if (top.id === 'teamPickModal') closeTeamPicker();
+          else if (top.id === 'formatModal') closeFormatModal();
+          else if (top.id === 'tossModal') closeTossModal();
+          else if (top.id === 'histModal') closeHistoryMatch();
+          else if (top.id === 'histEditModal') closeHistoryEdit();
+          else if (top.id === 'ballEditModal') closeBallEditor();
+          else if (top.id === 'shareCardModal') closeShareCard();
+          else if (top.id === 'tnMoreModal') closeTnMore();
+          else if (top.id === 'dlPermModal') closeDlPermPopup();
+          else top.classList.remove('show');
+        } catch(e){ top.classList.remove('show'); }
+        return true;
+      }
+      function appGoBack(){
+        /* A card popped over the scoring pad (Batters & Bowler,
+           ball-by-ball history) closes first — its backdrop is the
+           pad's own close control. */
+        var popBack = $('scPopBack');
+        if (popBack && !popBack.hidden){ closeScorerPop(); return true; }
+        if (document.querySelector('#view-scorer .card.pop')){ closeScorerPop(); return true; }
+        /* The home ⋮ menu, when open, closes before anything else
+           on the page moves. */
+        var dm = $('homeDotsMenu');
+        if (dm && !dm.hidden){ closeDotsMenu(); return true; }
+        /* Any open dialog closes through its own close function. */
+        if (closeTopModalForBack()) return true;
+        /* The current page's own 🔙, exactly as tapped on screen. */
+        var v = currentViewName;
+        if (v === 'tournament'){ tnBack(); return true; }
+        if (v === 'history'){
+          if (histTab === 'reports'){ setHistTab('home'); return true; }
+          if (histTab === 'matches'){ histMatchesBack(); return true; }
+          historyBack(); return true;
+        }
+        if (v === 'scoreboard'){ backToLiveMatches(); return true; }
+        if (v === 'teampage'){ closeTeamPage(); return true; }
+        if (v === 'search'){ closeSearch(); return true; }
+        if (v === 'tnedit'){ closeTnEdit(); return true; }
+        if (v === 'tnwinner'){ closeTnWinner(); return true; }
+        if (v === 'overlay'){ setView('scorer'); return true; }
+        if (v === 'myteams' || v === 'openmatch' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
+        /* home / live / console: landing pages with no on-screen
+           back control — Back stays on the page. */
+        return false;
+      }
       window.addEventListener('popstate', function(ev){
-        /* The Edit Profile dialog stacks above the profile — Back
-           closes it first, leaving the profile open underneath. */
-        var pfEditM = $('pfEditModal');
-        if (pfEditM && pfEditM.classList.contains('show')){
-          pfCloseEdit();
-          try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
-          return;
-        }
-        var openModal = document.querySelector('.modal-back.show');
-        if (openModal){
-          openModal.classList.remove('show');
-          if (openModal.id === 'playerModal'){ profileCtx = null; pfDirty = false; pfPhotoDraft = null; pfEditOpen = false; var em2 = $('pfEditModal'); if (em2) em2.classList.remove('show'); }
-          try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
-          return;
-        }
-        var st = (ev && ev.state) || {};
-        var hv = '';
-        try { hv = (location.hash || '').replace(/^#/, ''); } catch(e){}
-        var fallback = document.body.classList.contains('viewer-flow') ? 'live' : 'home';
-        var target = st.view || hv || fallback;
-        var known = ['home','live','console','myteams','openmatch','resume','tournaments','scorer','scoreboard','overlay','history','tournament','teampage','search'];
-        if (known.indexOf(target) === -1) target = fallback;
-        /* A team-page entry carries which team it shows; without
-           one (or a live context) there is no team page to return
-           to, so Back falls back to the landing view instead. */
-        if (target === 'teampage'){
-          if (st.tp && st.tp.team) teamPageCtx = { src: st.tp.src || 'tn', team: st.tp.team, back: st.tp.back || 'home' };
-          else if (!teamPageCtx) target = fallback;
-        }
+        /* Run the back step with navFromPop set, so nothing it does
+           pushes entries of its own; the single re-arm push below
+           is the only entry a Back press leaves behind. */
         navFromPop = true;
-        if (target !== currentViewName) setView(target);
-        if (target === 'tournament' && st.tnTab){ try { setTnTab(st.tnTab); } catch(e){} }
-        if (target === 'scoreboard' && st.cbTab){ try { setCbTab(st.cbTab); } catch(e){} }
+        try { appGoBack(); } catch(e){}
         navFromPop = false;
+        try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
       });
       function toggleClean(){
         cleanMode=!cleanMode;
@@ -23310,6 +23421,11 @@
            (see setView), so the phone / browser Back button walks back
            through the screens the user actually visited. */
         navInitDone = true;
+        /* One extra entry on top of the landing screen, so the very
+           first Back press is caught by the popstate handler (which
+           re-arms one entry after every press) instead of leaving
+           the app when the landing page is the whole history. */
+        try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
         /* Watch for a newer published build and offer a reload
            (see the update-notice block near toast). */
         try { startUpdateChecker(); } catch(e){}
