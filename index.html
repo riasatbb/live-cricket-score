@@ -735,6 +735,16 @@
       .ssb-tab{flex:1 1 auto;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);border-radius:10px;padding:9px 6px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
       .ssb-tab:active{transform:scale(.97)}
       .ssb-tab.active{background:var(--green);border-color:var(--green);color:#fff;cursor:default}
+      /* ---------- swipe between tabs (v201) ----------
+         A horizontal slide on the screen moves to the next /
+         previous tab of the tab strip on the current page (see
+         tabSwipeGroup in the script). The incoming panel gets a
+         short slide-in so the switch feels like the page slid. */
+      @keyframes tabSwipeInL{from{opacity:.3;transform:translateX(28px)}to{opacity:1;transform:translateX(0)}}
+      @keyframes tabSwipeInR{from{opacity:.3;transform:translateX(-28px)}to{opacity:1;transform:translateX(0)}}
+      .tab-swipe-l{animation:tabSwipeInL .22s ease-out}
+      .tab-swipe-r{animation:tabSwipeInR .22s ease-out}
+      @media (prefers-reduced-motion:reduce){ .tab-swipe-l,.tab-swipe-r{animation:none} }
       /* The pre-scoring hint ("Select Batters & Bowler") is a
          tappable call to action: the whole banner opens the
          Batter, Bowler Selection page. */
@@ -3717,7 +3727,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v200';
+      var APP_VERSION = 'v202';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -23236,6 +23246,206 @@
         navFromPop = false;
         try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
       });
+      /* ---------- native app (Capacitor) Back button / back gesture ----------
+         Inside the Android app the system Back button and the back
+         swipe (gesture navigation) are caught by the phone's native
+         shell BEFORE the page ever sees them: no popstate fires,
+         and with no native handler registered the shell simply
+         closes the whole app — even deep inside a page, which is
+         exactly what the back slide was doing. Registering an
+         App-plugin 'backButton' listener from the page hands every
+         Back press to the page instead: Capacitor reports the press
+         to this listener and does NOT finish the app, and the
+         listener runs the exact same appGoBack() dispatch the
+         on-screen 🔙 (and popstate above) uses — popup first, then
+         dialog, then the page's own back step. Only on a landing
+         page (Home / Live Matches / Scorer Console — nothing
+         in-app left to go back to) does it let the app close, as a
+         Back press there should. window.__criccastCanGoBack()
+         exposes that same "is there an in-app back step?" test for
+         the native shell itself. In a plain browser none of this
+         runs — popstate above already does the job there. */
+      function criccastCanGoBack(){
+        var popBack = $('scPopBack');
+        if (popBack && !popBack.hidden) return true;
+        if (document.querySelector('#view-scorer .card.pop')) return true;
+        var dm = $('homeDotsMenu');
+        if (dm && !dm.hidden) return true;
+        if (document.querySelector('.modal-back.show')) return true;
+        var v = currentViewName;
+        return !(v === null || v === 'home' || v === 'live' || v === 'console');
+      }
+      window.__criccastCanGoBack = criccastCanGoBack;
+      var capBackHooked = false;
+      function hookCapacitorBackButton(){
+        if (capBackHooked) return true;
+        try {
+          var C = window.Capacitor;
+          if (!C || !C.isNativePlatform || !C.isNativePlatform()) return false;
+          var App = C.Plugins && C.Plugins.App;
+          if (!App || typeof App.addListener !== 'function') return false;
+          App.addListener('backButton', function(){
+            if (criccastCanGoBack()){
+              navFromPop = true;
+              try { appGoBack(); } catch(e){}
+              navFromPop = false;
+              try { history.pushState(navStateFor(currentViewName || 'home'), '', navUrlFor(currentViewName || 'home')); } catch(e){}
+            } else {
+              try { App.exitApp(); } catch(e){}
+            }
+          });
+          capBackHooked = true;
+          return true;
+        } catch(e){ return false; }
+      }
+      hookCapacitorBackButton();
+      /* The native bridge is normally injected before this script
+         runs; if it ever lands late, keep trying for a few seconds
+         so the hook is never missed. */
+      if (!capBackHooked){
+        var capBackTries = 0;
+        var capBackTimer = setInterval(function(){
+          capBackTries++;
+          if (hookCapacitorBackButton() || capBackTries >= 20) clearInterval(capBackTimer);
+        }, 500);
+      }
+      /* ---------- swipe (slide) between tabs (v201) ----------
+         Sliding a finger horizontally across the screen moves to
+         the next (swipe left) or previous (swipe right) tab of
+         whichever tab strip the current page carries:
+           • the scoring pad's strip — Scoring / Info / Live /
+             Scorecard / Squads / Overs (openScorerSbTab);
+           • the Public Scoreboard's tabs — Summary / Info / Live /
+             Scorecard / Squads / Overs (setCbTab), where a scorer
+             who came from the pad can also slide back from the
+             first tab onto the pad itself;
+           • a tournament's tabs — Home / Teams / Matches / Points /
+             Statistics (setTnTab), except inside a drilled-in
+             group page or Statistics view;
+           • a team page's tabs (tpSetTab), or the scoreboard team
+             detail's Players / Matches / Statistics (setSbTeamTab).
+         A switch reuses the tab buttons' own click, so it behaves
+         exactly like tapping the tab (history step included).
+         Safety: a swipe never fires while a dialog is open, over
+         a card popped above the scoring pad, from a form field,
+         or across a strip / table that can still scroll sideways
+         in that direction (at its edge the swipe takes over) —
+         and the tap a drag would otherwise leave behind on the
+         scoring pad is swallowed, so a slide can never score a
+         ball by accident. */
+      function tabSwipeVisible(el){
+        return !!el && !el.hidden && el.getClientRects().length > 0;
+      }
+      function tabSwipeStrip(strip, btnSel, activeCls, panelFor){
+        if (!tabSwipeVisible(strip)) return null;
+        var btns = Array.prototype.filter.call(strip.querySelectorAll(btnSel), tabSwipeVisible);
+        if (btns.length < 2) return null;
+        var idx = -1;
+        btns.forEach(function(b, i){ if (b.classList.contains(activeCls)) idx = i; });
+        if (idx < 0) return null;
+        return { btns: btns, idx: idx, panelFor: panelFor || null, panelEl: null,
+          go: function(i){ btns[i].click(); } };
+      }
+      function tabSwipeGroup(){
+        var view = document.querySelector('.view.show');
+        if (!view) return null;
+        if (view.id === 'view-scoreboard'){
+          var g = tabSwipeStrip(view.querySelector('.cb-tabs'), '.cb-tab', 'active', function(b){ return $('cbPanel-' + b.getAttribute('data-cbtab')); });
+          if (!g) return null;
+          /* A scorer visiting from the pad has one more tab to the
+             left of the first scoreboard tab: the pad itself. */
+          if (typeof scorerSbReturn !== 'undefined' && scorerSbReturn
+              && !(typeof archiveView !== 'undefined' && archiveView)
+              && !document.body.classList.contains('viewer-mode')){
+            var inner = g;
+            return { btns: [null].concat(inner.btns), idx: inner.idx + 1, panelFor: inner.panelFor, panelEl: null,
+              go: function(i){ if (i === 0){ backToScoringPad(); } else { inner.btns[i - 1].click(); } } };
+          }
+          return g;
+        }
+        if (view.id === 'view-scorer'){
+          return tabSwipeStrip($('scorerSbTabs'), '.ssb-tab', 'active', null);
+        }
+        if (view.id === 'view-tournament'){
+          /* Inside a group page or a drilled-in Statistics view a
+             slide must not yank the user onto another tab. */
+          if (typeof tnGroupOpenId !== 'undefined' && tnGroupOpenId) return null;
+          if (typeof tnStatView !== 'undefined' && tnStatView && tnStatView.sec) return null;
+          return tabSwipeStrip(view.querySelector('.tn-tabs'), '.tn-tab', 'active', function(b){ return $('tnPanel-' + b.getAttribute('data-tntab')); });
+        }
+        if (view.id === 'view-teampage'){
+          var tp = tabSwipeStrip(view.querySelector('.pf-tabs'), '.pf-tab', 'on', null);
+          if (tp){ tp.panelEl = $('tpBody'); return tp; }
+          return tabSwipeStrip(view.querySelector('.sb-detail-tabs'), '.sb-detail-tab', 'active', null);
+        }
+        return null;
+      }
+      function tabSwipeScrollBlocks(el, dx){
+        /* True when some sideways-scrollable ancestor (a tab strip,
+           a wide table) can still scroll in the swipe's direction:
+           the gesture belongs to it, not to the tab switch. */
+        var n = el;
+        while (n && n !== document.body){
+          if (n.scrollWidth > n.clientWidth + 4){
+            var ox = '';
+            try { ox = getComputedStyle(n).overflowX; } catch(e){}
+            if (ox === 'auto' || ox === 'scroll'){
+              if (dx < 0 && n.scrollLeft < n.scrollWidth - n.clientWidth - 2) return true;
+              if (dx > 0 && n.scrollLeft > 2) return true;
+            }
+          }
+          n = n.parentElement;
+        }
+        return false;
+      }
+      var tabSwipeArm = null;
+      document.addEventListener('touchstart', function(ev){
+        if (ev.touches.length !== 1){ tabSwipeArm = null; return; }
+        var t = ev.touches[0];
+        tabSwipeArm = { x: t.clientX, y: t.clientY, t: Date.now(), el: ev.target };
+      }, { passive: true });
+      document.addEventListener('touchend', function(ev){
+        var arm = tabSwipeArm; tabSwipeArm = null;
+        if (!arm || !ev.changedTouches || !ev.changedTouches.length) return;
+        /* Never over an open dialog, a card popped above the pad,
+           or the home ⋮ menu — those own their gestures. */
+        if (document.querySelector('.modal-back.show')) return;
+        if (document.querySelector('#view-scorer .card.pop')) return;
+        var dm = $('homeDotsMenu'); if (dm && !dm.hidden) return;
+        var t = ev.changedTouches[0];
+        var dx = t.clientX - arm.x, dy = t.clientY - arm.y;
+        var adx = Math.abs(dx), ady = Math.abs(dy);
+        /* A tab slide is a quick, clearly horizontal drag; anything
+           else (a tap, a vertical page scroll) is left alone. */
+        if (adx < 64 || adx < ady * 1.8 || Date.now() - arm.t > 900) return;
+        var el = arm.el;
+        if (el && el.closest && el.closest('input, textarea, select, [contenteditable]')) return;
+        if (tabSwipeScrollBlocks(el, dx)) return;
+        var g = null;
+        try { g = tabSwipeGroup(); } catch(e){}
+        if (!g) return;
+        var step = dx < 0 ? 1 : -1;
+        var ni = g.idx + step;
+        if (ni < 0 || ni >= g.btns.length) return;
+        g.go(ni);
+        /* Slide the incoming panel in from the side the finger
+           pushed towards. */
+        var panel = null;
+        try { panel = g.panelEl || (g.panelFor && g.btns[ni] ? g.panelFor(g.btns[ni]) : null); } catch(e){}
+        if (panel){
+          var cls = step > 0 ? 'tab-swipe-l' : 'tab-swipe-r';
+          panel.classList.remove('tab-swipe-l'); panel.classList.remove('tab-swipe-r');
+          void panel.offsetWidth;
+          panel.classList.add(cls);
+          setTimeout(function(){ panel.classList.remove(cls); }, 300);
+        }
+        /* The drag can end on the same pad button it started on,
+           where the browser would still fire that button's tap
+           (a run scored by a slide!). Swallow exactly that click. */
+        var swallow = function(cev){ cev.stopPropagation(); cev.preventDefault(); document.removeEventListener('click', swallow, true); };
+        document.addEventListener('click', swallow, true);
+        setTimeout(function(){ document.removeEventListener('click', swallow, true); }, 400);
+      }, { passive: true });
       function toggleClean(){
         cleanMode=!cleanMode;
         $('overlayStage').classList.toggle('clean', cleanMode);
