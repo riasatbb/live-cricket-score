@@ -3800,7 +3800,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v212';
+      var APP_VERSION = 'v213';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11338,7 +11338,7 @@
         s[kind]++;
       }
       function tnStatData(){
-        var bat = {}, bowl = {}, field = {}, partnerships = [], teamTotals = [];
+        var bat = {}, bowl = {}, field = {}, partnerships = [], teamTotals = [], innBat = [], innBowl = [];
         function batEntry(m, team, b){
           var bk = b.pid || entryPlayerId(m, team, b.name);
           if (!bat[bk]) bat[bk] = { pid:bk, name:b.name, team:team, teams:[team], runs:0, balls:0, fours:0, sixes:0, inns:0, outs:0, best:0, bestBalls:0, thirties:0, fifties:0, hundreds:0, ducks:0, f30b:null, f30r:0, f50b:null, f50r:0, f100b:null, f100r:0, sixInn:0, sixInnR:0, fourInn:0, fourInnR:0 };
@@ -11357,12 +11357,24 @@
           (m.innings || []).forEach(function(inn){
             var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
             var hasBalls = deliveries.length > 0;
+            var innBatHere = [];
             if ((inn.legalBalls || 0) > 0 || (inn.runs || 0) > 0){
               teamTotals.push({ name: inn.battingTeam, team: inn.battingTeam, opp: inn.bowlingTeam, sub: 'vs ' + inn.bowlingTeam, runs: inn.runs || 0, wkts: inn.wickets || 0, legal: inn.legalBalls || 0 });
             }
             (inn.batters || []).forEach(function(b){
               var s = batEntry(m, inn.battingTeam, b);
               var br = b.runs || 0, bb = b.balls || 0;
+              /* One record per INNINGS batted, alongside the
+                 per-player aggregate: the per-innings rankings
+                 (Highest Score, Fastest 30 / 50 / 100, Most Sixes /
+                 Fours in an Innings) rank innings, not players, so
+                 the same player legitimately appears once for every
+                 innings that qualifies. The milestone balls start
+                 from the no-ball-by-ball fallback below and are
+                 refined by the ball-by-ball pass when a record
+                 exists. */
+              var ib = { pid: s.pid, name: b.name, team: inn.battingTeam, teams: s.teams, runs: br, balls: bb, out: !!b.out, fours: b.fours || 0, sixes: b.sixes || 0, f30b: null, f50b: null, f100b: null, totSixes: 0, totFours: 0 };
+              innBat.push(ib); innBatHere.push(ib);
               s.runs += br; s.balls += bb; s.fours += b.fours || 0; s.sixes += b.sixes || 0; s.inns++;
               if (b.out) s.outs++;
               if (b.out && br === 0) s.ducks++;
@@ -11380,6 +11392,9 @@
                 if (br >= 30 && (s.f30b === null || bb < s.f30b)){ s.f30b = bb; s.f30r = br; }
                 if (br >= 50 && (s.f50b === null || bb < s.f50b)){ s.f50b = bb; s.f50r = br; }
                 if (br >= 100 && (s.f100b === null || bb < s.f100b)){ s.f100b = bb; s.f100r = br; }
+                if (br >= 30) ib.f30b = bb;
+                if (br >= 50) ib.f50b = bb;
+                if (br >= 100) ib.f100b = bb;
               }
               var fcList = [];
               try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
@@ -11387,6 +11402,10 @@
             });
             (inn.bowlers || []).forEach(function(b){
               var s = bowlEntry(m, inn.bowlingTeam, b.name, b.pid);
+              /* One record per bowling innings too: Best Bowling
+                 Figures ranks spells, so a bowler appears once for
+                 every innings that qualifies. */
+              innBowl.push({ pid: s.pid, name: b.name, team: inn.bowlingTeam, teams: s.teams, wickets: b.wickets || 0, runs: b.runs || 0, balls: b.balls || 0 });
               s.balls += b.balls || 0; s.runs += b.runs || 0; s.wickets += b.wickets || 0; s.inns++;
               if (b.wickets > s.bestW || (b.wickets === s.bestW && b.runs < s.bestR)){ s.bestW = b.wickets; s.bestR = b.runs || 0; s.bestBalls = b.balls || 0; }
               if (b.wickets === 3) s.threeFers++; else if (b.wickets === 4) s.fourFers++; else if (b.wickets >= 5) s.fiveFers++;
@@ -11425,6 +11444,7 @@
                         if (x.name !== bl.batter) return;
                         var be = batEntry(m, inn.battingTeam, x);
                         if (be[th[1] + 'b'] === null || rb.balls < be[th[1] + 'b']){ be[th[1] + 'b'] = rb.balls; be[th[1] + 'r'] = finalRuns[bl.batter] || rb.runs; }
+                        innBatHere.forEach(function(ib2){ if (ib2.name === x.name && ib2[th[1] + 'b'] === null) ib2[th[1] + 'b'] = rb.balls; });
                       });
                     }
                   });
@@ -11522,7 +11542,12 @@
         function toArr(map){ return Object.keys(map).map(function(k){ return map[k]; }); }
         var fieldArr = toArr(field);
         fieldArr.forEach(function(s){ s.total = s.catches + s.runouts + s.stumpings; });
-        return { batting: toArr(bat), bowling: toArr(bowl), fielding: fieldArr, partnerships: partnerships, teamTotals: teamTotals };
+        /* The per-innings records carry the player's tournament
+           boundary totals as well (the "Total 6s / Total 4s" column
+           of the in-an-innings tables), filled in now that every
+           innings has been counted. */
+        innBat.forEach(function(ib){ var a = bat[ib.pid]; if (a){ ib.totSixes = a.sixes; ib.totFours = a.fours; } });
+        return { batting: toArr(bat), bowling: toArr(bowl), fielding: fieldArr, partnerships: partnerships, teamTotals: teamTotals, innBat: innBat, innBowl: innBowl };
       }
       function tnStatCategories(){
         function bAve(s){ return s.outs > 0 ? s.runs / s.outs : null; }
@@ -11537,9 +11562,9 @@
               head:['Runs','Inn','HS','Ave','SR'],
               cells:function(s){ return ['<b>' + s.runs + '</b>', s.inns, s.best, f1(bAve(s)), f1(bSR(s))]; } },
             { id:'hs', label:'Highest Score',
-              list:function(d){ return d.batting.filter(function(s){ return s.inns > 0; }).sort(function(a,b){ return (b.best - a.best) || (a.bestBalls - b.bestBalls); }); },
+              list:function(d){ return (d.innBat || []).slice().sort(function(a,b){ return (b.runs - a.runs) || (a.balls - b.balls); }); },
               head:['Score','Balls','SR'],
-              cells:function(s){ return ['<b>' + s.best + '</b>', s.bestBalls, s.bestBalls > 0 ? (s.best / s.bestBalls * 100).toFixed(1) : '—']; } },
+              cells:function(s){ return ['<b>' + s.runs + (s.out ? '' : '*') + '</b>', s.balls, s.balls > 0 ? (s.runs / s.balls * 100).toFixed(1) : '—']; } },
             { id:'ave', label:'Best Batting Average',
               list:function(d){ return d.batting.filter(function(s){ return s.outs > 0; }).sort(function(a,b){ return (bAve(b) - bAve(a)) || (b.runs - a.runs); }); },
               head:['Ave','Runs','Inn','Out'],
@@ -11561,17 +11586,17 @@
               head:['100s','50s','Runs'],
               cells:function(s){ return ['<b>' + s.hundreds + '</b>', s.fifties, s.runs]; } },
             { id:'fast30', label:'Fastest 30',
-              list:function(d){ return d.batting.filter(function(s){ return s.f30b !== null && s.f30b !== undefined; }).sort(function(a,b){ return (a.f30b - b.f30b) || (b.runs - a.runs); }); },
+              list:function(d){ return (d.innBat || []).filter(function(s){ return s.f30b !== null && s.f30b !== undefined; }).sort(function(a,b){ return (a.f30b - b.f30b) || (b.runs - a.runs); }); },
               head:['Balls','Score'],
-              cells:function(s){ return ['<b>' + s.f30b + '</b>', s.f30r]; } },
+              cells:function(s){ return ['<b>' + s.f30b + '</b>', s.runs]; } },
             { id:'fast50', label:'Fastest 50',
-              list:function(d){ return d.batting.filter(function(s){ return s.f50b !== null && s.f50b !== undefined; }).sort(function(a,b){ return (a.f50b - b.f50b) || (b.runs - a.runs); }); },
+              list:function(d){ return (d.innBat || []).filter(function(s){ return s.f50b !== null && s.f50b !== undefined; }).sort(function(a,b){ return (a.f50b - b.f50b) || (b.runs - a.runs); }); },
               head:['Balls','Score'],
-              cells:function(s){ return ['<b>' + s.f50b + '</b>', s.f50r]; } },
+              cells:function(s){ return ['<b>' + s.f50b + '</b>', s.runs]; } },
             { id:'fast100', label:'Fastest 100',
-              list:function(d){ return d.batting.filter(function(s){ return s.f100b !== null && s.f100b !== undefined; }).sort(function(a,b){ return (a.f100b - b.f100b) || (b.runs - a.runs); }); },
+              list:function(d){ return (d.innBat || []).filter(function(s){ return s.f100b !== null && s.f100b !== undefined; }).sort(function(a,b){ return (a.f100b - b.f100b) || (b.runs - a.runs); }); },
               head:['Balls','Score'],
-              cells:function(s){ return ['<b>' + s.f100b + '</b>', s.f100r]; } },
+              cells:function(s){ return ['<b>' + s.f100b + '</b>', s.runs]; } },
             { id:'ballsfaced', label:'Most Balls Faced',
               list:function(d){ return d.batting.filter(function(s){ return s.balls > 0; }).sort(function(a,b){ return (b.balls - a.balls) || (b.runs - a.runs); }); },
               head:['Balls','Runs','SR'],
@@ -11589,13 +11614,13 @@
               head:['6s','Runs','4s'],
               cells:function(s){ return ['<b>' + s.sixes + '</b>', s.runs, s.fours]; } },
             { id:'sixinn', label:'Most Sixes in an Innings',
-              list:function(d){ return d.batting.filter(function(s){ return s.sixInn > 0; }).sort(function(a,b){ return (b.sixInn - a.sixInn) || (b.sixInnR - a.sixInnR); }); },
+              list:function(d){ return (d.innBat || []).filter(function(s){ return s.sixes > 0; }).sort(function(a,b){ return (b.sixes - a.sixes) || (b.runs - a.runs); }); },
               head:['6s','Score','Total 6s'],
-              cells:function(s){ return ['<b>' + s.sixInn + '</b>', s.sixInnR, s.sixes]; } },
+              cells:function(s){ return ['<b>' + s.sixes + '</b>', s.runs, s.totSixes]; } },
             { id:'fourinn', label:'Most Fours in an Innings',
-              list:function(d){ return d.batting.filter(function(s){ return s.fourInn > 0; }).sort(function(a,b){ return (b.fourInn - a.fourInn) || (b.fourInnR - a.fourInnR); }); },
+              list:function(d){ return (d.innBat || []).filter(function(s){ return s.fours > 0; }).sort(function(a,b){ return (b.fours - a.fours) || (b.runs - a.runs); }); },
               head:['4s','Score','Total 4s'],
-              cells:function(s){ return ['<b>' + s.fourInn + '</b>', s.fourInnR, s.fours]; } },
+              cells:function(s){ return ['<b>' + s.fours + '</b>', s.runs, s.totFours]; } },
             { id:'partnership', label:'Best Partnership',
               list:function(d){ return (d.partnerships || []).slice().sort(function(a,b){ return (b.runs - a.runs) || (a.balls - b.balls); }); },
               head:['Runs','Balls'],
@@ -11611,9 +11636,9 @@
               head:['Wkts','Overs','Runs','Econ'],
               cells:function(s){ return ['<b>' + s.wickets + '</b>', oversText(s.balls), s.runs, f2(econ(s))]; } },
             { id:'fig', label:'Best Bowling Figures',
-              list:function(d){ return d.bowling.filter(function(s){ return s.inns > 0 && s.bestW > 0; }).sort(function(a,b){ return (b.bestW - a.bestW) || (a.bestR - b.bestR); }); },
+              list:function(d){ return (d.innBowl || []).filter(function(s){ return s.wickets > 0; }).sort(function(a,b){ return (b.wickets - a.wickets) || (a.runs - b.runs); }); },
               head:['Figures','Overs'],
-              cells:function(s){ return ['<b>' + s.bestW + '/' + s.bestR + '</b>', oversText(s.bestBalls)]; } },
+              cells:function(s){ return ['<b>' + s.wickets + '/' + s.runs + '</b>', oversText(s.balls)]; } },
             { id:'bave', label:'Best Bowling Average',
               list:function(d){ return d.bowling.filter(function(s){ return s.wickets > 0; }).sort(function(a,b){ return (a.runs / a.wickets) - (b.runs / b.wickets) || (b.wickets - a.wickets); }); },
               head:['Ave','Wkts','Runs'],
@@ -12073,7 +12098,7 @@
             r = A.players[key] = { name: name, pid: pid || '', matchIds: {},
               bat: { inns: 0, runs: 0, balls: 0, fours: 0, sixes: 0, outs: 0, best: -1, bestNO: false, ducks: 0, hundreds: 0, fifties: 0, thirties: 0 },
               bowl: { inns: 0, balls: 0, runs: 0, wkts: 0, dots: 0, maidens: 0, bestW: -1, bestR: 0, three: 0, five: 0 },
-              field: { catches: 0, stumpings: 0, runouts: 0 }, spells: [], potm: 0 };
+              field: { catches: 0, stumpings: 0, runouts: 0 }, spells: [], knocks: [], potm: 0 };
           }
           return r;
         }
@@ -12124,6 +12149,10 @@
                 if (b.out){ fb.outs++; if (runs === 0) fb.ducks++; }
                 if (runs > fb.best || (runs === fb.best && !b.out && !fb.bestNO)){ fb.best = runs; fb.bestNO = !b.out; }
                 if (runs >= 100) fb.hundreds++; else if (runs >= 50) fb.fifties++; else if (runs >= 30) fb.thirties++;
+                /* One record per innings batted, like the bowling
+                   spells: the Highest Score table ranks innings, so
+                   the same player appears once per innings. */
+                r.knocks.push({ runs: runs, balls: b.balls || 0, out: !!b.out });
               });
             }
             if (inn.bowlingTeam === team){
@@ -12175,6 +12204,7 @@
           if (src.bowl.bestW > dst.bowl.bestW || (src.bowl.bestW === dst.bowl.bestW && src.bowl.bestR < dst.bowl.bestR)){ dst.bowl.bestW = src.bowl.bestW; dst.bowl.bestR = src.bowl.bestR; }
           ['catches', 'stumpings', 'runouts'].forEach(function(f){ dst.field[f] += src.field[f]; });
           dst.spells = dst.spells.concat(src.spells);
+          dst.knocks = dst.knocks.concat(src.knocks);
           dst.potm += src.potm;
           Object.keys(src.matchIds).forEach(function(id){ dst.matchIds[id] = 1; });
           byName[r.name] = dst;
@@ -12648,9 +12678,22 @@
         { key: 'ducks', label: 'Duck Outs', val: function(b){ return b.ducks; }, need: function(b){ return b.ducks > 0; }, heads: ['Ducks', 'Inn', 'Run'], cols: function(r){ var b = r.bat; return [b.ducks, b.inns, b.runs]; } }
       ];
       function tpStatsBatHTML(){
+        var h = tpChipRow(TP_BAT_DEFS.map(function(x){ return [x.key, x.label]; }), tpBatMetric, 'tpSetBatMetric');
+        if (tpBatMetric === 'best'){
+          /* Highest Score ranks INNINGS, not players — every
+             innings batted is a row, so a player with two big
+             knocks appears twice (the batting mirror of Best
+             Bowling's per-spell table). */
+          var knocks = [];
+          tpData.agg.playerList.forEach(function(r){ (r.knocks || []).forEach(function(k){ knocks.push({ name: r.name, runs: k.runs, balls: k.balls, out: k.out }); }); });
+          knocks.sort(function(a, b){ return (b.runs - a.runs) || (a.balls - b.balls); });
+          var krows = knocks.map(function(k){
+            return { name: k.name, cols: [k.runs + (k.out ? '' : '*'), k.balls, k.balls > 0 ? (k.runs / k.balls * 100).toFixed(1) : '—'] };
+          });
+          return h + '<div class="card">' + tpLbTable(['HS', 'Balls', 'SR'], krows) + '</div>';
+        }
         var def = TP_BAT_DEFS[0];
         TP_BAT_DEFS.forEach(function(x){ if (x.key === tpBatMetric) def = x; });
-        var h = tpChipRow(TP_BAT_DEFS.map(function(x){ return [x.key, x.label]; }), tpBatMetric, 'tpSetBatMetric');
         var rows = tpData.agg.playerList.filter(function(r){ return def.need(r.bat); })
           .sort(function(a, b){ return def.val(b.bat) - def.val(a.bat); })
           .map(function(r){ return { name: r.name, cols: def.cols(r) }; });
@@ -13770,11 +13813,13 @@
          In Progress / Completed / Upcoming), a label line (match
          name / tournament name), one score line per innings (team
          abbreviation + score + overs), and a result or status line
-         underneath. The match being scored now sits at the TOP;
-         other matches in progress follow (several matches can be in
-         progress at once — each is simply In Progress, never
-         "parked"), then the recent results, newest first, then the
-         fixtures. EVERY row is tappable and opens that match:
+         underneath. The list runs in a fixed serial — live,
+         upcoming, completed: the match being scored now sits at
+         the TOP, other matches in progress follow (several matches
+         can be in progress at once — each is simply In Progress,
+         never "parked"), then the upcoming fixtures, then the
+         completed matches, newest first. EVERY row is tappable and
+         opens that match:
          in-progress matches open their read-only scoreboard,
          completed matches open their full record, and a fixture
          opens its match page — the details that exist (teams,
@@ -13985,7 +14030,17 @@
         normalizeTournament();
         var tn = S.tournament;
         var tnName = (tn.name && tn.name.trim()) ? tn.name.trim() : '';
-        var html = '<div class="ml-list">' + liveRowHTML();
+        /* The list runs in a fixed serial: matches in progress at
+           the top, then the upcoming fixtures, then the completed
+           matches. The pad match's own row joins whichever group
+           it belongs to — while it is live (or play is over and
+           the scorer is still completing it) it heads the list;
+           once it is finished it is a Completed row and heads the
+           completed group instead of sitting above the fixtures. */
+        var curRow = liveRowHTML();
+        var curDone = !liveMatchTombstoned(S) && !!(S.teamA && S.teamB) && (S.status === 'finished' || !!S.abandoned) && !S.awaitingFinish;
+        var html = '<div class="ml-list">';
+        if (!curDone) html += curRow;
         /* Every OTHER match in progress is listed too, right under
            the one on the pad — several matches can be on at once,
            and each is simply In Progress (its own red pill, its own
@@ -14010,14 +14065,17 @@
           results = [lastFin].concat(results.filter(function(m){ return String(m.id) !== String(lastFin.id); }));
         }
         results = results.slice(0, 6);
+        var resultsHtml = '';
         if (results.length){
           /* Per-row tournament label: tournament results (from
              tn.matches) carry the tournament name, but the finished
              Single Match (lastFinishedSingle) must never be labelled
              with it — it is a Single Match, even though a tournament
              exists in the same state. A row that carries its own
-             kind / tournament name is honoured as stored. */
-          html += results.map(function(m){
+             kind / tournament name is honoured as stored. The rows
+             are built now but only appended after the fixtures —
+             completed matches close the list. */
+          resultsHtml = results.map(function(m){
             var rowTnName = tnName;
             if (lastFin && String(m.id) === String(lastFin.id)) rowTnName = '';
             if (m && m.matchKind === 'single') rowTnName = '';
@@ -14045,6 +14103,11 @@
         if (fixRows){
           html += fixRows;
         }
+        /* Completed matches close the list: the pad match's own
+           finished row first (it is the newest of them), then the
+           saved results, newest first. */
+        if (curDone) html += curRow;
+        html += resultsHtml;
         html += '</div>';
         listEl.innerHTML = html;
       }
