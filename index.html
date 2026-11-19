@@ -620,15 +620,6 @@
       .mc table th:last-child,.mc table td:last-child{padding-right:14px}
       .mc table tr:last-child td{border-bottom:none}
       .mc-edit{background:none;border:none;color:#d97706;font-size:15px;padding:0 2px;cursor:pointer;vertical-align:middle;line-height:1}
-      /* Swap batters button in the Batsman table header: sits
-         immediately AFTER the word "Batsman" (the spot the scorer
-         pointed at), as a small tappable pill so it reads as a
-         button, not just an icon. Dimmed while a batter slot is
-         still empty — tapping it then explains both batters must
-         be selected first (swapBatters guards that). */
-      .mc-swap{background:var(--surface2);border:1.5px solid #d97706;color:#d97706;font-size:16px;font-weight:800;padding:2px 9px;margin-left:7px;border-radius:999px;cursor:pointer;vertical-align:middle;line-height:1.2;font-family:inherit}
-      .mc-swap:active{transform:scale(.94)}
-      .mc-swap.dim{opacity:.45}
       .mc-pname{font-weight:600;color:var(--muted)}
       .mc-pname.on{color:var(--ink)}
       .mc-striker-pill{display:inline-block;background:#f59e0b;color:#241a02;border-radius:7px;padding:3px 10px;font-weight:700}
@@ -3755,7 +3746,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v205';
+      var APP_VERSION = 'v206';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7113,25 +7104,16 @@
            side, and not a single ball (or extra) recorded yet. */
         var ftEl = $('mcFixToss');
         if (ftEl) ftEl.hidden = !canFixLiveToss();
-        /* One Edit (✎) icon beside Batsman and one beside Bowler:
-           the Batsman icon opens the Batters & Bowler popup (change
+        /* One Edit (✎) icon beside Batter and one beside Bowler:
+           the Batter icon opens the Batters & Bowler popup (change
            the striker or the non-striker), the Bowler icon opens the
            bowler picker popup directly (change the bowler). Neither
-           needs a card on the scoring screen itself. */
+           needs a card on the scoring screen itself. There is
+           deliberately NO swap button in this header — an accidental
+           touch there could swap the batters mid-over; swapping
+           stays available only via the labelled "⇄ Swap Batters"
+           button in the Batters & Bowler card. */
         var batPencil = '<button type="button" class="mc-edit" onclick="editPlayers()" aria-label="Edit batters — change the striker or non-striker">✎</button>';
-        /* Swap (⇄) in the Batsman table header, immediately AFTER
-           the word "Batsman" — exactly the spot the scorer pointed
-           at in his screenshot (cursor just right of "Batsman"),
-           NOT beside the ✎ on the left of the word. It is always
-           rendered in the header so the scorer can see where it
-           lives even while a batter slot is still empty (e.g.
-           "Select striker batter" after a wicket); in that state
-           it is dimmed and swapBatters() explains that both
-           batters must be selected first. Once both batters are
-           at the crease one tap exchanges the ends — the short-run
-           correction (1 run entered, pair swapped back so the
-           original striker keeps strike). */
-        var batSwap = '<button type="button" class="mc-swap' + ((inn.striker && inn.nonStriker) ? '' : ' dim') + '" onclick="swapBatters()" aria-label="Swap batters — striker and non-striker change ends" title="Swap batters">⇄</button>';
         var bowlPencil = '<button type="button" class="mc-edit" onclick="changeBowler()" aria-label="Edit bowler — change the bowler">✎</button>';
         function batRow(name, isStriker){
           if (!name) return '<tr><td><span class="mc-missing">' + (isStriker ? 'Select striker batter' : 'Select non-striker') + '</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>';
@@ -7149,7 +7131,7 @@
         var mcRows = mcPair.length === 2
           ? mcPair.map(function(nm){ return batRow(nm, nm === inn.striker); }).join('')
           : batRow(inn.striker, true) + batRow(inn.nonStriker, false);
-        $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batsman' + batSwap + '</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
+        $('mcBatters').innerHTML = '<table><thead><tr><th>' + batPencil + ' Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>'
           + mcRows + '</tbody></table>';
         var bwHead = '<table><thead><tr><th>' + bowlPencil + ' Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Eco</th></tr></thead><tbody>';
         if (inn.bowler){
