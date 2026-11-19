@@ -3731,7 +3731,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v203';
+      var APP_VERSION = 'v204';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4156,40 +4156,274 @@
         toast('⏳ Still loading the live match from Firebase — scoring unlocks in a moment');
         return true;
       }
+      /* ---------- data-light sync (v204): the live match and the library travel separately ----------
+         WHY: covering one 10-over match burned through ~1.5 GB of
+         mobile data. Every ball re-uploaded and re-downloaded the
+         ENTIRE state — team logos (up to ~200 KB each), the
+         tournament banner (~380 KB), player photos, the parked
+         matches, the archived tournaments and the full tournament
+         book — because the whole state was written to liveMatch in
+         one transaction per ball and every screen listened to that
+         one node. None of that heavy data changes while a match is
+         being scored.
+         NOW the state travels in two parts:
+         - liveMatch keeps only the LIVE MATCH itself (the
+           MATCH_SLICE_KEYS fields, plus inningsEndReady and
+           updatedAt): the score, the innings, the ball-by-ball.
+           That is all a ball ever changes, so that is all a ball
+           sends, and all any viewer downloads per ball.
+         - liveLibrary carries everything else — the player and
+           team registries, the logos, the banner, the tournament,
+           the parked matches, the finished-match record and the
+           archives — and is written ONLY when its content actually
+           changes (a setup edit, a logo, a saved result), never per
+           ball. Each device downloads it once per change.
+         The state on screen (S) is unchanged — one whole object,
+         merged from the two nodes as they arrive — so scoring,
+         rendering, the on-device backup and every rule that reads
+         S work exactly as before, and fbConfirmedState is likewise
+         the merged confirmed state, so viewer surfaces keep
+         showing exactly what the server holds.
+         SAFETY: if the database Rules do not allow the liveLibrary
+         node yet, the first library access is rejected, fbLibDenied
+         latches, and every write falls back to the exact legacy
+         behaviour (the whole state at liveMatch) — the match keeps
+         syncing perfectly, just at the old data cost, until the
+         Rules gain a liveLibrary entry like liveMatch's. Nothing is
+         ever dropped: a split write always lands the library BEFORE
+         the first hot-only write replaces liveMatch, and a denied
+         library write leaves liveMatch untouched. */
+      var HOT_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsEndReady','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName','updatedAt'];
+      var COLD_KEYS = ['nicknames','players','playerIds','teamRegistry','teamLogos','singleFixtures','pausedMatches','lastFinishedSingle','tournamentsArchive','myTeams','tournament'];
+      var fbLibRef = null;      /* the liveLibrary node */
+      var fbHotState = null;    /* the last liveMatch payload Firebase is known to hold (hot-only, or a legacy whole state) */
+      var fbColdState = null;   /* the last liveLibrary payload Firebase is known to hold */
+      var fbColdSeen = false;   /* the library listener has answered (data or null) at least once */
+      var fbLibDenied = false;  /* library access rejected — legacy whole-state sync is in force */
+      var fbColdHash = '';      /* content signature of the library this device last pushed or confirmed */
+      var fbColdLocalAt = 0;    /* when this device last changed the library content locally */
+      var fbFirstSnapDone = false; /* the first liveMatch snapshot already ran the first-read logic */
+      var fbLastSnapAt = 0;     /* last time any Firebase listener delivered data (see refreshFromFirebaseNow) */
+      function partOf(st, keys){
+        var o = {};
+        if (!st) return o;
+        keys.forEach(function(k){ if (st[k] !== undefined) o[k] = deep(st[k]); });
+        return o;
+      }
+      function hotPartOf(st){ return partOf(st, HOT_KEYS); }
+      function coldPartOf(st){ return partOf(st, COLD_KEYS); }
+      function coldHashOf(cold){ try { return JSON.stringify(cold || {}); } catch(e){ return ''; } }
+      /* The library content the server is currently known to hold:
+         the library node's own payload once it exists; until then
+         the library keys a legacy whole-state liveMatch still
+         carries; failing both, nothing yet (null). */
+      function effectiveCold(){
+        if (fbLibDenied && fbHotState) return coldPartOf(fbHotState);
+        if (fbColdState) return coldPartOf(fbColdState);
+        if (fbHotState){ var emb = coldPartOf(fbHotState); if (Object.keys(emb).length) return emb; }
+        if (fbColdSeen) return null;
+        return coldPartOf(S);
+      }
+      /* One whole state assembled from the two nodes — the shape S
+         and fbConfirmedState have always had. Null while the server
+         has not produced a live match at all. */
+      function composedState(){
+        if (!fbHotState) return null;
+        var out = freshState();
+        var cold = effectiveCold();
+        if (cold) COLD_KEYS.forEach(function(k){ if (cold[k] !== undefined) out[k] = deep(cold[k]); });
+        HOT_KEYS.forEach(function(k){ if (fbHotState[k] !== undefined) out[k] = deep(fbHotState[k]); });
+        /* A legacy whole-state liveMatch can carry keys the split
+           does not know about — keep them, so nothing a surface
+           reads can go missing during the changeover. */
+        Object.keys(fbHotState).forEach(function(k){ if (out[k] === undefined) out[k] = deep(fbHotState[k]); });
+        return out;
+      }
+      /* fbConfirmedState is rebuilt from the two nodes whenever
+         either one moves, so viewer surfaces keep rendering exactly
+         what Firebase holds — the live match from liveMatch, the
+         library (last finished Single Match, tournament book,
+         logos) from liveLibrary. */
+      function refreshConfirmedState(){
+        var c = composedState();
+        if (c){ fbConfirmedState = c; return; }
+        if (fbColdSeen || fbColdState){
+          /* No live match on the server, but the library is known:
+             the confirmed state is a blank match over that library,
+             so the viewer home can still show the last finished
+             Single Match and the tournament book it came from. */
+          var out = freshState();
+          var cold = effectiveCold();
+          if (cold) COLD_KEYS.forEach(function(k){ if (cold[k] !== undefined) out[k] = deep(cold[k]); });
+          fbConfirmedState = out;
+          return;
+        }
+        fbConfirmedState = null;
+      }
+      /* A library payload arriving from Firebase: patch ONLY the
+         library keys into S — the live match on screen (including
+         work scored locally while offline) is never touched by it.
+         Our own writes echo back with the same content and are
+         recognised by their signature, so they change nothing. */
+      function applyColdFromRemote(payload){
+        fbColdState = payload ? deep(payload) : null;
+        if (fbLibDenied){ refreshConfirmedState(); return; }
+        var incoming = payload ? coldPartOf(payload) : null;
+        if (!incoming){ refreshConfirmedState(); return; }
+        /* Before Firebase is ready, this session's own unsynced
+           work (fbLocalDirty) wins over the server's library: the
+           first-read sync publishes it whole (see
+           firstLiveSnapshot), and only then do server library
+           updates start landing on S. The confirmed display state
+           above still tracks the server's library throughout —
+           viewers never see the unconfirmed copy. */
+        if (!fbReady && fbLocalDirty){ refreshConfirmedState(); return; }
+        var h = coldHashOf(incoming);
+        if (h === coldHashOf(coldPartOf(S))){ fbColdHash = h; refreshConfirmedState(); return; }
+        /* A library change made on THIS device that has not landed
+           yet is newer than anything the server can echo back — an
+           older library snapshot must not roll it back. */
+        var libAt = (payload && typeof payload.libAt === 'number') ? payload.libAt : 0;
+        if (fbColdLocalAt && libAt && libAt < fbColdLocalAt) return;
+        fbColdHash = h;
+        var defs = freshState();
+        COLD_KEYS.forEach(function(k){ S[k] = (incoming[k] !== undefined) ? deep(incoming[k]) : defs[k]; });
+        try { cleanGhostPlayers(); } catch(e){}
+        try { normalizeStateShape(); } catch(e){}
+        refreshConfirmedState();
+        saveLocalBackup();
+        try { renderAll(false); } catch(e){}
+      }
+      /* Write the library node — but only when its content actually
+         changed since the last push or confirmed snapshot. Resolves
+         once the attempt settles; a permission rejection latches
+         fbLibDenied (the legacy fallback) so the caller can take
+         over with a whole-state write and no data is ever stranded.
+         Any other failure leaves the signature unset, so the next
+         commit retries the library write on its own. */
+      function pushLibraryIfChanged(){
+        if (!fbLibRef || fbLibDenied) return Promise.resolve(false);
+        var cold = coldPartOf(S);
+        var h = coldHashOf(cold);
+        if (!h || h === fbColdHash) return Promise.resolve(true);
+        fbColdLocalAt = Date.now();
+        var payload = cold; payload.libAt = fbColdLocalAt;
+        return fbLibRef.set(payload).then(function(){
+          fbColdHash = h;
+          fbColdState = deep(payload);
+          refreshConfirmedState();
+          return true;
+        }).catch(function(err){
+          if (err && /permission/i.test(err.message || '')) fbLibDenied = true;
+          return false;
+        });
+      }
+      /* Write a whole state across the two nodes — the library
+         FIRST, so a hot-only liveMatch never replaces the legacy
+         whole state before the library safely holds its half. Used
+         by the first-read seed / sync and by the delete publishes,
+         which must land as one confirmed act. In legacy fallback
+         (or with no library node) it is exactly the old single
+         liveMatch set. */
+      function writeSplitState(st){
+        var full = deep(st);
+        if (fbLibDenied || !fbLibRef){
+          return fbRef.set(full).then(function(){
+            fbHotState = deep(full);
+            refreshConfirmedState();
+            try { renderAll(false); } catch(e){}
+          });
+        }
+        var cold = coldPartOf(full);
+        var payload = cold; payload.libAt = Date.now(); fbColdLocalAt = payload.libAt;
+        return fbLibRef.set(payload).then(function(){
+          fbColdHash = coldHashOf(cold);
+          fbColdState = deep(payload);
+          return fbRef.set(hotPartOf(full));
+        }, function(err){
+          if (err && /permission/i.test(err.message || '')){
+            /* Rules do not allow the library node yet: fall back to
+               the legacy whole-state write — liveMatch still holds
+               everything, exactly as before the split. */
+            fbLibDenied = true;
+            return fbRef.set(full);
+          }
+          throw err;
+        }).then(function(){
+          fbHotState = fbLibDenied ? deep(full) : hotPartOf(full);
+          refreshConfirmedState();
+          try { renderAll(false); } catch(e){}
+        });
+      }
       function pushToFirebase(){
         if (!fbRef || fbPushing || !fbReady) return;
         var ref = fbRef;
+        /* The library goes first — and only when it changed. During
+           scoring it never changes, so a ball costs one small
+           transaction on liveMatch and nothing else. If the library
+           write is rejected, the legacy whole-state push takes over
+           for the rest of the session. */
+        pushLibraryIfChanged().then(function(){
+          if (fbLibDenied || !fbLibRef){ pushWholeState(ref); return; }
+          var pushed = hotPartOf(S);
+          var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
+          /* Transaction, not a blind set: if another scoring device
+             published a NEWER match since this device last saw the
+             server, this older write aborts instead of erasing that
+             device's balls, and the newer state is adopted. Writes
+             from the state this device last confirmed go through
+             unchanged. */
+          ref.transaction(function(cur){
+            if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
+            if (cur && typeof cur.updatedAt === 'number' && cur.updatedAt > pushed.updatedAt && fbLocalDirty !== true && baseAt === null) return undefined;
+            return pushed;
+          }).then(function(res){
+            if (res && res.committed === false){
+              /* This push never landed, so a waiting profile-save
+                 confirmation must not claim it did — the refresh
+                 notice below tells the scorer to re-check instead. */
+              pendingProfileSaveMsg = null;
+              /* Aborted — a newer state won. Adopt it (merged with
+                 the library) so no ball from either device is
+                 silently lost in a stale overwrite. */
+              try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv){ fbHotState = deep(nv); refreshConfirmedState(); var mg = composedState(); if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg); } } catch(e){}
+              toast('⚠️ Another device scored a newer update — this screen has refreshed to the latest score so no ball is lost. Please re-check before scoring the next ball.');
+              return;
+            }
+            fbErrorShown = false;
+            /* Firebase accepted this exact live match: it is now the
+               confirmed state viewer surfaces may show. */
+            fbHotState = deep(pushed);
+            refreshConfirmedState();
+            try { renderAll(false); } catch(e){}
+            /* A profile save waiting on this push may now show its
+               "✓ Profile saved" confirmation — the server really has
+               the new profile. */
+            if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
+          }).catch(function(err){ pendingProfileSaveMsg = null; showFirebaseError(err, 'update'); });
+        });
+      }
+      /* The pre-split push, kept whole as the fallback for databases
+         whose Rules do not allow the liveLibrary node yet: the
+         ENTIRE state in one transaction at liveMatch, exactly as
+         every build before v204 wrote it. */
+      function pushWholeState(ref){
         var pushed = deep(S);
         var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
-        /* Transaction, not a blind whole-state set: if another scoring
-           device published a NEWER state since this device last saw
-           the server, this older write aborts instead of erasing that
-           device's balls, and the newer state is adopted. Writes from
-           the state this device last confirmed go through unchanged. */
         ref.transaction(function(cur){
           if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
           if (cur && typeof cur.updatedAt === 'number' && cur.updatedAt > pushed.updatedAt && fbLocalDirty !== true && baseAt === null) return undefined;
           return pushed;
         }).then(function(res){
           if (res && res.committed === false){
-            /* This push never landed, so a waiting profile-save
-               confirmation must not claim it did — the refresh
-               notice below tells the scorer to re-check instead. */
             pendingProfileSaveMsg = null;
-            /* Aborted — a newer state won. Adopt it so no ball from
-               either device is silently lost in a stale overwrite. */
             try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv && shouldAdoptRemote(nv)) adoptRemoteState(nv); } catch(e){}
             toast('⚠️ Another device scored a newer update — this screen has refreshed to the latest score so no ball is lost. Please re-check before scoring the next ball.');
             return;
           }
           fbErrorShown = false;
-          /* Firebase accepted this exact state: it is now the
-             confirmed state viewer surfaces may show. */
           fbConfirmedState = pushed;
           try { renderAll(false); } catch(e){}
-          /* A profile save waiting on this push may now show its
-             "✓ Profile saved" confirmation — the server really has
-             the new profile. */
           if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
         }).catch(function(err){ pendingProfileSaveMsg = null; showFirebaseError(err, 'update'); });
       }
@@ -4282,7 +4516,7 @@
         deleteInFlight = true;
         var candidate = buildDeletedState();
         var pushedDelete = deep(candidate);
-        fbRef.set(candidate).then(function(){
+        writeSplitState(candidate).then(function(){
           deleteInFlight = false;
           fbPendingDelete = false; fbPendingFreshPublish = false;
           fbConfirmedState = pushedDelete;
@@ -4374,28 +4608,54 @@
          This page is a fixed snapshot: once a newer build is
          published, copies already open (a phone tab left running,
          the APK WebView) keep executing the old code until someone
-         reloads. The checker periodically re-fetches this page's
-         own served document — its own path plus a cache-busting
-         query, with no-store so no cache can serve the old copy —
-         reads the build stamp out of the response, and when the
-         served stamp differs from the running one it shows the
-         small fixed #updateBanner. Reload loads the new build;
-         dismissing hides the banner for that version only (the
-         dismissed stamp lives in a JS variable — nothing is stored
-         on the device), so a later version prompts again. Matching
-         stamps never show the banner, and a failed fetch (offline,
-         blocked) is silent — the next scheduled check retries. */
+         reloads. The checker periodically asks the server for this
+         page's own served document, reads the build stamp out of
+         the response, and when the served stamp differs from the
+         running one it shows the small fixed #updateBanner. Reload
+         loads the new build; dismissing hides the banner for that
+         version only (the dismissed stamp lives in a JS variable —
+         nothing is stored on the device), so a later version
+         prompts again. Matching stamps never show the banner, and
+         a failed fetch (offline, blocked) is silent — the next
+         scheduled check retries.
+         DATA (v204): the check used to download the whole page
+         (~1.5 MB) every 3 minutes AND on every focus / visibility
+         return — over one match that alone ate tens of megabytes.
+         It now runs at most once in 10 minutes, and asks
+         conditionally: the ETag / Last-Modified of the last full
+         response goes back as If-None-Match / If-Modified-Since,
+         so an unchanged page answers "304" with no body at all —
+         a few hundred bytes instead of the whole document. Only a
+         genuinely changed page (or a host that sends no validator)
+         costs a full download. */
       var updateSeenVersion = '';
       var updateDismissedFor = '';
       var updateCheckBusy = false;
+      var updateLastCheckAt = 0;
+      var updateEtag = '';
+      var updateLastMod = '';
       function checkForUpdate(){
         if (updateCheckBusy || typeof fetch !== 'function') return;
+        var now = Date.now();
+        if (updateLastCheckAt && (now - updateLastCheckAt) < 10 * 60 * 1000) return;
         var url = '';
-        try { url = location.pathname + '?_upd=' + Date.now(); } catch(e){ return; }
+        try { url = location.pathname; } catch(e){ return; }
         if (!url) return;
         updateCheckBusy = true;
-        fetch(url, { cache:'no-store', credentials:'same-origin' })
-          .then(function(r){ return (r && r.ok) ? r.text() : ''; })
+        updateLastCheckAt = now;
+        var headers = {};
+        if (updateEtag) headers['If-None-Match'] = updateEtag;
+        if (updateLastMod) headers['If-Modified-Since'] = updateLastMod;
+        fetch(url, { cache:'no-cache', credentials:'same-origin', headers: headers })
+          .then(function(r){
+            if (r && r.status === 304) return ''; /* unchanged — no body was sent */
+            if (r && r.ok){
+              try { updateEtag = r.headers.get('ETag') || updateEtag; } catch(e){}
+              try { updateLastMod = r.headers.get('Last-Modified') || updateLastMod; } catch(e){}
+              return r.text();
+            }
+            return '';
+          })
           .then(function(html){
             updateCheckBusy = false;
             if (!html) return;
@@ -4414,7 +4674,7 @@
       }
       function startUpdateChecker(){
         setTimeout(checkForUpdate, 20000);
-        setInterval(checkForUpdate, 3 * 60 * 1000);
+        setInterval(checkForUpdate, 10 * 60 * 1000);
         document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkForUpdate(); });
         window.addEventListener('focus', checkForUpdate);
       }
@@ -13862,6 +14122,7 @@
       function initFirebaseWithConfig(cfg, isDefault){
         if (typeof firebase === 'undefined'){ throw new Error('Firebase library did not load'); }
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
+        if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
         if (fbConnRef){ try{ fbConnRef.off(); }catch(e){} fbConnRef = null; }
@@ -13873,6 +14134,8 @@
         setFbStage('db-connecting');
         fbReady = false; fbConnecting = true; fbErrorShown = false;
         fbConfirmedState = null; fbServerSeen = false;
+        fbHotState = null; fbColdState = null; fbColdSeen = false; fbLibDenied = false;
+        fbColdHash = ''; fbColdLocalAt = 0; fbFirstSnapDone = false; fbLastSnapAt = 0;
         setPadLocked(true);
         setConnStatus('connecting', '⏳ Connecting to Firebase — loading the live match from the database before scoring unlocks…');
         fbApp = firebase.initializeApp(cfg, 'liveCricketApp');
@@ -13900,6 +14163,29 @@
             if (snap && snap.val() === true){ try { flushHistoryPending(); flushHistoryDeletes(); scheduleHistoryRetry(); } catch(e){} }
           });
         } catch(e){ fbConnRef = null; }
+        /* The library node (v204): everything in the state that is
+           NOT the live match — the registries, logos, banner,
+           tournament, parked matches and archives. It is read here,
+           once per change, and written only when it changes (see
+           pushLibraryIfChanged), so it stays off the per-ball path
+           entirely. A read rejection (Rules not updated yet) latches
+           the legacy fallback: the library keys embedded in a
+           whole-state liveMatch remain the source, exactly as
+           before the split. */
+        try {
+          fbLibRef = fbApp.database().ref('liveLibrary');
+          var myLibRef = fbLibRef;
+          myLibRef.on('value', function(snap){
+            if (fbLibRef !== myLibRef) return;
+            fbColdSeen = true;
+            fbLastSnapAt = Date.now();
+            applyColdFromRemote(snap.val());
+          }, function(err){
+            if (fbLibRef !== myLibRef) return;
+            fbColdSeen = false; fbColdState = null;
+            fbLibDenied = true;
+          });
+        } catch(e){ fbLibRef = null; }
         /* Permanent history lives at its own path, matchHistory —
            separate from the live match, so a New Match reset of
            liveMatch can never touch it. Everyone reads it (viewers
@@ -13909,17 +14195,30 @@
         histSyncedOnce = false;
         fbHistRef = fbApp.database().ref('matchHistory');
         var myHistRef = fbHistRef;
-        myHistRef.on('value', function(snap){
-          if (fbHistRef !== myHistRef) return;
-          histFbError = '';
-          mergeRemoteHistory(snap.val());
-          flushHistoryPending();
-          flushHistoryDeletes();
-        }, function(err){
+        /* Per-entry listeners (v204): the old whole-history 'value'
+           listener re-downloaded EVERY archived match whenever ONE
+           match was filed, edited or deleted — and the record book
+           only grows, so that cost grew with it. Now an entry
+           travels only when IT changes. The authoritative
+           "confirmed but gone from the server" reconciliation the
+           full snapshot used to perform is kept, cheaply:
+           child_removed covers deletes that happen while connected,
+           and one shallow key-only read at connect (a few bytes per
+           match — see reconcileHistoryKeys) covers deletes that
+           happened while this device was away. */
+        var histErr = function(err){
           if (fbHistRef !== myHistRef) return;
           histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
           try { renderHistory(); } catch(e){}
-        });
+        };
+        myHistRef.on('child_added', function(snap){ if (fbHistRef !== myHistRef) return; histChildUpsert(snap.key, snap.val()); }, histErr);
+        myHistRef.on('child_changed', function(snap){ if (fbHistRef !== myHistRef) return; histChildUpsert(snap.key, snap.val()); }, histErr);
+        myHistRef.on('child_removed', function(snap){ if (fbHistRef !== myHistRef) return; histChildRemoved(snap.key); }, histErr);
+        reconcileHistoryKeys();
+        /* If the shallow read cannot complete (offline, blocked),
+           do not leave the History status claiming "syncing"
+           forever — the entries themselves still arrive per child. */
+        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} } }, 8000);
         /* Delete tombstones live at their own path, matchHistoryDeleted —
            read by everyone, written only by the scorer's side. A
            rejected read here (Rules not yet updated) is NOT fatal and
@@ -13931,6 +14230,7 @@
         var myDelRef = fbDelRef;
         myDelRef.on('value', function(snap){
           if (fbDelRef !== myDelRef) return;
+          fbLastSnapAt = Date.now();
           mergeRemoteDeleted(snap.val());
         }, function(err){ /* local tombstones still apply — see note above */ });
         myRef.on('value', function(snap){
@@ -13940,11 +14240,23 @@
              state — viewer surfaces show exactly this, even when
              this device's own copy is ahead of it or stranded. The
              server has now answered (even with null = no live
-             match), so viewer surfaces may state what it said. */
+             match), so viewer surfaces may state what it said. The
+             confirmed state is this live match MERGED with the
+             library node (see refreshConfirmedState): since v204
+             this snapshot carries only the match itself. */
           fbServerSeen = true;
-          fbConfirmedState = v ? deep(v) : null;
-          if (shouldAdoptRemote(v)) adoptRemoteState(v);
+          fbLastSnapAt = Date.now();
+          fbHotState = v ? deep(v) : null;
+          refreshConfirmedState();
+          var mg = composedState();
+          if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg);
           try { guardViewerScoreboard(); } catch(e){}
+          /* The first snapshot also runs the first-read logic —
+             the ready gate, plus seeding / re-syncing this
+             session's own offline work. It used to run on a
+             separate once('value') read that downloaded the whole
+             match a SECOND time on every connect and reconnect. */
+          if (!fbFirstSnapDone){ fbFirstSnapDone = true; try { firstLiveSnapshot(v, isDefault); } catch(e){} }
         }, function(err){
           if (fbRef !== myRef) return;
           /* A failed read must never leave the pad locked forever or the
@@ -13956,29 +14268,30 @@
           showFirebaseError(err, 'read');
           scheduleFbRetry();
         });
-        /* One-time read before any write: adopt remote if it exists. The
-           database is seeded ONLY with work actually scored or edited
-           in THIS session (fbLocalDirty) that carries a real match —
-           a fresh tab's untouched 0/0 demo state is never written,
-           and neither is a state merely restored from this device's
-           on-device backup: the viewer end must only ever show what
-           the server holds, so an empty database stays empty (a
-           match deleted on the server must never be pushed back
-           from a phone's memory). */
-        myRef.once('value').then(function(snap){
-          if (fbRef !== myRef) return;
-          var v = snap.val();
-          fbServerSeen = true;
-          fbConfirmedState = v ? deep(v) : null;
+        /* First-read logic, run once per connection on the live
+           listener's first delivery (see the on('value') handler
+           above): adopt remote if it exists — the listener already
+           did — then open the scoring gate, then publish this
+           session's own offline work if the database is empty or
+           older. The database is seeded ONLY with work actually
+           scored or edited in THIS session (fbLocalDirty) that
+           carries a real match — a fresh tab's untouched 0/0 demo
+           state is never written, and neither is a state merely
+           restored from this device's on-device backup: the viewer
+           end must only ever show what the server holds, so an
+           empty database stays empty (a match deleted on the server
+           must never be pushed back from a phone's memory). A read
+           FAILURE never reaches here — the listener's own error
+           handler surfaces it and schedules the retry, and the gate
+           timer below covers a database that never answers at all. */
+        function firstLiveSnapshot(v, isDefault){
           if (v){
-            if (shouldAdoptRemote(v)) adoptRemoteState(v);
             markFirebaseReady(isDefault);
             /* This device holds newer work scored while Firebase was
                unreachable (restored backup) — publish it now instead of
                letting the older database state stand. */
             if (!fbPendingDelete && fbLocalDirty && (hasMeaningfulState(S) || fbPendingFreshPublish) && v.updatedAt && v.updatedAt < S.updatedAt){
-              var pushedSync = deep(S);
-              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSync; try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'sync'); });
+              writeSplitState(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; }).catch(function(err){ showFirebaseError(err, 'sync'); });
             }
           } else {
             markFirebaseReady(isDefault);
@@ -13988,20 +14301,11 @@
                THIS session's own work (fbLocalDirty) may seed an
                empty database — never a restored on-device backup. */
             if (!fbPendingDelete && fbLocalDirty && hasMeaningfulState(S)){
-              var pushedSeed = deep(S);
-              myRef.set(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; fbConfirmedState = pushedSeed; saveLocalBackup(); try { renderAll(false); } catch(e){} }).catch(function(err){ showFirebaseError(err, 'seed'); });
+              writeSplitState(S).then(function(){ fbLocalDirty = false; fbPendingFreshPublish = false; saveLocalBackup(); }).catch(function(err){ showFirebaseError(err, 'seed'); });
             }
           }
           try { guardViewerScoreboard(); } catch(e){}
-        }).catch(function(err){
-          if (fbRef !== myRef) return;
-          if (fbGateTimer){ clearTimeout(fbGateTimer); fbGateTimer = null; }
-          fbConnecting = false; fbReady = false;
-          setFbStage('error');
-          setPadLocked(false);
-          showFirebaseError(err, 'read');
-          scheduleFbRetry();
-        });
+        }
         /* If Firebase never answers at all, do not sit on "Connecting"
            forever: unlock the pad in local mode and say so honestly.
            Scoring done meanwhile is backed up on this device, and the
@@ -14075,6 +14379,8 @@
       }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
+        if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
+        fbHotState = null; fbColdState = null; fbColdSeen = false;
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
         if (fbConnRef){ try{ fbConnRef.off(); }catch(e){} fbConnRef = null; }
@@ -14898,6 +15204,74 @@
         flushHistoryDeletes();
         try { renderHistory(); } catch(e){}
       }
+      /* ---------- per-entry history sync (v204) ----------
+         The child listeners registered in initFirebaseWithConfig
+         feed these helpers. An upsert or removal lands in HIST at
+         once; the follow-up work the old full-snapshot merge ran
+         every time (device backup, the ID backfills, the render,
+         the pending-write flush) is debounced into one pass, so the
+         initial burst of child_added events — one per archived
+         match — costs one render, not one per match. */
+      var histMergeTimer = null;
+      function afterHistRemoteChange(){
+        if (histMergeTimer) return;
+        histMergeTimer = setTimeout(function(){
+          histMergeTimer = null;
+          saveHistLocal();
+          try { migratePlayerIds(); } catch(e){}
+          try { migrateTeamIds(); } catch(e){}
+          try { stampTournamentIds(); } catch(e){}
+          try { renderHistory(); } catch(e){}
+          flushHistoryPending();
+          flushHistoryDeletes();
+          scheduleHistoryRetry();
+        }, 250);
+      }
+      function histChildUpsert(id, e){
+        id = String(id);
+        fbLastSnapAt = Date.now();
+        histConfirmed[id] = true;
+        if (!isHistGone(id) && e && typeof e === 'object'){ e.id = id; HIST[id] = e; }
+        afterHistRemoteChange();
+      }
+      function histChildRemoved(id){
+        id = String(id);
+        fbLastSnapAt = Date.now();
+        /* A match Firebase used to confirm but no longer holds was
+           deleted (by the scorer, from any device) — it must vanish
+           here too, instead of living on forever in this device's
+           backup. A locally pending delete keeps its marker: its
+           own flush finishes the job. */
+        if (histConfirmed[id] && !histDeleted[id]) delete HIST[id];
+        delete histConfirmed[id];
+        afterHistRemoteChange();
+      }
+      /* The one full-history question the child listeners cannot
+         answer on their own: which matches were deleted while THIS
+         device was away (no child_removed fires for a match that
+         was already gone when the listener attached). Firebase's
+         shallow read answers it with the entry KEYS only — a few
+         bytes per match instead of every match in full — and any
+         locally confirmed entry missing from the key set is
+         dropped, exactly as the old authoritative snapshot merge
+         dropped it. If the read cannot happen (offline, blocked,
+         a database whose Rules refuse it), nothing is dropped:
+         the child listeners remain the source of truth. */
+      function reconcileHistoryKeys(){
+        var base = '';
+        try { base = (fbApp && fbApp.options && fbApp.options.databaseURL) || ''; } catch(e){}
+        if (!base || typeof fetch !== 'function'){ histSyncedOnce = true; return; }
+        var url = base.replace(/\/+$/, '') + '/matchHistory.json?shallow=true';
+        fetch(url).then(function(r){ return (r && r.ok) ? r.json() : null; }).then(function(keys){
+          histSyncedOnce = true;
+          if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} return; }
+          var changed = false;
+          Object.keys(HIST).forEach(function(id){
+            if (histConfirmed[id] && !keys[id] && !histDeleted[id]){ delete HIST[id]; delete histConfirmed[id]; changed = true; }
+          });
+          if (changed){ saveHistLocal(); try { renderHistory(); } catch(e){} }
+        }).catch(function(){ histSyncedOnce = true; });
+      }
       /* ---------- authoritative refresh ----------
          Firebase is the truth on every open AND on every return to
          the page: when the tab becomes visible again, the app comes
@@ -14908,15 +15282,30 @@
       var fbRefreshInFlight = false;
       function refreshFromFirebaseNow(){
         if (fbRefreshInFlight) return;
-        if (fbRef){
+        /* The listeners already deliver every change the moment it
+           lands. This re-read used to run on EVERY focus /
+           visibility return and re-downloaded the whole match and
+           the whole history each time — over one match, app
+           switches and screen wakes alone cost more data than the
+           scoring did. Within two minutes of the last listener
+           delivery the re-reads are skipped (the pending-write
+           flush below still runs, so nothing waits on it); after a
+           longer silence the authoritative re-read resumes as the
+           safety net it was meant to be. */
+        var fresh = fbReady && fbLastSnapAt && (Date.now() - fbLastSnapAt < 120000);
+        if (!fresh && fbRef){
           fbRefreshInFlight = true;
           fbRef.once('value').then(function(snap){
             fbRefreshInFlight = false;
             var v = snap.val();
-            if (v && shouldAdoptRemote(v)) adoptRemoteState(v);
+            fbLastSnapAt = Date.now();
+            fbHotState = v ? deep(v) : null;
+            refreshConfirmedState();
+            var mg = composedState();
+            if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg);
           }).catch(function(){ fbRefreshInFlight = false; });
         }
-        if (fbHistRef){
+        if (!fresh && fbHistRef){
           fbHistRef.once('value').then(function(snap){
             histFbError = '';
             mergeRemoteHistory(snap.val());
@@ -14927,9 +15316,10 @@
             try { renderHistory(); } catch(e){}
           });
         }
-        if (fbDelRef){
+        if (!fresh && fbDelRef){
           fbDelRef.once('value').then(function(snap){ mergeRemoteDeleted(snap.val()); }).catch(function(){});
         }
+        try { flushHistoryPending(); flushHistoryDeletes(); } catch(e){}
         scheduleHistoryRetry();
       }
       document.addEventListener('visibilitychange', function(){ if (!document.hidden) refreshFromFirebaseNow(); });
@@ -14937,6 +15327,7 @@
       window.addEventListener('focus', function(){ refreshFromFirebaseNow(); });
       function mergeRemoteHistory(val){
         histSyncedOnce = true;
+        fbLastSnapAt = Date.now();
         var remote = (val && typeof val === 'object') ? val : {};
         /* Firebase is AUTHORITATIVE for history: whatever the
            database holds is what every device shows. */
@@ -15066,7 +15457,7 @@
           try { renderLiveHome(); } catch(e){}
           return;
         }
-        fbRef.set(ns).then(function(){
+        writeSplitState(ns).then(function(){
           fbConfirmedState = deep(ns);
           fbPendingDelete = false; fbPendingFreshPublish = false;
           try { hideResetRetry(); } catch(e){}
@@ -20061,7 +20452,7 @@
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
             + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || !data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
           html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
