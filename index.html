@@ -753,6 +753,7 @@
       .ptable td.teamcell{font-weight:700;text-align:left;max-width:110px}
       .ptable tr.toprow td{background:var(--surface2)}
       .qdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle}
+      .edot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:5px;vertical-align:middle}
       .match-row{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;background:var(--surface2)}
       .match-row.tap{cursor:pointer}
       .match-row.tap:active{background:var(--surface)}
@@ -1078,6 +1079,7 @@
       .bk-tick{flex:none;color:var(--green);font-weight:900}
       .bk-result{font-weight:700;color:var(--green);font-size:14px;margin-top:7px}
       .bk-wait{color:var(--muted);font-size:13px;margin-top:7px}
+      .bk-sched{color:var(--gold);font-size:13px;font-weight:600;margin-top:7px;text-align:center}
       .bk-champ{border:1px solid var(--gold);border-radius:11px;padding:12px 14px;margin-top:12px;background:#fdf6e3;font-size:15px}
       @media (prefers-color-scheme: dark){.bk-champ{background:#2a2113}}
       .bk-champ b{font-size:16px}
@@ -2818,11 +2820,12 @@
             <div style="font-weight:800;font-size:15.5px">Wicket — how was the batter out?</div>
             <p class="note" id="wktContext" style="margin:4px 0 10px"></p>
             <div class="grid3">
-              <div><label for="wktType">Dismissal type *</label><select id="wktType"><option value="bowled">Bowled</option><option value="caught">Caught</option><option value="candbowled">Caught &amp; Bowled</option><option value="lbw">LBW</option><option value="runout">Run Out</option><option value="stumped">Stumped</option><option value="hitwicket">Hit Wicket</option><option value="retired">Retired Out</option></select></div>
+              <div><label for="wktType">Dismissal type *</label><select id="wktType" onchange="onWktTypeChanged()"><option value="bowled">Bowled</option><option value="caught">Caught</option><option value="candbowled">Caught &amp; Bowled</option><option value="lbw">LBW</option><option value="runout">Run Out</option><option value="stumped">Stumped</option><option value="hitwicket">Hit Wicket</option><option value="retired">Retired Out</option></select></div>
               <div><label for="wktOutWho">Batter out</label><select id="wktOutWho"><option value="striker">Striker</option><option value="nonStriker">Non-Striker (run out)</option></select></div>
               <div><label for="wktRuns">Runs on this ball</label><select id="wktRuns"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
             </div>
-            <div style="margin-top:10px"><label for="wktFielder">Fielder / catcher (optional)</label><select id="wktFielder" onchange="onFielderSelChanged(this)"><option value="">— None —</option></select></div>
+            <div style="margin-top:10px"><label for="wktFielder" id="wktFielderLabel">Fielder / catcher (optional)</label><select id="wktFielder" onchange="onFielderSelChanged(this)"><option value="">— None —</option></select></div>
+            <div style="margin-top:10px" id="wktFielder2Row" hidden><label for="wktFielder2">Fielder 2 (optional) — the other fielder in the run out</label><select id="wktFielder2" onchange="onFielder2SelChanged(this)"><option value="">— None —</option></select></div>
             <div class="rowflex" style="margin-top:12px">
               <button class="btn red sm" onclick="confirmWicket()">Confirm Wicket</button>
               <button class="btn ghost sm" onclick="cancelWicket()">Cancel</button>
@@ -3570,6 +3573,57 @@
       </div>
     </div>
 
+    <!-- Schedule a knockout bracket match: date / time / venue and
+         the format it will be played under. Saving mirrors the
+         match into Upcoming Fixtures (a tournament fixture carrying
+         the bracket match's BK- ID), so it starts from there like
+         any league fixture and its result fills the bracket. -->
+    <div class="modal-back" id="bkSchedModal" onclick="if(event.target===this)closeBkSchedule()">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bkSchedTitle">
+        <div class="modal-head">
+          <h2 id="bkSchedTitle">📅 Schedule</h2>
+          <button class="sq-x big" onclick="closeBkSchedule()" aria-label="Close">×</button>
+        </div>
+        <p class="sub" id="bkSchedTeams" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div class="grid2" style="margin-top:12px">
+          <div><label for="bkSchedDate">Date</label><input id="bkSchedDate" type="date" /></div>
+          <div><label for="bkSchedTime">Time</label><input id="bkSchedTime" type="time" /></div>
+        </div>
+        <div style="margin-top:12px"><label for="bkSchedVenue">Venue</label><input id="bkSchedVenue" placeholder="e.g. KU Playground" /></div>
+        <div class="grid2" style="margin-top:12px">
+          <div><label for="bkSchedOvers">Overs</label><input id="bkSchedOvers" type="number" min="1" max="50" placeholder="Overs" /></div>
+          <div><label for="bkSchedWickets">Wickets</label><input id="bkSchedWickets" type="number" min="1" max="10" placeholder="10" /></div>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div><label for="bkSchedFormat">Format</label><select id="bkSchedFormat">
+            <option value="">Not set</option>
+            <option value="T10">T10</option>
+            <option value="T20">T20</option>
+            <option value="Club">Club</option>
+            <option value="L-4i">L-4i</option>
+            <option value="100">100</option>
+            <option value="One Day">One Day</option>
+            <option value="Test Match">Test Match</option>
+          </select></div>
+          <div><label for="bkSchedBall">Ball Type</label><select id="bkSchedBall">
+            <option value="">Not set</option>
+            <option value="Leather Ball">Leather Ball</option>
+            <option value="Tennis Ball">Tennis Ball</option>
+          </select></div>
+        </div>
+        <div style="margin-top:12px">
+          <label for="bkSchedScorer">Select Scorer (Optional) — Gmail</label>
+          <input id="bkSchedScorer" type="email" placeholder="scorer@gmail.com" autocomplete="off" />
+          <p class="sub" id="bkSchedScorerNote" style="color:var(--muted);font-size:13px;margin:6px 0 0"></p>
+        </div>
+        <div class="rowflex" style="margin-top:16px">
+          <button type="button" class="btn" onclick="saveBkSchedule()">Save Schedule</button>
+          <button type="button" class="btn ghost" id="bkSchedRemove" onclick="removeBkSchedule()" hidden>Remove Schedule</button>
+          <button type="button" class="btn ghost" onclick="closeBkSchedule()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Fix Toss: correcting the toss of the LIVE match before the
          first ball. Shown only while nothing has been bowled; once
          a ball is recorded the toss is part of the record and the
@@ -3746,7 +3800,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v207';
+      var APP_VERSION = 'v212';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4770,7 +4824,7 @@
         if ((m = /^lbw b (.+)$/.exec(h))) return 'lbw b ' + resolve(m[1]);
         if ((m = /^hit wicket b (.+)$/.exec(h))) return 'hit wicket b ' + resolve(m[1]);
         if ((m = /^b (.+)$/.exec(h))) return 'b ' + resolve(m[1]);
-        if ((m = /^run out \((.+)\)$/.exec(h))) return 'run out (' + resolve(m[1]) + ')';
+        if ((m = /^run out \((.+)\)$/.exec(h))) return 'run out (' + m[1].split('/').map(function(p){ return resolve(p.trim()); }).join('/') + ')';
         return h;
       }
       function dispHowOut(team, howOut){
@@ -5041,6 +5095,151 @@
            the deterministic hash itself) — never a name-only merge,
            so a same-name player from another team is never pulled in. */
         return mappedOrHashId(team, name) || pidHash(team || '', name);
+      }
+      /* ---------- fielding credit: the fielder's structured identity ----------
+         Fielding was once read ONLY from the dismissal text
+         ("c X b Y", "run out (X)", "st X b Y") — and that text
+         carries the fielder's NICKNAME (dispName), never his full
+         name, so resolving it through entryPlayerId produced the
+         hash of a nickname and the credit silently missed the
+         fielder's real Player ID: profiles, tournament and team
+         Fielding tables stayed at 0 even for catches that were
+         scored. The fielder is picked from a DROPDOWN whose value
+         is the player's FULL name, so at scoring time the exact
+         Player ID is right there: applyWicket now stores
+         fielderName (full name) + fielderPid on BOTH the ball
+         record and the dismissed batter's record, alongside the
+         unchanged howOut text. Every fielding reader goes through
+         fieldingCreditFor(): the structured identity wins, and
+         the howOut text is only a legacy fallback — with the
+         nickname in it resolved back to the full name / Player ID
+         through the match's own nicknames snapshot (then the live
+         nicknames / registry nicknames), so older matches scored
+         with a nickname in the line credit the right player too.
+         Stored howOut / ball records are never rewritten. */
+      function parseFieldingHowOut(howOut){
+        var ho = String(howOut || ''), mm = null;
+        if ((mm = /^c & b (.+)$/.exec(ho))) return { kind: 'catches', fielder: mm[1] };
+        if ((mm = /^c (.+?) b /.exec(ho))) return { kind: 'catches', fielder: mm[1] };
+        if ((mm = /^run out \((.+)\)$/.exec(ho))){
+          /* A run out can name TWO fielders — "run out (A/B)": the
+             first is the primary credit, the second is returned
+             separately so he earns a Runouts credit of his own. */
+          var rp = mm[1].split('/');
+          return { kind: 'runouts', fielder: rp[0].trim(), fielder2: rp.length > 1 ? rp.slice(1).join('/').trim() : '' };
+        }
+        if ((mm = /^st (.+?) b /.exec(ho))) return { kind: 'stumpings', fielder: mm[1] };
+        return null;
+      }
+      function fieldingKindForDismissal(dismissal){
+        if (dismissal === 'caught' || dismissal === 'candbowled') return 'catches';
+        if (dismissal === 'stumped') return 'stumpings';
+        if (dismissal === 'runout') return 'runouts';
+        return '';
+      }
+      function resolveFielderIdentity(entry, team, rawName, structName, structPid){
+        if (structPid) return { name: String(structName || rawName || ''), pid: structPid };
+        if (structName){
+          var sn = String(structName);
+          return { name: sn, pid: entry ? entryPlayerId(entry, team, sn) : (lookupPlayerId(team, sn) || pidHash(team || '', sn)) };
+        }
+        var raw = String(rawName || '').trim();
+        if (!raw || raw.indexOf('not recorded') > -1) return null;
+        var nickLists = [];
+        if (entry && Array.isArray(entry.nicknames)) nickLists.push(entry.nicknames);
+        if (Array.isArray(S.nicknames)) nickLists.push(S.nicknames);
+        for (var li = 0; li < nickLists.length; li++){
+          var list = nickLists[li];
+          for (var i = 0; i < list.length; i++){
+            var ne = list[i];
+            if (!ne || ne.k !== raw || !ne.n) continue;
+            if (ne.t && team && ne.t !== team) continue;
+            return { name: ne.n, pid: entry ? entryPlayerId(entry, team, ne.n) : (lookupPlayerId(team, ne.n) || pidHash(team || '', ne.n)) };
+          }
+        }
+        try {
+          ensurePlayerArrays();
+          for (var j = 0; j < S.players.length; j++){
+            var pp = S.players[j];
+            if (pp && pp.nickname && pp.nickname === raw && pp.id) return { name: pp.name, pid: pp.id };
+          }
+        } catch(e2){}
+        return { name: raw, pid: entry ? entryPlayerId(entry, team, raw) : (lookupPlayerId(team, raw) || pidHash(team || '', raw)) };
+      }
+      /* The one fielding credit a dismissed batter's record earns:
+         { name (full), pid, kind: 'catches'|'stumpings'|'runouts' }
+         or null when the dismissal earns no fielder credit (bowled,
+         LBW, hit wicket, retired, or a fielder who was never
+         recorded). `entry` is the match record the innings belongs
+         to (its snapshots resolve the IDs); pass null for a live
+         innings being scored right now. */
+      function fieldingCreditFor(entry, inn, batter){
+        if (!batter || !inn) return null;
+        var team = inn.bowlingTeam || '';
+        var ball = null;
+        var balls = inn.balls || [];
+        for (var i = 0; i < balls.length; i++){
+          var bl = balls[i];
+          if (bl && !bl.evt && bl.wkt && (bl.outName || '') === (batter.name || '')){ ball = bl; break; }
+        }
+        var kind = '';
+        if (ball && ball.dismissal) kind = fieldingKindForDismissal(ball.dismissal);
+        var parsed = parseFieldingHowOut(batter.howOut);
+        if (!kind && parsed) kind = parsed.kind;
+        if (!kind) return null;
+        var structName = batter.fielderName || (ball && ball.fielderName) || '';
+        var structPid = batter.fielderPid || (ball && ball.fielderPid) || '';
+        if (structName || structPid){
+          var r1 = resolveFielderIdentity(entry, team, '', structName, structPid);
+          return r1 ? { name: r1.name, pid: r1.pid, kind: kind } : null;
+        }
+        if (parsed && parsed.fielder){
+          var r2 = resolveFielderIdentity(entry, team, parsed.fielder, '', '');
+          return r2 ? { name: r2.name, pid: r2.pid, kind: kind } : null;
+        }
+        if (ball && ball.dismissal === 'candbowled' && ball.bowler){
+          var r3 = resolveFielderIdentity(entry, team, '', ball.bowler, (ball.bowlerPid || ''));
+          return r3 ? { name: r3.name, pid: r3.pid, kind: kind } : null;
+        }
+        return null;
+      }
+      /* Every fielding credit a dismissal earns, as a list: the
+         primary fielder (exactly what fieldingCreditFor returns),
+         plus — for a Run Out scored with two fielders — the second
+         fielder, who earns a Runouts credit of his own. The second
+         fielder's structured identity (fielder2Name / fielder2Pid,
+         stored on the batter's and the ball's records at scoring
+         time) wins; the "run out (A/B)" dismissal text is the
+         legacy fallback. Aggregators loop this list so both
+         fielders are credited everywhere fielding is counted. */
+      function fieldingCreditsFor(entry, inn, batter){
+        var first = fieldingCreditFor(entry, inn, batter);
+        if (!first) return [];
+        var out = [first];
+        if (first.kind !== 'runouts') return out;
+        var team = inn.bowlingTeam || '';
+        var ball = null;
+        var balls = inn.balls || [];
+        for (var i = 0; i < balls.length; i++){
+          var bl = balls[i];
+          if (bl && !bl.evt && bl.wkt && (bl.outName || '') === (batter.name || '')){ ball = bl; break; }
+        }
+        var second = null;
+        var sName = batter.fielder2Name || (ball && ball.fielder2Name) || '';
+        var sPid = batter.fielder2Pid || (ball && ball.fielder2Pid) || '';
+        if (sName || sPid){
+          var r1 = resolveFielderIdentity(entry, team, '', sName, sPid);
+          if (r1) second = { name: r1.name, pid: r1.pid, kind: 'runouts' };
+        }
+        if (!second){
+          var parsed = parseFieldingHowOut(batter.howOut);
+          if (parsed && parsed.fielder2){
+            var r2 = resolveFielderIdentity(entry, team, parsed.fielder2, '', '');
+            if (r2) second = { name: r2.name, pid: r2.pid, kind: 'runouts' };
+          }
+        }
+        if (second && second.pid !== first.pid) out.push(second);
+        return out;
       }
       /* Stamp one innings' batter / bowler records with Player IDs. */
       function stampInningsPids(inn){
@@ -6056,6 +6255,7 @@
       var ADD_PLAYER_VALUE = '__add_new_player__';
       var addPlayerCtx = null;
       var wktFielderLast = '';
+      var wktFielder2Last = '';
       function addPlayerOptionHTML(){ return '<option value="' + ADD_PLAYER_VALUE + '">＋ Add new player…</option>'; }
       function addPlayerToMatchSquad(team, name){
         normalizeSquads();
@@ -6084,6 +6284,7 @@
         if (!ctx) return;
         if (ctx.kind === 'main'){ var el = $(ctx.selId); if (el) el.value = ctx.prev || ''; }
         else if (ctx.kind === 'fielder'){ var f = $('wktFielder'); if (f) f.value = wktFielderLast || ''; }
+        else if (ctx.kind === 'fielder2'){ var f2 = $('wktFielder2'); if (f2) f2.value = wktFielder2Last || ''; }
         else if (ctx.kind === 'rh'){ var r = $('rhNew'); if (r) r.value = ctx.prev || ''; }
         else if (ctx.kind === 'be'){ try { beRender(); } catch(e){} }
       }
@@ -6129,18 +6330,11 @@
           var sel = $(ctx.selId);
           if (sel){ ensureSelectOption(sel, name); sel.value = name; onPlayerNameSettled(sel); }
         } else if (ctx.kind === 'fielder'){
-          var fSel = $('wktFielder');
-          if (fSel){
-            var fTeam = S.current ? (S.current.bowlingTeam || '') : '';
-            var fList = [];
-            try { fList = displaySquadForTeam(fTeam) || []; } catch(e3){}
-            if (!fList.length){ try { fList = bowlingSquad() || []; } catch(e4){} }
-            var fSeen = {};
-            fSel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
-              return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
-            }).join('') + addPlayerOptionHTML();
-            fSel.value = name; wktFielderLast = name;
-          }
+          fillFielderSelect($('wktFielder'), name);
+          wktFielderLast = name;
+        } else if (ctx.kind === 'fielder2'){
+          fillFielderSelect($('wktFielder2'), name);
+          wktFielder2Last = name;
         } else if (ctx.kind === 'rh'){
           var rSel = $('rhNew');
           if (rSel){
@@ -6167,6 +6361,50 @@
           return;
         }
         wktFielderLast = el.value || '';
+      }
+      function onFielder2SelChanged(el){
+        if (!el) return;
+        if (el.value === ADD_PLAYER_VALUE){
+          if (!S.current) return;
+          openAddPlayerModal({ kind: 'fielder2', team: S.current.bowlingTeam || '', prev: wktFielder2Last || '' });
+          return;
+        }
+        wktFielder2Last = el.value || '';
+      }
+      /* (Re)fill a wicket-panel fielder dropdown with the fielding
+         (bowling) team's players for this match — the confirmed
+         final squad when one is set, the loaded squad otherwise.
+         The option VALUE is the player's full name (confirmWicket
+         passes it through dispName() exactly as the typed name used
+         to be), the label is the display name the scorecard shows. */
+      function fillFielderSelect(sel, selected){
+        if (!sel) return;
+        var fTeam = S.current ? (S.current.bowlingTeam || '') : '';
+        var fList = [];
+        try { fList = displaySquadForTeam(fTeam) || []; } catch(e){}
+        if (!fList.length){ try { fList = bowlingSquad() || []; } catch(e){} }
+        var fSeen = {};
+        sel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
+          return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
+        }).join('') + addPlayerOptionHTML();
+        sel.value = selected || '';
+      }
+      /* The dismissal type drives the fielder rows: Caught, Stumped
+         and Run Out REQUIRE a fielder (confirmWicket blocks without
+         one), so their label carries the mandatory star; a Run Out
+         additionally offers a SECOND fielder picker — optional —
+         for the other fielder involved in the dismissal. */
+      function onWktTypeChanged(){
+        var tSel = $('wktType'); if (!tSel) return;
+        var type = tSel.value;
+        var row2 = $('wktFielder2Row'); if (row2) row2.hidden = type !== 'runout';
+        var lab = $('wktFielderLabel');
+        if (lab){
+          if (type === 'caught') lab.textContent = 'Fielder / catcher *';
+          else if (type === 'stumped') lab.textContent = 'Wicket-keeper / fielder *';
+          else if (type === 'runout') lab.textContent = 'Fielder 1 *';
+          else lab.textContent = 'Fielder / catcher (optional)';
+        }
       }
       function onRhNewChanged(el){
         if (!el) return;
@@ -7260,7 +7498,11 @@
          Tapping Wicket opens the dismissal panel instead of recording
          a plain "bowled": the scorer picks HOW the batter was out,
          who was out (a run out can dismiss either batter), the fielder
-         and the runs completed on the ball. A wicket can also fall on
+         and the runs completed on the ball. For Caught, Stumped and
+         Run Out the fielder pick is MANDATORY (confirmWicket refuses
+         to record the wicket without one), and a Run Out offers a
+         second, optional fielder picker for the other fielder
+         involved. A wicket can also fall on
          a pending Wide / No-Ball / Bye / Leg-Bye ball — the panel is
          filled in for that same delivery. The bowler is credited only
          for bowler dismissals (bowled, caught, caught & bowled, LBW,
@@ -7268,13 +7510,13 @@
       function bowlerCredited(dismissal){
         return ['bowled','caught','candbowled','lbw','stumped','hitwicket'].indexOf(dismissal) > -1;
       }
-      function dismissalHowOut(type, fielder, bowler){
+      function dismissalHowOut(type, fielder, bowler, fielder2){
         switch(type){
           case 'bowled': return 'b ' + bowler;
           case 'caught': return fielder ? ('c ' + fielder + ' b ' + bowler) : ('c (fielder not recorded) b ' + bowler);
           case 'candbowled': return 'c & b ' + bowler;
           case 'lbw': return 'lbw b ' + bowler;
-          case 'runout': return fielder ? ('run out (' + fielder + ')') : 'run out';
+          case 'runout': return fielder ? ('run out (' + fielder + (fielder2 ? ('/' + fielder2) : '') + ')') : 'run out';
           case 'stumped': return fielder ? ('st ' + fielder + ' b ' + bowler) : ('st (keeper not recorded) b ' + bowler);
           case 'hitwicket': return 'hit wicket b ' + bowler;
           case 'retired': return 'retired out';
@@ -7309,24 +7551,13 @@
         var runsSel = $('wktRuns'); if (runsSel) runsSel.value = '0';
         /* Fielder / catcher is a DROPDOWN, not a typing box: the
            choices are the fielding (bowling) team's players for this
-           match — the confirmed final squad when one is set, the
-           loaded squad otherwise. The option VALUE is the player's
-           full name (confirmWicket passes it through dispName()
-           exactly as the typed name used to be), the label is the
-           display name the scorecard shows. */
-        var fSel = $('wktFielder');
-        if (fSel){
-          var fTeam = S.current.bowlingTeam || '';
-          var fList = [];
-          try { fList = displaySquadForTeam(fTeam) || []; } catch(e){}
-          if (!fList.length){ try { fList = bowlingSquad() || []; } catch(e){} }
-          var fSeen = {};
-          fSel.innerHTML = '<option value="">— None —</option>' + fList.filter(function(n){ if (!n || fSeen[n]) return false; fSeen[n] = 1; return true; }).map(function(n){
-            return '<option value="' + esc(n) + '">' + esc(dispName(fTeam, n)) + '</option>';
-          }).join('') + addPlayerOptionHTML();
-          fSel.value = '';
-          wktFielderLast = '';
-        }
+           match. A Run Out gets a second fielder dropdown too —
+           the first is mandatory, the second optional. */
+        fillFielderSelect($('wktFielder'), '');
+        wktFielderLast = '';
+        fillFielderSelect($('wktFielder2'), '');
+        wktFielder2Last = '';
+        onWktTypeChanged();
         var panel = $('wicketPanel'); if (panel){ panel.hidden = false; try { panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
       }
       function cancelWicket(){
@@ -7353,12 +7584,39 @@
         var outWhich = $('wktOutWho').value === 'nonStriker' ? 'nonStriker' : 'striker';
         var fielder = $('wktFielder').value.trim();
         if (fielder === ADD_PLAYER_VALUE) fielder = '';
+        /* A Run Out can name a SECOND fielder — the other fielder
+           involved (the thrower, when the first-named fielder broke
+           the wicket, or vice versa). Optional; only a Run Out
+           reads this picker. */
+        var fielder2 = '';
+        if (type === 'runout'){
+          var f2el = $('wktFielder2');
+          fielder2 = f2el ? f2el.value.trim() : '';
+          if (fielder2 === ADD_PLAYER_VALUE) fielder2 = '';
+        }
         var runs = Math.max(0, Math.min(6, parseInt($('wktRuns').value, 10) || 0));
         var extra = pendingExtra;
+        /* Caught / Stumped / Run Out: picking the fielder is
+           MANDATORY — the wicket is not recorded without one, so a
+           catch / stumping / run-out can never again be lost from
+           the fielder's fielding statistics. The panel stays open
+           and nothing is scored; the scorer picks the fielder and
+           confirms again. (Other dismissal types never need one.) */
+        if (!fielder && (type === 'caught' || type === 'stumped' || type === 'runout')){
+          var needMsg = 'Pick the fielder first — a fielder is mandatory for a ' + (type === 'caught' ? 'catch' : (type === 'stumped' ? 'stumping' : 'run out')) + '. The wicket has not been recorded.';
+          toast('⚠ ' + needMsg);
+          var ctxEl = $('wktContext'); if (ctxEl) ctxEl.textContent = '⚠ ' + needMsg;
+          var fSelEl = $('wktFielder'); if (fSelEl){ try { fSelEl.focus(); } catch(e){} }
+          return;
+        }
+        if (fielder2 && fielder2 === fielder){
+          toast('⚠ Fielder 2 must be a different player — pick another fielder, or leave Fielder 2 as None');
+          return;
+        }
         cancelWicket();
-        applyWicket(type, outWhich, fielder, runs, extra);
+        applyWicket(type, outWhich, fielder, runs, extra, fielder2);
       }
-      function applyWicket(type, outWhich, fielder, runs, extra){
+      function applyWicket(type, outWhich, fielder, runs, extra, fielder2){
         if (scoringLocked()) return;
         if (!requireLiveOwner('score')) return;
         if (matchFinishedGuard()) return;
@@ -7424,7 +7682,20 @@
            the fielder — the same display names the bowling card
            shows — never their full names. (Matches already scored
            keep the lines they were scored with.) */
-        var howOut = dismissalHowOut(type, fielder ? dispName(inn.bowlingTeam, fielder) : fielder, dispName(inn.bowlingTeam, inn.bowler));
+        var howOut = dismissalHowOut(type, fielder ? dispName(inn.bowlingTeam, fielder) : fielder, dispName(inn.bowlingTeam, inn.bowler), (type === 'runout' && fielder2) ? dispName(inn.bowlingTeam, fielder2) : '');
+        /* The fielder's STRUCTURED identity, captured while the
+           dropdown's full name is still in hand: the dropdown value
+           IS the full name, so its Player ID is exact — no parsing
+           the nickname-carrying dismissal line back later. For a
+           caught & bowled the fielder is the bowler himself. Only
+           dismissals that credit a fielder carry it. A run out's
+           optional second fielder is captured the same way
+           (fielder2Name / fielder2Pid) and earns his own Runouts
+           credit alongside the first fielder. */
+        var fielderFull = '', fielderPid = '', fielder2Full = '', fielder2Pid = '';
+        if (type === 'candbowled'){ fielderFull = inn.bowler || ''; fielderPid = bowl.pid || (fielderFull ? playerIdFor(inn.bowlingTeam, fielderFull) : ''); }
+        else if ((type === 'caught' || type === 'stumped' || type === 'runout') && fielder){ fielderFull = fielder; fielderPid = playerIdFor(inn.bowlingTeam, fielder); }
+        if (type === 'runout' && fielder2){ fielder2Full = fielder2; fielder2Pid = playerIdFor(inn.bowlingTeam, fielder2); }
         var legal = false, token = '', teamRuns = 0, batRuns = 0;
         if (extra === 'wide'){
           token = runs > 0 ? ('WdW+' + runs) : 'WdW';
@@ -7459,8 +7730,10 @@
         inn.runs += teamRuns;
         inn.wickets++;
         outBat.out = true; outBat.howOut = howOut;
+        if (fielderPid || fielderFull){ outBat.fielderName = fielderFull; outBat.fielderPid = fielderPid; }
+        if (fielder2Pid || fielder2Full){ outBat.fielder2Name = fielder2Full; outBat.fielder2Pid = fielder2Pid; }
         if (credited) bowl.wickets++;
-        pushBall(inn, token, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: type, howOut: howOut, outName: outName, fh: fhBall });
+        pushBall(inn, token, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: type, howOut: howOut, outName: outName, fh: fhBall, fielderName: fielderFull, fielderPid: fielderPid, fielder2Name: fielder2Full, fielder2Pid: fielder2Pid });
         updateFreeHitAfterBall(inn, token, legal); /* a no-ball wicket (run out) re-arms the free hit; a legal wicket ball consumes it; a wide leaves it armed */
         /* Milestones on a wicket ball: runs the striker completed
            on it still count towards a fifty / century, and a wicket
@@ -7747,8 +8020,22 @@
           var pbId = pendingBracketStart; pendingBracketStart = null;
           var pbm = bracketMatchById(pbId);
           var pbTeams = pbm ? bracketTeams(pbm) : { a:null, b:null };
-          if (pbTeams.a && pbTeams.b && ((pbTeams.a === newA && pbTeams.b === newB) || (pbTeams.a === newB && pbTeams.b === newA))){
+          var pbOk = !!(pbTeams.a && pbTeams.b && ((pbTeams.a === newA && pbTeams.b === newB) || (pbTeams.a === newB && pbTeams.b === newA)));
+          if (!pbOk && pendingBracketTeams){
+            var pbt = pendingBracketTeams;
+            pbOk = !!((pbt.a === newA && pbt.b === newB) || (pbt.a === newB && pbt.b === newA));
+          }
+          pendingBracketTeams = null;
+          if (pbOk){
             S.bracketMatchId = pbId;
+            /* The scheduled mirror fixture (if this match was
+               started from the bracket card instead of from the
+               fixture list) is consumed in the same commit — the
+               match now exists as the live match, never also as an
+               Upcoming fixture. */
+            if (S.tournament && Array.isArray(S.tournament.fixtures)){
+              S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return !(x && x.bracketId === pbId); });
+            }
           }
         }
         commit('Match started');
@@ -8790,6 +9077,23 @@
                 if (s != null && (!s || typeof s !== 'object' || (s.k !== 'W' && s.k !== 'L') || typeof s.of !== 'string' || !s.of)) m[k] = null;
               });
               m.isFinal = !!m.isFinal;
+              /* The match's schedule (set from the bracket's
+                 Schedule button): date / time / venue plus the
+                 format the match will be played under, and the
+                 designated scorer as a HASH only — the address
+                 itself never enters the synced state. While the
+                 schedule stands, a mirror fixture carrying this
+                 match's BK- ID sits in the tournament fixtures, so
+                 the match appears in Upcoming Fixtures and starts
+                 from there like any league fixture. */
+              if (typeof m.date !== 'string') m.date = '';
+              if (typeof m.time !== 'string') m.time = '';
+              if (typeof m.venue !== 'string') m.venue = '';
+              m.overs = (typeof m.overs === 'number' && m.overs > 0) ? Math.floor(m.overs) : 0;
+              if (typeof m.format !== 'string') m.format = '';
+              m.wickets = (typeof m.wickets === 'number' && m.wickets >= 1 && m.wickets <= 10) ? Math.floor(m.wickets) : 0;
+              if (typeof m.ballType !== 'string') m.ballType = '';
+              if (typeof m.scorerEmailHash !== 'string') m.scorerEmailHash = '';
             });
             if (!bk.matches.length) S.tournament.bracket = null;
           }
@@ -9160,7 +9464,10 @@
       /* Every points table the Points tab (and the scoreboard's
          tournament section) shows: with no groups, the one table
          there has always been. With groups, one table per group,
-         then the ungrouped teams (if any), then the overall table. */
+         then the ungrouped teams (if any). There is deliberately
+         NO overall / all-teams table — with 2+ groups each group
+         has its own table, and with one group an overall table
+         would only duplicate it (removed at the user's request). */
       function pointsTablesHTML(){
         normalizeTournament();
         var groups = rawGroups();
@@ -9170,7 +9477,6 @@
         }).join('');
         var ung = ungroupedTeams();
         if (ung.length) html += '<div class="bk-stage">Teams Not in a Group</div>' + pointsTableHTML({ teams: ung, group: null });
-        html += '<div class="bk-stage">Overall — All Teams</div>' + pointsTableHTML();
         return html;
       }
       /* The order the knockout bracket seeds from. With no groups
@@ -9699,6 +10005,14 @@
           function(){
             normalizeTournament();
             S.tournament.fixtures = S.tournament.fixtures.filter(function(f){ return f.id !== id; });
+            /* Removing a scheduled knockout fixture also clears
+               the schedule on its bracket match, so the bracket
+               card stops showing a date for a fixture that no
+               longer exists. */
+            if (fx.bracketId){
+              var rbm = bracketMatchById(fx.bracketId);
+              if (rbm){ rbm.date = ''; rbm.time = ''; rbm.venue = ''; rbm.overs = 0; rbm.format = ''; rbm.wickets = 0; rbm.ballType = ''; rbm.scorerEmailHash = ''; }
+            }
             commit('Fixture removed', true);
             toast('Fixture removed');
           });
@@ -9727,9 +10041,20 @@
         om.teamA = fx.teamA; om.teamB = fx.teamB;
         om.overs = fx.overs || null; om.format = fx.format || ''; om.wickets = fx.wickets || 10; om.ballType = fx.ballType || '';
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        if (fx.scorerEmailHash) om.fixtureScorerHash = fx.scorerEmailHash;
+        /* A fixture that mirrors a scheduled knockout match starts
+           AS that bracket match: doStartMatch stamps its BK- ID on
+           the live match (accepting this fixture's own pairing —
+           see pendingBracketTeams), so the result fills the
+           bracket slot and the podium. */
+        if (fx.bracketId){
+          pendingBracketStart = fx.bracketId;
+          pendingBracketTeams = { a: fx.teamA, b: fx.teamB };
+        }
         openMatchScreenPrefilled();
         if ($('omVenue')) $('omVenue').value = fx.venue || '';
         if ($('omDate') && fx.date) $('omDate').value = fx.date;
+        if ($('omTime') && fx.time) $('omTime').value = fx.time;
         toast(fx.teamA + ' vs ' + fx.teamB + ' — check the details, then tap START MATCH for the toss');
       }
       /* ---------- auto fixture generator: round-robin league ----------
@@ -9899,10 +10224,18 @@
          concrete teams for seed / picked slots, while srcA/srcB —
          { k:'W'|'L', of:<stage code> } — mean the slot is filled by
          the winner / loser of another bracket match once that match
-         is decided. The draw is fixed at generation, like a real
-         tournament draw: later league results never move a team
-         inside it (the owner can pick a new format while no knockout
-         result exists). Every bracket match keeps its own stable
+         is decided. A seed slot names a place in the points table,
+         so it resolves LIVE from the current standings until the
+         match itself has a result (bkSlotTeam) — a bracket drawn
+         before the league ends still names the right teams once
+         the table settles; picked-team slots are fixed at
+         generation, and the owner can pick a new format while no
+         knockout result exists. A bracket match may also carry a
+         schedule (date / time / venue / format / scorer hash),
+         mirrored into a tournament fixture with its BK- ID so the
+         match can be given a date and started from Upcoming
+         Fixtures (see the scheduling block after startBracketMatch).
+         Every bracket match keeps its own stable
          unique BK- ID for life, and a saved result belongs to a
          bracket match only through that ID — the result's
          bracketId, set when the match was started from the bracket —
@@ -10075,14 +10408,35 @@
           if (!r) return null;
           return (src.k === 'W') ? r.winner : r.loser;
         }
+        var stored = (side === 'A') ? bm.teamA : bm.teamB;
+        var seed = (side === 'A') ? bm.seedA : bm.seedB;
+        if (seed > 0){
+          /* A seed slot names a PLACE in the points table, not a
+             team frozen at draw time: until this match itself has
+             a result, the slot follows the CURRENT standings, so a
+             bracket drawn before the league finished still names
+             the right teams once the table settles (a straight
+             Final drawn early names the eventual top 2, not whoever
+             led on day one). Once a result is saved for the match,
+             the teams that actually played are locked in from that
+             result and the standings can no longer move them. */
+          var res = bracketResult(bm);
+          if (res){
+            var inn = res.match.innings[side === 'A' ? 0 : 1];
+            return (inn && inn.battingTeam) ? inn.battingTeam : (stored || null);
+          }
+          var order = bkSeedOrder();
+          if (order[seed - 1]) return order[seed - 1];
+          return stored || null;
+        }
+        if (stored) return stored;
         if (!bm.srcA && !bm.srcB && (bm.stage === 'F' || bm.stage === 'P3')){
           var s1 = bracketResult(bracketMatchByStage('SF1'));
           var s2 = bracketResult(bracketMatchByStage('SF2'));
           if (bm.stage === 'F') return (side === 'A') ? (s1 ? s1.winner : null) : (s2 ? s2.winner : null);
           return (side === 'A') ? (s1 ? s1.loser : null) : (s2 ? s2.loser : null);
         }
-        var t = (side === 'A') ? bm.teamA : bm.teamB;
-        return t || null;
+        return null;
       }
       function bracketTeams(bm){
         if (!bm) return { a:null, b:null };
@@ -10097,6 +10451,8 @@
           var ref = bracketMatchByStage(src.of);
           return (src.k === 'W' ? 'Winner of ' : 'Loser of ') + (ref ? (ref.label || ref.stage) : 'an earlier match');
         }
+        var seed = (side === 'A') ? bm.seedA : bm.seedB;
+        if (seed > 0) return bkOrdinal(seed) + ' in the points table';
         if (!bm.srcA && !bm.srcB && bm.stage === 'F') return side === 'A' ? 'Winner of Semi-final 1' : 'Winner of Semi-final 2';
         if (!bm.srcA && !bm.srcB && bm.stage === 'P3') return side === 'A' ? 'Loser of Semi-final 1' : 'Loser of Semi-final 2';
         return 'To be decided';
@@ -10246,11 +10602,145 @@
         var t = bracketTeams(bm);
         if (!t.a || !t.b){ toast('🏆 ' + bm.label + ' is waiting for the earlier knockout matches to finish'); return; }
         pendingBracketStart = id; /* doStartMatch tags the live match with this bracket match ID */
+        pendingBracketTeams = null; /* teams resolve live from the bracket for a bracket start */
         pendingMatchKind = 'tournament'; /* a bracket match belongs to the tournament */
         $('teamA').value = t.a; $('teamB').value = t.b;
         setView('scorer');
         openFoldById('setupCard');
         toast('🏆 ' + bm.label + ': ' + t.a + ' vs ' + t.b + ' — tap Start Match when ready');
+      }
+      /* ---------- knockout match scheduling ----------
+         A bracket match can be given a date, time, venue and
+         format BEFORE it is played. Saving the schedule mirrors it
+         into a real tournament fixture carrying the bracket
+         match's BK- ID (bracketId), so the match appears in
+         Upcoming Fixtures everywhere a league fixture does — the
+         Recent Matches list, the tournament Matches tab, the
+         scoreboard's Fixtures section and the teams' pages — and
+         starts from there through the normal fixture route: the
+         Open Match screen opens prefilled, the fixture is consumed
+         as the match starts, and doStartMatch stamps the bracket
+         ID onto the live match, so the result feeds the bracket
+         and the podium exactly like a match started from the
+         bracket card. The schedule lives on the bracket match
+         itself (date / time / venue / overs / format / wickets /
+         ballType / scorerEmailHash — the scorer as a hash only);
+         the fixture is its mirror, re-synced on every save, and
+         removed when the schedule is removed, when the fixture is
+         removed from the Matches tab, or when the match starts. */
+      var bkSchedId = null;
+      function bkFixtureFor(bm){
+        if (!bm) return null;
+        var found = null;
+        (S.tournament.fixtures || []).forEach(function(f){ if (f && f.bracketId === bm.id) found = f; });
+        return found;
+      }
+      function bkFixtureLabel(bm){
+        var parts = [bm.label || bm.stage || 'Knockout Match'];
+        if (bm.date) parts.push(fmtDateShort(bm.date));
+        if (bm.time) parts.push(bm.time);
+        if (bm.venue) parts.push(bm.venue);
+        return parts.join(' • ');
+      }
+      /* True when a fixture is the mirror of a bracket match that
+         already has a saved result: it is no longer upcoming (the
+         bracket card offers the replay when a tie left it open),
+         so fixture lists skip it even if a copy lingers. */
+      function bkFixtureDecided(f){
+        if (!f || !f.bracketId || !S.tournament || !S.tournament.bracket) return false;
+        var bm = null;
+        S.tournament.bracket.matches.forEach(function(m){ if (m.id === f.bracketId) bm = m; });
+        var r = bm ? bracketResult(bm) : null;
+        return !!(r && r.winner);
+      }
+      function openBkSchedule(id){
+        if (!requireTnOwner('schedule knockout matches')) return;
+        normalizeTournament();
+        var bm = bracketMatchById(id);
+        if (!bm) return;
+        var bkRes = bracketResult(bm);
+        if (bkRes && bkRes.winner){ toast('🏆 ' + (bm.label || 'This match') + ' is already decided — it no longer needs a schedule'); return; }
+        var t = bracketTeams(bm);
+        if (!t.a || !t.b){ toast('🏆 ' + (bm.label || 'This match') + ' — the two teams are not decided yet, so it cannot be scheduled'); return; }
+        bkSchedId = id;
+        var seed = fixtureFormatSeed();
+        $('bkSchedTitle').textContent = '📅 Schedule — ' + (bm.label || bm.stage);
+        $('bkSchedTeams').textContent = t.a + ' vs ' + t.b;
+        $('bkSchedDate').value = bm.date || '';
+        $('bkSchedTime').value = bm.time || '';
+        $('bkSchedVenue').value = bm.venue || S.tournament.venue || '';
+        $('bkSchedOvers').value = bm.overs || (seed ? seed.overs : '') || '';
+        $('bkSchedFormat').value = bm.format || (seed ? (seed.format || '') : '');
+        $('bkSchedWickets').value = bm.wickets || (seed ? seed.wickets : '') || '';
+        $('bkSchedBall').value = bm.ballType || (seed ? (seed.ballType || '') : '');
+        $('bkSchedScorer').value = '';
+        $('bkSchedScorerNote').textContent = bm.scorerEmailHash ? 'A designated scorer is set for this match — type a Gmail only to change it.' : '';
+        var rm = $('bkSchedRemove');
+        if (rm) rm.hidden = !(bm.date || bm.time || bm.venue);
+        $('bkSchedModal').classList.add('show');
+      }
+      function closeBkSchedule(){
+        var m = $('bkSchedModal'); if (m) m.classList.remove('show');
+        bkSchedId = null;
+      }
+      function saveBkSchedule(){
+        if (!requireTnOwner('schedule knockout matches')) return;
+        normalizeTournament();
+        var bm = bkSchedId ? bracketMatchById(bkSchedId) : null;
+        if (!bm){ closeBkSchedule(); return; }
+        var t = bracketTeams(bm);
+        if (!t.a || !t.b){ toast('🏆 The two teams are not decided yet, so this match cannot be scheduled'); return; }
+        var date = ($('bkSchedDate').value || '').trim();
+        var time = ($('bkSchedTime').value || '').trim();
+        var venue = ($('bkSchedVenue').value || '').trim();
+        if (!date && !venue){ toast('⚠️ Add at least a date or a venue for the schedule'); return; }
+        var email = (($('bkSchedScorer').value || '').trim()).toLowerCase();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('⚠️ That scorer email does not look like a Gmail address — check it or leave it blank'); return; }
+        var overs = parseInt($('bkSchedOvers').value, 10);
+        var wickets = parseInt($('bkSchedWickets').value, 10);
+        bm.date = date; bm.time = time; bm.venue = venue;
+        bm.overs = (!isNaN(overs) && overs >= 1 && overs <= 50) ? overs : 0;
+        bm.format = $('bkSchedFormat').value || '';
+        bm.wickets = (!isNaN(wickets) && wickets >= 1 && wickets <= 10) ? wickets : 0;
+        bm.ballType = $('bkSchedBall').value || '';
+        if (email) bm.scorerEmailHash = hashEmail(email);
+        /* Mirror into the fixture list (created once, then kept in
+           step): teams are the pairing as resolved right now, and
+           doStartMatch accepts exactly that pairing for the
+           bracket tag (see pendingBracketTeams). */
+        var fx = bkFixtureFor(bm);
+        if (!fx){
+          fx = { id: newFixtureId(), bracketId: bm.id, group: '' };
+          S.tournament.fixtures.push(fx);
+        }
+        fx.teamA = t.a; fx.teamB = t.b;
+        fx.label = bkFixtureLabel(bm);
+        fx.date = date; fx.time = time; fx.venue = venue;
+        if (bm.overs) fx.overs = bm.overs; else delete fx.overs;
+        fx.format = bm.format;
+        if (bm.wickets) fx.wickets = bm.wickets; else delete fx.wickets;
+        fx.ballType = bm.ballType;
+        fx.scorerEmailHash = bm.scorerEmailHash || '';
+        closeBkSchedule();
+        commit('Knockout match scheduled', true);
+        toast('📅 ' + (bm.label || 'Knockout match') + ' scheduled — ' + t.a + ' vs ' + t.b + ' is now in Upcoming Fixtures');
+      }
+      function removeBkSchedule(){
+        normalizeTournament();
+        var bm = bkSchedId ? bracketMatchById(bkSchedId) : null;
+        if (!bm){ closeBkSchedule(); return; }
+        var label = bm.label || bm.stage;
+        closeBkSchedule();
+        askVerify('Remove this schedule?',
+          label + ' will lose its date, time and venue, and its fixture will be removed from Upcoming Fixtures. The bracket match itself stays. This cannot be undone.',
+          function(){
+            normalizeTournament();
+            var b2 = bracketMatchById(bm.id);
+            if (b2){ b2.date = ''; b2.time = ''; b2.venue = ''; b2.overs = 0; b2.format = ''; b2.wickets = 0; b2.ballType = ''; b2.scorerEmailHash = ''; }
+            S.tournament.fixtures = S.tournament.fixtures.filter(function(f){ return !(f && f.bracketId === bm.id); });
+            commit('Knockout schedule removed', true);
+            toast('📅 Schedule removed — ' + label + ' is no longer in Upcoming Fixtures');
+          });
       }
       /* ---------- bracket format picker & custom builder ---------- */
       function bkPickFormat(id){
@@ -10455,14 +10945,27 @@
           + '<button type="button" class="bk-idchip" title="Tap to copy this match\'s unique ID" onclick="copyIdValue(\'' + bm.id + '\',\'Match ID\')">ID ' + esc(bm.id) + '</button></div>'
           + bracketTeamRow(t.a, bm.seedA || 0, res, !!(res && res.winner && res.winner === t.a), bkSlotTbd(bm, 'A'))
           + bracketTeamRow(t.b, bm.seedB || 0, res, !!(res && res.winner && res.winner === t.b), bkSlotTbd(bm, 'B'));
+        if ((!res || res.tied) && (bm.date || bm.time || bm.venue)){
+          var schedParts = [];
+          if (bm.date) schedParts.push(fmtDateShort(bm.date));
+          if (bm.time) schedParts.push(bm.time);
+          if (bm.venue) schedParts.push(bm.venue);
+          html += '<div class="bk-sched">📅 ' + esc(schedParts.join(' • ')) + '</div>';
+        }
         if (res){
           html += '<div class="bk-result">' + esc(matchResultText(res.match)) + '</div>';
           if (res.tied) html += '<div class="bk-wait">Tied — no team advances from a tie, so this slot stays open for a replay.</div>'
-            + '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score the Replay →</button></div>';
+            + '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score the Replay →</button><button class="btn ghost sm" onclick="openBkSchedule(\'' + bm.id + '\')">' + (bm.date || bm.venue ? '📅 Edit Schedule' : '📅 Schedule') + '</button></div>';
         } else if (t.a && t.b){
-          html += '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score This Match →</button></div>';
+          html += '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score This Match →</button><button class="btn ghost sm" onclick="openBkSchedule(\'' + bm.id + '\')">' + (bm.date || bm.venue ? '📅 Edit Schedule' : '📅 Schedule') + '</button></div>';
         } else {
-          html += '<div class="bk-wait">Waiting for the earlier knockout matches to finish</div>';
+          /* The waiting line names what this match is actually
+             waiting for: an earlier knockout result when a slot
+             follows one, the final league standings when a slot is
+             a points-table seed (a straight Final has no earlier
+             knockout matches at all). */
+          var waitsOnSrc = (!t.a && (bm.srcA || (!bm.seedA && !bm.teamA))) || (!t.b && (bm.srcB || (!bm.seedB && !bm.teamB)));
+          html += '<div class="bk-wait">' + (waitsOnSrc ? 'Waiting for the earlier knockout matches to finish' : 'The teams will be set from the final points table') + '</div>';
         }
         return html + '</div>';
       }
@@ -10637,12 +11140,50 @@
         arr.sort(function(x,y){ return (y.pts - x.pts) || (y.nrr - x.nrr) || (y.w - x.w) || x.team.localeCompare(y.team); });
         return arr;
       }
+      /* How many places at the top of ONE points table are the
+         qualifying places — the green-dot places; every team below
+         them carries the red dot (eliminated / outside the
+         qualifying places). With no knockout bracket the table has
+         always marked the top 2, and a group table in a multi-group
+         tournament keeps that top-2-per-group rule. A single table
+         (no groups, or the tournament's only group) follows the
+         saved bracket instead: a Straight Final qualifies 2, an
+         Eliminator 3, semi-finals 4, quarter-finals 8 — the same
+         "Top N qualify" the bracket picker shows. A custom bracket
+         qualifies as many teams as it seeds into the draw. */
+      function pointsQualifyCount(filter){
+        var dflt = 2;
+        try {
+          normalizeTournament();
+          var br = S.tournament && S.tournament.bracket;
+          if (!br) return dflt;
+          var groups = rawGroups();
+          var singleTable = !filter ? true : (filter.group ? groups.length <= 1 : groups.length === 0);
+          if (!singleTable) return dflt;
+          var fmt = bkFormatById(br.format);
+          if (fmt && fmt.need > 0) return fmt.need;
+          if (br.format === 'custom'){
+            var seeds = {};
+            (br.matches || []).forEach(function(m){ if (m.seedA > 0) seeds[m.seedA] = 1; if (m.seedB > 0) seeds[m.seedB] = 1; });
+            var n = Object.keys(seeds).length;
+            return n > 0 ? n : dflt;
+          }
+          /* A bracket saved before formats were stamped: read the
+             qualifying count back from its stages. */
+          var stages = (br.matches || []).map(function(m){ return m.stage || ''; });
+          if (stages.some(function(s){ return s.indexOf('QF') === 0; })) return 8;
+          if (stages.some(function(s){ return s.indexOf('SF') === 0; })) return 4;
+        } catch(e){}
+        return dflt;
+      }
       function pointsTableHTML(filter){
         var arr = computePoints(filter || undefined);
         if (!arr.length) return filter ? '<p class="note">No teams in this group yet.</p>' : '<p class="note">No teams entered yet.</p>';
+        var qn = pointsQualifyCount(filter || undefined);
         var body = arr.map(function(r,i){
           var ptLogo = teamLogoFor(r.team);
-          return '<tr class="' + (i < 2 ? 'toprow' : '') + '"><td class="teamcell">' + (i < 2 ? '<span class="qdot"></span>' : '') + (ptLogo ? '<img class="pt-logo" src="' + esc(ptLogo) + '" alt="" loading="lazy" />' : '') + esc(r.team) + '</td>'
+          var qualified = i < qn;
+          return '<tr class="' + (qualified ? 'toprow' : '') + '"><td class="teamcell">' + (qualified ? '<span class="qdot" title="In a qualifying place"></span>' : '<span class="edot" title="Eliminated — outside the qualifying places"></span>') + (ptLogo ? '<img class="pt-logo" src="' + esc(ptLogo) + '" alt="" loading="lazy" />' : '') + esc(r.team) + '</td>'
             + '<td>' + r.p + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + r.t + '</td>'
             + '<td>' + (r.nrr >= 0 ? '+' : '') + r.nrr.toFixed(3) + '</td><td><b>' + r.pts + '</b></td></tr>';
         }).join('');
@@ -10754,10 +11295,11 @@
          from the same matches the other statistics use (saved
          results plus the match being scored right now), so the
          tables move ball by ball, and a re-render keeps the level
-         the reader is on. Fielding figures are read from the
-         dismissal text recorded on each wicket ("c X b Y",
-         "run out (X)", "st X b Y", "c & b Y") — the only place
-         fielding was ever written down. */
+         the reader is on. Fielding figures come from the fielder's
+         structured identity stored at scoring time (fielderName /
+         fielderPid — see fieldingCreditFor), with the dismissal
+         text ("c X b Y", "run out (X)", "st X b Y", "c & b Y") as
+         the legacy fallback for matches scored before it existed. */
       var tnStatView = { sec:'', cat:'' };
       function tnStatsToTop(){
         var tb = $('tnBody'); if (tb) tb.scrollTop = 0;
@@ -10784,11 +11326,11 @@
         try { renderTnStats(); } catch(e){}
         return true;
       }
-      function tnFieldingCredit(map, m, team, name, kind){
+      function tnFieldingCredit(map, m, team, name, kind, pidOverride){
         var nm = String(name || '').trim();
         if (!nm || nm.indexOf('not recorded') > -1) return;
-        var pid = '';
-        try { pid = entryPlayerId(m, team, nm); } catch(e){}
+        var pid = pidOverride || '';
+        if (!pid){ try { pid = entryPlayerId(m, team, nm); } catch(e){} }
         var key = pid || ('nm:' + nm.toLowerCase());
         if (!map[key]) map[key] = { pid:pid, name:nm, team:team, teams:[team], catches:0, runouts:0, stumpings:0 };
         var s = map[key];
@@ -10839,11 +11381,9 @@
                 if (br >= 50 && (s.f50b === null || bb < s.f50b)){ s.f50b = bb; s.f50r = br; }
                 if (br >= 100 && (s.f100b === null || bb < s.f100b)){ s.f100b = bb; s.f100r = br; }
               }
-              var ho = String(b.howOut || ''), mm = null;
-              if ((mm = /^c & b (.+)$/.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
-              else if ((mm = /^c (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'catches');
-              else if ((mm = /^run out \((.+)\)$/.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'runouts');
-              else if ((mm = /^st (.+?) b /.exec(ho))) tnFieldingCredit(field, m, inn.bowlingTeam, mm[1], 'stumpings');
+              var fcList = [];
+              try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
+              fcList.forEach(function(fc){ tnFieldingCredit(field, m, inn.bowlingTeam, fc.name, fc.kind, fc.pid); });
             });
             (inn.bowlers || []).forEach(function(b){
               var s = bowlEntry(m, inn.bowlingTeam, b.name, b.pid);
@@ -11598,19 +12138,11 @@
                 r.spells.push({ wkts: wk, runs: b.runs || 0, balls: b.balls || 0 });
               });
               (inn.batters || []).forEach(function(b){
-                var ho = String(b.howOut || ''), mm = null, kind = '';
-                if ((mm = /^c & b (.+)$/.exec(ho))) kind = 'catches';
-                else if ((mm = /^c (.+?) b /.exec(ho))) kind = 'catches';
-                else if ((mm = /^run out \((.+)\)$/.exec(ho))) kind = 'runouts';
-                else if ((mm = /^st (.+?) b /.exec(ho))) kind = 'stumpings';
-                if (kind && mm){
-                  var nm = String(mm[1] || '').trim();
-                  if (nm && nm.indexOf('not recorded') === -1){
-                    var fp = '';
-                    try { fp = entryPlayerId(m, team, nm); } catch(e){}
-                    var r2 = prec(nm, fp); r2.matchIds[m.id] = 1; r2.field[kind]++;
-                  }
-                }
+                var fcList = [];
+                try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
+                fcList.forEach(function(fc){
+                  var r2 = prec(fc.name, fc.pid); r2.matchIds[m.id] = 1; r2.field[fc.kind]++;
+                });
               });
             }
           });
@@ -11673,13 +12205,9 @@
                 if ((b.wickets || 0) >= 3){ r.threeW++; r.threeBadge = true; }
               });
               (inn.batters || []).forEach(function(b){
-                var ho = String(b.howOut || ''), mm = null;
-                if ((mm = /^c & b (.+)$/.exec(ho))) {}
-                else if ((mm = /^c (.+?) b /.exec(ho))) {}
-                else if ((mm = /^run out \((.+)\)$/.exec(ho))) {}
-                else if ((mm = /^st (.+?) b /.exec(ho))) {}
-                else mm = null;
-                if (mm){ var r = pr(String(mm[1]).trim()); r.matchIds[m.id] = 1; r.field++; }
+                var fcList = [];
+                try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
+                fcList.forEach(function(fc){ var r = pr(fc.name); r.matchIds[m.id] = 1; r.field++; });
               });
             }
           });
@@ -13512,7 +14040,7 @@
             return (pr[0] === f.teamA && pr[1] === f.teamB) || (pr[0] === f.teamB && pr[1] === f.teamA);
           });
         }
-        var fixRows = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
+        var fixRows = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f) && !bkFixtureDecided(f); }).map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
         fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return singleFixtureRowHTML(f); }).join('');
         if (fixRows){
           html += fixRows;
@@ -13872,7 +14400,7 @@
         var played = S.tournament.matches.filter(function(m){
           return (m.innings || []).some(function(inn){ return inn.battingTeam === teamName || inn.bowlingTeam === teamName; });
         });
-        var upcoming = S.tournament.fixtures.filter(function(f){ return f.teamA === teamName || f.teamB === teamName; });
+        var upcoming = S.tournament.fixtures.filter(function(f){ return (f.teamA === teamName || f.teamB === teamName) && !bkFixtureDecided(f); });
         return { played: played, upcoming: upcoming };
       }
       /* The scoreboard's tournament explorer is a viewer surface:
@@ -14097,6 +14625,7 @@
         });
         /* Upcoming fixtures. */
         tn.fixtures.forEach(function(f){
+          if (bkFixtureDecided(f)) return; /* a decided knockout match's mirror fixture is no longer upcoming */
           var fGrp = null;
           try { fGrp = matchGroupName(f); } catch(e){}
           out.push('<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '>'
@@ -14135,8 +14664,9 @@
           sbBatHtml = battingStatsHTML();
           sbBowlHtml = bowlingStatsHTML();
           sbExtraHtml = extraStatsHTML();
-          sbFixHtml = dtn.fixtures.length
-            ? dtn.fixtures.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
+          var dFix = dtn.fixtures.filter(function(f){ return !bkFixtureDecided(f); });
+          sbFixHtml = dFix.length
+            ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
             : '<p class="note">No fixtures yet.</p>';
           var dFin = tournamentFinalResult();
           var dFinId = dFin ? dFin.match.id : null;
@@ -15788,7 +16318,7 @@
            migration assigns), so old and new matches join up. */
         var map = {};
         function rec(name, team, pid){
-          if (!map[pid]) map[pid] = { pid:pid, name:name, team:team, teams:[team], matchIds:{}, matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0 };
+          if (!map[pid]) map[pid] = { pid:pid, name:name, team:team, teams:[team], matchIds:{}, matches:0, batInns:0, runs:0, balls:0, fours:0, sixes:0, outs:0, best:-1, bestNO:false, bowlBalls:0, bowlRuns:0, wkts:0, bestBW:-1, bestBR:0, catches:0, stumpings:0, runouts:0 };
           var r = map[pid];
           if (r.teams.indexOf(team) === -1) r.teams.push(team);
           return r;
@@ -15803,6 +16333,19 @@
               r.batInns++; r.runs += b.runs || 0; r.balls += b.balls || 0; r.fours += b.fours || 0; r.sixes += b.sixes || 0;
               if (b.out) r.outs++;
               if (b.runs > r.best || (b.runs === r.best && !b.out && !r.bestNO)){ r.best = b.runs; r.bestNO = !b.out; }
+              /* Fielding credit for this dismissal, by the fielder's
+                 Player ID (structured identity first, dismissal text
+                 as legacy fallback — see fieldingCreditFor). The
+                 fielder's record is created even when he neither
+                 batted nor bowled in this match. */
+              var fcList = [];
+              try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
+              fcList.forEach(function(fc){
+                if (!fc || !fc.pid) return;
+                var fr2 = rec(fc.name, inn.bowlingTeam, fc.pid);
+                if (!seen[fc.pid]){ seen[fc.pid] = 1; fr2.matchIds[m.id] = 1; }
+                fr2[fc.kind]++;
+              });
             });
             (inn.bowlers || []).forEach(function(b){
               var pid = b.pid || entryPlayerId(m, inn.bowlingTeam, b.name);
@@ -16386,9 +16929,10 @@
          BAT / BOWL / FIELD tables split by match format and a
          MATCH-WISE list of per-match cards. Every figure comes from
          the same recorded matches the career totals use
-         (allRecordMatches, by Player ID); fielding figures are read
-         from the dismissal text recorded on each wicket — the same
-         derivation the tournament Fielding statistics use — and dots
+         (allRecordMatches, by Player ID); fielding figures come
+         from the fielder's structured identity stored at scoring
+         time (dismissal text as the legacy fallback — the same
+         derivation the tournament Fielding statistics use), and dots
          / maidens are counted from the ball-by-ball record. Tab and
          toggle taps re-render only #pfMain, so an owner mid-edit in
          the form below never loses what they typed. */
@@ -16537,24 +17081,23 @@
             (inn.batters || []).forEach(function(b, bi){ if (recBelongsTo(m, inn, inn.battingTeam, b, ctx)) batRecs.push({ b: b, inn: inn, order: bi + 1 }); });
             (inn.bowlers || []).forEach(function(b){ if (recBelongsTo(m, inn, inn.bowlingTeam, b, ctx)) bowlRecs.push({ b: b, inn: inn, maidens: 0 }); });
           });
-          /* Fielding: credit catches / stumpings / run-outs named in
-             the dismissal text to this player (resolved by Player ID
-             through the match's own snapshot, as in tnFieldingCredit). */
+          /* Fielding: credit catches / stumpings / run-outs to this
+             player by Player ID — the structured fielder identity
+             stored at scoring time first, the dismissal text (with
+             its nickname resolved through the match's snapshot)
+             only as the legacy fallback. See fieldingCreditFor. */
           var fielded = false;
-          function credit(inn, fielderName, kind){
-            var nm = String(fielderName || '').trim();
-            if (!nm || nm.indexOf('not recorded') > -1) return;
-            var fp = '';
-            try { fp = entryPlayerId(m, inn.bowlingTeam, nm); } catch(e){}
-            if (fp === usePid || (!fp && nm === name)){ field[kind]++; fr.field[kind]++; fielded = true; }
+          function credit(inn, b){
+            var fcList = [];
+            try { fcList = fieldingCreditsFor(m, inn, b); } catch(e){}
+            fcList.forEach(function(fc){
+              if (fc.pid === usePid || (!fc.pid && fc.name === name)){ field[fc.kind]++; fr.field[fc.kind]++; fielded = true; }
+            });
           }
           (m.innings || []).forEach(function(inn){
             (inn.batters || []).forEach(function(b){
-              var ho = String(b.howOut || ''), mm = null;
-              if ((mm = /^c & b (.+)$/.exec(ho))) credit(inn, mm[1], 'catches');
-              else if ((mm = /^c (.+?) b /.exec(ho))) credit(inn, mm[1], 'catches');
-              else if ((mm = /^run out \((.+)\)$/.exec(ho))) credit(inn, mm[1], 'runouts');
-              else if ((mm = /^st (.+?) b /.exec(ho))) credit(inn, mm[1], 'stumpings');
+              credit(inn, b);
+              var ho = String(b.howOut || '');
               /* Bowling dismissals: a wicket the dismissal text
                  credits to this bowler ("… b <name>"), by kind. */
               var bm = /(?:^| )b (.+)$/.exec(ho);
@@ -20227,9 +20770,23 @@
             out.wickets++;
             var outBat = getBat(rec.outName || rec.batter);
             outBat.out = true; outBat.howOut = rec.howOut || 'out';
+            /* Carry the fielder's structured identity through the
+               replay — from the ball record when it has one, else
+               resolved once here from the dismissal line (nickname
+               resolved through the entry's snapshot), so a corrected
+               innings keeps / gains the exact fielding credit. */
+            var fcId = null, fcId2 = null;
+            try {
+              var fcAll = fieldingCreditsFor(entry, srcInn, { name: rec.outName || rec.batter || '', howOut: rec.howOut || '', fielderName: rec.fielderName || '', fielderPid: rec.fielderPid || '', fielder2Name: rec.fielder2Name || '', fielder2Pid: rec.fielder2Pid || '' });
+              fcId = fcAll[0] || null; fcId2 = fcAll[1] || null;
+            } catch(e){}
+            if (fcId){ outBat.fielderName = fcId.name; outBat.fielderPid = fcId.pid; }
+            else if (rec.fielderName || rec.fielderPid){ outBat.fielderName = rec.fielderName || ''; outBat.fielderPid = rec.fielderPid || ''; }
+            if (fcId2){ outBat.fielder2Name = fcId2.name; outBat.fielder2Pid = fcId2.pid; }
+            else if (rec.fielder2Name || rec.fielder2Pid){ outBat.fielder2Name = rec.fielder2Name || ''; outBat.fielder2Pid = rec.fielder2Pid || ''; }
             var credited = (typeof rec.bowlerWicket === 'boolean') ? rec.bowlerWicket : bowlerCredited(rec.dismissal || '');
             if (credited) bowl.wickets++;
-            pushBall(out, t, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: rec.dismissal || '', howOut: rec.howOut || '', outName: rec.outName || rec.batter || '', fh: fhBefore });
+            pushBall(out, t, 'bw', overNo, { wkt: true, bowlerWicket: credited, dismissal: rec.dismissal || '', howOut: rec.howOut || '', outName: rec.outName || rec.batter || '', fh: fhBefore, fielderName: outBat.fielderName || '', fielderPid: outBat.fielderPid || '', fielder2Name: outBat.fielder2Name || '', fielder2Pid: outBat.fielder2Pid || '' });
             updateFreeHitAfterBall(out, t, legal);
             checkBatterMilestones(out, bat, batBefore, legal);
             if (credited) checkBowlerMilestones(out, bowl, bowlWBefore, legal);
@@ -20357,7 +20914,28 @@
           var outName = rec.outName || rec.batter || '';
           f.wOut = (pair.ns && outName === pair.ns && outName !== rec.batter) ? 'nonStriker' : 'striker';
           f.wOther = pair.ns || '';
-          f.wFielder = beFielderFromHowOut(rec.howOut);
+          /* The fielder box holds the FULL name: the structured
+             identity stored at scoring time wins; for a legacy ball
+             the name parsed out of the dismissal line may be a
+             nickname, so resolve it back to the full name through
+             the entry's nicknames snapshot when it matches one. */
+          f.wFielder = rec.fielderName || beFielderFromHowOut(rec.howOut);
+          f.wFielderPid = rec.fielderPid || '';
+          /* A run out's second fielder: the structured fielder2Name
+             wins; a legacy "run out (A/B)" line carries both names
+             in the one box, so split them back apart. */
+          f.wFielder2 = rec.fielder2Name || '';
+          f.wFielder2Pid = rec.fielder2Pid || '';
+          if (!f.wFielder2 && f.wFielder && f.wFielder.indexOf('/') > -1){
+            var fparts = f.wFielder.split('/');
+            f.wFielder = fparts[0].trim();
+            f.wFielder2 = fparts.slice(1).join('/').trim();
+          }
+          if (!rec.fielderName && f.wFielder){
+            var nks = (beCtx && beCtx.entry && beCtx.entry.nicknames) || [];
+            for (var ni = 0; ni < nks.length; ni++){ if (nks[ni] && nks[ni].k === f.wFielder && nks[ni].n){ f.wFielder = nks[ni].n; break; } }
+            if (f.wFielder2){ for (var nj2 = 0; nj2 < nks.length; nj2++){ if (nks[nj2] && nks[nj2].k === f.wFielder2 && nks[nj2].n){ f.wFielder2 = nks[nj2].n; break; } } }
+          }
         }
         return f;
       }
@@ -20419,7 +20997,8 @@
             + '<option value="nonStriker"' + (f.wOut === 'nonStriker' ? ' selected' : '') + (f.pairNs ? '' : ' disabled') + '>Other batter' + (f.pairNs ? ' — ' + esc(dispIn(e.nicknames, inn.battingTeam, f.pairNs)) : '') + '</option>'
             + '</select>'
             + '<label for="beWOther">Other batter\'s correct name</label><input id="beWOther" value="' + esc(f.wOther || '') + '" placeholder="The other batter at the crease" autocomplete="off" />'
-            + '<label for="beWFielder">Fielder (as shown on the card)</label><input id="beWFielder" value="' + esc(f.wFielder || '') + '" placeholder="Catcher / fielder / keeper — blank if none" autocomplete="off" />'
+            + '<label for="beWFielder">Fielder (full name) *</label><input id="beWFielder" value="' + esc(f.wFielder || '') + '" placeholder="Catcher / fielder / keeper — mandatory for Caught, Stumped, Run Out" autocomplete="off" />'
+            + '<label for="beWFielder2">Second fielder (full name) — Run Out only, optional</label><input id="beWFielder2" value="' + esc(f.wFielder2 || '') + '" placeholder="The other fielder in the run out — blank if none" autocomplete="off" />'
             + '<label for="beWRuns">Runs completed on the ball</label><input id="beWRuns" type="number" min="0" max="36" step="1" value="' + (f.wRuns || 0) + '" />';
         }
         h += '<div class="rowflex" style="margin-top:14px">'
@@ -20445,6 +21024,7 @@
         if ((x = v('beWOut')) !== null) f.wOut = x;
         if ((x = v('beWOther')) !== null) f.wOther = x;
         if ((x = v('beWFielder')) !== null) f.wFielder = x;
+        if ((x = v('beWFielder2')) !== null) f.wFielder2 = x;
         if ((x = v('beWRuns')) !== null) f.wRuns = x;
       }
       function beFormTypeChanged(){ beHarvestForm(); beRender(); }
@@ -20472,9 +21052,49 @@
           var pre = f.wExtra === 'wide' ? 'WdW' : (f.wExtra === 'noball' ? 'NbW' : (f.wExtra === 'bye' ? 'ByeW' : (f.wExtra === 'legbye' ? 'LbW' : 'W')));
           token = wr > 0 ? pre + '+' + wr : pre;
           cls = 'bw';
-          var howOut = dismissalHowOut(f.wType, String(f.wFielder || '').trim(), dispIn(e.nicknames, inn.bowlingTeam, bowler));
+          var fielderRaw = String(f.wFielder || '').trim();
+          var fielder2Raw = String(f.wFielder2 || '').trim();
+          /* A "First/Second" pair typed into the first box (the way
+             the dismissal line itself writes it) splits into the
+             two fielder boxes for a run out. */
+          if (f.wType === 'runout' && !fielder2Raw && fielderRaw.indexOf('/') > -1){
+            var fsplit = fielderRaw.split('/');
+            fielderRaw = fsplit[0].trim();
+            fielder2Raw = fsplit.slice(1).join('/').trim();
+          }
+          if (f.wType !== 'runout') fielder2Raw = '';
+          /* Resolve a nickname typed / parsed here back to the full
+             name through the entry's nicknames snapshot, so the
+             corrected ball stores the same structured identity live
+             scoring stores (full name + Player ID). */
+          if (fielderRaw || fielder2Raw){
+            var nks2 = e.nicknames || [];
+            for (var nj = 0; nj < nks2.length; nj++){ if (nks2[nj] && nks2[nj].k === fielderRaw && nks2[nj].n){ fielderRaw = nks2[nj].n; break; } }
+            if (fielder2Raw){ for (var nk2 = 0; nk2 < nks2.length; nk2++){ if (nks2[nk2] && nks2[nk2].k === fielder2Raw && nks2[nk2].n){ fielder2Raw = nks2[nk2].n; break; } } }
+          }
+          if (f.wType === 'candbowled') fielderRaw = bowler;
+          /* Same rule as live scoring: a fielder is MANDATORY for
+             Caught / Stumped / Run Out — the correction is not saved
+             without one. */
+          if (!fielderRaw && (f.wType === 'caught' || f.wType === 'stumped' || f.wType === 'runout')){
+            toast('⚠ A fielder is mandatory for a ' + (f.wType === 'caught' ? 'catch' : (f.wType === 'stumped' ? 'stumping' : 'run out')) + ' — type the fielder\'s full name first');
+            return;
+          }
+          if (fielder2Raw && fielder2Raw === fielderRaw){
+            toast('⚠ The second fielder must be a different player — or leave the second fielder blank');
+            return;
+          }
+          var fielderPid2 = '';
+          if (fielderRaw && (f.wType === 'caught' || f.wType === 'candbowled' || f.wType === 'stumped' || f.wType === 'runout')){
+            try { fielderPid2 = entryPlayerId(e, inn.bowlingTeam, fielderRaw); } catch(err2){}
+          } else fielderRaw = (f.wType === 'caught' || f.wType === 'stumped' || f.wType === 'runout') ? fielderRaw : '';
+          var fielder2PidB = '';
+          if (fielder2Raw){
+            try { fielder2PidB = entryPlayerId(e, inn.bowlingTeam, fielder2Raw); } catch(err3){}
+          }
+          var howOut = dismissalHowOut(f.wType, fielderRaw, dispIn(e.nicknames, inn.bowlingTeam, bowler), fielder2Raw);
           var outName = f.wOut === 'nonStriker' ? (String(f.wOther || '').trim() || f.pairNs || batter) : batter;
-          extra = { wkt: true, bowlerWicket: bowlerCredited(f.wType), dismissal: f.wType, howOut: howOut, outName: outName };
+          extra = { wkt: true, bowlerWicket: bowlerCredited(f.wType), dismissal: f.wType, howOut: howOut, outName: outName, fielderName: fielderRaw || '', fielderPid: fielderPid2 || '', fielder2Name: fielder2Raw || '', fielder2Pid: fielder2PidB || '' };
           /* A Retired Out on a legal delivery is not a delivery at
              all (see applyWicket): it is stored below as the same
              feed note live scoring writes, so the replay restores
@@ -20743,6 +21363,10 @@
         html += boardTable('Most Wickets', byWkts.map(function(r){
           return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r">' + oversText(r.bowlBalls) + '</td><td class="r">' + r.bowlRuns + '</td><td class="r"><b>' + r.wkts + '</b></td><td class="r">' + econ(r) + '</td></tr>';
         }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wkts</th><th class="r">Econ</th>');
+        var byField = players.filter(function(r){ return (r.catches + r.stumpings + r.runouts) > 0; }).sort(function(a, b){ return ((b.catches + b.stumpings + b.runouts) - (a.catches + a.stumpings + a.runouts)) || (b.catches - a.catches); }).slice(0, 10);
+        html += boardTable('Fielding — Most Dismissals', byField.map(function(r){
+          return '<tr>' + nm(r) + '<td class="r">' + r.matches + '</td><td class="r">' + r.catches + '</td><td class="r">' + r.stumpings + '</td><td class="r">' + r.runouts + '</td><td class="r"><b>' + (r.catches + r.stumpings + r.runouts) + '</b></td></tr>';
+        }).join(''), '<th>Player</th><th class="r">Mat</th><th class="r">Cat</th><th class="r">Stu</th><th class="r">RO</th><th class="r">Total</th>');
         var byAve = players.filter(function(r){ return r.outs >= 3; }).sort(function(a, b){ return (b.runs / b.outs) - (a.runs / a.outs); }).slice(0, 5);
         html += boardTable('Best Average (min. 3 dismissals)', byAve.map(function(r){
           return '<tr>' + nm(r) + '<td class="r">' + r.batInns + '</td><td class="r">' + r.runs + '</td><td class="r"><b>' + ave(r) + '</b></td></tr>';
@@ -22613,6 +23237,15 @@
          fixture, a bracket match is NOT removed when scored — its
          result fills the bracket slot instead. */
       var pendingBracketStart = null;
+      /* The pairing a SCHEDULED bracket fixture carried when it was
+         started (see startFixture): seed slots resolve live from
+         the points table, so by start day the bracket card may
+         name a different pairing than the fixture that was
+         scheduled — doStartMatch also accepts the fixture's own
+         pairing for the bracket tag, because the scheduled fixture
+         IS that bracket match. Null for a start straight from the
+         bracket card, where the live pairing is the only one. */
+      var pendingBracketTeams = null;
       /* One-shot extras handed from the Open Match screen to
          doStartMatch: the format details for the match about to
          start, and its wickets limit. Consumed (and cleared) there. */
