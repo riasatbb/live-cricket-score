@@ -3800,7 +3800,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v213';
+      var APP_VERSION = 'v214';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3959,7 +3959,7 @@
       }
       var S = freshState();
       var undoStack = [];
-      var pendingExtra = null; /* 'wide' | 'noball' | 'bye' | 'legbye' */
+      var pendingExtra = null; /* 'wide' | 'noball' | 'bye' | 'legbye' | 'noball+bye' | 'noball+legbye' (a no-ball whose runs were byes / leg-byes) */
       var fbApp = null, fbRef = null, fbPushing = false, fbIsDefault = false;
       /* Sync state machine. fbReady turns true only after the first
          Firebase snapshot has actually been read — until then the scoring
@@ -5776,8 +5776,11 @@
         var m;
         if (/^\d+$/.test(s)) return parseInt(s, 10) || 0;
         if ((m = s.match(/^Nb\+(\d+)$/))) return 1 + (parseInt(m[1], 10) || 0);
+        if ((m = s.match(/^Nb\+(?:B|Lb)(\d+)$/))) return 1; /* no-ball + byes / leg-byes: only the 1 penalty run is the bowler's */
         if ((m = s.match(/^NbW\+(\d+)$/))) return 1 + (parseInt(m[1], 10) || 0);
         if (s === 'NbW') return 1;
+        if ((m = s.match(/^(?:NbBW|NbLbW)\+(\d+)$/))) return 1;
+        if (s === 'NbBW' || s === 'NbLbW') return 1;
         if ((m = s.match(/^Wd\+(\d+)$/))) return 1 + (parseInt(m[1], 10) || 0);
         if (s === 'Wd') return 1;
         if ((m = s.match(/^WdW\+(\d+)$/))) return 1 + (parseInt(m[1], 10) || 0);
@@ -7157,20 +7160,48 @@
         if (matchFinishedGuard()) return;
         if (inningsEndGuard()) return;
         syncPlayersFromInputs(); if (!playersSelected()) return;
-        pendingExtra = (pendingExtra===type) ? null : type;
+        /* A No-Ball can carry byes / leg-byes on the SAME delivery
+           (the batters crossed without the bat touching the ball),
+           so NB combines with Bye / LB into one pending extra —
+           tapped in either order. Tapping a combined part again
+           removes just that part; a Wide never combines (a wide
+           cannot also be a no-ball / bye / leg-bye delivery) and
+           simply replaces whatever was pending. */
+        if (pendingExtra === 'noball+bye' || pendingExtra === 'noball+legbye'){
+          var cKind = pendingExtra === 'noball+bye' ? 'bye' : 'legbye';
+          if (type === 'noball') pendingExtra = cKind;
+          else if (type === cKind) pendingExtra = 'noball';
+          else if (type === 'bye' || type === 'legbye') pendingExtra = 'noball+' + type;
+          else pendingExtra = type;
+        } else if (pendingExtra === 'noball' && (type === 'bye' || type === 'legbye')){
+          pendingExtra = 'noball+' + type;
+        } else if ((pendingExtra === 'bye' || pendingExtra === 'legbye') && type === 'noball'){
+          pendingExtra = 'noball+' + pendingExtra;
+        } else {
+          pendingExtra = (pendingExtra===type) ? null : type;
+        }
         renderPending();
-        if (pendingExtra) toast(pendingExtra==='wide'
+        if (pendingExtra === 'noball+bye' || pendingExtra === 'noball+legbye'){
+          toast(pendingLabel() + ' selected — now tap the ' + (pendingExtra === 'noball+bye' ? 'byes' : 'leg-byes') + ' run on this ball (0 = none). Total added: 1 no-ball run + those ' + (pendingExtra === 'noball+bye' ? 'byes' : 'leg-byes') + '; only the 1 run is charged to the bowler');
+        } else if (pendingExtra) toast(pendingExtra==='wide'
           ? 'Wide selected — now tap the extra runs run on top of the 1 wide run (0 = just the wide)'
-          : pendingLabel() + ' selected — now tap the runs (0–6)');
+          : (pendingExtra==='noball'
+            ? 'No-Ball selected — tap the runs off the bat (0–6), or tap Bye / LB first if the runs were byes / leg-byes on this no-ball'
+            : pendingLabel() + ' selected — now tap the runs (0–6)'));
       }
-      function pendingLabel(){ return pendingExtra==='wide' ? 'Wide' : (pendingExtra==='noball' ? 'No-Ball' : (pendingExtra==='bye' ? 'Bye' : 'Leg-Bye')); }
+      function pendingLabel(){ return pendingExtra==='wide' ? 'Wide' : (pendingExtra==='noball' ? 'No-Ball' : (pendingExtra==='bye' ? 'Bye' : (pendingExtra==='legbye' ? 'Leg-Bye' : (pendingExtra==='noball+bye' ? 'No-Ball + Bye' : 'No-Ball + Leg-Bye')))); }
       function renderPending(){
         var note=$('pendingNote');
         ['btnWide','btnNB','btnBye','btnLB'].forEach(function(id){ $(id).classList.remove('pending'); });
         if (pendingExtra){
           note.textContent = '';
           note.classList.remove('show');
-          $(pendingExtra==='wide'?'btnWide':(pendingExtra==='noball'?'btnNB':(pendingExtra==='bye'?'btnBye':'btnLB'))).classList.add('pending');
+          if (pendingExtra === 'noball+bye' || pendingExtra === 'noball+legbye'){
+            $('btnNB').classList.add('pending');
+            $(pendingExtra === 'noball+bye' ? 'btnBye' : 'btnLB').classList.add('pending');
+          } else {
+            $(pendingExtra==='wide'?'btnWide':(pendingExtra==='noball'?'btnNB':(pendingExtra==='bye'?'btnBye':'btnLB'))).classList.add('pending');
+          }
         } else { note.classList.remove('show'); note.textContent=''; }
       }
       /* ---------- clean scorer centre (Match Centre-style) ---------- */
@@ -7453,7 +7484,26 @@
         var inn=S.current, bat=getBatter(inn,inn.striker), bowl=getBowler(inn,inn.bowler);
         var overNo = Math.floor(inn.legalBalls / 6) + 1;
         var fhBall = freeHitPending(inn);
-        if (type==='noball'){
+        if (type==='noball+bye' || type==='noball+legbye'){
+          /* A no-ball on which the runs were byes / leg-byes: ONE
+             delivery, stored as 'Nb+B n' / 'Nb+Lb n'. The team gets
+             1 + n — the 1 is the no-ball extra, the n are byes /
+             leg-byes — but the bowler is charged ONLY the 1 penalty
+             run (byes / leg-byes are never charged to the bowler),
+             the batter gets NO runs (nothing off the bat) though he
+             did face the ball, and the delivery is not legal, so
+             the over does not advance and the free hit is armed
+             for the next ball, exactly like any other no-ball. */
+          var nbKey = (type==='noball+bye') ? 'bye' : 'legbye';
+          inn.runs += 1+n; inn.extras.noball+=1; inn.extras[nbKey]+=n; bowl.runs += 1;
+          bat.balls++;
+          pushBall(inn, 'Nb+' + (nbKey==='bye' ? 'B' : 'Lb') + n, 'bx', overNo, fhBall ? { fh: true } : null);
+          inn.freeHit = true; /* a no-ball arms the free hit for the next delivery */
+          if (n%2===1) swapStrike(inn);
+          checkInningsEnd();
+          if (S.status === 'live') announceFreeHit(inn);
+          commit('No-Ball + ' + n + ' ' + (nbKey==='bye' ? (n===1 ? 'bye' : 'byes') : (n===1 ? 'leg-bye' : 'leg-byes')) + ' — ' + (1+n) + ' runs total');
+        } else if (type==='noball'){
           var batRunsBefore = bat.runs;
           inn.runs += 1+n; inn.extras.noball+=1; bowl.runs += 1+n;
           bat.runs+=n; bat.balls++; /* a no-ball is not a legal delivery for the over or the bowler, but the batter DID face it — it counts as a ball faced (unlike a wide) */
@@ -7705,6 +7755,15 @@
           teamRuns = 1 + runs; inn.extras.noball += 1; bowl.runs += teamRuns;
           batRuns = runs; strikerBat.runs += runs;
           if (runs === 4) strikerBat.fours++; if (runs === 6) strikerBat.sixes++;
+        } else if (extra === 'noball+bye' || extra === 'noball+legbye'){
+          /* A wicket (in practice a run out) on a no-ball whose
+             completed runs were byes / leg-byes: stored as 'NbBW' /
+             'NbLbW'. The 1 no-ball run is charged to the bowler;
+             the completed runs are byes / leg-byes — never the
+             bowler's, never the striker's. */
+          var nbWKey = extra === 'noball+bye' ? 'bye' : 'legbye';
+          token = (extra === 'noball+bye' ? 'NbBW' : 'NbLbW') + (runs > 0 ? ('+' + runs) : '');
+          teamRuns = 1 + runs; inn.extras.noball += 1; inn.extras[nbWKey] += runs; bowl.runs += 1;
         } else if (extra === 'bye' || extra === 'legbye'){
           var key = extra === 'bye' ? 'bye' : 'legbye';
           token = (extra === 'bye' ? 'ByeW' : 'LbW') + (runs > 0 ? ('+' + runs) : '');
@@ -7717,7 +7776,7 @@
           if (runs === 4) strikerBat.fours++; if (runs === 6) strikerBat.sixes++;
           legal = true;
         }
-        if (legal || extra === 'noball'){
+        if (legal || extra === 'noball' || extra === 'noball+bye' || extra === 'noball+legbye'){
           /* The striker faced this delivery: a legal ball counts as a
              ball faced (a bye / leg-bye wicket ball included), and so
              does a NO-BALL — the batter plays it, exactly like a run
@@ -7769,7 +7828,7 @@
         /* A run out on a no-ball re-arms the free hit: announce it in
            the commentary, after this ball's own line — unless the
            ball also ended the innings or the match. */
-        if (extra === 'noball' && S.status === 'live' && inn.wickets < wicketsLimit()) announceFreeHit(inn);
+        if ((extra === 'noball' || extra === 'noball+bye' || extra === 'noball+legbye') && S.status === 'live' && inn.wickets < wicketsLimit()) announceFreeHit(inn);
         commit('Wicket! ' + outName + ' — ' + howOut);
         if (S.inningsNo === innNoBefore && S.status === 'live' && inn.wickets < wicketsLimit() && vacantSlot){
           if (batterCandidates(vacantSlot === 'striker' ? inn.nonStriker : inn.striker).length){
@@ -20683,8 +20742,9 @@
         t = String(t || '');
         if (/^\d+$/.test(t)) return parseInt(t, 10);
         var m = t.match(/^(?:Nb|Wd)\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^Nb\+(?:B|Lb)(\d+)$/); if (m) return parseInt(m[1], 10); /* the byes / leg-byes are the runs crossed on a no-ball + bye ball */
         m = t.match(/^(?:B|Lb)(\d+)$/); if (m) return parseInt(m[1], 10);
-        m = t.match(/^(?:W|WdW|NbW|ByeW|LbW)\+(\d+)$/); if (m) return parseInt(m[1], 10);
+        m = t.match(/^(?:W|WdW|NbW|ByeW|LbW|NbBW|NbLbW)\+(\d+)$/); if (m) return parseInt(m[1], 10);
         return 0;
       }
       function beFindPartner(inn, name){
@@ -20826,9 +20886,10 @@
             var kind = beWicketKind(t), r = kind.runs, teamRuns = 0;
             if (kind.extra === 'wide'){ teamRuns = 1 + r; out.extras.wide += teamRuns; bowl.runs += teamRuns; }
             else if (kind.extra === 'noball'){ teamRuns = 1 + r; out.extras.noball += 1; bowl.runs += teamRuns; bat.runs += r; if (r === 4) bat.fours++; if (r === 6) bat.sixes++; }
+            else if (kind.extra === 'noball+bye' || kind.extra === 'noball+legbye'){ teamRuns = 1 + r; out.extras.noball += 1; out.extras[kind.extra === 'noball+bye' ? 'bye' : 'legbye'] += r; bowl.runs += 1; /* the completed byes / leg-byes are not the bowler's and not the batter's */ }
             else if (kind.extra === 'bye' || kind.extra === 'legbye'){ teamRuns = r; out.extras[kind.extra === 'bye' ? 'bye' : 'legbye'] += r; legal = true; }
             else { teamRuns = r; bowl.runs += r; bat.runs += r; if (r === 4) bat.fours++; if (r === 6) bat.sixes++; legal = true; }
-            if (legal || kind.extra === 'noball'){ bat.balls++; if (legal){ bowl.balls++; out.legalBalls++; } }
+            if (legal || kind.extra === 'noball' || kind.extra === 'noball+bye' || kind.extra === 'noball+legbye'){ bat.balls++; if (legal){ bowl.balls++; out.legalBalls++; } }
             out.runs += teamRuns;
             out.wickets++;
             var outBat = getBat(rec.outName || rec.batter);
@@ -20853,7 +20914,7 @@
             updateFreeHitAfterBall(out, t, legal);
             checkBatterMilestones(out, bat, batBefore, legal);
             if (credited) checkBowlerMilestones(out, bowl, bowlWBefore, legal);
-            if (kind.extra === 'noball' && deliveryFollows(recIdx)) announceFreeHit(out);
+            if ((kind.extra === 'noball' || kind.extra === 'noball+bye' || kind.extra === 'noball+legbye') && deliveryFollows(recIdx)) announceFreeHit(out);
           } else if (/^\d+$/.test(t)){
             var n = parseInt(t, 10);
             out.runs += n; bat.runs += n; bat.balls++; bowl.runs += n; bowl.balls++;
@@ -20871,6 +20932,17 @@
             pushBall(out, t, 'bx', overNo, fhBefore ? { fh: true } : null);
             out.freeHit = true;
             checkBatterMilestones(out, bat, batBefore, false);
+            if (deliveryFollows(recIdx)) announceFreeHit(out);
+          } else if ((m = t.match(/^Nb\+(B|Lb)(\d+)$/))){
+            /* No-ball + byes / leg-byes: 1 + n to the team, only the
+               1 penalty run to the bowler, nothing off the bat; the
+               batter faced it, the delivery is not legal and the
+               free hit is armed — the mirror of completeExtra. */
+            var n6 = parseInt(m[2], 10);
+            out.runs += 1 + n6; out.extras.noball += 1; out.extras[m[1] === 'B' ? 'bye' : 'legbye'] += n6;
+            bowl.runs += 1; bat.balls++;
+            pushBall(out, t, 'bx', overNo, fhBefore ? { fh: true } : null);
+            out.freeHit = true;
             if (deliveryFollows(recIdx)) announceFreeHit(out);
           } else if (t === 'Wd' || (m = t.match(/^Wd\+(\d+)$/))){
             var tot = 1 + (m ? parseInt(m[1], 10) : 0);
@@ -20904,6 +20976,10 @@
         if (t === 'WdW') return { extra: 'wide', runs: 0 };
         if ((m = t.match(/^NbW\+(\d+)$/))) return { extra: 'noball', runs: parseInt(m[1], 10) };
         if (t === 'NbW') return { extra: 'noball', runs: 0 };
+        if ((m = t.match(/^NbLbW\+(\d+)$/))) return { extra: 'noball+legbye', runs: parseInt(m[1], 10) };
+        if (t === 'NbLbW') return { extra: 'noball+legbye', runs: 0 };
+        if ((m = t.match(/^NbBW\+(\d+)$/))) return { extra: 'noball+bye', runs: parseInt(m[1], 10) };
+        if (t === 'NbBW') return { extra: 'noball+bye', runs: 0 };
         if ((m = t.match(/^ByeW\+(\d+)$/))) return { extra: 'bye', runs: parseInt(m[1], 10) };
         if (t === 'ByeW') return { extra: 'bye', runs: 0 };
         if ((m = t.match(/^LbW\+(\d+)$/))) return { extra: 'legbye', runs: parseInt(m[1], 10) };
@@ -20964,6 +21040,8 @@
         var pair = bePairAt(item.work, idx);
         f.pairS = pair.s; f.pairNs = pair.ns;
         if (/^\d+$/.test(t)){ f.type = 'runs'; f.runs = parseInt(t, 10); }
+        else if ((m = t.match(/^Nb\+B(\d+)$/))){ f.type = 'noball+bye'; f.runs = parseInt(m[1], 10); }
+        else if ((m = t.match(/^Nb\+Lb(\d+)$/))){ f.type = 'noball+legbye'; f.runs = parseInt(m[1], 10); }
         else if ((m = t.match(/^Nb\+(\d+)$/))){ f.type = 'noball'; f.runs = parseInt(m[1], 10); }
         else if (t === 'Wd'){ f.type = 'wide'; f.runs = 0; }
         else if ((m = t.match(/^Wd\+(\d+)$/))){ f.type = 'wide'; f.runs = parseInt(m[1], 10); }
@@ -21037,20 +21115,20 @@
           var rec = (inn.balls || [])[ed.idx];
           sub = (rec && rec.over ? 'Ball ' + rec.over + ' — ' : '') + esc(dispIn(e.nicknames, inn.bowlingTeam, rec ? rec.bowler : '')) + ' to ' + esc(dispIn(e.nicknames, inn.battingTeam, rec ? rec.batter : ''));
         }
-        var runsLabel = f.type === 'wide' ? 'Extra runs run (on top of the wide)' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : 'Runs off the bat'));
+        var runsLabel = f.type === 'wide' ? 'Extra runs run (on top of the wide)' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : (f.type === 'noball+bye' ? 'Byes on the no ball (the 1 no-ball run is added automatically)' : (f.type === 'noball+legbye' ? 'Leg byes on the no ball (the 1 no-ball run is added automatically)' : 'Runs off the bat'))));
         var h = '<div class="be-form"><h3>' + title + '</h3>' + (sub ? '<p class="be-fsub">' + sub + '</p>' : '')
           + '<label for="beBatterSel">Batter facing</label><select id="beBatterSel" onchange="bePlayerSelChanged(this,\'bat\')">' + opts(beNameList(item, 'bat'), f.batter, inn.battingTeam) + addPlayerOptionHTML() + '</select>'
           + '<label for="beBatterTxt">Correct batter name</label><input id="beBatterTxt" value="' + esc(f.batterTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
           + '<label for="beBowlerSel">Bowler</label><select id="beBowlerSel" onchange="bePlayerSelChanged(this,\'bowl\')">' + opts(beNameList(item, 'bowl'), f.bowler, inn.bowlingTeam) + addPlayerOptionHTML() + '</select>'
           + '<label for="beBowlerTxt">Correct bowler name</label><input id="beBowlerTxt" value="' + esc(f.bowlerTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
           + '<label for="beTypeSel">Outcome</label><select id="beTypeSel" onchange="beFormTypeChanged()">'
-          + [['runs', 'Runs off the bat'], ['wide', 'Wide'], ['noball', 'No ball'], ['bye', 'Bye'], ['legbye', 'Leg bye'], ['wicket', 'Wicket']].map(function(o){ return '<option value="' + o[0] + '"' + (f.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+          + [['runs', 'Runs off the bat'], ['wide', 'Wide'], ['noball', 'No ball'], ['noball+bye', 'No ball + Bye'], ['noball+legbye', 'No ball + Leg bye'], ['bye', 'Bye'], ['legbye', 'Leg bye'], ['wicket', 'Wicket']].map(function(o){ return '<option value="' + o[0] + '"' + (f.type === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
           + '</select>';
         if (f.type !== 'wicket'){
           h += '<label for="beRuns">' + runsLabel + '</label><input id="beRuns" type="number" min="0" max="36" step="1" value="' + (f.runs || 0) + '" />';
         } else {
           h += '<label for="beWExtra">Wicket fell on</label><select id="beWExtra">'
-            + [['none', 'A legal delivery'], ['wide', 'A wide'], ['noball', 'A no ball'], ['bye', 'A bye'], ['legbye', 'A leg bye']].map(function(o){ return '<option value="' + o[0] + '"' + (f.wExtra === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+            + [['none', 'A legal delivery'], ['wide', 'A wide'], ['noball', 'A no ball'], ['noball+bye', 'A no ball + bye'], ['noball+legbye', 'A no ball + leg bye'], ['bye', 'A bye'], ['legbye', 'A leg bye']].map(function(o){ return '<option value="' + o[0] + '"' + (f.wExtra === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
             + '</select>'
             + '<label for="beWType">How out</label><select id="beWType">'
             + [['bowled', 'Bowled'], ['caught', 'Caught'], ['candbowled', 'Caught & bowled'], ['lbw', 'LBW'], ['runout', 'Run out'], ['stumped', 'Stumped'], ['hitwicket', 'Hit wicket'], ['retired', 'Retired out']].map(function(o){ return '<option value="' + o[0] + '"' + (f.wType === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
@@ -21108,11 +21186,13 @@
         if (f.type === 'runs'){ token = String(runs); cls = runs === 4 ? 'b4' : (runs === 6 ? 'b6' : ''); }
         else if (f.type === 'wide'){ token = runs > 0 ? 'Wd+' + runs : 'Wd'; cls = 'bx'; }
         else if (f.type === 'noball'){ token = 'Nb+' + runs; cls = 'bx'; }
+        else if (f.type === 'noball+bye'){ token = 'Nb+B' + runs; cls = 'bx'; }
+        else if (f.type === 'noball+legbye'){ token = 'Nb+Lb' + runs; cls = 'bx'; }
         else if (f.type === 'bye'){ token = 'B' + runs; cls = 'bx'; }
         else if (f.type === 'legbye'){ token = 'Lb' + runs; cls = 'bx'; }
         else {
           var wr = Math.max(0, Math.min(36, parseInt(f.wRuns, 10) || 0));
-          var pre = f.wExtra === 'wide' ? 'WdW' : (f.wExtra === 'noball' ? 'NbW' : (f.wExtra === 'bye' ? 'ByeW' : (f.wExtra === 'legbye' ? 'LbW' : 'W')));
+          var pre = f.wExtra === 'wide' ? 'WdW' : (f.wExtra === 'noball' ? 'NbW' : (f.wExtra === 'noball+bye' ? 'NbBW' : (f.wExtra === 'noball+legbye' ? 'NbLbW' : (f.wExtra === 'bye' ? 'ByeW' : (f.wExtra === 'legbye' ? 'LbW' : 'W')))));
           token = wr > 0 ? pre + '+' + wr : pre;
           cls = 'bw';
           var fielderRaw = String(f.wFielder || '').trim();
@@ -22335,7 +22415,7 @@
         if (!b) return false;
         if (b.wkt) return true;
         var t = String(b.text || '');
-        return t === 'W' || /^W\+\d+$/.test(t) || /^(?:WdW|NbW|ByeW|LbW)(?:\+\d+)?$/.test(t);
+        return t === 'W' || /^W\+\d+$/.test(t) || /^(?:WdW|NbW|ByeW|LbW|NbBW|NbLbW)(?:\+\d+)?$/.test(t);
       }
       /* A Retired Out dismissal is stored as a feed note, not as a
          delivery — no ball is bowled when a batter retires out (MCC
@@ -22365,6 +22445,9 @@
         m = t.match(/^Wd\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
         if (t === 'Wd') return 1;
         m = t.match(/^Nb\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
+        m = t.match(/^Nb\+(?:B|Lb)(\d+)$/); if (m) return 1 + parseInt(m[1], 10); /* no-ball + byes / leg-byes: 1 penalty + the byes */
+        m = t.match(/^(?:NbBW|NbLbW)\+(\d+)$/); if (m) return 1 + parseInt(m[1], 10);
+        if (t === 'NbBW' || t === 'NbLbW') return 1;
         m = t.match(/^(?:B|Lb)(\d+)$/); if (m) return parseInt(m[1], 10);
         return 0;
       }
@@ -22411,6 +22494,8 @@
         var wm = t.match(/^W\+(\d+)$/); if (wm) return '<span class="cw">WICKET</span> — batter is out, ' + wm[1] + (wm[1] === '1' ? ' run' : ' runs') + ' completed';
         wm = t.match(/^WdW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>Wide</b> — ' + runW(1 + (wm[1] ? parseInt(wm[1], 10) : 0)) + ' in extras';
         wm = t.match(/^NbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b>' + (wm[1] ? ' — ' + runW(parseInt(wm[1], 10)) + ' off the bat' : '');
+        wm = t.match(/^NbLbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b> — run out' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'leg bye', 'leg byes') + ' completed' : '') + ' + 1 no-ball run';
+        wm = t.match(/^NbBW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> on a <b>No ball</b> — run out' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'bye', 'byes') + ' completed' : '') + ' + 1 no-ball run';
         wm = t.match(/^ByeW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Bye</b>' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'bye', 'byes') + ' completed' : '');
         wm = t.match(/^LbW(?:\+(\d+))?$/); if (wm) return '<span class="cw">WICKET</span> — run out on a <b>Leg bye</b>' + (wm[1] ? ', ' + plural(parseInt(wm[1], 10), 'leg bye', 'leg byes') + ' completed' : '');
         if (t === '0') return '<b>no run</b> — dot ball';
@@ -22419,6 +22504,8 @@
         if (t === 'Wd') return '<b>Wide</b> — 1 extra run';
         var m = t.match(/^Wd\+(\d+)$/); if (m) return '<b>Wide + ' + m[1] + '</b> — ' + runW(1 + parseInt(m[1], 10)) + ' in extras';
         m = t.match(/^Nb\+(\d+)$/); if (m) return '<b>No ball + ' + m[1] + '</b> — free hit territory, ' + runW(1 + parseInt(m[1], 10)) + ' added';
+        m = t.match(/^Nb\+Lb(\d+)$/); if (m) return '<b>No ball + ' + plural(parseInt(m[1], 10), 'leg bye', 'leg byes') + '</b> — free hit territory, ' + runW(1 + parseInt(m[1], 10)) + ' in extras (1 no-ball + ' + m[1] + ' leg ' + (m[1] === '1' ? 'bye' : 'byes') + ')';
+        m = t.match(/^Nb\+B(\d+)$/); if (m) return '<b>No ball + ' + plural(parseInt(m[1], 10), 'bye', 'byes') + '</b> — free hit territory, ' + runW(1 + parseInt(m[1], 10)) + ' in extras (1 no-ball + ' + m[1] + ' ' + (m[1] === '1' ? 'bye' : 'byes') + ')';
         m = t.match(/^B(\d+)$/); if (m) return '<b>Bye</b> — ' + m[1] + (m[1] === '1' ? ' run' : ' runs');
         m = t.match(/^Lb(\d+)$/); if (m) return '<b>Leg bye</b> — ' + m[1] + (m[1] === '1' ? ' run' : ' runs');
         return '<b>' + esc(t) + '</b>';
@@ -22440,7 +22527,7 @@
          plays it), a wide does not. */
       function isLegalDelivery(text){
         var t = String(text || '');
-        return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t) || t === 'NbW' || /^NbW\+\d+$/.test(t));
+        return !(t === 'Wd' || /^Wd\+\d+$/.test(t) || /^Nb\+\d+$/.test(t) || /^Nb\+(?:B|Lb)\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t) || t === 'NbW' || /^NbW\+\d+$/.test(t) || /^(?:NbBW|NbLbW)(?:\+\d+)?$/.test(t));
       }
       function batterRunsOnBall(text){
         var t = String(text || '');
@@ -22453,6 +22540,7 @@
       function extraRunsOnBall(text){
         var t = String(text || '');
         if (t === 'Wd' || /^Wd\+\d+$/.test(t) || t === 'WdW' || /^WdW\+\d+$/.test(t)) return parseBallRuns(t);
+        if (/^Nb\+(?:B|Lb)\d+$/.test(t) || /^(?:NbBW|NbLbW)(?:\+\d+)?$/.test(t)) return parseBallRuns(t); /* no-ball + byes / leg-byes: every run is an extra */
         if (/^Nb\+\d+$/.test(t) || /^NbW(?:\+\d+)?$/.test(t)) return 1;
         if (/^(?:B|Lb)\d+$/.test(t) || /^(?:ByeW|LbW)(?:\+\d+)?$/.test(t)) return parseBallRuns(t);
         return 0;
