@@ -647,6 +647,7 @@
       /* Finish Match bar — the one prominent action once play is
          over: full-width gold button under the pad. */
       .mc-finish{border-top:1px solid var(--line);margin-top:12px;padding:14px;background:var(--surface2)}
+      .mc-fixtoss{text-align:center;margin-top:10px}
       .mc-finish-btn{width:100%;font-size:17.5px;font-weight:800;padding:14px 16px}
       .mc-potm{border-top:1px solid var(--line);margin-top:12px;padding:13px 14px 15px;background:var(--surface2)}
       .mc-potm label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:7px}
@@ -2747,6 +2748,7 @@
           <div class="mc-score num" id="mcScore">0-0</div>
           <div class="mc-status" id="mcStatus"></div>
           <div class="mc-meta" id="mcMeta"></div>
+          <div class="mc-fixtoss" id="mcFixToss" hidden><button type="button" class="btn ghost sm" onclick="openFixToss()">🪙 Fix Toss</button></div>
           <div id="mcBatters"></div>
           <div id="mcBowler"></div>
           <div class="mc-balls" id="mcBalls"></div>
@@ -3577,6 +3579,28 @@
       </div>
     </div>
 
+    <!-- Fix Toss: correcting the toss of the LIVE match before the
+         first ball. Shown only while nothing has been bowled; once
+         a ball is recorded the toss is part of the record and the
+         only way back is Delete Match + start again. -->
+    <div class="modal-back" id="fixTossModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fixTossTitle">
+        <div class="modal-head">
+          <h2 id="fixTossTitle">🪙 Fix Toss</h2>
+          <button class="sq-x big" onclick="closeFixToss()" aria-label="Close">×</button>
+        </div>
+        <p class="sub" style="color:var(--muted);font-size:14px;margin:6px 0 0">No ball has been bowled yet, so the toss can still be corrected. If the correction changes which team bats first, the batter and bowler picks are cleared and picked again.</p>
+        <h3 class="om-h">Who won the toss?</h3>
+        <div class="toss-grid" id="fixTossGrid"></div>
+        <h3 class="om-h">Decided to?</h3>
+        <div class="chip-row">
+          <button type="button" class="chip" id="fixTossChipBat" onclick="fixTossDecide('bat')">Bat</button>
+          <button type="button" class="chip" id="fixTossChipBowl" onclick="fixTossDecide('bowl')">Bowl</button>
+        </div>
+        <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="applyFixToss()">Save Toss</button>
+      </div>
+    </div>
+
     <div class="modal-back" id="playerModal">
       <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
         <div class="modal-head">
@@ -3731,7 +3755,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v204';
+      var APP_VERSION = 'v205';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7084,6 +7108,11 @@
         row2 += '<span>Partnership - <b>' + (pship.balls ? (pship.runs + '(' + pship.balls + ')') : '—') + '</b></span>';
         $('mcMeta').innerHTML = '<div class="mrow"><span>Extras - <b>' + ex + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ', P ' + innExtras(inn).penalty + ')</span><span>Overs - <b>' + oversText(inn.legalBalls) + ' / ' + (effOversLimit() || '—') + '</b></span><span>CRR - <b>' + crr().toFixed(2) + '</b></span></div>'
           + '<div class="mrow">' + row2 + '</div>';
+        /* Fix Toss lives under the score while — and only while —
+           the toss can still be corrected: live 1st innings, owner
+           side, and not a single ball (or extra) recorded yet. */
+        var ftEl = $('mcFixToss');
+        if (ftEl) ftEl.hidden = !canFixLiveToss();
         /* One Edit (✎) icon beside Batsman and one beside Bowler:
            the Batsman icon opens the Batters & Bowler popup (change
            the striker or the non-striker), the Bowler icon opens the
@@ -8196,6 +8225,101 @@
       function moreNum(id){ var el = $(id); return el ? parseInt(el.value, 10) : NaN; }
       function selOptions(names, selected){
         return names.map(function(n){ return '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('');
+      }
+
+      /* ----- Fix Toss: correct a wrong toss entry before the first ball -----
+         The toss is entered once, when the match starts, and a wrong
+         entry used to mean Delete Match + start again. While NOTHING
+         has been bowled — no legal ball, no extra, no run, no wicket,
+         no feed line — the record is still just the toss itself, so
+         the owner can re-open the toss picker from the scoring screen
+         and correct it in place. If the correction keeps the same
+         team batting first (only the winner's name was wrong), just
+         the toss fields change. If it changes who bats first, the
+         innings is reset to a fresh blank one for the new order —
+         nothing has been scored, so nothing is lost; the openers and
+         the opening bowler are simply picked again. After the first
+         ball there is deliberately NO in-place fix: the toss is part
+         of the scored record and the only honest correction is
+         Delete Match + restart. Finished matches are not touched
+         here at all. */
+      function tossNotStarted(){
+        if (!S || !S.current || S.inningsNo !== 1 || S.prevInnings) return false;
+        var inn = S.current;
+        if (inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0) return false;
+        if (inn.balls && inn.balls.length) return false;
+        var ex = inn.extras || {};
+        if (ex.wide || ex.noball || ex.bye || ex.legbye || ex.penalty) return false;
+        return true;
+      }
+      function canFixLiveToss(){
+        if (!S || S.status !== 'live' || !liveMatchExists()) return false;
+        if (liveMatchLocked()) return false;
+        return tossNotStarted();
+      }
+      var fixTossPickState = { winner: '', decision: '' };
+      function openFixToss(){
+        if (scoringLocked()) return;
+        if (!requireLiveOwner('correct the toss')) return;
+        if (!canFixLiveToss()){
+          toast('The toss can only be corrected before the first ball is bowled. After that, use Delete Match and start again with the right toss.');
+          return;
+        }
+        fixTossPickState.winner = S.tossWinner || '';
+        fixTossPickState.decision = S.tossDecision || '';
+        renderFixToss();
+        $('fixTossModal').classList.add('show');
+      }
+      function closeFixToss(){ var m = $('fixTossModal'); if (m) m.classList.remove('show'); }
+      function renderFixToss(){
+        var grid = $('fixTossGrid'); if (!grid) return;
+        grid.innerHTML = [S.teamA, S.teamB].map(function(n, i){
+          var logo = teamLogoFor(n);
+          return '<button type="button" class="toss-card' + (fixTossPickState.winner === n ? ' sel' : '') + '" onclick="fixTossPick(' + i + ')">'
+            + '<span class="om-circle c' + (i % 4) + (logo ? ' has-logo' : '') + '">' + omLogoInnerHTML(n) + '</span>'
+            + '<span class="toss-name">' + esc(n) + '</span></button>';
+        }).join('');
+        var b = $('fixTossChipBat'), w = $('fixTossChipBowl');
+        if (b) b.classList.toggle('sel', fixTossPickState.decision === 'bat');
+        if (w) w.classList.toggle('sel', fixTossPickState.decision === 'bowl');
+      }
+      function fixTossPick(i){
+        fixTossPickState.winner = i === 0 ? S.teamA : S.teamB;
+        renderFixToss();
+      }
+      function fixTossDecide(d){
+        fixTossPickState.decision = d;
+        renderFixToss();
+      }
+      function applyFixToss(){
+        if (!requireLiveOwner('correct the toss')) return;
+        if (!canFixLiveToss()){
+          closeFixToss();
+          toast('The toss can no longer be corrected — a ball has been bowled. Delete the match and start again with the right toss.');
+          return;
+        }
+        var tw = fixTossPickState.winner, td = fixTossPickState.decision;
+        if (!tw){ toast('⚠️ Who won the toss? Tap the winning team'); return; }
+        if (!td){ toast('⚠️ Decided to Bat or Bowl? Tap one'); return; }
+        if (tw === S.tossWinner && td === S.tossDecision){ closeFixToss(); toast('The toss is unchanged'); return; }
+        snapshot(); /* the correction is undoable, like any scoring action */
+        var battingFirst = (td === 'bat') ? tw : (tw === S.teamA ? S.teamB : S.teamA);
+        var bowlingFirst = (battingFirst === S.teamA) ? S.teamB : S.teamA;
+        var orderChanged = battingFirst !== S.current.battingTeam;
+        S.tossWinner = tw; S.tossDecision = td;
+        S.tossInfo = tw + ' won the toss and chose to ' + td + '.';
+        if (orderChanged){
+          /* Same clean slate doStartMatch creates for the toss:
+             a fresh innings for the new batting order, no pending
+             extra, no half-open wicket panel, no player picks. */
+          S.current = blankInnings(battingFirst, bowlingFirst);
+          pendingExtra = null; renderPending();
+          cancelWicket();
+          clearPlayerInputs();
+        }
+        closeFixToss();
+        commit('Toss corrected: ' + S.tossInfo);
+        toast('🪙 Toss corrected — ' + S.tossInfo);
       }
 
       /* ----- Abandon: the match ends now, with no result ----- */
@@ -23625,6 +23749,7 @@
           else if (top.id === 'teamPickModal') closeTeamPicker();
           else if (top.id === 'formatModal') closeFormatModal();
           else if (top.id === 'tossModal') closeTossModal();
+          else if (top.id === 'fixTossModal') closeFixToss();
           else if (top.id === 'histModal') closeHistoryMatch();
           else if (top.id === 'histEditModal') closeHistoryEdit();
           else if (top.id === 'ballEditModal') closeBallEditor();
