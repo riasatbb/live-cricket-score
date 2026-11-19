@@ -3746,7 +3746,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v206';
+      var APP_VERSION = 'v207';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7340,6 +7340,16 @@
           toast('⚡ Free Hit — only a Run Out can dismiss a batter on this ball');
           return;
         }
+        /* Retired Out happens BETWEEN deliveries — no ball is bowled
+           (MCC Law 25) — so it can never be merged into a pending
+           Wide / No-Ball / Bye / Leg-Bye delivery. That delivery must
+           be scored as its own ball first; only then can the
+           retirement be recorded. The panel stays open and the
+           pending extra stays selected, so nothing is lost. */
+        if (type === 'retired' && pendingExtra){
+          toast('Retired Out happens between balls — score the ' + pendingLabel() + ' first, then record the Retired Out');
+          return;
+        }
         var outWhich = $('wktOutWho').value === 'nonStriker' ? 'nonStriker' : 'striker';
         var fielder = $('wktFielder').value.trim();
         if (fielder === ADD_PLAYER_VALUE) fielder = '';
@@ -7357,6 +7367,50 @@
         if (S.status === 'inningsBreak') S.status = 'live';
         pendingExtra = null; renderPending();
         var inn = S.current;
+        if (type === 'retired' && !extra){
+          /* Retired Out (MCC Law 25): the batter retires BETWEEN
+             deliveries — no ball is bowled. The wicket falls and a
+             replacement comes in, exactly like any other dismissal,
+             but NOTHING is charged to a delivery: the retired
+             batter's balls faced, the bowler's balls and runs, and
+             the innings' legal-ball (over) count all stay exactly as
+             they were; no 'W' ball enters the record; no runs are
+             added (the panel's runs picker is ignored — there was no
+             delivery to complete runs on); the bowler is credited
+             with nothing; and a pending free hit stays armed for the
+             next real delivery. The dismissal is stored as a feed
+             note — the same shape Retired Hurt uses — and every
+             figure rebuilt from the record (fall of wickets,
+             partnerships, over summaries, the ball-by-ball replay)
+             reads that note as the wicket it is. */
+          var rOutName = outWhich === 'nonStriker' ? inn.nonStriker : inn.striker;
+          var rOutBat = getBatter(inn, rOutName);
+          inn.wickets++;
+          rOutBat.out = true; rOutBat.howOut = 'retired out';
+          pushFeedEvent(inn, 'note', '', rOutName + ' retired out.', { outName: rOutName, dismissal: 'retired', howOut: 'retired out' });
+          var rVacant = null;
+          if (inn.wickets < wicketsLimit()){
+            /* No ball was bowled, so nobody crossed: the vacant end
+               is simply the retired batter's own end. */
+            rVacant = outWhich;
+            if (outWhich === 'striker') inn.striker = null; else inn.nonStriker = null;
+          } else {
+            inn.striker = outWhich === 'striker' ? null : inn.striker;
+            inn.nonStriker = outWhich === 'nonStriker' ? null : inn.nonStriker;
+          }
+          $('strikerName').value = inn.striker || '';
+          $('nonStrikerName').value = inn.nonStriker || '';
+          checkInningsEnd();
+          commit('Wicket! ' + rOutName + ' — retired out');
+          if (S.status === 'live' && inn.wickets < wicketsLimit() && rVacant){
+            if (batterCandidates(rVacant === 'striker' ? inn.nonStriker : inn.striker).length){
+              openPicker('batter', { slot: rVacant });
+            } else {
+              try { $(rVacant === 'striker' ? 'strikerName' : 'nonStrikerName').focus(); } catch(e){}
+            }
+          }
+          return;
+        }
         var overNo = Math.floor(inn.legalBalls / 6) + 1;
         var strikerBat = getBatter(inn, inn.striker);
         var outName = outWhich === 'nonStriker' ? inn.nonStriker : inn.striker;
@@ -10895,8 +10949,12 @@
                   if (x.evt === 'start'){ pair = [x.who, x.ns].filter(Boolean); }
                   else if (x.evt === 'crease'){ if (x.who && pair.indexOf(x.who) === -1 && pair.length < 2) pair.push(x.who); }
                   else if (x.evt === 'note'){
-                    var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
-                    if (rm && pair.indexOf(rm[1]) > -1){ closeStand(wktsDown + 1); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+                    var roN = retiredOutName(x);
+                    if (roN && pair.indexOf(roN) > -1){ wktsDown++; closeStand(wktsDown); dismissed[roN] = 1; pair = pair.filter(function(n){ return n !== roN; }); }
+                    else {
+                      var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
+                      if (rm && pair.indexOf(rm[1]) > -1){ closeStand(wktsDown + 1); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+                    }
                   }
                   return;
                 }
@@ -11416,7 +11474,9 @@
       }
       function tpPartnershipsOf(m, inn){
         var batters = inn.batters || [];
-        var balls = (inn.balls || []).filter(function(b){ return b && !b.evt; });
+        /* Retired Out notes stay in the list: no delivery was bowled,
+           but the stand ended there, exactly as at a wicket ball. */
+        var balls = (inn.balls || []).filter(function(b){ return b && (!b.evt || retiredOutName(b)); });
         if (batters.length < 2 || !balls.length) return [];
         var order = batters.map(function(b){ return b.name; });
         var segs = [], nextIn = 2;
@@ -11429,6 +11489,15 @@
         var cur = newSeg(order[0], order[1]);
         balls.forEach(function(bl){
           if (!cur) return;
+          if (bl.evt){
+            segs.push(cur);
+            var rOutN = retiredOutName(bl);
+            var rRem = (cur.a === rOutN) ? cur.b : cur.a;
+            cur = null;
+            var rNb = order[nextIn++];
+            if (rNb !== undefined && rRem) cur = newSeg(rRem, rNb);
+            return;
+          }
           var t = String(bl.text || '');
           cur.runs += parseBallRuns(t);
           if (isLegalDelivery(t)) cur.balls++;
@@ -19049,7 +19118,13 @@
           return cur;
         }
         (inn.balls || []).forEach(function(b){
-          if (b.evt) return;
+          if (b.evt){
+            /* A Retired Out note is not a delivery, but the wicket
+               fell during the over in progress: it counts in that
+               over's wickets and in the cumulative score line. */
+            if (retiredOutName(b)){ cumWkts++; if (cur){ cur.wkts++; cur.cumRuns = cumRuns; cur.cumWkts = cumWkts; } }
+            return;
+          }
           var g = groupFor(Math.floor(legalBefore / 6) + 1);
           var r = parseBallRuns(b.text);
           g.balls.push(b); g.runs += r; cumRuns += r;
@@ -19089,14 +19164,23 @@
         return stats;
       }
       function mrFallOfWickets(inn){
-        var out = [], score = 0, n = 0;
+        var out = [], score = 0, n = 0, legalBefore = 0;
         (inn.balls || []).forEach(function(b){
-          if (b.evt) return;
+          if (b.evt){
+            /* A Retired Out is stored as a feed note (no delivery
+               was bowled), but the wicket DID fall: it belongs in
+               the fall of wickets at the score and over as they
+               stood when the batter retired. */
+            var rn = retiredOutName(b);
+            if (rn){ n++; out.push({ score: score, n: n, name: rn, over: oversText(legalBefore) }); }
+            return;
+          }
           score += parseBallRuns(b.text);
           if (isWicketBall(b)){
             n++;
             out.push({ score: score, n: n, name: b.outName || '', over: b.over || '' });
           }
+          if (isLegalDelivery(b.text)) legalBefore++;
         });
         return out;
       }
@@ -20020,6 +20104,8 @@
           } else if (rec.evt === 'note'){
             var rm = /^(.+) retired hurt\.$/.exec(String(rec.text || ''));
             if (rm){ if (st.s === rm[1]) st.s = null; if (st.ns === rm[1]) st.ns = null; }
+            var roP = retiredOutName(rec);
+            if (roP){ if (st.s === roP) st.s = null; if (st.ns === roP) st.ns = null; }
           }
           return st;
         }
@@ -20110,6 +20196,15 @@
             if (pm) out.runs += parseInt(pm[1], 10) || 0;
             var rm = /^(.+) retired hurt\.$/.exec(String(rec.text || ''));
             if (rm && rec.evt === 'note'){ var rb = getBat(rm[1]); rb.retiredHurt = true; if (!rb.out) rb.howOut = 'retired hurt'; }
+            /* A Retired Out note restores the wicket WITHOUT a ball:
+               the batter is out and the wicket count rises, but no
+               balls-faced, bowler or legal-ball figure moves — the
+               same rule live scoring applies. (A legacy 'W' ball
+               whose dismissal is 'retired' is NOT routed here: it
+               replays through the wicket-ball path below exactly as
+               it was scored, so old matches keep their figures.) */
+            var roR = retiredOutName(rec);
+            if (roR && rec.evt === 'note'){ var ob = getBat(roR); ob.out = true; ob.howOut = 'retired out'; out.wickets++; }
             bePairAdvance(st, rec, srcInn);
             return;
           }
@@ -20366,7 +20461,7 @@
         if (bowler === ADD_PLAYER_VALUE) bowler = '';
         if (!batter || !bowler){ toast('Pick the batter and the bowler for this ball'); return; }
         var runs = Math.max(0, Math.min(36, parseInt(f.runs, 10) || 0));
-        var token = '', cls = '', extra = null;
+        var token = '', cls = '', extra = null, retiredNoteOut = '';
         if (f.type === 'runs'){ token = String(runs); cls = runs === 4 ? 'b4' : (runs === 6 ? 'b6' : ''); }
         else if (f.type === 'wide'){ token = runs > 0 ? 'Wd+' + runs : 'Wd'; cls = 'bx'; }
         else if (f.type === 'noball'){ token = 'Nb+' + runs; cls = 'bx'; }
@@ -20380,9 +20475,22 @@
           var howOut = dismissalHowOut(f.wType, String(f.wFielder || '').trim(), dispIn(e.nicknames, inn.bowlingTeam, bowler));
           var outName = f.wOut === 'nonStriker' ? (String(f.wOther || '').trim() || f.pairNs || batter) : batter;
           extra = { wkt: true, bowlerWicket: bowlerCredited(f.wType), dismissal: f.wType, howOut: howOut, outName: outName };
+          /* A Retired Out on a legal delivery is not a delivery at
+             all (see applyWicket): it is stored below as the same
+             feed note live scoring writes, so the replay restores
+             the wicket without inventing a ball. A Retired Out
+             picked WITH a wide / no-ball / bye / leg-bye keeps the
+             delivery record, exactly as live scoring records a
+             wicket on such a ball. */
+          if (f.wType === 'retired' && f.wExtra === 'none') retiredNoteOut = outName;
         }
         var rec = { over: '', overNo: 0, text: token, cls: cls, bowler: bowler, batter: batter };
         if (extra) for (var k in extra) rec[k] = extra[k];
+        if (retiredNoteOut){
+          var posIdx = beCtx.edit.isNew ? beCtx.edit.afterIdx + 1 : beCtx.edit.idx;
+          var atB = bePairAt(item.work, posIdx).legal;
+          rec = { over: '', overNo: Math.floor(atB / 6) + 1, text: retiredNoteOut + ' retired out.', cls: 'evt', evt: 'note', who: '', bowler: '', batter: '', atBalls: atB, outName: retiredNoteOut, dismissal: 'retired', howOut: 'retired out' };
+        }
         var ed = beCtx.edit;
         if (ed.isNew){ item.work.balls.splice(ed.afterIdx + 1, 0, rec); beCtx.changedIdx = ed.afterIdx + 1; }
         else { item.work.balls[ed.idx] = rec; beCtx.changedIdx = ed.idx; }
@@ -20802,7 +20910,9 @@
          uses; the stand's own balls are legal deliveries only. */
       function inningsPartnerships(inn){
         var batters = inn.batters || [];
-        var balls = (inn.balls || []).filter(function(b){ return b && !b.evt; });
+        /* Retired Out notes stay in the list: no delivery was bowled,
+           but the stand ended there, exactly as at a wicket ball. */
+        var balls = (inn.balls || []).filter(function(b){ return b && (!b.evt || retiredOutName(b)); });
         if (batters.length < 2 || !balls.length) return [];
         var order = batters.map(function(b){ return b.name; });
         var segs = [], nextIn = 2;
@@ -20815,6 +20925,15 @@
         var cur = newSeg(order[0], order[1]);
         balls.forEach(function(bl){
           if (!cur) return;
+          if (bl.evt){
+            segs.push(cur);
+            var rOutN = retiredOutName(bl);
+            var rRem = (cur.a === rOutN) ? cur.b : cur.a;
+            cur = null;
+            var rNb = order[nextIn++];
+            if (rNb !== undefined && rRem) cur = newSeg(rRem, rNb);
+            return;
+          }
           var t = String(bl.text || '');
           cur.runs += parseBallRuns(t);
           if (isLegalDelivery(t)) cur.balls++;
@@ -21001,8 +21120,12 @@
             if (x.evt === 'start'){ pair = [x.who, x.ns].filter(Boolean); }
             else if (x.evt === 'crease'){ if (x.who && pair.indexOf(x.who) === -1 && pair.length < 2) pair.push(x.who); }
             else if (x.evt === 'note'){
-              var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
-              if (rm && pair.indexOf(rm[1]) > -1){ closeStand(false); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+              var roN2 = retiredOutName(x);
+              if (roN2 && pair.indexOf(roN2) > -1){ closeStand(false); dismissed[roN2] = 1; pair = pair.filter(function(n){ return n !== roN2; }); }
+              else {
+                var rm = /^(.+) retired hurt\./.exec(String(x.text || ''));
+                if (rm && pair.indexOf(rm[1]) > -1){ closeStand(false); pair = pair.filter(function(n){ return n !== rm[1]; }); }
+              }
             }
             return;
           }
@@ -21527,6 +21650,20 @@
         var t = String(b.text || '');
         return t === 'W' || /^W\+\d+$/.test(t) || /^(?:WdW|NbW|ByeW|LbW)(?:\+\d+)?$/.test(t);
       }
+      /* A Retired Out dismissal is stored as a feed note, not as a
+         delivery — no ball is bowled when a batter retires out (MCC
+         Law 25). The note's text names the batter ("X retired out.")
+         and the record also carries outName / dismissal fields.
+         Returns the retired batter's name, or '' for any other
+         record. Matches scored before this fix hold the dismissal
+         as a 'W' ball instead; those keep rendering and replaying
+         exactly as they were scored and are never rewritten. */
+      function retiredOutName(b){
+        if (!b || b.evt !== 'note') return '';
+        var m = /^(.+) retired out\.$/.exec(String(b.text || ''));
+        if (m) return m[1];
+        return (b.dismissal === 'retired' && b.outName) ? b.outName : '';
+      }
       function parseBallRuns(text){
         var t = String(text || '');
         if (/^\d+$/.test(t)) return parseInt(t, 10);
@@ -21640,11 +21777,17 @@
          last wicket (wides / no-balls add runs but no ball). */
       function partnershipFigures(inn){
         var runs = 0, balls = 0;
-        var list = (inn.balls || []).filter(function(b){ return !b.evt; });
-        for (var i = list.length - 1; i >= 0; i--){
-          if (isWicketBall(list[i])) break; /* the wicket ball ended the previous partnership */
-          runs += parseBallRuns(list[i].text);
-          if (isLegalDelivery(list[i].text)) balls++;
+        var all = inn.balls || [];
+        var list = all.filter(function(b){ return !b.evt; });
+        for (var i = all.length - 1; i >= 0; i--){
+          var rec = all[i];
+          if (rec.evt){
+            if (retiredOutName(rec)) break; /* a Retired Out ended the previous partnership without a ball being bowled */
+            continue;
+          }
+          if (isWicketBall(rec)) break; /* the wicket ball ended the previous partnership */
+          runs += parseBallRuns(rec.text);
+          if (isLegalDelivery(rec.text)) balls++;
         }
         /* Fallback for a state whose ball record never arrived (the
            Firebase empty-array drop repaired by normalizeInningsShape
@@ -21670,7 +21813,7 @@
         var snaps = groups.map(function(g){
           var overBatters = [], overBowlers = [], extrasOver = 0, ownLegal = 0;
           g.balls.forEach(function(b){
-            if (b.evt) return; /* announcement lines are not deliveries */
+            if (b.evt){ if (retiredOutName(b)) cumWkts++; return; } /* announcement lines are not deliveries — but a Retired Out note is still a wicket down */
             cumRuns += parseBallRuns(b.text);
             if (isWicketBall(b)) cumWkts++;
             if (isLegalDelivery(b.text)){ cumLegal++; ownLegal++; }
