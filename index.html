@@ -3837,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v225';
+      var APP_VERSION = 'v226';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11321,6 +11321,12 @@
          control side, never in a viewer session. */
       function repairMatchAttribution(){
         if (!S || typeof HIST === 'undefined' || !HIST) return;
+        /* While a tournament is being viewed by ID (v226), the
+           on-screen tournament is a copy of one that also sits in
+           the archive, so holder counts would read double —
+           attribution repair waits until the view is closed, when
+           every record is back in its real place. */
+        if (tnViewCtx) return;
         var histChanged = false, stateChanged = false;
         Object.keys(HIST).forEach(function(id){
           var e = HIST[id];
@@ -11356,6 +11362,83 @@
         }
         if (histChanged) saveHistLocal();
         if (stateChanged) commit('Match returned to its own tournament', true);
+        try { repairHistoryInfoFields(); } catch(e){}
+      }
+      /* Backfill of the Match Info fields (v226): permanent history
+         entries filed before those fields existed — the BBEPL-2
+         Final among them — carry no tournament name, season, ball
+         type, date or toss, so their Info tab showed only a
+         handful of rows while every other match showed the full
+         v195 set. Each missing field is filled ONLY from the
+         match's own records: the ONE tournament whose saved
+         results hold it (its name, season and ball type, and the
+         result record's own venue / stage / bracket stamp), the
+         live state when it still holds this very match (format,
+         ball type, schedule, toss — the original match record),
+         and the entry's own recorded finish time for the date &
+         time. Nothing is invented, and no settled fact — score,
+         result, finish time, POTM, Final designation — is ever
+         changed: only empty fields are filled. Idempotent: once
+         an entry carries its fields, this changes nothing. */
+      function repairHistoryInfoFields(){
+        if (!S || typeof HIST === 'undefined' || !HIST) return;
+        var changed = false;
+        Object.keys(HIST).forEach(function(id){
+          var e = HIST[id];
+          if (!e) return;
+          var dirty = false;
+          function fill(field, val){ if (val && !e[field]){ e[field] = val; dirty = true; } }
+          var holders = [];
+          allTournamentObjs().forEach(function(o){
+            (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(id)) holders.push({ o: o, rec: m }); });
+          });
+          if (holders.length === 1){
+            var tn = holders[0].o.tn, rec = holders[0].rec;
+            if (e.matchKind !== 'tournament'){ e.matchKind = 'tournament'; dirty = true; }
+            fill('tournamentName', (tn.name || '').trim());
+            fill('tournamentId', tournamentKeyOf(tn));
+            fill('season', tn.season || '');
+            fill('ballType', tn.ballType || '');
+            fill('venue', rec.venue || '');
+            if (!e.stage && rec.stage){ e.stage = rec.stage; dirty = true; }
+            if (!e.bracketId && rec.bracketId){ e.bracketId = rec.bracketId; dirty = true; }
+          } else if (e.tournamentId){
+            var ownObj = tournamentForKey(e.tournamentId);
+            if (ownObj){
+              if (e.matchKind !== 'tournament'){ e.matchKind = 'tournament'; dirty = true; }
+              fill('tournamentName', (ownObj.tn.name || '').trim());
+              fill('season', ownObj.tn.season || '');
+              fill('ballType', ownObj.tn.ballType || '');
+            }
+          }
+          /* The live state still holding this very match is the
+             original match record — format, schedule and toss are
+             read from it. */
+          if (S.status === 'finished' && (String(S.matchId) === String(id) || String(S.archivedMatchId) === String(id))){
+            fill('matchFormat', S.matchFormat || '');
+            fill('ballType', S.ballType || '');
+            fill('matchDate', S.matchDate || '');
+            fill('matchTime', S.matchTime || '');
+            fill('tossInfo', S.tossInfo || '');
+            if (e.matchKind === 'tournament'){ try { fill('tournamentName', liveMatchTournamentName()); } catch(err){} }
+          }
+          /* Date & time fall back to the entry's own recorded
+             finish time — the day the match was played and the
+             moment it ended (for the BBEPL-2 Final, 20/11/2026
+             11:32, exactly as recorded). */
+          if (e.at && (!e.matchDate || !e.matchTime)){
+            var d = new Date(e.at);
+            if (!isNaN(d.getTime())){
+              if (!e.matchDate){ e.matchDate = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); dirty = true; }
+              if (!e.matchTime){ e.matchTime = pad2(d.getHours()) + ':' + pad2(d.getMinutes()); dirty = true; }
+            }
+          }
+          if (dirty){
+            changed = true;
+            try { if (histEntrySyncable(e)) pushHistoryEntry(e); } catch(err){}
+          }
+        });
+        if (changed) saveHistLocal();
       }
       function liveTournamentRecord(){
         if (!S || !S.current) return null;
@@ -14209,6 +14292,15 @@
            level (category → section → the three boxes) instead of
            leaving the tournament page. */
         if (currentTnTab === 'stats' && tnStatBackStep()) return;
+        /* Tournament view mode (v226): 🔙 leaves the viewed
+           tournament and returns to wherever it was opened from —
+           the current tournament was never changed, so there is
+           nothing to switch back. */
+        if (tnViewCtx){
+          var tnRv = exitTnView();
+          setView((tnRv && tnRv !== 'tournament' && tnRv !== 'teampage' && tnRv !== 'tnedit' && tnRv !== 'tnwinner') ? tnRv : 'tournaments');
+          return;
+        }
         if (document.body.classList.contains('viewer-inpage') || document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')){
           closeTournamentViewerInPage();
         } else {
@@ -15360,6 +15452,21 @@
 
       /* ---------- sync ---------- */
       function commit(msg, silent){
+        /* Tournament view mode (v226): while an archived tournament
+           is being viewed by ID, S.tournament is the viewed copy,
+           not the current tournament. A commit made in that state
+           first writes the viewed copy back into its OWN archive
+           slot, then backs up and publishes with the REAL current
+           tournament in place, and puts the viewed copy back on
+           screen afterwards — viewing (or even editing) one
+           tournament can never replace or disturb the current one. */
+        var tnViewHeld = null;
+        if (tnViewCtx){
+          try { tournamentsArchive().forEach(function(a){ if (a.id === tnViewCtx.arcId) a.data = deep(tnViewCtx.viewObj); }); } catch(e){}
+          if (S.tournament !== tnViewCtx.viewObj && S.tournament !== tnViewCtx.saved) tnViewCtx.saved = S.tournament;
+          tnViewHeld = tnViewCtx.viewObj;
+          S.tournament = tnViewCtx.saved;
+        }
         S.updatedAt = Date.now();
         /* Strip any ghost batter / bowler rows (see cleanGhostPlayers)
            before the state is backed up or published, so a match whose
@@ -15382,6 +15489,7 @@
         if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
         pushToFirebase();
         if (msg && !silent) toast(msg + ' — updated in both outputs ✓');
+        if (tnViewHeld){ S.tournament = tnViewHeld; try { renderAll(true); } catch(e){} }
       }
       if (bc){
         bc.onmessage = function(ev){
@@ -18644,9 +18752,51 @@
         base.matchGroup = e.group || '';
         base.matchFormat = e.matchFormat || ''; base.ballType = e.ballType || '';
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
+        /* An entry filed before the schedule fields existed shows
+           its Date & Time from its own recorded finish time — the
+           day the match was played (v226; the entry itself is
+           backfilled permanently by repairHistoryInfoFields). */
+        if (e.at && (!base.matchDate || !base.matchTime)){
+          var adt = new Date(e.at);
+          if (!isNaN(adt.getTime())){
+            if (!base.matchDate) base.matchDate = adt.getFullYear() + '-' + pad2(adt.getMonth() + 1) + '-' + pad2(adt.getDate());
+            if (!base.matchTime) base.matchTime = pad2(adt.getHours()) + ':' + pad2(adt.getMinutes());
+          }
+        }
         base.scorerEmailHash = e.scorerEmailHash || '';
         base.matchKind = (e.matchKind === 'tournament') ? 'tournament' : 'single';
         base.tournament = { name: e.tournamentName || '', season: e.season || '', venue: '', dates: '', banner: '', teamLogos: [], leadership: [], teams: [], matches: [], fixtures: [], groups: [], squads: {}, defaultsSeeded: true, ownerUid: '', ownerName: '' };
+        /* Info-field fallbacks (v226): an entry filed before the
+           Info fields existed may still lack its tournament name,
+           season or ball type even though its OWN tournament —
+           resolved here from the entry's stamp, while the real
+           state is active — carries them. The display state
+           borrows them, so the Info tab shows the full row set
+           even before the permanent backfill reaches this device. */
+        if (base.matchKind === 'tournament' && e.tournamentId){
+          try {
+            var ownTnObj = tournamentForKey(e.tournamentId);
+            if (ownTnObj){
+              if (!base.tournament.name) base.tournament.name = ownTnObj.tn.name || '';
+              if (!base.tournament.season) base.tournament.season = ownTnObj.tn.season || '';
+              if (!base.ballType) base.ballType = ownTnObj.tn.ballType || '';
+            }
+          } catch(err){}
+        }
+        /* Whether this match is its tournament's Final, resolved
+           NOW — while the real state is active — from the entry's
+           own designation and from the saved result that holds it.
+           The scoreboard's result lines read this flag to apply
+           the 🏆 rule (Final only, leading), since the display
+           state's own tournament stub holds no results to check. */
+        base.isFinalDisplay = false;
+        try {
+          base.isFinalDisplay = resultIsFinal(e);
+          if (!base.isFinalDisplay){
+            var holdObj = tournamentHolderOfMatch(e.id);
+            if (holdObj) (holdObj.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m)) base.isFinalDisplay = true; });
+          }
+        } catch(err){}
         /* Team logos live in the global store (v191): carry this
            device's logos for the two teams into the display state,
            so an archived scorecard shows the real logos exactly like
@@ -23579,7 +23729,7 @@
              full commentary back the moment the page renders. */
           var feedAll = '';
           if (S.status === 'finished' && S.resultText){
-            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">' + (liveMatchIsFinal() ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
+            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">' + (((typeof S.isFinalDisplay !== 'undefined' && S.isFinalDisplay) || liveMatchIsFinal()) ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
           }
           feedAll += feedHTMLFor(inn);
           if (S.prevInnings){
@@ -23704,7 +23854,18 @@
           }
           irow2('Toss Won By', twName);
           irow2('Decided To', tdName ? (tdName === 'bat' ? 'Bat' : 'Bowl') : '');
-          if (S.status === 'finished' && S.resultText) rows.push(['Result', fixResultText(S.resultText)]);
+          if (S.status === 'finished' && S.resultText){
+            /* The Info Result row follows the same 🏆 rule as
+               every other result line (v226): the recorded text's
+               own 🏆s are stripped and the single leading one is
+               re-added for the tournament Final alone — a group
+               match never shows one here, and the Final's never
+               trails the text. */
+            var infoRes = fixResultText(String(S.resultText).replace(/🏆/g, ''));
+            var infoFin = false;
+            try { infoFin = !!S.isFinalDisplay || liveMatchIsFinal(); } catch(e){}
+            rows.push(['Result', (infoFin ? '🏆 ' : '') + infoRes]);
+          }
           infoEl.innerHTML = infoHead + rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
           if (S.superOver && S.superOver.id){
             infoEl.innerHTML += '<div class="cb-info-row"><span>Super Over</span><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b>' + esc(S.superOver.active ? 'In progress — 1 over a side' : (S.superOver.resultText || 'Played')) + '</b>' + superOverIdChipHTML(S.superOver) + '</span></div>';
@@ -23747,6 +23908,16 @@
            routing and the Firebase auto-connect that run after it — the
            viewer link then sat on the home chooser in "Local Mode". */
         function step(fn){ try { fn(); } catch(e){} }
+        /* Tournament view mode (v226): if a remote state landed
+           while an archived tournament is being viewed by ID, the
+           adopted state's tournament is the real current one —
+           keep it as the saved current and put the viewed copy
+           back on screen, so the view never silently swaps to a
+           different tournament underneath the reader. */
+        if (tnViewCtx && S.tournament !== tnViewCtx.viewObj){
+          tnViewCtx.saved = S.tournament;
+          S.tournament = tnViewCtx.viewObj;
+        }
         step(function(){ normalizeSquads(); normalizeStateShape(); syncPlayersFromInputsSilent(); });
         /* An open match view (another in-progress match, or a
            fixture, opened from the Recent Matches list) first
@@ -24728,26 +24899,79 @@
            discards the draft. See openTnCreate / saveTnEditInfo. */
         openTnCreate();
       }
+      /* ---------- opening a tournament: by ID, view only (v226) ----------
+         There is no "Open / Close" any more, and no confirmation
+         dialog: every tournament has its own unique ID, so tapping
+         a tournament simply opens THAT tournament's page, by ID.
+         The current tournament is not archived, not replaced and
+         not re-published — any number of tournaments can be looked
+         at, one after another, and the current one stays current
+         throughout. View mode holds the real current tournament
+         aside (tnViewCtx.saved) and puts a copy of the tapped
+         tournament on screen; renderAll re-applies the copy if a
+         remote state lands underneath, commit publishes with the
+         real current tournament back in place, and leaving the
+         tournament page (its 🔙 control, or any navigation away)
+         restores the real current tournament. On the control side
+         the viewed tournament's own edits write back into ITS OWN
+         archive slot through that same commit path, so editing
+         the tournament on screen works as before — it is still
+         never confused with the current one. Viewers get the same
+         page read-only, exactly like the in-page tournament
+         viewer, and never see any open/close prompt. */
+      var tnViewCtx = null;   /* { arcId, viewObj, saved, returnView, addedViewerCls } */
       function openArchivedTournament(id){
-        if (S.tournament && S.tournament.id === id){ setView('tournament'); return; }
-        var doIt = function(){
-          archiveCurrentTournament();
-          var arc = tournamentsArchive();
-          var idx = -1;
-          arc.forEach(function(a, i){ if (a.id === id) idx = i; });
-          if (idx < 0) return;
-          var entry = arc.splice(idx, 1)[0];
-          S.tournament = deep(entry.data);
-          if (!S.tournament.id) S.tournament.id = entry.id;
-          commit('Tournament opened', true);
-          setView('tournament');
-          toast('🏆 ' + (S.tournament.name || 'Tournament') + ' opened');
-        };
-        if (tournamentHasContent(S.tournament)){
-          askVerify('Open this tournament?',
-            'The current tournament' + (S.tournament.name ? ' (“' + S.tournament.name + '”)' : '') + ' will be kept in your tournament list — nothing is deleted. Continue?',
-            doIt);
-        } else doIt();
+        if (tnViewCtx && tnViewCtx.arcId === id){ setView('tournament'); return; }
+        if (!tnViewCtx && S.tournament && S.tournament.id === id){ setView('tournament'); return; }
+        var arc = tournamentsArchive();
+        var entry = null;
+        arc.forEach(function(a){ if (a.id === id) entry = a; });
+        if (!entry) return;
+        var data = deep(entry.data || {});
+        if (!data.id) data.id = entry.id;
+        var ret = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'tournament') ? currentViewName : 'tournaments';
+        if (!tnViewCtx){
+          tnViewCtx = { arcId: id, viewObj: data, saved: S.tournament, returnView: ret, addedViewerCls: false };
+        } else {
+          tnViewCtx.arcId = id; tnViewCtx.viewObj = data;
+        }
+        S.tournament = tnViewCtx.viewObj;
+        if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')){
+          if (!document.body.classList.contains('viewer-inpage')) tnViewCtx.addedViewerCls = true;
+          document.body.classList.add('viewer-mode');
+          document.body.classList.add('viewer-inpage');
+          var vSub = document.querySelector('#tnTeamsCard .sub');
+          if (vSub) vSub.textContent = '';
+          var vH = document.querySelector('#tnTeamsCard h2');
+          if (vH) vH.textContent = 'Teams';
+        }
+        try { renderTournament(); } catch(e){}
+        try { renderTournamentHome(); } catch(e){}
+        setView('tournament');
+        setTnTab('home');
+        toast('🏆 ' + (data.name || 'Tournament'));
+      }
+      /* Leaving view mode: the viewed copy's latest state is kept
+         in its own archive slot (in memory — the next commit
+         publishes it), the real current tournament goes back on
+         screen untouched, and the caller is told which view the
+         tournament was opened from. */
+      function exitTnView(){
+        if (!tnViewCtx) return null;
+        var ctx = tnViewCtx;
+        tnViewCtx = null;
+        try { tournamentsArchive().forEach(function(a){ if (a.id === ctx.arcId) a.data = deep(ctx.viewObj); }); } catch(e){}
+        S.tournament = ctx.saved;
+        if (ctx.addedViewerCls){
+          var inFlow = document.body.classList.contains('viewer-flow');
+          var pureViewer = document.body.classList.contains('link-viewer');
+          if (!inFlow) document.body.classList.remove('viewer-inpage');
+          var q = '';
+          try { q = location.search || ''; } catch(e){}
+          if (q.indexOf('viewer') === -1 && !inFlow && !pureViewer) document.body.classList.remove('viewer-mode');
+        }
+        try { renderTournamentList(); } catch(e){}
+        return ctx.returnView;
       }
       /* ---------- tournament delete cascade (v141) ----------
          Deleting a tournament IS deleting its matches. The
@@ -25020,6 +25244,7 @@
          opening an empty page. */
       var searchReturnView = null;
       var searchHits = { players: [], teams: [], tournaments: [] };
+      var searchSwapS = null;   /* the real state, while a viewer search reads the confirmed snapshot instead (v226) */
       function openSearch(){
         searchReturnView = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'search') ? currentViewName : null;
         setView('search');
@@ -25055,6 +25280,7 @@
       }
       function renderSearch(){
         var wrap = $('searchResults'); if (!wrap) return;
+        if (searchSwapS){ S = searchSwapS; searchSwapS = null; }
         var box = $('searchBox');
         var q = box ? String(box.value || '').trim().toLowerCase() : '';
         var qid = q.replace(/[\s\-]/g, '');
@@ -25062,6 +25288,26 @@
         if (q.length < 2){
           wrap.innerHTML = '';
           return;
+        }
+        /* Viewer sessions search the SERVER snapshot (v226),
+           never this device's local state — the same rule as
+           every other viewer surface. The corpus is read with S
+           swapped to the confirmed state, so the results are the
+           same stable set whatever the local state happens to
+           hold (a tournament just opened, a backup not yet
+           replaced, a cold start): "BBEPL" finds BBEPL-2 and
+           BBEPL-3 alike, every time. Before the server has
+           answered, the page says so instead of claiming nothing
+           matches. The control side searches its own state, as
+           before. */
+        var viewerSearch = false;
+        try { viewerSearch = isViewerSession() || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer'); } catch(e){}
+        if (viewerSearch){
+          if (!fbServerSeen){
+            wrap.innerHTML = '<div class="card"><p class="note" style="margin:0">Connecting to the server…</p></div>';
+            return;
+          }
+          searchSwapS = S; S = liveDisplayState();
         }
         /* Players: name, nickname or Player ID. */
         try {
@@ -25093,7 +25339,7 @@
           if (tn && tn.present !== false && tournamentHasContent(tn)){
             var cName = tn.name || 'Current Tournament';
             if (tnHit(cName, [tournamentKeyOf(tn), tourIdFor(tn.name || '')])){
-              searchHits.tournaments.push({ current: true, name: cName, meta: 'Current tournament • ' + (tn.teams || []).length + ((tn.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (tn.matches || []).length + ((tn.matches || []).length === 1 ? ' match' : ' matches') + ' completed • Tour ID ' + tourIdFor(tn.name || '') });
+              searchHits.tournaments.push({ current: true, name: cName, meta: ((tnViewCtx && tn === tnViewCtx.viewObj) ? 'Viewing now' : 'Current tournament') + ' • ' + (tn.teams || []).length + ((tn.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (tn.matches || []).length + ((tn.matches || []).length === 1 ? ' match' : ' matches') + ' completed • Tour ID ' + tourIdFor(tn.name || '') });
             }
           }
         } catch(e){}
@@ -25109,6 +25355,10 @@
           tournamentsArchive().forEach(function(a){
             var d = (a && a.data) || {};
             var aName = (a && a.name) || d.name || 'Tournament';
+            /* The tournament on screen (the current one, or the
+               one being viewed by ID) is listed once, above —
+               never a second time as its own archive copy. */
+            if (S.tournament && ((a.id && S.tournament.id && a.id === S.tournament.id) || (d.id && S.tournament.id && d.id === S.tournament.id))) return;
             if (!tnHit(aName, [tournamentKeyOf(d), tourIdFor(aName), a && a.id])) return;
             var date = a.at ? fmtDMY(a.at) : '';
             searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
@@ -25145,6 +25395,7 @@
           }).join('') + '</div>';
         }
         if (!html) html = '<div class="card"><p class="note" style="margin:0">No player, team or tournament matches “' + esc(q) + '”.</p></div>';
+        if (searchSwapS){ S = searchSwapS; searchSwapS = null; }
         wrap.innerHTML = html;
       }
 
@@ -25178,6 +25429,12 @@
         else { setView('home'); }
       }
       function setView(v){
+        /* Navigating away from the tournament page family ends
+           tournament view mode (v226): the real current tournament
+           is restored before the new view renders. The tournament
+           page's own sub-pages (team page, Edit Info, Select
+           Winner) keep the viewed tournament on screen. */
+        if (tnViewCtx && v !== 'tournament' && v !== 'teampage' && v !== 'tnedit' && v !== 'tnwinner'){ try { exitTnView(); } catch(e){} }
         /* Leaving the scoreboard also ends the scorer's detour from
            the scoring pad: the "Back to Scoring Pad" bar belongs
            only to a scoreboard the scorer opened from the pad. */
