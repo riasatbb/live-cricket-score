@@ -11,17 +11,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
+    <!-- Warm up the connections the Firebase startup needs anyway, in
+         parallel with the page download: the primary library CDN, the
+         database host itself and the Auth host. These hints only open
+         the sockets early (DNS + TLS) — no data is fetched — so the
+         library load and the first database read skip that setup time
+         when they start. The fallback mirrors get DNS-only hints. -->
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://live-cricket-score-1cdf8-default-rtdb.asia-southeast1.firebasedatabase.app" />
+    <link rel="preconnect" href="https://live-cricket-score-1cdf8.firebaseapp.com" />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
     <script>
-      /* Firebase compat libraries, loaded with mirror fallback: if the
-         primary CDN (gstatic) is unreachable, the same 10.12.2 compat
-         builds are tried from jsDelivr, unpkg and cdnjs in turn, so a
-         single blocked CDN can no longer drop the whole app into
-         Local Mode. If EVERY mirror fails, the page says so honestly
-         (see the init code) and scoring continues in Local Mode on
-         the on-device backup — it never pretends to be live. The
-         Auth build (Google sign-in) loads best-effort from the same
-         mirror AFTER the database build: if only Auth fails, live
-         sync still works and the sign-in button says so honestly. */
+      /* Firebase compat libraries, loaded for SPEED with mirror
+         fallback (v234). The old loader fetched app → database → auth
+         strictly one after another per mirror and only declared the
+         library "ready" after AUTH — the last and least urgent piece —
+         had also arrived, so app open waited on the whole chain. Now:
+         1. The app build races across ALL mirrors at once; the first
+            mirror to deliver it wins (the compat builds need the app
+            build executed before database/auth can register).
+         2. Database and Auth then download IN PARALLEL from the
+            winning mirror.
+         3. "Library ready" fires the moment the DATABASE build is in
+            — live sync starts at once. Auth finishes whenever it
+            lands and announces itself through __onFbAuthLibReady, so
+            Google sign-in wires itself up the moment it can instead
+            of holding the connection hostage.
+         If the winning mirror's database or auth build fails, the
+         next mirrors are tried for just that piece. If EVERY mirror
+         fails, the page says so honestly (see the init code) and
+         scoring continues in Local Mode on the on-device backup — it
+         never pretends to be live. If only Auth fails everywhere,
+         live sync still works and the sign-in button says so. */
       window.__fbLibReady = false; window.__fbLibFailed = false; window.__fbAuthLibReady = false;
       (function(){
         var MIRRORS = [
@@ -39,42 +62,65 @@
           s.src = src;
           document.head.appendChild(s);
         }
-        var libWon = false;
-        function tryMirror(i){
-          if (libWon) return;
-          loadOne(MIRRORS[i][0], function(ok1){
-            if (libWon) return;
-            if (!ok1 || typeof firebase === 'undefined'){ return; }
-            loadOne(MIRRORS[i][1], function(ok2){
-              if (libWon) return;
-              if (ok2 && typeof firebase !== 'undefined' && firebase.database){
-                libWon = true;
-                /* Database is ready — the app can go live. Auth is
-                   loaded best-effort from the same mirror; its flag is
-                   set either way so the sign-in UI can be honest. */
-                loadOne(MIRRORS[i][2], function(ok3){
-                  window.__fbAuthLibReady = !!(ok3 && typeof firebase !== 'undefined' && firebase.auth);
-                  window.__fbLibReady = true;
-                  if (window.__onFbLibReady) window.__onFbLibReady();
-                });
-              }
-            });
+        var appWon = -1, appDead = 0, libDone = false, authDone = false;
+        function finishLib(){
+          if (libDone) return;
+          libDone = true;
+          window.__fbLibReady = true;
+          if (window.__onFbLibReady) window.__onFbLibReady();
+        }
+        function finishAuth(ok){
+          if (authDone) return;
+          authDone = true;
+          window.__fbAuthLibReady = !!ok;
+          if (window.__onFbAuthLibReady) window.__onFbAuthLibReady();
+        }
+        function failAll(){
+          if (libDone || window.__fbLibReady) return;
+          window.__fbLibFailed = true;
+          if (window.__onFbLibFailed) window.__onFbLibFailed();
+        }
+        /* Database / Auth for one piece (1 = database, 2 = auth),
+           starting at the winning mirror and walking the rest until
+           one delivers. */
+        function loadPiece(piece, i, tried){
+          if (piece === 1 && libDone) return;
+          if (piece === 2 && authDone) return;
+          if (tried >= MIRRORS.length){
+            if (piece === 1) failAll(); else finishAuth(false);
+            return;
+          }
+          var idx = ((i % MIRRORS.length) + MIRRORS.length) % MIRRORS.length;
+          loadOne(MIRRORS[idx][piece], function(ok){
+            var good = ok && typeof firebase !== 'undefined' && (piece === 1 ? !!firebase.database : !!firebase.auth);
+            if (good){ if (piece === 1) finishLib(); else finishAuth(true); return; }
+            loadPiece(piece, idx + 1, tried + 1);
           });
         }
+        function onAppWon(i){
+          if (appWon >= 0) return;
+          appWon = i;
+          /* Database and Auth download in parallel from here. */
+          loadPiece(1, i, 0);
+          loadPiece(2, i, 0);
+        }
         function tryAllMirrors(){
-          libWon = false;
-          for (var i = 0; i < MIRRORS.length; i++) tryMirror(i);
-          setTimeout(function(){
-            if (!libWon && !window.__fbLibReady){
-              window.__fbLibFailed = true;
-              if (window.__onFbLibFailed) window.__onFbLibFailed();
-            }
-          }, 4000);
+          appWon = -1; appDead = 0; libDone = false; authDone = false;
+          for (var i = 0; i < MIRRORS.length; i++){
+            (function(idx){
+              loadOne(MIRRORS[idx][0], function(ok){
+                if (ok && typeof firebase !== 'undefined'){ onAppWon(idx); return; }
+                appDead++;
+                if (appDead >= MIRRORS.length && appWon < 0) failAll();
+              });
+            })(i);
+          }
+          setTimeout(function(){ if (!libDone && !window.__fbLibReady) failAll(); }, 4000);
         }
         /* Exposed so the connection panel's Retry button can run the
            whole mirror chain again when every mirror failed (or the
            network was down at first load) without a page reload. */
-        window.__fbLoadLib = function(){ window.__fbLibFailed = false; window.__fbLibReady = false; tryAllMirrors(); };
+        window.__fbLoadLib = function(){ window.__fbLibFailed = false; window.__fbLibReady = false; window.__fbAuthLibReady = false; tryAllMirrors(); };
         window.__fbLoadLib();
       })();
     </script>
@@ -1418,6 +1464,16 @@
       .cb-panel.show{display:block}
       .cb-status{color:#f07a5f;font-size:16.5px;font-weight:500;line-height:1.4;padding:14px 16px 4px;background:#2b2b2b}
       .cb-status:empty{display:none}
+      /* Toss + teams block on the LIVE tab (per reference): the toss
+         headline, the two Playing XIs, the toss sentence and the two
+         full squads, in that order, once the squad is confirmed. */
+      .cb-tossblock{background:#2b2b2b;padding:2px 16px 14px;border-bottom:1px solid #3d3d3d}
+      .cb-tossblock[hidden]{display:none}
+      .cb-toss-head{color:#f0ab3c;font-size:17.5px;font-weight:700;text-align:center;padding:10px 0 4px}
+      .cb-toss-h{font-size:16.5px;font-weight:700;color:#fff;margin:14px 0 6px}
+      .cb-toss-line{font-size:15.5px;line-height:1.65;color:#e2e2e2;margin:0 0 10px}
+      .cb-toss-line b{color:#fff}
+      .cb-toss-sentence{font-size:15.5px;font-weight:700;color:#fff;line-height:1.55;margin:12px 0 2px}
       /* Scorecard tab (per reference): a situation band on top, then
          one collapsible row per innings — team name left, the score
          as runs-wickets (overs) right, and a chevron — expanding in
@@ -2052,8 +2108,9 @@
       .tp-msub{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em;margin-top:8px}
       .tp-mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px}
       .tp-vtn{flex:none;background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
-      /* View Tournament bar at the head of the Summary and Info tabs (v231) */
-      .sb-vt-bar{margin:0 0 12px}
+      /* View Tournament bar in the scoreboard header, above the tab
+         strip (v232 — moved up from the Summary / Info tab heads) */
+      .sb-vt-bar{padding:2px 12px 12px;background:#191919}
       .sb-vt-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px 16px;border:none;border-radius:12px;background:var(--green);color:#fff;font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
       .sb-vt-btn .sb-vt-name{font-weight:600;opacity:.88;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
       .tp-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
@@ -2922,6 +2979,17 @@
             </button>
             <button type="button" class="cb-iconbtn" onclick="setCbTab('info')" aria-label="Match info">⋮</button>
           </div>
+          <!-- View Tournament sits in the header itself (v232),
+               above the tab strip, so it is the first thing under
+               the match title on every tab: for a tournament match
+               it opens THAT match's own tournament, resolved from
+               the match's own tournament stamp — never simply
+               whichever tournament is current. Shown and labelled
+               by renderScoreboardCB on every render; hidden for a
+               Single Match. -->
+          <div class="sb-vt-bar" id="sbVtBarTop" hidden style="display:none">
+            <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
+          </div>
           <nav class="cb-tabs" aria-label="Scoreboard views">
             <button type="button" class="cb-tab" data-cbtab="summary" id="cbTabSummary" onclick="setCbTab('summary')" hidden>Summary</button>
             <button type="button" class="cb-tab" data-cbtab="info" onclick="setCbTab('info')">Info</button>
@@ -2934,6 +3002,7 @@
           <!-- LIVE -->
           <div class="cb-panel show" id="cbPanel-live">
             <div class="cb-status" id="cbStatusLine"></div>
+            <div class="cb-tossblock" id="cbTossBlock" hidden></div>
             <div class="cb-main" id="cbMainScore"></div>
             <div class="cb-pship" id="cbPship"></div>
             <div class="cb-table" id="cbBatterTable"></div>
@@ -2945,24 +3014,13 @@
           <!-- SUMMARY (completed matches only — the tab itself is
                hidden until the match on show is finished) -->
           <div class="cb-panel" id="cbPanel-summary">
-            <!-- View Tournament sits at the HEAD of this tab (v231),
-                 not buried at the bottom of Info: for a tournament
-                 match it opens THAT match's own tournament, resolved
-                 from the match's own tournament stamp — never simply
-                 whichever tournament is current. Shown and labelled
-                 by renderScoreboardCB on every render; hidden for a
-                 Single Match. -->
-            <div class="sb-vt-bar" id="sbVtBarSummary" hidden style="display:none">
-              <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
-            </div>
+            <!-- View Tournament lives in the scoreboard header
+                 above the tab strip (v232), not inside this tab. -->
             <div id="cbSummaryBody"></div>
           </div>
 
           <!-- INFO -->
           <div class="cb-panel" id="cbPanel-info">
-            <div class="sb-vt-bar" id="sbVtBarInfo" hidden style="display:none">
-              <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
-            </div>
             <div class="card" style="margin-bottom:0">
               <h2>Match Info</h2>
               <div id="cbInfoBody"></div>
@@ -2970,10 +3028,11 @@
             <!-- Nothing lives under Match Info any more (v231): the
                  old Follow Tournament card at the bottom of this tab
                  was easy to miss and opened whichever tournament was
-                 current rather than this match's own — it moved to
-                 the View Tournament bars at the head of the Summary
-                 and Info tabs above. A Single Match shows nothing
-                 tournament-related here at all. -->
+                 current rather than this match's own — the tournament
+                 is now reached from the View Tournament bar in the
+                 scoreboard header above the tab strip (v232). A
+                 Single Match shows nothing tournament-related here
+                 at all. -->
           </div>
 
           <!-- SCORECARD — per reference: the situation band, then
@@ -3846,7 +3905,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v231';
+      var APP_VERSION = 'v235';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4113,7 +4172,13 @@
       }
       var localRestored = false;
       function saveLocalBackup(){
-        try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify(S)); } catch(e){}
+        /* The backup always holds the TRUE state (v233): while an
+           archived tournament is being viewed, S.tournament is the
+           viewed copy, and backing THAT up would resurrect the
+           viewed tournament as the current one on the next restore
+           — tnFoldedState puts the real current tournament back
+           and the viewed copy in its own archive slot first. */
+        try { localStorage.setItem(LS_BACKUP_KEY, JSON.stringify((typeof tnFoldedState === 'function') ? tnFoldedState() : S)); } catch(e){}
       }
       function loadLocalBackup(){
         try {
@@ -4143,7 +4208,7 @@
         var dot = $('brandDot'); if (dot) dot.classList.toggle('on', mode === 'live');
         pill.classList.remove('on'); pill.classList.remove('err');
         if (mode === 'live'){ pill.textContent = '● Firebase Live — Everyone online is watching'; pill.classList.add('on'); }
-        else if (mode === 'connecting'){ pill.textContent = '● Connecting to Firebase…'; }
+        else if (mode === 'connecting'){ pill.textContent = (fbStage === 'lib-loading') ? '● Loading the Firebase library…' : (fbStage === 'db-waiting') ? '● Connected — loading the live match…' : '● Connecting to Firebase…'; }
         else if (mode === 'error'){ pill.textContent = '● Firebase problem — viewers may not be updating'; pill.classList.add('err'); }
         else { pill.textContent = '● Local Mode — Live across tabs in this browser'; }
         if (detail){
@@ -4407,7 +4472,11 @@
            viewers never see the unconfirmed copy. */
         if (!fbReady && fbLocalDirty){ refreshConfirmedState(); return; }
         var h = coldHashOf(incoming);
-        if (h === coldHashOf(coldPartOf(S))){ fbColdHash = h; refreshConfirmedState(); return; }
+        /* The echo comparison uses the folded state (v233): while a
+           tournament is being viewed, S itself holds the viewed
+           copy as its tournament, so comparing against raw S would
+           never recognise this device's own library writes. */
+        if (h === coldHashOf(coldPartOf(tnFoldedState()))){ fbColdHash = h; refreshConfirmedState(); return; }
         /* A library change made on THIS device that has not landed
            yet is newer than anything the server can echo back — an
            older library snapshot must not roll it back. */
@@ -4419,6 +4488,13 @@
         try { cleanGhostPlayers(); } catch(e){}
         try { normalizeStateShape(); } catch(e){}
         refreshConfirmedState();
+        /* The library just replaced the tournament keys with the
+           server's true state: re-apply the viewed tournament's
+           identity (v233) before the backup and the render read S,
+           so the page keeps showing the tournament that was opened
+           — refreshed from its own slot — and the backup stores
+           the folded true state. */
+        try { tnViewResolve(); } catch(e){}
         saveLocalBackup();
         try { renderAll(false); } catch(e){}
       }
@@ -4431,7 +4507,12 @@
          commit retries the library write on its own. */
       function pushLibraryIfChanged(){
         if (!fbLibRef || fbLibDenied) return Promise.resolve(false);
-        var cold = coldPartOf(S);
+        /* The library is written from the folded state (v233):
+           while a tournament is being viewed, S.tournament is the
+           viewed copy, and the library must always carry the REAL
+           current tournament plus the viewed copy in its own
+           archive slot — never the viewed copy AS the current one. */
+        var cold = coldPartOf(tnFoldedState());
         var h = coldHashOf(cold);
         if (!h || h === fbColdHash) return Promise.resolve(true);
         fbColdLocalAt = Date.now();
@@ -4455,6 +4536,13 @@
          liveMatch set. */
       function writeSplitState(st){
         var full = deep(st);
+        /* Writing the live state while a tournament is being
+           viewed folds view mode away first (v233), exactly like
+           the library push: the written state carries the real
+           current tournament, with the viewed copy in its own
+           archive slot. (A pre-built candidate state — the delete
+           publish — is already folded by its builder.) */
+        if (st === S && typeof tnViewCtx !== 'undefined' && tnViewCtx){ var tnFold = tnFoldedState(); full.tournament = tnFold.tournament; full.tournamentsArchive = tnFold.tournamentsArchive; }
         if (fbLibDenied || !fbLibRef){
           return fbRef.set(full).then(function(){
             fbHotState = deep(full);
@@ -4536,7 +4624,7 @@
          ENTIRE state in one transaction at liveMatch, exactly as
          every build before v204 wrote it. */
       function pushWholeState(ref){
-        var pushed = deep(S);
+        var pushed = deep(tnFoldedState());
         var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
         ref.transaction(function(cur){
           if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
@@ -4584,7 +4672,13 @@
          kept; permanent Match History is separate again and is never
          touched here. */
       function buildDeletedState(){
-        var keepTn = deep(S.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
+        /* Built from the folded state (v233): if a tournament is
+           being viewed when the delete is built, the cleared state
+           still carries the REAL current tournament and the viewed
+           copy in its own archive slot — never the viewed copy as
+           the current tournament. */
+        var foldSrc = tnFoldedState();
+        var keepTn = deep(foldSrc.tournament || { name:'', teams:[], matches:[], fixtures:[], squads:{} });
         var ns = freshState();
         ns.tournament = keepTn;
         ns.myTeams = deep(S.myTeams || { teams: [], squads: {}, seeded: false });
@@ -4594,7 +4688,7 @@
         ns.teamRegistry = deep(S.teamRegistry || []); /* deleting the match never deletes a Team ID — the registry stays on the server */
         ns.teamLogos = deep(S.teamLogos || []); /* deleting the match never deletes a team's logo either (v191) */
         ns.pausedMatches = deep(S.pausedMatches || []);
-        ns.tournamentsArchive = deep(S.tournamentsArchive || []);
+        ns.tournamentsArchive = deep(foldSrc.tournamentsArchive || []);
         ns.lastFinishedSingle = deep(S.lastFinishedSingle || null);
         ns.matchId = Date.now();
         ns.updatedAt = Date.now();
@@ -9078,9 +9172,20 @@
       }
       function normalizeTournament(){
         if (!S.tournament || typeof S.tournament !== 'object') S.tournament = { name:'', teams:[], matches:[], fixtures:[], groups:[], squads:{} };
-        if (!Array.isArray(S.tournament.teams)) S.tournament.teams = [];
-        if (!Array.isArray(S.tournament.matches)) S.tournament.matches = [];
-        if (!Array.isArray(S.tournament.fixtures)) S.tournament.fixtures = [];
+        /* Firebase hands arrays back as objects with numeric keys
+           when it feels like it (the registries and groups below
+           already coerce that shape) — teams / matches / fixtures
+           get the same coercion (v233). Resetting an object-shaped
+           list to [] here silently EMPTIED a healthy tournament:
+           its name still rendered while its teams, matches and
+           points vanished, which read as another tournament's
+           empty state under this one's name. */
+        ['teams','matches','fixtures'].forEach(function(k){
+          if (!Array.isArray(S.tournament[k])){
+            if (S.tournament[k] && typeof S.tournament[k] === 'object') S.tournament[k] = Object.keys(S.tournament[k]).sort().map(function(key){ return S.tournament[k][key]; });
+            else S.tournament[k] = [];
+          }
+        });
         /* Every fixture carries its own stable unique ID: a fixture
            that arrives without one (saved before fixture IDs) is
            given one here, and a duplicate ID is re-issued, so an ID
@@ -12389,6 +12494,7 @@
       function renderTnStats(){
         var el = $('tnStats');
         if (!el) return;
+        try { tnViewResolve(); } catch(e){}
         var cats = tnStatCategories();
         var secs = [
           { id:'bat', icon:'🏏', title:'Batting', sub:'' },
@@ -12441,6 +12547,11 @@
       }
       var currentTnTab = 'home';
       function setTnTab(tab){
+        /* A tab switch re-resolves the viewed tournament first
+           (v233): whichever tab is entered, it renders the
+           tournament that was opened — by its stored ID — never
+           whatever tournament the state underneath last held. */
+        try { tnViewResolve(); } catch(e){}
         var prevTab = currentTnTab;
         currentTnTab = tab;
         /* Leaving Statistics for another tab also leaves any
@@ -13205,7 +13316,11 @@
           if (tname){
             tournamentsArchive().forEach(function(a){
               if (!a || !a.data) return;
-              if (a.data.name === tname || a.name === tname){ out.kind = 'arc'; out.arcId = a.id; }
+              /* First name match wins (v233): a later archive entry
+                 with the same name must not override the match
+                 already found — the name fallback is a last resort
+                 behind every ID match above, never a lottery. */
+              if (!out.arcId && (a.data.name === tname || a.name === tname)){ out.kind = 'arc'; out.arcId = a.id; }
             });
           }
         } catch(e){}
@@ -13214,7 +13329,11 @@
       function tpOpenTnTarget(t){
         if (t.kind === 'current'){
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          else setView('tournament');
+          /* Opening the CURRENT tournament leaves view mode first
+             (v233): setView('tournament') alone would keep the
+             viewed archived tournament on screen, so a tap on the
+             current tournament could land on the archived one. */
+          else { try { exitTnView(); } catch(e){} setView('tournament'); }
           return;
         }
         if (t.kind === 'arc'){ openArchivedTournament(t.arcId); return; }
@@ -13226,12 +13345,13 @@
         if (!m || !m.tournamentName) return;
         tpOpenTnTarget(tpTnTarget(String(m.tournamentId || ''), String(m.tournamentName)));
       }
-      /* The scoreboard's View Tournament bars (Summary / Info tab
-         heads, v231): renderScoreboardCB stashes the tournament of
-         the match ON SHOW here on every render; tapping a bar opens
-         exactly that tournament — by its own ID when it is an
-         archived one, the current tournament page when it is the
-         current one — never a different tournament. */
+      /* The scoreboard's View Tournament bar (in the header above
+         the tab strip, v232): renderScoreboardCB stashes the
+         tournament of the match ON SHOW here on every render;
+         tapping the bar opens exactly that tournament — by its own
+         ID when it is an archived one, the current tournament page
+         when it is the current one — never a different
+         tournament. */
       var sbVtTarget = null;   /* { tid, tname } of the match on show, or null */
       function sbViewShownTournament(){
         if (!sbVtTarget) return;
@@ -13713,13 +13833,31 @@
       function selectTnTeam(teamName){
         openTeamPage('tn', teamName);
       }
+      var tnGalleryNames = [];   /* the team names the gallery last rendered, in tile order */
       function renderTnTeamsGallery(){
         var grid = $('tnTeamsGrid');
         if (!grid) return;
+        /* Resolve first (v233): the gallery renders the tournament
+           that was opened, by its stored ID — and it is re-rendered
+           on every TEAMS entry (see setTnTab), so it can never sit
+           stale under another tournament's name. */
+        try { tnViewResolve(); } catch(e){}
         normalizeTournament();
         var tn = S.tournament;
-        grid.innerHTML = tn.teams.length
-          ? '<div class="sb-teams-grid">' + tn.teams.map(function(n, i){
+        /* The gallery's teams are the union of the tournament's
+           teams list and every team its matches and fixtures name
+           (v233): the teams list alone used to decide, so a copy
+           whose list arrived unsettled showed a false "No teams
+           in this tournament yet." under a tournament whose
+           Matches tab was full. The empty note now appears only
+           when the tournament truly names no team anywhere. */
+        var names = (tn.teams || []).slice();
+        function addTnName(n){ if (n && names.indexOf(n) === -1) names.push(n); }
+        (tn.matches || []).forEach(function(m){ (m.innings || []).forEach(function(inn){ addTnName(inn.battingTeam); addTnName(inn.bowlingTeam); }); });
+        (tn.fixtures || []).forEach(function(f){ addTnName(f.teamA); addTnName(f.teamB); });
+        tnGalleryNames = names;
+        grid.innerHTML = names.length
+          ? '<div class="sb-teams-grid">' + names.map(function(n, i){
               var players = Array.isArray(tn.squads[n]) ? tn.squads[n] : [];
               return '<button type="button" class="sb-team-tile" data-tn-team-idx="' + i + '" aria-label="Open ' + esc(n) + '">'
                 + teamBadgeHTML(n, i)
@@ -13735,7 +13873,11 @@
         var tile = (t && t.closest) ? t.closest('[data-tn-team-idx]') : null;
         if (tile){
           var idx = parseInt(tile.getAttribute('data-tn-team-idx'), 10);
-          var name = S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null;
+          /* The tile index addresses the list the gallery actually
+             rendered (v233) — the same tournament it resolved —
+             falling back to the open tournament's own teams list. */
+          try { tnViewResolve(); } catch(e){}
+          var name = (tnGalleryNames && tnGalleryNames[idx]) || (S.tournament && S.tournament.teams ? S.tournament.teams[idx] : null);
           if (name) selectTnTeam(name);
         }
       });
@@ -14057,6 +14199,7 @@
         return base + (1000 + (h % 9000));
       }
       function renderTournamentHome(){
+        try { tnViewResolve(); } catch(e){}
         var tn = S.tournament;
         var displayName = (tn.name && tn.name.trim()) ? tn.name.trim() : 'Tournament';
         var banner = $('tnBannerTitle'); if (banner) banner.innerHTML = bannerTitleHTML(displayName);
@@ -15634,24 +15777,24 @@
 
       /* ---------- sync ---------- */
       function commit(msg, silent){
-        /* Tournament view mode (v226): while an archived tournament
-           is being viewed by ID, S.tournament is the viewed copy,
-           not the current tournament. A commit made in that state
-           first writes the viewed copy back into its OWN archive
-           slot, then backs up and publishes with the REAL current
-           tournament in place, and puts the viewed copy back on
-           screen afterwards — viewing (or even editing) one
-           tournament can never replace or disturb the current one. */
-        var tnViewHeld = null;
+        /* Tournament view mode (v226, fold v233): while an archived
+           tournament is being viewed by ID, S.tournament is the
+           viewed copy, not the current tournament. A commit made in
+           that state first writes the viewed copy back into its OWN
+           archive slot; the backup, the broadcast and the Firebase
+           publish below then each fold view mode away
+           (tnFoldedState), so they always carry the REAL current
+           tournament — the viewed copy stays on screen throughout,
+           with no swap-and-restore window in which a render, a
+           snapshot or a broadcast could capture the wrong
+           tournament as the current one. */
         if (tnViewCtx){
           try { tournamentsArchive().forEach(function(a){ if (a.id === tnViewCtx.arcId) a.data = deep(tnViewCtx.viewObj); }); } catch(e){}
           /* The slot now holds exactly the viewed copy, so the
              resolver's slot signature follows it — the next resolve
              must not mistake this write-back for a server update. */
           try { tnViewCtx.arcHash = coldHashOf(tnViewCtx.viewObj || {}); } catch(e){}
-          if (S.tournament !== tnViewCtx.viewObj && S.tournament !== tnViewCtx.saved) tnViewCtx.saved = S.tournament;
-          tnViewHeld = tnViewCtx.viewObj;
-          S.tournament = tnViewCtx.saved;
+          try { tnViewResolve(); } catch(e){}
         }
         S.updatedAt = Date.now();
         /* Strip any ghost batter / bowler rows (see cleanGhostPlayers)
@@ -15672,10 +15815,9 @@
         if (!fbReady) fbLocalDirty = true;
         saveLocalBackup();
         renderAll(true);
-        if (bc){ try { bc.postMessage({ type:'state', state:S }); } catch(e){} }
+        if (bc){ try { bc.postMessage({ type:'state', state: tnFoldedState() }); } catch(e){} }
         pushToFirebase();
         if (msg && !silent) toast(msg + ' — updated in both outputs ✓');
-        if (tnViewHeld){ S.tournament = tnViewHeld; try { renderAll(true); } catch(e){} }
       }
       if (bc){
         bc.onmessage = function(ev){
@@ -15690,7 +15832,7 @@
             var incAt = ev.data.state.updatedAt, curAt = S.updatedAt;
             if (typeof incAt !== 'number') return;
             if (typeof curAt === 'number' && incAt <= curAt) return;
-            S = ev.data.state; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} saveLocalBackup(); renderAll(false);
+            S = ev.data.state; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} try { tnViewResolve(); } catch(e){} saveLocalBackup(); renderAll(false);
           }
         };
       }
@@ -15718,7 +15860,7 @@
            centre and pad. Guarded to the scorer view only, so
            viewers and every other screen are untouched. */
         var hadMatch = false; try { hadMatch = liveMatchExists(); } catch(e){}
-        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbConfirmedState = deep(S); fbLocalDirty = false; saveLocalBackup(); renderAll(false); fbPushing = false;
+        fbPushing = true; S = v; try { cleanGhostPlayers(); } catch(e){} try { normalizeStateShape(); } catch(e){} fbConfirmedState = deep(S); fbLocalDirty = false; /* v233: the adopted state is a true state — re-apply the viewed tournament's identity (saved follows the new current, the view copy refreshes from its own slot) before the backup and the render read S. */ try { tnViewResolve(); } catch(e){} saveLocalBackup(); renderAll(false); fbPushing = false;
         if (hadMatch && typeof currentViewName !== 'undefined' && currentViewName === 'scorer'){ var hasMatch = false; try { hasMatch = liveMatchExists(); } catch(e){} if (!hasMatch){ try { setView('console'); } catch(e){} } }
         /* A remote match with no owner yet is claimed by the account
            already signed in on this control side (see ownership). */
@@ -15825,8 +15967,31 @@
            see the same record book); only the scorer's side writes.
            A rejected read/write (e.g. Rules that still allow only
            liveMatch) surfaces the real error in the History view. */
+        /* The history and tombstone listeners attach LATE (v234):
+           they used to be registered in the same breath as the live
+           match, so opening the app immediately downloaded the whole
+           record book — every archived match, growing forever —
+           before the first live snapshot could land. Now only the
+           live match (and the small library node) load up front;
+           history attaches the moment the first live snapshot has
+           been read, or after 2.5 s at the latest, and flushes any
+           pending writes then. Every history write path already
+           guards a missing fbHistRef and stays enrolled in the
+           retry engine, so nothing scored in the gap is lost. */
+        var myAppForSecondary = fbApp;
+        var secondaryAttached = false, secondaryTimer = null;
+        function attachSecondaryListeners(){
+          if (secondaryAttached || fbApp !== myAppForSecondary) return;
+          secondaryAttached = true;
+          if (secondaryTimer){ clearTimeout(secondaryTimer); secondaryTimer = null; }
+          attachHistoryListeners();
+          attachDeletedListener();
+          try { flushHistoryPending(); flushHistoryDeletes(); } catch(e){}
+        }
+        secondaryTimer = setTimeout(attachSecondaryListeners, 2500);
+        function attachHistoryListeners(){
         histSyncedOnce = false;
-        fbHistRef = fbApp.database().ref('matchHistory');
+        fbHistRef = myAppForSecondary.database().ref('matchHistory');
         var myHistRef = fbHistRef;
         /* Per-entry listeners (v204): the old whole-history 'value'
            listener re-downloaded EVERY archived match whenever ONE
@@ -15852,6 +16017,8 @@
            do not leave the History status claiming "syncing"
            forever — the entries themselves still arrive per child. */
         setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} } }, 8000);
+        }
+        function attachDeletedListener(){
         /* Delete tombstones live at their own path, matchHistoryDeleted —
            read by everyone, written only by the scorer's side. A
            rejected read here (Rules not yet updated) is NOT fatal and
@@ -15859,13 +16026,14 @@
            tombstones still apply, and deletes themselves go through
            matchHistory as before. The History status text carries the
            updated Rules JSON that includes this path. */
-        fbDelRef = fbApp.database().ref('matchHistoryDeleted');
+        fbDelRef = myAppForSecondary.database().ref('matchHistoryDeleted');
         var myDelRef = fbDelRef;
         myDelRef.on('value', function(snap){
           if (fbDelRef !== myDelRef) return;
           fbLastSnapAt = Date.now();
           mergeRemoteDeleted(snap.val());
         }, function(err){ /* local tombstones still apply — see note above */ });
+        }
         myRef.on('value', function(snap){
           if (fbRef !== myRef) return;
           var v = snap.val();
@@ -15889,7 +16057,7 @@
              session's own offline work. It used to run on a
              separate once('value') read that downloaded the whole
              match a SECOND time on every connect and reconnect. */
-          if (!fbFirstSnapDone){ fbFirstSnapDone = true; try { firstLiveSnapshot(v, isDefault); } catch(e){} }
+          if (!fbFirstSnapDone){ fbFirstSnapDone = true; try { firstLiveSnapshot(v, isDefault); } catch(e){} /* The live match has been read — now the deferred history / tombstone listeners may attach (v234). */ try { attachSecondaryListeners(); } catch(e){} }
         }, function(err){
           if (fbRef !== myRef) return;
           /* A failed read must never leave the pad locked forever or the
@@ -16056,6 +16224,15 @@
          writers.
          ============================================================ */
       var fbAuth = null, authUser = null;
+      /* The Auth library no longer holds up the connection (v234):
+         the head loader declares the database ready the moment it
+         lands and fires this hook when the Auth build arrives. If
+         the app was already initialised by then, wire Auth up now —
+         a restored Google session then appears on its own, and the
+         sign-in button works the moment anyone taps it. */
+      window.__onFbAuthLibReady = function(){
+        if (fbApp && !fbAuth){ try { initAuthForApp(); } catch(e){} }
+      };
       function currentUid(){ return authUser ? authUser.uid : ''; }
       function authDisplayName(){ return authUser ? (authUser.displayName || authUser.email || 'Signed-in user') : ''; }
       function initAuthForApp(){
@@ -16122,6 +16299,17 @@
          crashes the same way, the native sign-in is treated as broken
          and the user is offered the browser fallback below instead of
          a dead button. */
+      /* The probe verdict is cached per plugin for the whole
+         session (v234): probing on every sign-in tap could add up
+         to its 4-second timeout again and again, while the answer
+         cannot change while the app stays open. */
+      var nativeProbeCache = null;
+      function nativeAuthProbeOnce(nativeAuth){
+        if (nativeProbeCache && nativeProbeCache.plugin === nativeAuth) return nativeProbeCache.promise;
+        var p = nativeAuthProbe(nativeAuth);
+        nativeProbeCache = { plugin: nativeAuth, promise: p };
+        return p;
+      }
       function nativeAuthProbe(nativeAuth){
         return new Promise(function(resolve){
           var settled = false;
@@ -16195,13 +16383,14 @@
       function signInWithGoogle(){
         if (!fbAuth){
           if (!fbApp) toast('⏳ Firebase is still connecting — try signing in again in a moment.');
+          else if (!window.__fbAuthLibReady && !window.__fbLibFailed) toast('⏳ Google sign-in is still loading — it runs separately from the live connection now, so give it a moment and tap again.');
           else toast('⚠️ Google sign-in is unavailable right now — the sign-in library did not load. Live scores still work; check the connection and reload the page.');
           return;
         }
         var nativeAuth = nativeAuthPlugin();
         if (nativeAuth){
           toast('Opening Google sign-in…');
-          nativeAuthProbe(nativeAuth).then(function(ready){
+          nativeAuthProbeOnce(nativeAuth).then(function(ready){
             if (!ready){ showNativeSignInFallback(); return; }
             nativeAuth.signInWithGoogle().then(function(res){
               var cred = res && res.credential;
@@ -18311,7 +18500,7 @@
         if (t.kind === 'current'){
           closePlayerProfile();
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          else setView('tournament');
+          else { try { exitTnView(); } catch(e){} setView('tournament'); }
           return;
         }
         if (t.kind === 'arc'){ closePlayerProfile(); openArchivedTournament(t.arcId); return; }
@@ -23794,6 +23983,83 @@
         else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
         return status;
       }
+      /* The ONE squad entered for a team in the tournament this
+         match belongs to: a tournament team has a single squad,
+         entered once at the start, and every match of that
+         tournament reads it. Resolved from the match's OWN
+         tournament (its start-of-match stamp, via tournamentForKey),
+         never from whichever tournament happens to be open, so a
+         match never borrows another tournament's squad. Returns
+         null for a Single Match, and whenever this device does not
+         hold that tournament's squad for the team (an archived
+         match's display state, say) — the caller then falls back
+         to the match's own squad. */
+      function cbTournamentSquad(team){
+        if (!team) return null;
+        if (S.matchKind !== 'tournament' && !S.tournamentId) return null;
+        var stamp = (typeof S.tournamentId === 'string') ? S.tournamentId : '';
+        var tn = null;
+        if (stamp){
+          try { var own = tournamentForKey(stamp); if (own && own.tn) tn = own.tn; } catch(e){}
+          if (!tn && S.tournament && tournamentKeyOf(S.tournament) === stamp) tn = S.tournament;
+        } else if (S.tournament) tn = S.tournament;
+        if (tn && tn.squads && Array.isArray(tn.squads[team]) && tn.squads[team].length) return tn.squads[team];
+        return null;
+      }
+      /* The toss + teams block for the LIVE tab (per reference), in
+         the reference's exact sequence: (1) the toss-decision
+         headline ("<winner> opt to bat/bowl"), (2) "Teams:" — each
+         side's Playing XI as a comma list, batting-first side first,
+         with (c)/(vc)/(w) suffixes from the leadership picks, (3) the
+         toss sentence ("<winner> have won the toss and have opted
+         to bat/field"), (4) "Squads:" — each side's full squad the
+         same way. The two lists come from two different places, on
+         purpose: the Playing XI is THIS match's confirmed final
+         squad's first eleven (the per-match confirmation, exactly
+         as the Squads tab cuts it), while "Squads:" shows the ONE
+         squad entered for the team in the match's own tournament
+         (cbTournamentSquad) — entered once, at the start — falling
+         back to the match's full squad for a Single Match or when
+         that tournament squad is not held. The block appears once
+         the toss is recorded AND the squad has been confirmed;
+         before confirmation there is no confirmed XI to show, so
+         it stays hidden. It is rebuilt from the state on every
+         render, so whenever the Playing XI confirmation lands —
+         and whenever the tournament squad itself is edited — the
+         block updates itself in this same sequence, for the scorer
+         and, through the synced state, for viewers alike. */
+      function cbTossBlockHTML(){
+        if (!S.tossWinner || !S.tossDecision || !S.squadConfirmed) return '';
+        var winner = S.tossWinner;
+        var other = (winner === S.teamA) ? S.teamB : S.teamA;
+        var batFirst = (S.tossDecision === 'bat') ? winner : other;
+        var sides = [batFirst, (batFirst === S.teamA) ? S.teamB : S.teamA];
+        function namesWithSuffix(team, list){
+          var L = cbxLeadership(team);
+          return list.map(function(n){
+            var s = esc(n);
+            if (L.c === n) s += '(c)';
+            if (L.vc === n) s += '(vc)';
+            if (L.wk === n) s += '(w)';
+            return s;
+          }).join(', ');
+        }
+        var xiLines = '', sqLines = '', anyXI = false;
+        sides.forEach(function(team){
+          var xiSource = displaySquadForTeam(team) || [];
+          var full = cbTournamentSquad(team) || xiSource;
+          if (xiSource.length){
+            anyXI = true;
+            xiLines += '<p class="cb-toss-line"><b>' + esc(team) + '</b> (Playing XI): ' + namesWithSuffix(team, xiSource.slice(0, 11)) + '</p>';
+          }
+          if (full.length) sqLines += '<p class="cb-toss-line"><b>' + esc(team) + '</b> Squad: ' + namesWithSuffix(team, full) + '</p>';
+        });
+        if (!anyXI) return '';
+        return '<div class="cb-toss-head">' + esc(winner) + ' opt to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '</div>'
+          + '<div class="cb-toss-h">Teams:</div>' + xiLines
+          + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '</div>'
+          + '<div class="cb-toss-h">Squads:</div>' + sqLines;
+      }
       function renderScoreboardCB(){
         var inn = S.current;
         var titleEl = $('cbMatchTitle');
@@ -23811,6 +24077,27 @@
         var t = target();
         var status = cbStatusText();
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
+        /* Toss + teams block: at the TOP of the Live tab (directly
+           under the status line, as in the reference) until the
+           first ball is bowled; once play is under way the same
+           block moves to the BOTTOM of the tab, under the
+           commentary, so the live score keeps the top of the screen
+           and the toss sequence stays on the tab permanently. */
+        var tbEl = $('cbTossBlock');
+        if (tbEl){
+          var tbHtml = '';
+          try { tbHtml = cbTossBlockHTML(); } catch(e){ tbHtml = ''; }
+          tbEl.innerHTML = tbHtml;
+          tbEl.hidden = !tbHtml;
+          if (tbHtml){
+            var livePanel = $('cbPanel-live');
+            var ballsPlayed = !!((inn && inn.balls && inn.balls.length) || S.prevInnings || finished);
+            if (livePanel){
+              if (ballsPlayed) livePanel.appendChild(tbEl);
+              else if (stEl && tbEl.previousSibling !== stEl) livePanel.insertBefore(tbEl, stEl.nextSibling);
+            }
+          }
+        }
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
         var rr = rrr();
@@ -24167,19 +24454,19 @@
           if (S.matchId) infoEl.innerHTML += '<div class="cb-info-row"><span>Match ID</span>' + matchIdChipHTML(S.matchId) + '</div>';
           if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) infoEl.innerHTML += '<div class="cb-info-row"><span>Tournament ID</span><button type="button" class="bk-idchip fx" title="Tap to copy the full Tournament ID" onclick="copyIdTap(event,' + fxIdArg(tourIdFor(S.tournament.name)) + ',\'Tournament ID\')">ID ' + esc(tourIdFor(S.tournament.name)) + '</button></div>';
         }
-        /* View Tournament bars (v231): at the head of the Summary
-           and Info tabs, shown only when the match ON SHOW is a
-           tournament match, and labelled with that match's own
-           tournament. The target is stashed from this same shown
-           state (S here is the live display state, an archived
-           match's state, or a match view's state — whichever is on
-           show), so the button always opens the tournament THIS
-           match belongs to, resolved from its own stamp — never
-           just whichever tournament happens to be current. A
-           Single Match shows no bar on either tab. */
+        /* View Tournament bar (v231, moved into the scoreboard
+           header above the tab strip in v232): shown only when the
+           match ON SHOW is a tournament match, and labelled with
+           that match's own tournament. The target is stashed from
+           this same shown state (S here is the live display state,
+           an archived match's state, or a match view's state —
+           whichever is on show), so the button always opens the
+           tournament THIS match belongs to, resolved from its own
+           stamp — never just whichever tournament happens to be
+           current. A Single Match shows no bar at all. */
         var vtIsTn = S.matchKind === 'tournament' && S.tournament && !!(S.tournament.name || '').trim();
         sbVtTarget = vtIsTn ? { tid: String(S.tournamentId || S.tournament.id || ''), tname: String(S.tournament.name || '') } : null;
-        [$('sbVtBarSummary'), $('sbVtBarInfo')].forEach(function(barEl){
+        [$('sbVtBarTop')].forEach(function(barEl){
           if (!barEl) return;
           barEl.hidden = !sbVtTarget;
           barEl.style.display = sbVtTarget ? '' : 'none';
@@ -24190,11 +24477,11 @@
            the same state as every other panel. */
         try { renderSummaryPanel(); } catch(e){}
         /* Nothing else lives under Match Info: the tournament is
-           reached from the View Tournament bars at the head of the
-           Summary and Info tabs, and a Single Match shows nothing
-           tournament-related at all. (Past Matches keeps its own
-           entries — the Recent Matches landing and the History
-           & Reports home — just not a card here.) */
+           reached from the View Tournament bar in the scoreboard
+           header above the tab strip, and a Single Match shows
+           nothing tournament-related at all. (Past Matches keeps
+           its own entries — the Recent Matches landing and the
+           History & Reports home — just not a card here.) */
       }
 
       function renderAll(){
@@ -25202,10 +25489,12 @@
          throughout. View mode holds the real current tournament
          aside (tnViewCtx.saved) and puts a copy of the tapped
          tournament on screen; renderAll re-applies the copy if a
-         remote state lands underneath, commit publishes with the
-         real current tournament back in place, and leaving the
-         tournament page (its 🔙 control, or any navigation away)
-         restores the real current tournament. On the control side
+         remote state lands underneath, every backup / broadcast /
+         publish folds view mode away first (tnFoldedState, v233)
+         so what leaves this device always carries the real
+         current tournament, and leaving the tournament page (its
+         🔙 control, or any navigation away) restores the real
+         current tournament. On the control side
          the viewed tournament's own edits write back into ITS OWN
          archive slot through that same commit path, so editing
          the tournament on screen works as before — it is still
@@ -25214,29 +25503,70 @@
          viewer, and never see any open/close prompt. */
       var tnViewCtx = null;   /* { arcId, viewObj, saved, returnView, addedViewerCls, arcHash } */
       function tnViewSlotHash(entry){ try { return coldHashOf((entry && entry.data) || {}); } catch(e){ return ''; } }
+      /* The state with view mode folded away (v233): the real
+         current tournament back in the tournament slot, and the
+         viewed copy written into its OWN archive slot. Everything
+         that leaves this page's in-memory display — the on-device
+         backup, a broadcast to another tab, a Firebase library
+         write, a whole-state write — goes through this, so the
+         viewed tournament can never be backed up, broadcast or
+         published AS the current one. (Before v233, commit()'s
+         swap-and-restore cycle let its mid-commit renderAll flip
+         S.tournament back to the viewed copy BEFORE the broadcast
+         and the library push read it, so opening BBEPL-2 and then
+         committing anything published BBEPL-2's copy as the
+         server's current tournament and BBEPL-3 stopped being
+         current everywhere — the root of the "which tournament
+         did I tap?" confusion.) When no tournament is being
+         viewed this returns S itself, unchanged. */
+      function tnFoldedState(){
+        if (typeof tnViewCtx === 'undefined' || !tnViewCtx) return S;
+        var out = deep(S);
+        var arc = Array.isArray(out.tournamentsArchive) ? out.tournamentsArchive : [];
+        arc.forEach(function(a){ if (a && a.id === tnViewCtx.arcId) a.data = deep(tnViewCtx.viewObj); });
+        out.tournamentsArchive = arc;
+        out.tournament = deep(tnViewCtx.saved || tnViewCtx.viewObj || {});
+        return out;
+      }
       /* The one resolver every tournament-page render goes through
-         (v231). While a tournament is open by ID, the page — the
-         locked head and every tab body alike — renders
-         tnViewCtx.viewObj and nothing else, so a name from one
-         tournament can never sit over another tournament's teams,
-         matches or points. Whenever the state underneath changes
-         (a Firebase library adoption, a state adopted from another
-         tab, a restore), the real current tournament is re-taken
-         from the NEW state as the saved one, and the viewed copy
-         is refreshed from the new state's own archive slot for the
-         SAME ID — the viewed tournament follows the server's copy
-         of itself as data lands, and is never swapped for, or
-         mixed with, another tournament. A slot whose content is
-         unchanged since the last resolve leaves the viewed copy
-         (and any edits in progress on it) untouched. */
+         (v231, identity hardened v233). While a tournament is open
+         by ID, the page — the locked head and every tab body alike
+         — renders tnViewCtx.viewObj and nothing else, so a name
+         from one tournament can never sit over another tournament's
+         teams, matches or points. The viewed tournament is
+         identified by its stored archive-slot ID (tnViewCtx.arcId)
+         and by nothing else: no name, no name-derived Tour ID ever
+         decides which tournament is on screen. Whenever the state
+         underneath changes (a Firebase library adoption, a state
+         adopted from another tab, a restore), the real current
+         tournament is re-taken from the NEW state as the saved one,
+         and the viewed copy is refreshed from the new state's own
+         archive slot for the SAME ID — the viewed tournament
+         follows the server's copy of itself as data lands, and is
+         never swapped for, or mixed with, another tournament. A
+         slot whose content is unchanged since the last resolve
+         leaves the viewed copy (and any edits in progress on it)
+         untouched. */
       function tnViewResolve(){
         if (!tnViewCtx) return;
-        if (S.tournament !== tnViewCtx.viewObj && S.tournament !== tnViewCtx.saved) tnViewCtx.saved = S.tournament;
+        var st = S.tournament;
+        var viewedId = (tnViewCtx.viewObj && tnViewCtx.viewObj.id) || tnViewCtx.arcId;
+        if (st && st !== tnViewCtx.viewObj && st.id && viewedId && String(st.id) === String(viewedId)){
+          /* S.tournament is the viewed tournament itself — or a
+             copy of it, e.g. a match start that carried the open
+             tournament over into the fresh state. That is the view
+             copy, never the saved current one: adopt it as the
+             view copy and keep the real current tournament saved. */
+          tnViewCtx.viewObj = st;
+          try { tnViewCtx.arcHash = tnViewSlotHash({ data: st }); } catch(e){}
+        } else if (st && typeof st === 'object' && st !== tnViewCtx.viewObj && st !== tnViewCtx.saved){
+          tnViewCtx.saved = st;
+        }
         var entry = null;
         tournamentsArchive().forEach(function(a){ if (a && a.id === tnViewCtx.arcId) entry = a; });
         if (entry && entry.data){
           var h = tnViewSlotHash(entry);
-          if (h && tnViewCtx.arcHash && h !== tnViewCtx.arcHash){
+          if (h && h !== tnViewCtx.arcHash){
             var fresh = deep(entry.data);
             if (!fresh.id) fresh.id = entry.id;
             tnViewCtx.viewObj = fresh;
@@ -25613,7 +25943,7 @@
         var r = searchHits.tournaments[i]; if (!r) return;
         if (r.current){
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          else setView('tournament');
+          else { try { exitTnView(); } catch(e){} setView('tournament'); }
           return;
         }
         openArchivedTournament(r.arcId);
