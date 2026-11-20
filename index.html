@@ -3966,7 +3966,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v238';
+      var APP_VERSION = 'v239';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -13518,11 +13518,14 @@
       function tpOpenTnTarget(t){
         if (t.kind === 'current'){
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          /* Opening the CURRENT tournament leaves view mode first
-             (v233): setView('tournament') alone would keep the
-             viewed archived tournament on screen, so a tap on the
-             current tournament could land on the archived one. */
-          else { try { exitTnView(); } catch(e){} setView('tournament'); }
+          /* Opening the CURRENT tournament goes through the one
+             full-reset opener (v239): it leaves view mode first,
+             then pins, clears and re-renders the whole page on
+             HOME — setView('tournament') alone kept the viewed
+             archived tournament's panels and tab on screen, so a
+             tap on the current tournament could land on the
+             archived one. */
+          else { openCurrentTournament(); }
           return;
         }
         if (t.kind === 'arc'){ openArchivedTournament(t.arcId); return; }
@@ -14694,6 +14697,7 @@
           tneCreateMode = false;
           tneDraftBanner = '';
           tneSetChrome(false);
+          tnPin = { kind:'current', id: fresh.id };   /* the page is pinned to the tournament just created (v239) */
           commit('New tournament created', true);
           setView('tournament');
           setTnTab('home');
@@ -14791,6 +14795,11 @@
         if (vSub) vSub.textContent = '';
         var vH = document.querySelector('#tnTeamsCard h2');
         if (vH) vH.textContent = 'Teams';
+        /* Same full reset as every other tournament open (v239):
+           forget any drilled-in Statistics view or open group
+           page, and land on HOME — the panels re-render whole
+           below, so no earlier tournament's tab state survives. */
+        try { tnResetTabState(); } catch(e){}
         try { renderTournament(); } catch(e){}
         try { renderTournamentHome(); } catch(e){}
         setView('tournament');
@@ -18699,7 +18708,7 @@
         if (t.kind === 'current'){
           closePlayerProfile();
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          else { try { exitTnView(); } catch(e){} setView('tournament'); }
+          else { openCurrentTournament(); }
           return;
         }
         if (t.kind === 'arc'){ closePlayerProfile(); openArchivedTournament(t.arcId); return; }
@@ -25903,13 +25912,84 @@
         }
         S.tournament = tnViewCtx.viewObj;
       }
+      /* ---------- one pinned tournament identity (v239) ----------
+         The tournament page is pinned to ONE tournament at open
+         time: tnPin records which one ({kind:'current'} for the
+         current tournament, {kind:'arc', id} for an archived one,
+         the id being its stored archive-slot ID — never a name).
+         Every way of opening the page — the Tournaments list (the
+         current row included), Search, a match's or a profile's
+         View Tournament — goes through openCurrentTournament() or
+         openArchivedTournament() below, and BOTH do the same full
+         reset every time: any previous view mode is ended or
+         replaced, the drilled-in Statistics view and any open
+         group page are forgotten, every panel and the page head
+         are cleared to a loading note, the pinned tournament is
+         then rendered into ALL of them (head, Home, Teams,
+         Matches, Points, Statistics), and the page always lands
+         on the HOME tab.
+         Before v239 the current tournament's entries only called
+         setView('tournament') — no render, no tab reset — so after
+         visiting an archived tournament the page kept showing THAT
+         tournament's head and Home / Matches / Points panels and
+         stayed on its Statistics tab, while the Teams gallery and
+         the Statistics categories (the two surfaces that re-render
+         on entry) read the restored current tournament and showed
+         its empty state: two tournaments on one page, and which
+         tap went wrong varied from visit to visit. */
+      var tnPin = null;   /* { kind:'current'|'arc', id } — set by the openers, cleared by exitTnView */
+      function tnResetTabState(){
+        tnStatView = { sec:'', cat:'' };
+        tnGroupOpenId = null; grpPickValue = '';
+      }
+      /* Clear the page to an honest loading state at open time:
+         until the pinned tournament renders (the same tick, in the
+         openers), no panel may still hold the previous
+         tournament's rows — and if a render ever failed, the page
+         would say it is loading rather than present another
+         tournament's data, or a false "No teams / matches yet",
+         under this one's name. */
+      function tnShowLoading(){
+        var load = '<p class="note">Loading tournament…</p>';
+        var head = $('tnHeadTitle'); if (head) head.textContent = 'Loading…';
+        var title = $('tnTitle'); if (title) title.textContent = 'Loading…';
+        var grid = $('tnTeamsGrid'); if (grid) grid.innerHTML = load;
+        var pts = $('tnPoints'); if (pts) pts.innerHTML = load;
+        var fix = $('tnFixtures'); if (fix) fix.innerHTML = load;
+        var stats = $('tnStats'); if (stats) stats.innerHTML = load;
+      }
+      /* Open the CURRENT tournament page — the one full-reset
+         entry every "current tournament" tap uses (the list's
+         current row, Search, View Tournament on a current match).
+         Ending an archived view first restores the real current
+         tournament into S.tournament; the page is then pinned to
+         it and rendered whole, landing on HOME. */
+      function openCurrentTournament(){
+        if (tnViewCtx){ try { exitTnView(); } catch(e){} }
+        tnPin = { kind:'current', id: (S.tournament && S.tournament.id) || '' };
+        tnResetTabState();
+        tnShowLoading();
+        try { renderTournament(); } catch(e){}
+        try { renderTournamentHome(); } catch(e){}
+        setView('tournament');
+        setTnTab('home');
+      }
       function openArchivedTournament(id){
-        if (tnViewCtx && tnViewCtx.arcId === id){ setView('tournament'); return; }
-        if (!tnViewCtx && S.tournament && S.tournament.id === id){ setView('tournament'); return; }
+        /* The tapped ID is the current tournament's own: that is
+           a current-tournament open, with the same full reset
+           (v239) — never a bare setView onto stale panels. */
+        if (!tnViewCtx && S.tournament && S.tournament.id === id){ openCurrentTournament(); return; }
         var arc = tournamentsArchive();
         var entry = null;
         arc.forEach(function(a){ if (a.id === id) entry = a; });
         if (!entry) return;
+        /* Switching straight from one viewed tournament to
+           another: the outgoing one's latest state is written
+           back into ITS OWN slot first, so nothing it holds is
+           lost when the pin moves (v239). */
+        if (tnViewCtx && tnViewCtx.arcId !== id){
+          try { tournamentsArchive().forEach(function(a){ if (a.id === tnViewCtx.arcId) a.data = deep(tnViewCtx.viewObj); }); } catch(e){}
+        }
         /* The server's confirmed copy of THIS tournament wins over
            this device's stored copy once Firebase has answered
            (v231): opening a tournament shows what the server holds
@@ -25927,14 +26007,29 @@
             if (a && a.id === id && a.data) entry.data = deep(a.data);
           });
         }
-        var data = deep(entry.data || {});
+        /* Re-opening the tournament already on screen keeps its
+           live view copy (and anything not yet committed on it);
+           a fresh open reads the slot's copy as before (v239). */
+        var data = (tnViewCtx && tnViewCtx.arcId === id && tnViewCtx.viewObj) ? deep(tnViewCtx.viewObj) : deep(entry.data || {});
         if (!data.id) data.id = entry.id;
         var ret = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'tournament') ? currentViewName : 'tournaments';
         if (!tnViewCtx){
           tnViewCtx = { arcId: id, viewObj: data, saved: S.tournament, returnView: ret, addedViewerCls: false, arcHash: tnViewSlotHash(entry) };
         } else {
-          tnViewCtx.arcId = id; tnViewCtx.viewObj = data; tnViewCtx.arcHash = tnViewSlotHash(entry);
+          /* A same-tournament re-open kept the live view copy as
+             the data, so the resolver's slot signature follows
+             THAT copy — otherwise the next resolve would mistake
+             the kept copy for a stale one and swap the slot's
+             older copy back in underneath the reader (v239). */
+          var tnSameId = tnViewCtx.arcId === id;
+          tnViewCtx.arcId = id; tnViewCtx.viewObj = data; tnViewCtx.arcHash = tnSameId ? tnViewSlotHash({ data: data }) : tnViewSlotHash(entry);
         }
+        /* Pin the page to THIS tournament and reset it whole
+           (v239): the pin, the tab state and a loading clear come
+           before the render, exactly as for the current
+           tournament, and the page lands on HOME every time —
+           re-tapping the tournament already open included. */
+        tnPin = { kind:'arc', id: id };
         S.tournament = tnViewCtx.viewObj;
         if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')){
           if (!document.body.classList.contains('viewer-inpage')) tnViewCtx.addedViewerCls = true;
@@ -25945,6 +26040,8 @@
           var vH = document.querySelector('#tnTeamsCard h2');
           if (vH) vH.textContent = 'Teams';
         }
+        tnResetTabState();
+        tnShowLoading();
         try { renderTournament(); } catch(e){}
         try { renderTournamentHome(); } catch(e){}
         setView('tournament');
@@ -25960,6 +26057,7 @@
         if (!tnViewCtx) return null;
         var ctx = tnViewCtx;
         tnViewCtx = null;
+        tnPin = null;   /* the pin ends with the view (v239) — openCurrentTournament sets its own right after calling this */
         try { tournamentsArchive().forEach(function(a){ if (a.id === ctx.arcId) a.data = deep(ctx.viewObj); }); } catch(e){}
         S.tournament = ctx.saved;
         if (ctx.addedViewerCls){
@@ -26201,7 +26299,7 @@
             + '<span class="tp-meta">There is no current tournament.</span></span>'
             + '</div></div>';
         } else {
-          html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
+          html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="openCurrentTournament()">'
             + '<span><span class="tp-name">' + esc(tn.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span></button>'
             + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
@@ -26271,7 +26369,7 @@
         var r = searchHits.tournaments[i]; if (!r) return;
         if (r.current){
           if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
-          else { try { exitTnView(); } catch(e){} setView('tournament'); }
+          else { openCurrentTournament(); }
           return;
         }
         openArchivedTournament(r.arcId);
