@@ -3837,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v224';
+      var APP_VERSION = 'v225';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8581,7 +8581,12 @@
           });
         }
         if (S.tournament && Array.isArray(S.tournament.matches)) scan(S.tournament.matches);
-        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn) scan(tn.matches); });
+        /* Archived tournaments hold their results under .data —
+           scanning tn.matches (always undefined on an archive
+           entry) silently skipped every archived copy, so a POTM
+           picked after the tournament was set aside never reached
+           its own tournament's result. */
+        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn && tn.data) scan(tn.data.matches); });
         return touched;
       }
       function renderPotmPicker(){
@@ -9941,12 +9946,21 @@
           if (bf && bf.id === S.bracketMatchId) return true;
         }
         var mid = (S.archivedMatchId != null) ? S.archivedMatchId : S.matchId;
-        if (mid != null && S.tournament && Array.isArray(S.tournament.matches)){
-          var rec = null, fin = null;
-          S.tournament.matches.forEach(function(m){ if (m && String(m.id) === String(mid)) rec = m; });
+        if (mid != null){
+          /* The saved record is looked for in the match's OWN
+             tournament too (v225) — it may sit in an archived
+             tournament's results while another tournament is
+             open, and the 🏆 must still find it. */
+          var rec = null;
+          allTournamentObjs().forEach(function(o){
+            (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(mid)) rec = m; });
+          });
           if (rec && resultIsFinal(rec)) return true;
-          try { fin = tournamentFinalResult(); } catch(e){}
-          if (fin && fin.match && String(fin.match.id) === String(mid)) return true;
+          if (S.tournament && Array.isArray(S.tournament.matches)){
+            var fin = null;
+            try { fin = tournamentFinalResult(); } catch(e){}
+            if (fin && fin.match && String(fin.match.id) === String(mid)) return true;
+          }
         }
         return false;
       }
@@ -9981,13 +9995,25 @@
         if (S.abandoned) return null;
         var mid = S.matchId || S.updatedAt || 1;
         if (!S.matchId) S.matchId = mid;
+        /* The result is filed into the match's OWN tournament —
+           the one its start-of-match stamp names (v225) — never
+           into whichever tournament happens to be open now. The
+           stamp-less legacy case (a match started before stamping
+           existed) keeps the old behaviour: the open tournament.
+           When the owning tournament is an archived one, the
+           result is filed into its stored copy, so the match
+           appears inside its own tournament again. */
+        var ownKey = (typeof S.tournamentId === 'string' && S.tournamentId) ? S.tournamentId : tournamentKeyOf(S.tournament);
+        var tgtObj = tournamentForKey(ownKey);
+        var tgtTn = tgtObj ? tgtObj.tn : S.tournament;
+        if (tgtObj) ownKey = tournamentKeyOf(tgtObj.tn) || ownKey;
         var inningsArr = [deep(S.prevInnings), deep(S.current)];
         var match = {
           id: mid, at: Date.now(), manual: false,
           /* The owning tournament's stable key (v141) — see
              buildHistoryEntry: a tournament delete finds its matches
              by this stamp, never by team names alone. */
-          tournamentId: S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : ''),
+          tournamentId: ownKey,
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
           innings: inningsArr, resultText: S.resultText || '',
           /* Set when this match was started from the knockout
@@ -10012,19 +10038,26 @@
         };
         if (!match.resultText) match.resultText = matchResultText(match);
         match.winner = matchWinner(match);
-        inningsArr.forEach(function(inn){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); });
+        inningsArr.forEach(function(inn){
+          if (tgtTn === S.tournament){ ensureTournamentTeam(inn.battingTeam); ensureTournamentTeam(inn.bowlingTeam); }
+          else [inn.battingTeam, inn.bowlingTeam].forEach(function(nm){
+            if (!nm) return;
+            if (tgtTn.teams.indexOf(nm) === -1) tgtTn.teams.push(nm);
+            if (!Array.isArray(tgtTn.squads[nm])) tgtTn.squads[nm] = [];
+          });
+        });
         /* Saving again REPLACES the stored result for this match
            (same match id) instead of refusing or duplicating it — so
            a corrected score can be re-saved. */
         var existingIdx = -1;
-        S.tournament.matches.forEach(function(m, i){ if (m.id === mid) existingIdx = i; });
+        tgtTn.matches.forEach(function(m, i){ if (m.id === mid) existingIdx = i; });
         var replaced = existingIdx > -1;
         /* A re-save keeps the record's Final designation, so
            correcting the Final's score never opens the podium. */
-        if (replaced && S.tournament.matches[existingIdx].stage) match.stage = S.tournament.matches[existingIdx].stage;
-        if (replaced && !match.group && S.tournament.matches[existingIdx].group) match.group = S.tournament.matches[existingIdx].group;
-        if (replaced) S.tournament.matches[existingIdx] = match;
-        else S.tournament.matches.push(match);
+        if (replaced && tgtTn.matches[existingIdx].stage) match.stage = tgtTn.matches[existingIdx].stage;
+        if (replaced && !match.group && tgtTn.matches[existingIdx].group) match.group = tgtTn.matches[existingIdx].group;
+        if (replaced) tgtTn.matches[existingIdx] = match;
+        else tgtTn.matches.push(match);
         S.archivedMatchId = mid;
         return replaced ? 'updated' : 'saved';
       }
@@ -11198,6 +11231,132 @@
          Over's own over never enters the tournament figures —
          exactly like a saved result, which carries the main
          innings only. */
+      /* ---------- a match's OWN tournament (v225) ----------
+         A match belongs to exactly ONE tournament: the one named
+         by the stamp it was started with (S.tournamentId, set in
+         doStartMatch), by the saved result that holds it, and by
+         its permanent history entry. It NEVER belongs to whichever
+         tournament happens to be open on screen — the open
+         tournament changes (the next tournament is created while
+         the previous Final still sits in the live slot), and every
+         surface that read the open tournament instead of the
+         match's own identity showed that Final as the NEW
+         tournament's match and hid it from its own. The helpers
+         below are the one place that identity is resolved:
+         current tournament first, then the archived ones. */
+      function allTournamentObjs(){
+        var out = [];
+        try { normalizeTournament(); } catch(e){}
+        if (S.tournament) out.push({ tn: S.tournament, arc: null });
+        tournamentsArchive().forEach(function(a){ if (a && a.data) out.push({ tn: a.data, arc: a }); });
+        return out;
+      }
+      /* The tournament (current or archived) a stable key names —
+         its own id, its archive entry id, or the Tour ID derived
+         from its name — or null when this device does not hold it. */
+      function tournamentForKey(key){
+        if (!key) return null;
+        var k = String(key), found = null;
+        allTournamentObjs().forEach(function(o){
+          if (found) return;
+          if (tournamentKeyOf(o.tn) === k || (o.arc && o.arc.id === k)) found = o;
+          /* The derived Tour ID form counts too — a tournament can
+             gain its own id after a match was stamped with the
+             derived key (the same dual check liveTournamentRecord
+             makes). */
+          else if (o.tn.name && tourIdFor(o.tn.name) === k) found = o;
+        });
+        return found;
+      }
+      /* The tournament whose SAVED RESULTS hold this match id. */
+      function tournamentHolderOfMatch(mid){
+        if (mid == null) return null;
+        var found = null;
+        allTournamentObjs().forEach(function(o){
+          if (found) return;
+          (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(mid)) found = o; });
+        });
+        return found;
+      }
+      /* The name of the tournament the LIVE match belongs to,
+         resolved from the match itself: its start-of-match stamp,
+         then the tournament holding its saved result, then its
+         permanent history entry. Only a match still being played,
+         with no stamp and no saved copy anywhere, falls back to
+         the open tournament — the one it was started from. A
+         finished match NEVER borrows the open tournament's name. */
+      function liveMatchTournamentName(){
+        if (!S || S.matchKind !== 'tournament') return '';
+        var stamp = (typeof S.tournamentId === 'string') ? S.tournamentId : '';
+        if (stamp){
+          var o = tournamentForKey(stamp);
+          if (o) return (o.tn.name || '').trim();
+        }
+        var mid = (S.archivedMatchId != null) ? S.archivedMatchId : S.matchId;
+        var holder = tournamentHolderOfMatch(mid);
+        if (holder) return (holder.tn.name || '').trim();
+        try {
+          if (typeof HIST !== 'undefined' && HIST && mid != null && HIST[String(mid)] && HIST[String(mid)].tournamentName) return String(HIST[String(mid)].tournamentName).trim();
+        } catch(e){}
+        if (S.status !== 'finished' && S.tournament && S.tournament.name) return S.tournament.name.trim();
+        return '';
+      }
+      /* One-time repair of matches filed under the WRONG
+         tournament before v225 (the BBEPL-2 Final whose permanent
+         history entry names BBEPL-3, because it was re-filed while
+         BBEPL-3 was the open tournament). The derivation uses only
+         each match's own identity — never a typed-in name:
+         (a) a history entry belongs to the ONE tournament whose
+         saved results hold that match; its stamp and name are
+         corrected to that tournament, keeping its original finish
+         time, POTM and Final designation untouched;
+         (b) a saved result copy sitting in a tournament its own
+         (repaired) history entry does not name is MOVED — not
+         copied — to the tournament the entry names, when that
+         tournament is held on this device and does not already
+         hold a copy. Idempotent: once every record agrees with
+         its owner, this changes nothing. History corrections are
+         published only when this account may sync that entry
+         (histEntrySyncable); result moves happen only on the
+         control side, never in a viewer session. */
+      function repairMatchAttribution(){
+        if (!S || typeof HIST === 'undefined' || !HIST) return;
+        var histChanged = false, stateChanged = false;
+        Object.keys(HIST).forEach(function(id){
+          var e = HIST[id];
+          if (!e || e.matchKind !== 'tournament') return;
+          var holders = [];
+          allTournamentObjs().forEach(function(o){
+            (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(id)) holders.push(o); });
+          });
+          if (holders.length === 1){
+            var k = tournamentKeyOf(holders[0].tn), nm = (holders[0].tn.name || '');
+            if (k && (String(e.tournamentId || '') !== k || String(e.tournamentName || '') !== nm)){
+              e.tournamentId = k; e.tournamentName = nm; histChanged = true;
+              try { if (histEntrySyncable(e)) pushHistoryEntry(e); } catch(err){}
+            }
+          }
+        });
+        if (!isViewerSession()){
+          allTournamentObjs().forEach(function(o){
+            var holderKey = tournamentKeyOf(o.tn);
+            (o.tn.matches || []).slice().forEach(function(m){
+              if (!m || m.id == null) return;
+              var e = HIST[String(m.id)];
+              if (!e || !e.tournamentId || e.tournamentId === holderKey) return;
+              var tgt = tournamentForKey(e.tournamentId);
+              if (!tgt || tgt.tn === o.tn) return;
+              var has = false;
+              (tgt.tn.matches || []).forEach(function(x){ if (x && String(x.id) === String(m.id)) has = true; });
+              o.tn.matches = o.tn.matches.filter(function(x){ return !(x && String(x.id) === String(m.id)); });
+              if (!has){ m.tournamentId = e.tournamentId; tgt.tn.matches.push(m); }
+              stateChanged = true;
+            });
+          });
+        }
+        if (histChanged) saveHistLocal();
+        if (stateChanged) commit('Match returned to its own tournament', true);
+      }
       function liveTournamentRecord(){
         if (!S || !S.current) return null;
         if (S.matchKind !== 'tournament') return null;
@@ -14247,14 +14406,16 @@
       }
       function liveRowHTML(){
         var inn = S.current;
-        var tn = S.tournament || {};
-        /* The tournament name labels this row ONLY when the live
-           match itself is a tournament match. A Single Match keeps
-           the tournament object in its state (it lives in the same
-           Firebase record), but it must never be presented as a
-           tournament match — so the label follows the match kind,
-           never the tournament's contents alone. */
-        var tnName = (S.matchKind === 'tournament' && tn.name && tn.name.trim()) ? tn.name.trim() : '';
+        /* The tournament name labels this row from the MATCH's own
+           identity (v225) — liveMatchTournamentName resolves its
+           start-of-match stamp, the tournament holding its saved
+           result, or its history entry — never from whichever
+           tournament happens to be open. A finished Final still
+           sitting in the live slot used to borrow the open
+           tournament's name, so it paraded as the new tournament's
+           match. A Single Match is labelled with nothing, as
+           before: it is never presented as a tournament match. */
+        var tnName = liveMatchTournamentName();
         var finished = S.status === 'finished';
         /* A match deleted from History is GONE, full stop: even if
            the finished state still sits in liveMatch (a History
@@ -14383,7 +14544,11 @@
         else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress.';
         else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting.';
         else status = 'Match not started yet.';
-        var tnName = slice.matchKind === 'tournament' ? ((S.tournament && S.tournament.name) || '') : '';
+        var tnName = '';
+        if (slice.matchKind === 'tournament'){
+          var slObj = (typeof slice.tournamentId === 'string' && slice.tournamentId) ? tournamentForKey(slice.tournamentId) : null;
+          tnName = slObj ? (slObj.tn.name || '') : ((S.tournament && S.tournament.name) || '');
+        }
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
         return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
           + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice)))) : mlLabel([slice.venue, tnName], false)) + lines
@@ -14430,10 +14595,32 @@
         if (parked.length){
           html += parked.map(function(p){ return inProgressRowHTML(p); }).join('');
         }
-        /* Most recent first. When the match on top is finished and has
-           already been saved to the tournament, its saved copy is the
-           same match — don't list it twice. */
-        var results = tn.matches.slice().reverse();
+        /* Most recent first. Completed results are gathered from
+           EVERY tournament this device holds — the open one and
+           the archived ones (v225) — each row labelled below with
+           its OWN tournament's name (resOwnerName). A tournament's
+           matches used to vanish from this list the moment another
+           tournament was opened, because only the open tournament's
+           results were read. The same match filed under two
+           tournaments (the old misattribution) is listed once: the
+           copy kept is the one held by the tournament the record
+           itself is stamped with. When the match on top is finished
+           and has already been saved to a tournament, its saved
+           copy is the same match — don't list it twice. */
+        var resById = {}, resOrder = [], resOwnerName = {}, resHolderKey = {};
+        allTournamentObjs().forEach(function(o){
+          var own = tournamentKeyOf(o.tn);
+          (o.tn.matches || []).forEach(function(m){
+            if (!m || m.id == null) return;
+            var k = String(m.id);
+            if (!(k in resById)){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; resOrder.push(k); return; }
+            /* Duplicate copy: keep the one whose holder IS the
+               tournament the record itself is stamped with. */
+            if (String(m.tournamentId || '') === own && String(resById[k].tournamentId || '') !== resHolderKey[k]){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; }
+          });
+        });
+        var results = resOrder.map(function(k){ return resById[k]; });
+        results.sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
         if (S.status === 'finished'){
           results = results.filter(function(m){ return m.id !== S.archivedMatchId && m.id !== S.matchId; });
         }
@@ -14457,10 +14644,12 @@
              are built now but only appended after the fixtures —
              completed matches close the list. */
           resultsHtml = results.map(function(m){
-            var rowTnName = tnName;
+            /* The row's tournament is the one HOLDING this result
+               (resOwnerName, v225) — never just the open one. */
+            var rowTnName = resOwnerName[String(m.id)] || tnName;
             if (lastFin && String(m.id) === String(lastFin.id)) rowTnName = '';
             if (m && m.matchKind === 'single') rowTnName = '';
-            if (m && typeof m.tournamentName === 'string') rowTnName = m.tournamentName;
+            if (m && typeof m.tournamentName === 'string' && m.tournamentName) rowTnName = m.tournamentName;
             return resultRowHTML(m, rowTnName);
           }).join('');
         }
@@ -16148,6 +16337,17 @@
         var inns = [];
         if (S.prevInnings) inns.push(deep(S.prevInnings));
         if (S.current && (S.current.batters.length || S.current.bowlers.length || S.current.legalBalls > 0 || S.prevInnings)) inns.push(deep(S.current));
+        /* The match's OWN tournament (v225), resolved from the
+           start-of-match stamp — so filing (or re-filing, when a
+           POTM is picked later) this match while a DIFFERENT
+           tournament is open can never attribute it to that
+           tournament. Falls back to the open tournament only for
+           a stamp-less match, as before. */
+        var ownTn = null;
+        if (S.matchKind === 'tournament'){
+          var ownObj = (typeof S.tournamentId === 'string' && S.tournamentId) ? tournamentForKey(S.tournamentId) : null;
+          ownTn = ownObj ? ownObj.tn : (S.tournament || null);
+        }
         return {
           id: String(S.matchId || S.updatedAt || Date.now()),
           at: Date.now(),
@@ -16158,7 +16358,7 @@
           venue: S.venue || '',
           /* A Single Match is not attributed to any tournament in the
              history either — only a tournament match carries the name. */
-          tournamentName: (S.matchKind === 'tournament' && S.tournament && S.tournament.name) ? S.tournament.name : '',
+          tournamentName: (S.matchKind === 'tournament' && ownTn && ownTn.name) ? ownTn.name : '',
           /* The owning tournament's stable key, stamped at archive
              time (v141): the tournament's own id when it has one,
              else the Tour ID derived from its name. A tournament
@@ -16167,14 +16367,14 @@
              so deleting a tournament removes its matches from the
              permanent history and from every player's career stats,
              exactly like deleting each match. */
-          tournamentId: (S.matchKind === 'tournament' && S.tournament) ? (S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : '')) : '',
+          tournamentId: (S.matchKind === 'tournament' && ownTn) ? tournamentKeyOf(ownTn) : '',
           matchKind: (S.matchKind === 'tournament') ? 'tournament' : 'single',
           tossInfo: S.tossInfo || '',
           /* The group and the tournament season ride into the
              archive too, so an archived match's Info tab can show
              its Match Title ("Group A Match") and Season rows. */
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
-          season: (S.matchKind === 'tournament' && S.tournament && S.tournament.season) ? S.tournament.season : '',
+          season: (S.matchKind === 'tournament' && ownTn && ownTn.season) ? ownTn.season : '',
           matchFormat: S.matchFormat || '', ballType: S.ballType || '',
           matchDate: S.matchDate || '', matchTime: S.matchTime || '',
           scorerEmailHash: S.scorerEmailHash || '',
@@ -16230,8 +16430,17 @@
            score, a Player of the Match picked later) writes again. */
         entry._sig = JSON.stringify([entry.innings, entry.resultText, entry.potmName, entry.potmTeam, entry.potmPid, entry.abandoned, entry.targetOverride, entry.dlTarget, entry.dlOvers, entry.superOver]);
         var prev = HIST[entry.id];
-        if (prev && prev._sig === entry._sig) return;
-        if (prev && prev.at) entry.at = prev.at; /* keep the original finish time */
+        if (prev){
+          /* The original filing's tournament attribution is kept
+             exactly, like its finish time (v225): a re-file — a
+             POTM picked later, a corrected score — must never move
+             the match to whichever tournament is open now. A
+             repair-corrected stamp on the stored entry is kept
+             the same way. */
+          if (prev.tournamentId){ entry.tournamentId = prev.tournamentId; entry.tournamentName = prev.tournamentName || entry.tournamentName; }
+          if (prev._sig === entry._sig) return;
+          if (prev.at) entry.at = prev.at; /* keep the original finish time */
+        }
         HIST[entry.id] = entry;
         delete histDeleted[entry.id];
         saveHistLocal();
@@ -16371,6 +16580,7 @@
           try { migratePlayerIds(); } catch(e){}
           try { migrateTeamIds(); } catch(e){}
           try { stampTournamentIds(); } catch(e){}
+          try { repairMatchAttribution(); } catch(e){}
           try { renderHistory(); } catch(e){}
           flushHistoryPending();
           flushHistoryDeletes();
@@ -21689,7 +21899,7 @@
           }
         }
         if (S.tournament && Array.isArray(S.tournament.matches)) S.tournament.matches.forEach(fixCopy);
-        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn && Array.isArray(tn.matches)) tn.matches.forEach(fixCopy); });
+        if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn && tn.data && Array.isArray(tn.data.matches)) tn.data.matches.forEach(fixCopy); });
         if (S.lastFinishedSingle && String(S.lastFinishedSingle.id) === String(id)){
           S.lastFinishedSingle.innings = deep(e.innings);
           S.lastFinishedSingle.resultText = e.resultText || '';
@@ -24797,14 +25007,14 @@
          case-insensitively, across the player registry
          (knownPlayers), the teams (tacKnown: registry + All Teams +
          current tournament) and the tournament list (the current
-         tournament, plus the archived ones on the control side).
-         Tapping a result opens the thing itself: the player profile
-         with its career stats, the team's own page, or the
-         tournament. An archived tournament opens exactly as it does
-         from the Tournaments list — control side only, since opening
-         one swaps the current tournament; viewers reach the current
-         tournament through the read-only tournament viewer, like the
-         scoreboard's View Tournament button. A registry team that is
+         tournament, plus every archived one — for viewers too,
+         since v225: search no longer hides every tournament but
+         the open one). Tapping a result opens the thing itself:
+         the player profile with its career stats, the team's own
+         page, or the tournament. An archived tournament opens
+         exactly as it does from the Tournaments list and from a
+         team page's View Tournament — the same openArchivedTournament
+         path those surfaces already use for every session. A registry team that is
          in neither All Teams nor the current tournament has no page
          to open, so its tap says so and shows its Team ID instead of
          opening an empty page. */
@@ -24869,8 +25079,8 @@
             if (t.name.toLowerCase().indexOf(q) > -1 || idHit) searchHits.teams.push(t);
           });
         } catch(e){}
-        /* Tournaments: name or Tour ID — the current one for
-           everyone, the archived list on the control side. */
+        /* Tournaments: name or Tour ID — the current one AND
+           every archived one, for everyone (v225). */
         function tnHit(name, keys){
           if (name && name.toLowerCase().indexOf(q) > -1) return true;
           if (qid.length >= 3){
@@ -24887,17 +25097,23 @@
             }
           }
         } catch(e){}
-        if (!isViewerSession()){
-          try {
-            tournamentsArchive().forEach(function(a){
-              var d = (a && a.data) || {};
-              var aName = (a && a.name) || d.name || 'Tournament';
-              if (!tnHit(aName, [tournamentKeyOf(d), tourIdFor(aName), a && a.id])) return;
-              var date = a.at ? fmtDMY(a.at) : '';
-              searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
-            });
-          } catch(e){}
-        }
+        /* Archived tournaments are searched for EVERYONE (v225) —
+           viewers included. Search used to list only the open
+           tournament on the viewer side, so a viewer searching a
+           tournament family's name ever saw just the newest one
+           and none of the earlier tournaments at all. The archive
+           rides inside the same server state viewers already
+           receive, so listing it shows them nothing they do not
+           already hold. */
+        try {
+          tournamentsArchive().forEach(function(a){
+            var d = (a && a.data) || {};
+            var aName = (a && a.name) || d.name || 'Tournament';
+            if (!tnHit(aName, [tournamentKeyOf(d), tourIdFor(aName), a && a.id])) return;
+            var date = a.at ? fmtDMY(a.at) : '';
+            searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
+          });
+        } catch(e){}
         var CAP = 20, html = '';
         if (searchHits.players.length){
           html += '<div class="card"><h3 style="margin-top:0">👤 Players</h3>' + searchHits.players.slice(0, CAP).map(function(p, i){
@@ -25374,7 +25590,7 @@
            past matches are on the record even before Firebase answers.
            (Both loads are skipped entirely for viewer sessions — see
            the server-only rule above.) */
-        if (!pureViewerSession){ try { loadHistLocal(); } catch(e){} try { migrateTeamIds(); } catch(e){} }
+        if (!pureViewerSession){ try { loadHistLocal(); } catch(e){} try { migrateTeamIds(); } catch(e){} try { repairMatchAttribution(); } catch(e){} }
         var backup = pureViewerSession ? null : loadLocalBackup();
         if (backup){
           S = backup;
