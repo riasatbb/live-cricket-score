@@ -3837,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v226';
+      var APP_VERSION = 'v227';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11363,6 +11363,7 @@
         if (histChanged) saveHistLocal();
         if (stateChanged) commit('Match returned to its own tournament', true);
         try { repairHistoryInfoFields(); } catch(e){}
+        try { repairOrphanedTournamentResults(); } catch(e){}
       }
       /* Backfill of the Match Info fields (v226): permanent history
          entries filed before those fields existed — the BBEPL-2
@@ -11437,6 +11438,119 @@
             changed = true;
             try { if (histEntrySyncable(e)) pushHistoryEntry(e); } catch(err){}
           }
+        });
+        if (changed) saveHistLocal();
+      }
+      /* Restoring a permanent entry whose match was never deleted
+         (v227). A deliberate History delete is all-or-nothing:
+         doDeleteHistoryMatch removes the entry, writes the
+         tombstone AND removes the copy saved as a tournament
+         result. A tournament-delete cascade, by contrast,
+         tombstones every history entry stamped with the deleted
+         tournament's key — including a match that had been
+         re-filed under that key by mistake (v225) while its saved
+         result sits in its OWN tournament, untouched. The result
+         is the inconsistent state the BBEPL-2 Final was found in:
+         no matchHistory entry, a tombstone in
+         matchHistoryDeleted, and the match itself alive in
+         BBEPL-2's saved results, in Recent Matches and on its
+         scoreboard — its Info half-empty (v226 backfilled history
+         entries only; there was none) and its performances
+         missing from every player's career record. This repair
+         recognises exactly that state — tombstone present, entry
+         absent, saved result surviving in a held tournament, no
+         delete pending from this device — and rebuilds the entry
+         from the match's OWN surviving records: the saved result
+         (innings, players, POTM, result, venue, finish time) and
+         its holding tournament (name, season, ball type, owner).
+         Format and toss are carried only when a surviving record
+         of the match itself carries them — never invented; the
+         date & time fall back to the recorded finish time, the
+         same convention repairHistoryInfoFields uses. The
+         tombstone is then lifted on Firebase, so the restored
+         entry can land on every device (mergeRemoteDeleted
+         mirrors the server's tombstone set). Owner / control
+         side only, signed in, and only once the server's entry
+         set is known. Idempotent: once the entry exists again,
+         this changes nothing. Nothing is deleted and no match is
+         duplicated — the entry is keyed by the match's own id,
+         the one every list already shows once. */
+      function repairOrphanedTournamentResults(){
+        if (!S || typeof HIST === 'undefined' || !HIST) return;
+        if (isViewerSession() || !histCanManage()) return;  /* viewers never write */
+        if (!histSyncedOnce) return;                        /* the server's entry set is not known yet */
+        if (!currentUid()) return;                          /* filing and lifting a tombstone need the signed-in owner */
+        if (tnViewCtx) return;                              /* holder reads double while a tournament is viewed by ID */
+        var changed = false;
+        allTournamentObjs().forEach(function(o){
+          var tn = o.tn;
+          (tn.matches || []).slice().forEach(function(rec){
+            if (!rec || rec.id == null) return;
+            var id = String(rec.id);
+            if (HIST[id]) return;            /* the permanent entry exists — nothing to restore */
+            if (histDeleted[id]) return;     /* a delete from THIS device is still flushing — that flow removes this saved copy itself */
+            if (!histGone[id]) return;       /* only the inconsistent state: tombstoned entry, surviving saved result */
+            var firstInn = (rec.innings && rec.innings[0]) || null;
+            var e = {
+              id: id,
+              at: rec.at || parseInt(id, 10) || Date.now(),
+              ownerUid: tn.ownerUid || '', ownerName: tn.ownerName || '',
+              teamA: rec.teamA || (firstInn ? (firstInn.battingTeam || '') : ''),
+              teamB: rec.teamB || (firstInn ? (firstInn.bowlingTeam || '') : ''),
+              venue: rec.venue || '',
+              tournamentName: (tn.name || '').trim(),
+              tournamentId: rec.tournamentId || tournamentKeyOf(tn),
+              matchKind: 'tournament',
+              tossInfo: rec.tossInfo || '',
+              group: rec.group || '',
+              season: tn.season || '',
+              matchFormat: rec.matchFormat || '', ballType: rec.ballType || tn.ballType || '',
+              matchDate: rec.matchDate || '', matchTime: rec.matchTime || '',
+              scorerEmailHash: rec.scorerEmailHash || '',
+              oversLimit: (typeof rec.oversLimit === 'number') ? rec.oversLimit : null,
+              wicketsLimit: (typeof rec.wicketsLimit === 'number') ? rec.wicketsLimit : 10,
+              targetOverride: (typeof rec.targetOverride === 'number') ? rec.targetOverride : null,
+              dlTarget: (typeof rec.dlTarget === 'number') ? rec.dlTarget : null,
+              dlOvers: (typeof rec.dlOvers === 'number') ? rec.dlOvers : null,
+              abandoned: !!rec.abandoned,
+              resultText: rec.resultText || '',
+              superOver: deep(rec.superOver || null),
+              potmName: rec.potmName || '', potmTeam: rec.potmTeam || '', potmPid: rec.potmPid || '',
+              innings: deep(rec.innings || []),
+              squadA: deep(rec.squadA || []), squadB: deep(rec.squadB || []),
+              nicknames: deep(rec.nicknames || []),
+              players: deep(rec.players || []),
+              playerIds: deep(rec.playerIds || [])
+            };
+            /* Date & time from the entry's own recorded finish
+               time when the saved result carries no schedule —
+               for the BBEPL-2 Final, 20/11/2026 11:32, exactly as
+               recorded in its saved result's `at`. */
+            if (!e.matchDate || !e.matchTime){
+              var d = new Date(e.at);
+              if (!isNaN(d.getTime())){
+                if (!e.matchDate) e.matchDate = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+                if (!e.matchTime) e.matchTime = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+              }
+            }
+            /* The same change signature archiveFinishedMatch
+               stamps, so a later re-archive of this match (a
+               corrected score, a POTM picked later) recognises
+               the restored entry as its own filing. */
+            e._sig = JSON.stringify([e.innings, e.resultText, e.potmName, e.potmTeam, e.potmPid, e.abandoned, e.targetOverride, e.dlTarget, e.dlOvers, e.superOver]);
+            if (!histEntrySyncable(e)) return;  /* not this account's match to restore */
+            HIST[id] = e;
+            delete histGone[id];
+            changed = true;
+            /* Lift the tombstone on Firebase: while it stands,
+               every device drops the restored entry the moment it
+               arrives (a tombstone beats any copy in the
+               database). The match was never deleted — its saved
+               result proves it — so the tombstone is the one
+               record here that is wrong. */
+            if (fbDelRef){ try { fbDelRef.child(id).remove().catch(function(){}); } catch(err){} }
+            try { pushHistoryEntry(e); } catch(err){}
+          });
         });
         if (changed) saveHistLocal();
       }
@@ -16854,6 +16968,17 @@
           if (histConfirmed[id]){ delete histConfirmed[id]; changed = true; }
           if (histCanManage() && !histDeleted[id]){ histDeleted[id] = true; changed = true; }
         });
+        /* The local gone set mirrors the server's tombstone set:
+           an id the server no longer tombstones has had its
+           tombstone lifted (repairOrphanedTournamentResults
+           restores a match whose saved result outlived its
+           entry), so the restored entry may land here too. A
+           delete still flushing from THIS device is untouched —
+           that flow always sets histDeleted alongside histGone,
+           and its marker is only cleared by its own flush. */
+        Object.keys(histGone).forEach(function(id){
+          if (histGone[id] && !remote[id] && !histDeleted[id]){ delete histGone[id]; changed = true; }
+        });
         if (changed){
           saveHistLocal();
           try { renderHistory(); } catch(e){}
@@ -18713,7 +18838,93 @@
       var archiveView = null;   /* { id, entry, returnView, state } */
       var cbOversInnSel = -1;   /* Overs tab innings pick: -1 = current / latest innings */
       function setOversInn(i){ cbOversInnSel = i; try { renderAll(); } catch(e){} }
+      /* ---------- one canonical record for a finished match ----------
+         Every archived-match surface (the scoreboard's Info tab
+         above all) reads the record this returns — never one store
+         alone. A finished match's facts can be split across its
+         OWN records: the permanent history entry (the fullest),
+         the saved result in the tournament that holds it, the
+         holding tournament itself (its name, season and ball
+         type), and — while it still sits there — the live state.
+         v226 backfilled the history entry only, and for the
+         BBEPL-2 Final there IS no history entry left on the
+         server: matchHistory holds no copy and matchHistoryDeleted
+         carries a tombstone for it (collateral of a tournament
+         delete cascade — a deliberate History delete removes the
+         saved result too, and this match's saved result in
+         BBEPL-2 was never removed), so the Info tab fell back to
+         the saved result alone, which by design carries none of
+         the Info fields. Here every empty field is filled from
+         the match's own other records; a field no record carries
+         stays empty — nothing is invented, and no settled fact
+         (score, result, finish time, POTM, Final designation) is
+         ever overwritten. The stores are not touched: this is the
+         display-time half of the v227 repair;
+         repairOrphanedTournamentResults restores the permanent
+         entry itself. */
+      function canonicalEntryForDisplay(e){
+        if (!e || e.id == null) return e;
+        var m = deep(e);
+        function fill(field, val){ if (val && !m[field]) m[field] = val; }
+        var id = String(m.id);
+        /* The saved result in the tournament that holds this match. */
+        var holder = null, rec = null;
+        try { holder = tournamentHolderOfMatch(id); } catch(err){}
+        if (holder){
+          (holder.tn.matches || []).forEach(function(x){ if (x && String(x.id) === id) rec = x; });
+        }
+        if (rec){
+          fill('tournamentId', rec.tournamentId || '');
+          fill('venue', rec.venue || '');
+          fill('group', rec.group || '');
+          if (!m.bracketId && rec.bracketId) m.bracketId = rec.bracketId;
+          if (!m.stage && rec.stage) m.stage = rec.stage;
+          fill('resultText', rec.resultText || '');
+          fill('potmName', rec.potmName || '');
+          fill('potmTeam', rec.potmTeam || '');
+          fill('potmPid', rec.potmPid || '');
+          if (m.oversLimit == null && typeof rec.oversLimit === 'number') m.oversLimit = rec.oversLimit;
+          if (m.wicketsLimit == null && typeof rec.wicketsLimit === 'number') m.wicketsLimit = rec.wicketsLimit;
+          if ((!m.innings || !m.innings.length) && rec.innings) m.innings = deep(rec.innings);
+          if ((!m.players || !m.players.length) && rec.players) m.players = deep(rec.players);
+          if ((!m.playerIds || !m.playerIds.length) && rec.playerIds) m.playerIds = deep(rec.playerIds);
+          if (!m.at && rec.at) m.at = rec.at;
+        }
+        /* The match's own tournament — resolved from its stamp
+           first, then from the holder — supplies the
+           tournament-level facts and settles the match kind: a
+           record held as a tournament result IS a tournament
+           match, even when the record itself never carried the
+           matchKind field (the Final's saved result does not). */
+        var tnObj = null;
+        try { tnObj = (m.tournamentId ? tournamentForKey(m.tournamentId) : null) || holder; } catch(err){}
+        if (tnObj){
+          m.matchKind = 'tournament';
+          fill('tournamentName', (tnObj.tn.name || '').trim());
+          fill('season', tnObj.tn.season || '');
+          fill('ballType', tnObj.tn.ballType || '');
+          if (!m.tournamentId) m.tournamentId = tournamentKeyOf(tnObj.tn);
+        }
+        /* The live state, while it still holds this very match,
+           is its original record — format, schedule and toss are
+           read from it, exactly as repairHistoryInfoFields does. */
+        if (typeof S !== 'undefined' && S && S.status === 'finished' && (String(S.matchId) === id || String(S.archivedMatchId) === id)){
+          fill('matchFormat', S.matchFormat || '');
+          fill('ballType', S.ballType || '');
+          fill('matchDate', S.matchDate || '');
+          fill('matchTime', S.matchTime || '');
+          fill('tossInfo', S.tossInfo || '');
+        }
+        /* Team names from the innings when the record omits them
+           (the same derivation openResultMatch has always used). */
+        if (m.innings && m.innings.length){
+          if (!m.teamA) m.teamA = m.innings[0].battingTeam || '';
+          if (!m.teamB) m.teamB = m.innings[0].bowlingTeam || '';
+        }
+        return m;
+      }
       function archiveDisplayState(e){
+        e = canonicalEntryForDisplay(e);
         var base = freshState();
         var inns = (e.innings || []).map(function(x){ return deep(x); });
         inns.forEach(function(x){ normalizeInningsShape(x); });
