@@ -44,7 +44,14 @@
          fails, the page says so honestly (see the init code) and
          scoring continues in Local Mode on the on-device backup — it
          never pretends to be live. If only Auth fails everywhere,
-         live sync still works and the sign-in button says so. */
+         live sync still works and the sign-in button says so.
+         v237: the loader is also more PATIENT — each script gets 9s
+         (was 3s) and the blanket give-up below is 20s (was 4s), and a
+         failure inside the startup grace window is presented as
+         "Connecting…", never "Firebase problem" (see onLibLoadFailed
+         in the main script): a slow cold load was being declared
+         failed a few seconds before the automatic retry connected. */
+      window.__fbBootAt = Date.now();
       window.__fbLibReady = false; window.__fbLibFailed = false; window.__fbAuthLibReady = false;
       (function(){
         var MIRRORS = [
@@ -56,7 +63,7 @@
         function loadOne(src, done){
           var s = document.createElement('script');
           var settled = false;
-          var timer = setTimeout(function(){ if (!settled){ settled = true; done(false); } }, 3000);
+          var timer = setTimeout(function(){ if (!settled){ settled = true; done(false); } }, 9000);
           s.onload = function(){ if (!settled){ settled = true; clearTimeout(timer); done(true); } };
           s.onerror = function(){ if (!settled){ settled = true; clearTimeout(timer); done(false); } };
           s.src = src;
@@ -115,7 +122,7 @@
               });
             })(i);
           }
-          setTimeout(function(){ if (!libDone && !window.__fbLibReady) failAll(); }, 4000);
+          setTimeout(function(){ if (!libDone && !window.__fbLibReady) failAll(); }, 20000);
         }
         /* Exposed so the connection panel's Retry button can run the
            whole mirror chain again when every mirror failed (or the
@@ -1474,6 +1481,9 @@
       .cb-toss-line{font-size:15.5px;line-height:1.65;color:#e2e2e2;margin:0 0 10px}
       .cb-toss-line b{color:#fff}
       .cb-toss-sentence{font-size:15.5px;font-weight:700;color:#fff;line-height:1.55;margin:12px 0 2px}
+      .cb-toss-tbc{color:#bdbdbd;font-style:italic}
+      .cb-crease{background:#2b2b2b;color:#fff;font-size:15.5px;font-weight:600;line-height:1.55;padding:12px 16px;border-bottom:1px solid #3d3d3d}
+      .cb-crease[hidden]{display:none}
       /* Scorecard tab (per reference): a situation band on top, then
          one collapsible row per innings — team name left, the score
          as runs-wickets (overs) right, and a chevron — expanding in
@@ -2110,7 +2120,7 @@
       .tp-vtn{flex:none;background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
       /* View Tournament bar in the scoreboard header, above the tab
          strip (v232 — moved up from the Summary / Info tab heads) */
-      .sb-vt-bar{padding:2px 12px 12px;background:#191919}
+      .sb-vt-bar{padding:12px 12px 0;background:#191919}
       .sb-vt-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px 16px;border:none;border-radius:12px;background:var(--green);color:#fff;font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
       .sb-vt-btn .sb-vt-name{font-weight:600;opacity:.88;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
       .tp-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
@@ -2970,6 +2980,19 @@
       <section class="view" id="view-scoreboard">
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
+          <!-- View Tournament sits at the very top of the
+               scoreboard (v236) — the two header lines swapped
+               places at the user's direction, so the button is
+               ABOVE the BACK / title / RESULT line, the first
+               thing on the page on every tab: for a tournament
+               match it opens THAT match's own tournament, resolved
+               from the match's own tournament stamp — never simply
+               whichever tournament is current. Shown and labelled
+               by renderScoreboardCB on every render; hidden for a
+               Single Match. -->
+          <div class="sb-vt-bar" id="sbVtBarTop" hidden style="display:none">
+            <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
+          </div>
           <div class="cb-top">
             <button type="button" class="cb-back" onclick="backToLiveMatches()" aria-label="Back to recent matches">🔙</button>
             <div class="cb-title" id="cbMatchTitle">Match</div>
@@ -2978,17 +3001,6 @@
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             </button>
             <button type="button" class="cb-iconbtn" onclick="setCbTab('info')" aria-label="Match info">⋮</button>
-          </div>
-          <!-- View Tournament sits in the header itself (v232),
-               above the tab strip, so it is the first thing under
-               the match title on every tab: for a tournament match
-               it opens THAT match's own tournament, resolved from
-               the match's own tournament stamp — never simply
-               whichever tournament is current. Shown and labelled
-               by renderScoreboardCB on every render; hidden for a
-               Single Match. -->
-          <div class="sb-vt-bar" id="sbVtBarTop" hidden style="display:none">
-            <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
           </div>
           <nav class="cb-tabs" aria-label="Scoreboard views">
             <button type="button" class="cb-tab" data-cbtab="summary" id="cbTabSummary" onclick="setCbTab('summary')" hidden>Summary</button>
@@ -3005,6 +3017,7 @@
             <div class="cb-tossblock" id="cbTossBlock" hidden></div>
             <div class="cb-main" id="cbMainScore"></div>
             <div class="cb-pship" id="cbPship"></div>
+            <div class="cb-crease" id="cbCreaseLine" hidden></div>
             <div class="cb-table" id="cbBatterTable"></div>
             <div class="cb-table" id="cbBowlerTable"></div>
             <div class="cb-comm" id="cbCommentary"></div>
@@ -3905,7 +3918,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v235';
+      var APP_VERSION = 'v237';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4094,6 +4107,19 @@
          one), the .info/connected listener, and the auto-retry chain. */
       var fbStage = 'idle', fbStageAt = Date.now(), fbStatusDetail = '', fbActiveCfg = null, fbConnRef = null;
       var fbRetryCount = 0, fbRetryTimer = null, fbRetryAt = 0, fbRetryStopped = false;
+      /* Startup grace (v237): the red "Firebase problem" state is
+         reserved for a connection that has GENUINELY failed — an
+         automatic retry has already been spent, or the whole startup
+         window below has elapsed. A slow cold load that is still
+         trying shows "Connecting…" instead (with the elapsed seconds
+         on the pill), so the app no longer cries "problem" a few
+         seconds before it connects on its own. fbBootAt is stamped
+         by the <head> loader the moment the library race starts. */
+      var fbBootAt = window.__fbBootAt || Date.now();
+      var FB_STARTUP_GRACE_MS = 25000;
+      function fbErrorAllowed(){
+        return fbRetryCount > 0 || (Date.now() - fbBootAt) >= FB_STARTUP_GRACE_MS;
+      }
       /* Confirmed-only display: fbConfirmedState holds the last live
          state Firebase is KNOWN to hold — a snapshot that arrived
          from the database, or a push the database accepted. Viewer
@@ -4242,7 +4268,7 @@
           case 'lib-failed': return 'The Firebase library could not be loaded from any CDN mirror';
           case 'db-connecting': return 'Opening the connection to the database';
           case 'db-waiting': return 'Database connection is open — waiting for the first data (the live match)';
-          case 'timeout': return 'Firebase did not answer within 8 seconds';
+          case 'timeout': return 'Firebase did not answer within 25 seconds';
           case 'error': return 'The database connection failed';
           default: return 'Connecting to the database';
         }
@@ -4275,6 +4301,24 @@
         var sig = mode + '|' + fbStage + '|' + fbRetryCount + '|' + (fbRetryTimer ? 1 : 0) + '|' + fbStatusDetail;
         slots.forEach(function(s){ if (s.getAttribute('data-csig') !== sig){ s.setAttribute('data-csig', sig); s.innerHTML = html; } });
       }
+      /* The library failed to load (every mirror missed). Inside the
+         startup grace window this is NOT surfaced as a problem: the
+         pill keeps saying "Connecting…" and the auto-retry runs — a
+         slow cold load usually lands on the retry, once the scripts
+         are cached or the network warms up. Only once a retry has
+         also failed, or the grace window has fully elapsed, does the
+         honest error state show (v237). */
+      function onLibLoadFailed(){
+        setFbStage('lib-failed');
+        if (fbErrorAllowed()){
+          fbConnecting = false; fbReady = false; setPadLocked(false);
+          setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. It retries on its own — check the internet connection; the status line at the top shows when it is live again.');
+          toast('⚠️ Firebase library failed to load — Local Mode');
+        } else {
+          setConnStatus('connecting', '⏳ Still loading the Firebase library — the connection is slow, so it keeps trying on its own. Nothing is lost: the score is backed up on this device, and the status line at the top shows when it is live.');
+        }
+        scheduleFbRetry();
+      }
       /* One attempt, whichever layer is missing: reload the library
          through the mirror chain if it never arrived, otherwise
          reconnect with the config already in use (or the built-in
@@ -4284,7 +4328,7 @@
         if (typeof firebase === 'undefined'){
           if (window.__fbLoadLib){
             window.__onFbLibReady = function(){ try { autoConnectFirebase(); } catch(e){} };
-            window.__onFbLibFailed = function(){ setFbStage('lib-failed'); scheduleFbRetry(); };
+            window.__onFbLibFailed = onLibLoadFailed;
             setFbStage('lib-loading');
             try { window.__fbLoadLib(); } catch(e){ scheduleFbRetry(); }
           }
@@ -4323,6 +4367,14 @@
         var now = Date.now();
         document.querySelectorAll('.conn-elapsed').forEach(function(el){ el.textContent = Math.max(0, Math.round((now - fbStageAt) / 1000)) + 's'; });
         if (fbRetryAt) document.querySelectorAll('.conn-countdown').forEach(function(el){ el.textContent = Math.max(0, Math.ceil((fbRetryAt - now) / 1000)) + 's'; });
+        /* While the first connection is still being attempted, the
+           pill itself carries the elapsed seconds, so "Connecting…"
+           visibly shows how long it has been trying (v237). */
+        var pill = $('connPill');
+        if (pill && !fbReady && (fbConnecting || fbStage === 'lib-loading' || fbStage === 'lib-failed')){
+          var base = (fbStage === 'lib-loading' || fbStage === 'lib-failed') ? '● Connecting to Firebase…' : pill.textContent.replace(/ \(\d+s\)$/, '');
+          pill.textContent = base + ' (' + Math.max(0, Math.round((now - fbBootAt) / 1000)) + 's)';
+        }
       }, 1000);
 
       /* ---------- scoring gate (locked until first Firebase read) ---------- */
@@ -6648,11 +6700,43 @@
           return fields.some(function(f){ return b[f] === name; });
         });
       }
+      /* ---------- the correction rule for announcement lines ----------
+         A scorer's wrong pick must never stay in the timeline. When
+         a bowler or batter was announced ("X comes into the attack"
+         / "X comes to the crease") but the pick is corrected BEFORE
+         that player has bowled or faced a single ball, the earlier
+         line is a mistake: the corrected name is written INTO that
+         same line, in its place, instead of a second line being
+         added underneath it. A player who has actually bowled or
+         batted is part of the match — his line is history and is
+         never rewritten. The tests below read the ball record
+         itself, so any trace of participation (a ball bowled, a
+         ball faced, a dismissal) protects the line. */
+      function feedBowlerActive(inn, name){
+        if (!name) return false;
+        for (var i = 0; i < (inn.bowlers || []).length; i++) if (inn.bowlers[i].name === name && inn.bowlers[i].balls > 0) return true;
+        return (inn.balls || []).some(function(b){ return !b.evt && b.bowler === name; });
+      }
+      function feedBatterActive(inn, name){
+        if (!name) return false;
+        for (var i = 0; i < (inn.batters || []).length; i++){ var b = inn.batters[i]; if (b.name === name && (b.balls > 0 || b.out)) return true; }
+        return (inn.balls || []).some(function(b){ return !b.evt && (b.batter === name || b.outName === name); });
+      }
       function announceAttack(inn, name){
         if (!name || name === 'Bowler') return;
         for (var i = 0; i < inn.bowlers.length; i++) if (inn.bowlers[i].name === name && inn.bowlers[i].balls > 0) return;
         if (alreadyAnnounced(inn, 'attack', name)) return;
         if (inStartLine(inn, name, ['bw'])) return;
+        /* Correction rule: an earlier attack line naming a bowler
+           who has still not bowled a ball was a wrong pick — put
+           the corrected bowler's name into THAT line. */
+        for (var j = (inn.balls || []).length - 1; j >= 0; j--){
+          var e = inn.balls[j];
+          if (e && e.evt === 'attack' && e.who && e.who !== name && !feedBowlerActive(inn, e.who)){
+            e.who = name; e.text = name + ' comes into the attack.';
+            return;
+          }
+        }
         pushFeedEvent(inn, 'attack', name, name + ' comes into the attack.');
       }
       function announceCrease(inn, name){
@@ -6660,6 +6744,17 @@
         for (var i = 0; i < inn.batters.length; i++){ var b = inn.batters[i]; if (b.name === name && (b.balls > 0 || b.out)) return; }
         if (alreadyAnnounced(inn, 'crease', name)) return;
         if (inStartLine(inn, name, ['who', 'ns'])) return;
+        /* Correction rule: an earlier crease line naming a batter
+           who has still not faced a ball and is no longer at the
+           crease was a wrong pick — put the corrected batter's
+           name into THAT line. */
+        for (var j = (inn.balls || []).length - 1; j >= 0; j--){
+          var e = inn.balls[j];
+          if (e && e.evt === 'crease' && e.who && e.who !== name && e.who !== inn.striker && e.who !== inn.nonStriker && !feedBatterActive(inn, e.who)){
+            e.who = name; e.text = name + ' comes to the crease.';
+            return;
+          }
+        }
         pushFeedEvent(inn, 'crease', name, name + ' comes to the crease.');
       }
       function inningsNotStarted(inn){
@@ -6667,17 +6762,46 @@
       }
       /* At the start of an innings the two openers and the opening
          bowler get ONE combined line — "A & B come to the crease.
-         C will open the attack." — instead of separate crease / attack
-         lines. It fires only once all three have been picked from the
-         dropdowns, and only once per innings. Returns true while the
-         innings has not started, so individual lines stay suppressed
-         until the combined line can fire. */
+         A is on strike. C will open the attack." — instead of
+         separate crease / attack lines. It fires only once all
+         three have been picked from the dropdowns, and only once
+         per innings. Returns true while the innings has not
+         started, so individual lines stay suppressed until the
+         combined line can fire. */
+      /* The innings-start line's text, built from its three names —
+         shared by the line's creation, its correction below and the
+         Ball Editor's reconciliation, so the wording never drifts.
+         It names the striker explicitly ("S is on strike") — who
+         takes strike first is part of the line, as in the
+         reference scorecards. */
+      function startLineText(s, ns, bw){
+        return s + ' & ' + ns + ' come to the crease. ' + s + ' is on strike. ' + bw + ' will open the attack.';
+      }
       function announceInningsStart(inn){
         if (!inningsNotStarted(inn)) return false;
-        if ((inn.balls || []).some(function(b){ return b.evt === 'start'; })) return true;
+        var se = null;
+        (inn.balls || []).forEach(function(b){ if (!se && b.evt === 'start') se = b; });
+        if (se){
+          /* Correction rule, applied to the start line itself:
+             while the innings has not begun, a re-picked opener or
+             opening bowler (or a swap of the openers' ends) edits
+             THIS line — the wrong name never stays in the timeline
+             next to a corrected one. Once a ball has been bowled
+             inningsNotStarted() is false and the line is history. */
+          var ch = false;
+          if (inn.striker && inn.nonStriker && se.who === inn.nonStriker && se.ns === inn.striker && inn.striker !== inn.nonStriker){
+            var t0 = se.who; se.who = se.ns; se.ns = t0; ch = true;
+          } else {
+            if (inn.striker && se.who !== inn.striker && se.who !== inn.nonStriker){ se.who = inn.striker; ch = true; }
+            if (inn.nonStriker && se.ns !== inn.nonStriker && se.ns !== inn.striker){ se.ns = inn.nonStriker; ch = true; }
+          }
+          if (inn.bowler && se.bw !== inn.bowler){ se.bw = inn.bowler; ch = true; }
+          if (ch) se.text = startLineText(se.who, se.ns, se.bw);
+          return true;
+        }
         var s = inn.striker, ns = inn.nonStriker, bw = inn.bowler;
         if (!s || !ns || !bw) return true;
-        pushFeedEvent(inn, 'start', s, s + ' & ' + ns + ' come to the crease. ' + bw + ' will open the attack.', { ns: ns, bw: bw });
+        pushFeedEvent(inn, 'start', s, startLineText(s, ns, bw), { ns: ns, bw: bw });
         return true;
       }
       function announceCurrentPlayers(){
@@ -16110,7 +16234,11 @@
         /* If Firebase never answers at all, do not sit on "Connecting"
            forever: unlock the pad in local mode and say so honestly.
            Scoring done meanwhile is backed up on this device, and the
-           live listener above will still adopt / sync when it can. */
+           live listener above will still adopt / sync when it can.
+           The wait is a patient 25s (v237, was 8s): on a slow cold
+           mobile connection the first snapshot can legitimately take
+           longer than 8s, and the old gate cried "Firebase problem"
+           moments before the answer arrived and the retry connected. */
         fbGateTimer = setTimeout(function(){
           fbGateTimer = null;
           if (fbRef !== myRef || fbReady || !fbConnecting) return;
@@ -16120,7 +16248,7 @@
           setConnStatus('error', '⚠️ Firebase did not answer in time — scoring is unlocked in Local Mode and every ball is backed up on this device, but viewers will not update until Firebase responds. It keeps retrying on its own — check the internet connection; the status line at the top shows when it is live again.');
           toast('⚠️ Firebase is not responding — Local Mode. Score is backed up on this device.');
           scheduleFbRetry();
-        }, 8000);
+        }, 25000);
       }
       function connectFirebase(){
         var raw = $('fbConfig').value.trim();
@@ -19438,7 +19566,12 @@
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         setView('scoreboard');
-        setCbTab('info');
+        /* An upcoming match opens on the LIVE tab: its toss block
+           shows both teams' squads there before the toss (and the
+           toss update, then the Playing XI in its fixed slot, as
+           they land) — the squads are the first thing a viewer
+           sees on entering the match. */
+        setCbTab('live');
         try { renderMatchViewScoreboard(); } catch(e){}
       }
       /* A completed match tapped on the Recent Matches list: the
@@ -22129,8 +22262,98 @@
         out.awaitingBowler = false;
         if (st.s) getBat(st.s);
         if (st.ns) getBat(st.ns);
+        try { beFixAnnouncements(out); } catch(e){}
         try { normalizeInningsShape(out); } catch(e){}
         return out;
+      }
+      /* ---------- announcement reconciliation ----------
+         The correction rule, applied to a replayed innings. The
+         replay above carries the stored announcement lines
+         (innings start, crease, attack) over verbatim, so when the
+         editor has corrected the PLAYER on the balls — a wrong
+         bowler or batter replaced on the deliveries — the line
+         naming the wrong player would otherwise stay in the
+         timeline next to the corrected balls. Here every
+         announcement is checked against the corrected record
+         itself: a line whose player never bowled or faced a ball
+         in the corrected innings is edited in place to the player
+         who actually came in at that point, or removed when
+         nobody did (or when that player already has his own
+         announcement), so a corrected mistake never remains
+         visible. Lines whose players genuinely played are history
+         and are never touched. Wrong runs, wrong dismissal types
+         and wrong extras need no such pass — the replay rebuilds
+         those balls themselves, so the wrong figures are gone the
+         moment the correction is made. */
+      function beFixAnnouncements(out){
+        var balls = out.balls || [];
+        if (!balls.length) return;
+        function bowlerActive(name){
+          for (var i = 0; i < (out.bowlers || []).length; i++) if (out.bowlers[i].name === name && out.bowlers[i].balls > 0) return true;
+          return balls.some(function(b){ return b && !b.evt && b.bowler === name; });
+        }
+        function batterActive(name){
+          for (var i = 0; i < (out.batters || []).length; i++){ var b = out.batters[i]; if (b.name === name && (b.balls > 0 || b.out)) return true; }
+          return balls.some(function(b){ return b && !b.evt && (b.batter === name || b.outName === name); });
+        }
+        function nextDelivery(idx){ for (var j = idx + 1; j < balls.length; j++) if (balls[j] && !balls[j].evt) return balls[j]; return null; }
+        function announcedBowlerBefore(idx, name){
+          for (var i = 0; i < idx; i++){ var r = balls[i]; if (!r) continue;
+            if (r.evt === 'attack' && r.who === name) return true;
+            if (r.evt === 'start' && r.bw === name) return true; }
+          return false;
+        }
+        function announcedBatterBefore(idx, name){
+          for (var i = 0; i < idx; i++){ var r = balls[i]; if (!r) continue;
+            if (r.evt === 'crease' && r.who === name) return true;
+            if (r.evt === 'start' && (r.who === name || r.ns === name)) return true; }
+          return false;
+        }
+        /* The innings-start line: its three names must be the
+           corrected record's openers and opening bowler. */
+        var startRec = null;
+        balls.forEach(function(r){ if (!startRec && r && r.evt === 'start') startRec = r; });
+        if (startRec){
+          var fd = nextDelivery(-1), sch = false;
+          if (fd){
+            if (fd.bowler && startRec.bw !== fd.bowler && !bowlerActive(startRec.bw)){ startRec.bw = fd.bowler; sch = true; }
+            if (fd.batter && startRec.who !== fd.batter && !batterActive(startRec.who)){ startRec.who = fd.batter; sch = true; }
+            var partner = null;
+            for (var j = 0; j < balls.length && !partner; j++){
+              var d = balls[j]; if (!d || d.evt) continue;
+              if (d.batter && d.batter !== startRec.who) partner = d.batter;
+              else if (d.outName && d.outName !== startRec.who) partner = d.outName;
+            }
+            if (partner && startRec.ns !== partner && !batterActive(startRec.ns) && startRec.ns !== out.striker && startRec.ns !== out.nonStriker){ startRec.ns = partner; sch = true; }
+          }
+          if (sch) startRec.text = startLineText(startRec.who, startRec.ns, startRec.bw);
+        }
+        var drop = [];
+        balls.forEach(function(r, idx){
+          if (!r || !r.evt) return;
+          if (r.evt === 'attack'){
+            if (bowlerActive(r.who)) return;
+            var nd = nextDelivery(idx);
+            if (!nd || !nd.bowler){ drop.push(r); return; }
+            if (nd.bowler === r.who) return;
+            if (announcedBowlerBefore(idx, nd.bowler)){ drop.push(r); return; }
+            r.who = nd.bowler; r.text = nd.bowler + ' comes into the attack.';
+          } else if (r.evt === 'crease'){
+            if (batterActive(r.who)) return;
+            if (r.who === out.striker || r.who === out.nonStriker) return;
+            var seen = {};
+            for (var i = 0; i < idx; i++){ var d0 = balls[i]; if (!d0 || d0.evt) continue; if (d0.batter) seen[d0.batter] = 1; if (d0.outName) seen[d0.outName] = 1; }
+            var repl = null;
+            for (var j2 = idx + 1; j2 < balls.length && !repl; j2++){
+              var d2 = balls[j2]; if (!d2 || d2.evt) continue;
+              if (d2.batter && !seen[d2.batter]) repl = d2.batter;
+              else if (d2.outName && !seen[d2.outName]) repl = d2.outName;
+            }
+            if (!repl || announcedBatterBefore(idx, repl)){ drop.push(r); return; }
+            r.who = repl; r.text = repl + ' comes to the crease.';
+          }
+        });
+        if (drop.length) out.balls = balls.filter(function(r){ return drop.indexOf(r) === -1; });
       }
       function beWicketKind(t){
         var m;
@@ -24006,33 +24229,39 @@
         if (tn && tn.squads && Array.isArray(tn.squads[team]) && tn.squads[team].length) return tn.squads[team];
         return null;
       }
-      /* The toss + teams block for the LIVE tab (per reference), in
-         the reference's exact sequence: (1) the toss-decision
-         headline ("<winner> opt to bat/bowl"), (2) "Teams:" — each
-         side's Playing XI as a comma list, batting-first side first,
-         with (c)/(vc)/(w) suffixes from the leadership picks, (3) the
-         toss sentence ("<winner> have won the toss and have opted
-         to bat/field"), (4) "Squads:" — each side's full squad the
-         same way. The two lists come from two different places, on
-         purpose: the Playing XI is THIS match's confirmed final
-         squad's first eleven (the per-match confirmation, exactly
-         as the Squads tab cuts it), while "Squads:" shows the ONE
-         squad entered for the team in the match's own tournament
+      /* The toss + teams block for the LIVE tab (per reference),
+         in ONE fixed sequence whose slots never move: (1) the
+         toss-decision headline ("<winner> opt to bat/bowl"), (2)
+         "Teams:" — each side's Playing XI as a comma list,
+         batting-first side first, with (c)/(vc)/(w) suffixes from
+         the leadership picks, (3) the toss sentence ("<winner>
+         have won the toss and have opted to bat/field"), (4)
+         "Squads:" — each side's full squad the same way. The two
+         lists come from two different places, on purpose: the
+         Playing XI is THIS match's confirmed final squad's first
+         eleven (the per-match confirmation, exactly as the Squads
+         tab cuts it), while "Squads:" shows the ONE squad entered
+         for the team in the match's own tournament
          (cbTournamentSquad) — entered once, at the start — falling
          back to the match's full squad for a Single Match or when
-         that tournament squad is not held. The block appears once
-         the toss is recorded AND the squad has been confirmed;
-         before confirmation there is no confirmed XI to show, so
-         it stays hidden. It is rebuilt from the state on every
-         render, so whenever the Playing XI confirmation lands —
-         and whenever the tournament squad itself is edited — the
-         block updates itself in this same sequence, for the scorer
-         and, through the synced state, for viewers alike. */
+         that tournament squad is not held.
+         The slots fill in as the match takes shape, in place: an
+         upcoming match (no toss yet) shows just "Squads:", so a
+         viewer opening it sees both teams' squads at once; once
+         the toss is recorded the headline and the toss sentence
+         appear around a "Teams:" slot that keeps its fixed place
+         — reading "Playing XI not confirmed yet" until the XI is
+         confirmed, then the confirmed eleven in that same slot.
+         It is rebuilt from the state on every render, so whenever
+         the Playing XI confirmation lands — and whenever the
+         tournament squad itself is edited — the block updates
+         itself in this same sequence, for the scorer and, through
+         the synced state, for viewers alike. */
       function cbTossBlockHTML(){
-        if (!S.tossWinner || !S.tossDecision || !S.squadConfirmed) return '';
+        var hasToss = !!(S.tossWinner && S.tossDecision);
         var winner = S.tossWinner;
         var other = (winner === S.teamA) ? S.teamB : S.teamA;
-        var batFirst = (S.tossDecision === 'bat') ? winner : other;
+        var batFirst = hasToss ? ((S.tossDecision === 'bat') ? winner : other) : S.teamA;
         var sides = [batFirst, (batFirst === S.teamA) ? S.teamB : S.teamA];
         function namesWithSuffix(team, list){
           var L = cbxLeadership(team);
@@ -24046,19 +24275,28 @@
         }
         var xiLines = '', sqLines = '', anyXI = false;
         sides.forEach(function(team){
-          var xiSource = displaySquadForTeam(team) || [];
-          var full = cbTournamentSquad(team) || xiSource;
+          /* The Playing XI slot shows the CONFIRMED eleven only —
+             never the unconfirmed working squad dressed up as an
+             XI. The full-squad line falls back through the match's
+             own squad, confirmed or not. */
+          var xiSource = S.squadConfirmed ? (displaySquadForTeam(team) || []) : [];
+          var full = cbTournamentSquad(team) || displaySquadForTeam(team) || [];
           if (xiSource.length){
             anyXI = true;
             xiLines += '<p class="cb-toss-line"><b>' + esc(team) + '</b> (Playing XI): ' + namesWithSuffix(team, xiSource.slice(0, 11)) + '</p>';
           }
           if (full.length) sqLines += '<p class="cb-toss-line"><b>' + esc(team) + '</b> Squad: ' + namesWithSuffix(team, full) + '</p>';
         });
-        if (!anyXI) return '';
-        return '<div class="cb-toss-head">' + esc(winner) + ' opt to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '</div>'
-          + '<div class="cb-toss-h">Teams:</div>' + xiLines
-          + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '</div>'
-          + '<div class="cb-toss-h">Squads:</div>' + sqLines;
+        if (!hasToss && !sqLines) return '';
+        var html = '';
+        if (hasToss){
+          html += '<div class="cb-toss-head">' + esc(winner) + ' opt to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '</div>'
+            + '<div class="cb-toss-h">Teams:</div>'
+            + (anyXI ? xiLines : '<p class="cb-toss-line cb-toss-tbc">Playing XI not confirmed yet.</p>')
+            + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '</div>';
+        }
+        if (sqLines) html += '<div class="cb-toss-h">Squads:</div>' + sqLines;
+        return html;
       }
       function renderScoreboardCB(){
         var inn = S.current;
@@ -24168,6 +24406,25 @@
               + projHtml;
           }
         }
+        /* The crease line, like the reference: who is at the crease
+           and — the part that was never spelled out at a glance —
+           who is ON STRIKE, with the opening bowler named before
+           the first ball ("C will open the attack"). It sits
+           directly above the batter table, is rebuilt from the
+           live pair on every render (so it is correct at the start
+           of the innings and after every wicket alike), and is
+           gone at the innings break and on a finished match, where
+           there is no current pair. */
+        var crEl = $('cbCreaseLine');
+        if (crEl){
+          var crHtml = '';
+          if (!finished && S.status !== 'inningsBreak' && inn && inn.striker && inn.nonStriker){
+            crHtml = '<b>' + plLink(inn.battingTeam, inn.striker) + '</b> and <b>' + plLink(inn.battingTeam, inn.nonStriker) + '</b> are at the crease. <b>' + plLink(inn.battingTeam, inn.striker) + '</b> is on strike.';
+            if (inningsNotStarted(inn) && inn.bowler) crHtml += ' <b>' + plLink(inn.bowlingTeam, inn.bowler) + '</b> will open the attack.';
+          }
+          crEl.innerHTML = crHtml;
+          crEl.hidden = !crHtml;
+        }
         /* batter table — current pair, like the reference. A finished
            match has no "current pair" table: the finished header, the
            Player of the Match band and the feed carry the page, and
@@ -24256,7 +24513,7 @@
                 /* Announcement lines show with NO over / ball number
                    in front of them — the over column stays empty. */
                 if (b.evt === 'start'){
-                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + plLink(innX.battingTeam, b.who || '') + '</b> &amp; <b>' + plLink(innX.battingTeam, b.ns || '') + '</b> come to the crease. <b>' + plLink(innX.bowlingTeam, b.bw || '') + '</b> will open the attack.</span></div>';
+                  return '<div class="cb-comm-row evt"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + plLink(innX.battingTeam, b.who || '') + '</b> &amp; <b>' + plLink(innX.battingTeam, b.ns || '') + '</b> come to the crease. <b>' + plLink(innX.battingTeam, b.who || '') + '</b> is on strike. <b>' + plLink(innX.bowlingTeam, b.bw || '') + '</b> will open the attack.</span></div>';
                 }
                 if (b.evt === 'freehit'){
                   /* "Free Hit coming up." — printed directly above the
@@ -26680,21 +26937,12 @@
         if (window.__fbLibReady || typeof firebase !== 'undefined'){
           try { autoConnectFirebase(); } catch(e){}
         } else if (window.__fbLibFailed){
-          fbConnecting = false; fbReady = false; setPadLocked(false);
-          setFbStage('lib-failed');
-          setConnStatus('local', '⚠️ The Firebase library could not be loaded from any mirror — running in Local Mode; scoring is backed up on this device only. It retries on its own — check the internet connection; the status line at the top shows when it is live again.');
-          scheduleFbRetry();
+          onLibLoadFailed();
         } else {
           setFbStage('lib-loading');
           setConnStatus('connecting', '⏳ Loading the Firebase library…');
           window.__onFbLibReady = function(){ try { autoConnectFirebase(); } catch(e){} };
-          window.__onFbLibFailed = function(){
-            fbConnecting = false; fbReady = false; setPadLocked(false);
-            setFbStage('lib-failed');
-            setConnStatus('error', '⚠️ The Firebase library could not be loaded from any mirror — viewers will not update until it loads. Scoring continues in Local Mode, backed up on this device. It retries on its own — check the internet connection; the status line at the top shows when it is live again.');
-            toast('⚠️ Firebase library failed to load — Local Mode');
-            scheduleFbRetry();
-          };
+          window.__onFbLibFailed = onLibLoadFailed;
         }
       })();
     </script>
