@@ -39,18 +39,35 @@
             lands and announces itself through __onFbAuthLibReady, so
             Google sign-in wires itself up the moment it can instead
             of holding the connection hostage.
-         If the winning mirror's database or auth build fails, the
-         next mirrors are tried for just that piece. If EVERY mirror
-         fails, the page says so honestly (see the init code) and
-         scoring continues in Local Mode on the on-device backup — it
-         never pretends to be live. If only Auth fails everywhere,
-         live sync still works and the sign-in button says so.
+         If EVERY mirror fails, the page says so honestly (see the
+         init code) and scoring continues in Local Mode on the
+         on-device backup — it never pretends to be live. If only
+         Auth fails everywhere, live sync still works and the
+         sign-in button says so.
          v237: the loader is also more PATIENT — each script gets 9s
-         (was 3s) and the blanket give-up below is 20s (was 4s), and a
-         failure inside the startup grace window is presented as
-         "Connecting…", never "Firebase problem" (see onLibLoadFailed
-         in the main script): a slow cold load was being declared
-         failed a few seconds before the automatic retry connected. */
+         (was 3s), and a failure inside the startup grace window is
+         presented as "Connecting…", never "Firebase problem" (see
+         onLibLoadFailed in the main script): a slow cold load was
+         being declared failed a few seconds before the automatic
+         retry connected.
+         v238: the PATIENCE alone was not enough — on a slow cold
+         mobile load the connect still took ~42s, because the
+         database build WALKED the mirrors one at a time (9s each,
+         up to 36s for that one piece), the old 20s blanket give-up
+         timer was never cancelled and could fire mid-chain —
+         declaring failure and restarting the whole chain while the
+         first chain was still in flight — and a retry always
+         reloaded the ENTIRE library even when only the database
+         piece was missing. Now EVERY piece races ALL mirrors in
+         parallel (the first mirror to deliver a working build
+         wins, so a piece lands as fast as the fastest mirror),
+         every chain carries a generation number so a retry cancels
+         the old chain's callbacks completely, the give-up watchdog
+         is a stored timer that is cleared the moment the library
+         lands (30s, beyond the ~18s worst case of two 9s races —
+         a pure safety net, never a mid-chain kill), and a retry
+         re-races ONLY the pieces that never arrived
+         (__fbRetryMissingPieces) instead of starting over. */
       window.__fbBootAt = Date.now();
       window.__fbLibReady = false; window.__fbLibFailed = false; window.__fbAuthLibReady = false;
       (function(){
@@ -69,65 +86,96 @@
           s.src = src;
           document.head.appendChild(s);
         }
-        var appWon = -1, appDead = 0, libDone = false, authDone = false;
-        function finishLib(){
-          if (libDone) return;
+        /* Generation counter: each fresh chain (first load, full
+           reload, or a missing-pieces retry) bumps it, and every
+           callback captures its chain's number — a callback from an
+           older chain is ignored, so a retry can never be corrupted
+           by the chain it replaced. */
+        var gen = 0;
+        var appWon = -1, libDone = false, authDone = false;
+        var watchdog = null;
+        function clearWatchdog(){ if (watchdog){ clearTimeout(watchdog); watchdog = null; } }
+        function armWatchdog(g){
+          clearWatchdog();
+          watchdog = setTimeout(function(){
+            watchdog = null;
+            if (g !== gen || libDone || window.__fbLibReady) return;
+            failAll(g);
+          }, 30000);
+        }
+        function finishLib(g){
+          if (g !== gen || libDone) return;
           libDone = true;
+          clearWatchdog();
           window.__fbLibReady = true;
           if (window.__onFbLibReady) window.__onFbLibReady();
         }
-        function finishAuth(ok){
-          if (authDone) return;
+        function finishAuth(g, ok){
+          if (g !== gen || authDone) return;
           authDone = true;
           window.__fbAuthLibReady = !!ok;
           if (window.__onFbAuthLibReady) window.__onFbAuthLibReady();
         }
-        function failAll(){
-          if (libDone || window.__fbLibReady) return;
+        function failAll(g){
+          if (g !== gen || libDone || window.__fbLibReady || window.__fbLibFailed) return;
+          clearWatchdog();
           window.__fbLibFailed = true;
           if (window.__onFbLibFailed) window.__onFbLibFailed();
         }
-        /* Database / Auth for one piece (1 = database, 2 = auth),
-           starting at the winning mirror and walking the rest until
-           one delivers. */
-        function loadPiece(piece, i, tried){
-          if (piece === 1 && libDone) return;
-          if (piece === 2 && authDone) return;
-          if (tried >= MIRRORS.length){
-            if (piece === 1) failAll(); else finishAuth(false);
-            return;
-          }
-          var idx = ((i % MIRRORS.length) + MIRRORS.length) % MIRRORS.length;
-          loadOne(MIRRORS[idx][piece], function(ok){
-            var good = ok && typeof firebase !== 'undefined' && (piece === 1 ? !!firebase.database : !!firebase.auth);
-            if (good){ if (piece === 1) finishLib(); else finishAuth(true); return; }
-            loadPiece(piece, idx + 1, tried + 1);
-          });
-        }
-        function onAppWon(i){
-          if (appWon >= 0) return;
-          appWon = i;
-          /* Database and Auth download in parallel from here. */
-          loadPiece(1, i, 0);
-          loadPiece(2, i, 0);
-        }
-        function tryAllMirrors(){
-          appWon = -1; appDead = 0; libDone = false; authDone = false;
+        /* Race ONE piece (0 = app, 1 = database, 2 = auth) across
+           ALL mirrors at once: every mirror is requested in
+           parallel and the first to deliver a WORKING build wins;
+           the piece is declared dead only when every mirror has
+           failed or timed out. A slow mirror therefore costs
+           nothing — the piece lands at the fastest mirror's speed
+           instead of waiting out each mirror in turn. */
+        function racePiece(g, piece, onWin, onDead){
+          var dead = 0, won = false;
           for (var i = 0; i < MIRRORS.length; i++){
             (function(idx){
-              loadOne(MIRRORS[idx][0], function(ok){
-                if (ok && typeof firebase !== 'undefined'){ onAppWon(idx); return; }
-                appDead++;
-                if (appDead >= MIRRORS.length && appWon < 0) failAll();
+              loadOne(MIRRORS[idx][piece], function(ok){
+                if (g !== gen || won) return;
+                var good = ok && typeof firebase !== 'undefined' && (piece === 0 || (piece === 1 ? !!firebase.database : !!firebase.auth));
+                if (good){ won = true; onWin(idx); return; }
+                dead++;
+                if (dead >= MIRRORS.length) onDead();
               });
             })(i);
           }
-          setTimeout(function(){ if (!libDone && !window.__fbLibReady) failAll(); }, 20000);
         }
-        /* Exposed so the connection panel's Retry button can run the
-           whole mirror chain again when every mirror failed (or the
-           network was down at first load) without a page reload. */
-        window.__fbLoadLib = function(){ window.__fbLibFailed = false; window.__fbLibReady = false; window.__fbAuthLibReady = false; tryAllMirrors(); };
+        function startPieces(g){
+          /* Database and Auth race in parallel from here. */
+          racePiece(g, 1, function(){ finishLib(g); }, function(){ failAll(g); });
+          racePiece(g, 2, function(){ finishAuth(g, true); }, function(){ finishAuth(g, false); });
+        }
+        function tryAllMirrors(){
+          gen++;
+          var g = gen;
+          appWon = -1; libDone = false; authDone = false;
+          window.__fbLibReady = false; window.__fbAuthLibReady = false;
+          racePiece(g, 0, function(idx){ appWon = idx; startPieces(g); }, function(){ failAll(g); });
+          armWatchdog(g);
+        }
+        /* Retry ONLY the pieces that never arrived: if the app
+           build is in but the database build was slow, re-race just
+           the database (and auth, if it is missing too) instead of
+           reloading the whole library. The generation bump cancels
+           every callback still in flight from the old chain. If the
+           app build itself never landed, fall back to a full load. */
+        window.__fbRetryMissingPieces = function(){
+          if (window.__fbLibReady && window.__fbAuthLibReady) return;
+          if (typeof firebase === 'undefined' || appWon < 0){ window.__fbLoadLib(); return; }
+          gen++;
+          var g = gen;
+          window.__fbLibFailed = false;
+          if (!libDone) racePiece(g, 1, function(){ finishLib(g); }, function(){ failAll(g); });
+          if (!authDone) racePiece(g, 2, function(){ finishAuth(g, true); }, function(){ finishAuth(g, false); });
+          armWatchdog(g);
+        };
+        /* Exposed so the connection retry can run the whole mirror
+           chain again when every mirror failed (or the network was
+           down at first load) without a page reload. */
+        window.__fbLoadLib = function(){ window.__fbLibFailed = false; tryAllMirrors(); };
         window.__fbLoadLib();
       })();
     </script>
@@ -3918,7 +3966,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v237';
+      var APP_VERSION = 'v238';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4322,15 +4370,25 @@
       /* One attempt, whichever layer is missing: reload the library
          through the mirror chain if it never arrived, otherwise
          reconnect with the config already in use (or the built-in
-         default via autoConnectFirebase). */
+         default via autoConnectFirebase). v238: "the library never
+         arrived" now also covers the case where the app build is in
+         but the DATABASE build is not — the old code fell through
+         to a reconnect attempt that threw on fbApp.database() and
+         never re-requested the missing script, so the retry chain
+         spun without ever fetching the one piece it needed. Now
+         only the missing pieces are re-raced (see the <head>
+         loader's __fbRetryMissingPieces). */
       function fbRetryAttempt(){
         if (fbReady || fbRetryStopped) return;
-        if (typeof firebase === 'undefined'){
+        if (typeof firebase === 'undefined' || !window.__fbLibReady){
           if (window.__fbLoadLib){
             window.__onFbLibReady = function(){ try { autoConnectFirebase(); } catch(e){} };
             window.__onFbLibFailed = onLibLoadFailed;
             setFbStage('lib-loading');
-            try { window.__fbLoadLib(); } catch(e){ scheduleFbRetry(); }
+            try {
+              if (typeof firebase !== 'undefined' && window.__fbRetryMissingPieces) window.__fbRetryMissingPieces();
+              else window.__fbLoadLib();
+            } catch(e){ scheduleFbRetry(); }
           }
           return;
         }
@@ -4368,12 +4426,19 @@
         document.querySelectorAll('.conn-elapsed').forEach(function(el){ el.textContent = Math.max(0, Math.round((now - fbStageAt) / 1000)) + 's'; });
         if (fbRetryAt) document.querySelectorAll('.conn-countdown').forEach(function(el){ el.textContent = Math.max(0, Math.ceil((fbRetryAt - now) / 1000)) + 's'; });
         /* While the first connection is still being attempted, the
-           pill itself carries the elapsed seconds, so "Connecting…"
-           visibly shows how long it has been trying (v237). */
+           pill itself carries the current stage AND the elapsed
+           seconds, so "Connecting…" visibly shows WHAT it is doing
+           and how long it has been trying (v237; per-stage label
+           added v238, so a stall names the stage it is stuck in).
+           A pill already showing the honest error state (the 'err'
+           class) is left alone — the ticker must never paint over
+           "Firebase problem" with "Connecting…". */
         var pill = $('connPill');
-        if (pill && !fbReady && (fbConnecting || fbStage === 'lib-loading' || fbStage === 'lib-failed')){
-          var base = (fbStage === 'lib-loading' || fbStage === 'lib-failed') ? '● Connecting to Firebase…' : pill.textContent.replace(/ \(\d+s\)$/, '');
-          pill.textContent = base + ' (' + Math.max(0, Math.round((now - fbBootAt) / 1000)) + 's)';
+        if (pill && !fbReady && !pill.classList.contains('err') && (fbConnecting || fbStage === 'lib-loading' || fbStage === 'lib-failed')){
+          var stageTxt = (fbStage === 'lib-loading' || fbStage === 'lib-failed') ? 'Connecting to Firebase — loading the library'
+            : (fbStage === 'db-waiting') ? 'Connected — loading the live match'
+            : 'Connecting to Firebase';
+          pill.textContent = '● ' + stageTxt + '… (' + Math.max(0, Math.round((now - fbBootAt) / 1000)) + 's)';
         }
       }, 1000);
 
@@ -16019,7 +16084,13 @@
           : '✅ Firebase connected — the live match was loaded from the database and everyone online can now watch live.');
       }
       function initFirebaseWithConfig(cfg, isDefault){
-        if (typeof firebase === 'undefined'){ throw new Error('Firebase library did not load'); }
+        /* The database build must actually be registered — the app
+           build alone defines `firebase` but cannot open a database,
+           and proceeding would throw further down with a misleading
+           message. Throwing here routes the caller into the
+           library-retry path, which re-races just the missing
+           database piece (v238). */
+        if (typeof firebase === 'undefined' || !firebase.database){ throw new Error('Firebase library did not load'); }
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
         if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
@@ -26934,7 +27005,14 @@
            itself now arrives through the mirror loader in <head>: if it
            is still loading, connect the moment it lands; if every
            mirror failed, say so honestly and stay in Local Mode. */
-        if (window.__fbLibReady || typeof firebase !== 'undefined'){
+        /* Only __fbLibReady may trigger the immediate connect
+           (v238): `typeof firebase !== 'undefined'` is already true
+           when just the APP build has landed, and connecting then
+           threw on the missing database build — after which nothing
+           hooked the library-ready signal, so the connect waited
+           for the retry backoff chain instead of happening the
+           moment the database build arrived. */
+        if (window.__fbLibReady){
           try { autoConnectFirebase(); } catch(e){}
         } else if (window.__fbLibFailed){
           onLibLoadFailed();
