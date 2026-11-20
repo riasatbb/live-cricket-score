@@ -3188,14 +3188,6 @@
 
           <!-- TEAMS -->
           <div class="tn-panel" id="tnPanel-teams">
-            <div class="card" id="tnGroupsCard">
-              <h2>Groups</h2>
-              <div class="grp-actions" style="margin-top:12px">
-                <label for="grpNewName">New group name</label>
-                <div class="rowflex"><input id="grpNewName" placeholder="e.g. Group A" style="flex:1;min-width:0" /><button class="btn sm" onclick="createGroup()">Create Group</button></div>
-              </div>
-              <div id="tnGroups" style="margin-top:12px"></div>
-            </div>
             <div class="card" id="tnTeamsCard">
               <h2>Teams</h2>
               <div class="rowflex names-row" style="margin-bottom:14px">
@@ -3845,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v221';
+      var APP_VERSION = 'v222';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
