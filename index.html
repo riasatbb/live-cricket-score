@@ -2052,6 +2052,10 @@
       .tp-msub{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em;margin-top:8px}
       .tp-mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px}
       .tp-vtn{flex:none;background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+      /* View Tournament bar at the head of the Summary and Info tabs (v231) */
+      .sb-vt-bar{margin:0 0 12px}
+      .sb-vt-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px 16px;border:none;border-radius:12px;background:var(--green);color:#fff;font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
+      .sb-vt-btn .sb-vt-name{font-weight:600;opacity:.88;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
       .tp-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
       .tp-chips::-webkit-scrollbar{display:none}
       .tp-chip{flex:none;border:1px solid var(--line);background:#dcebe4;color:#33523f;font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:6px 14px;cursor:pointer}
@@ -2941,30 +2945,35 @@
           <!-- SUMMARY (completed matches only — the tab itself is
                hidden until the match on show is finished) -->
           <div class="cb-panel" id="cbPanel-summary">
+            <!-- View Tournament sits at the HEAD of this tab (v231),
+                 not buried at the bottom of Info: for a tournament
+                 match it opens THAT match's own tournament, resolved
+                 from the match's own tournament stamp — never simply
+                 whichever tournament is current. Shown and labelled
+                 by renderScoreboardCB on every render; hidden for a
+                 Single Match. -->
+            <div class="sb-vt-bar" id="sbVtBarSummary" hidden style="display:none">
+              <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
+            </div>
             <div id="cbSummaryBody"></div>
           </div>
 
           <!-- INFO -->
           <div class="cb-panel" id="cbPanel-info">
+            <div class="sb-vt-bar" id="sbVtBarInfo" hidden style="display:none">
+              <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
+            </div>
             <div class="card" style="margin-bottom:0">
               <h2>Match Info</h2>
               <div id="cbInfoBody"></div>
             </div>
-            <!-- Under Match Info there is exactly ONE possible extra
-                 card, and only for a TOURNAMENT match: the Follow
-                 Tournament card, whose button opens the whole
-                 tournament read-only — the viewer sees everything
-                 (teams, matches, points, statistics) and can change
-                 nothing. For a Single Match there is NOTHING under
-                 Match Info — no card at all. Visibility is driven by
-                 renderScoreboardCB / renderSbTeams on every render,
-                 so it follows the match as Firebase updates arrive.
-                 Hidden by default so a Single Match never flashes it
-                 before the first render runs. -->
-            <div class="card sb-view-tour-card" id="sbTourCtaCard" hidden style="display:none">
-              <h2>Tournament</h2>
-              <button type="button" class="btn" id="btnViewTournamentInfo" style="margin-top:12px" onclick="openTournamentViewerInPage()">Follow Tournament</button>
-            </div>
+            <!-- Nothing lives under Match Info any more (v231): the
+                 old Follow Tournament card at the bottom of this tab
+                 was easy to miss and opened whichever tournament was
+                 current rather than this match's own — it moved to
+                 the View Tournament bars at the head of the Summary
+                 and Info tabs above. A Single Match shows nothing
+                 tournament-related here at all. -->
           </div>
 
           <!-- SCORECARD — per reference: the situation band, then
@@ -3837,7 +3846,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v229';
+      var APP_VERSION = 'v231';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -13171,14 +13180,34 @@
         return tpData.ms.map(function(m){ return tpMatchCardHTML(m); }).join('');
       }
       function tpTnTarget(tid, tname){
+        /* Resolve a match's tournament from the match's OWN stamp
+           (v231): an ID match always wins — the tournament's own id,
+           an archive slot's id, or the Tour ID derived from a name
+           all count as the same identity — and only when no ID
+           matches anywhere does the name decide. (Before, a name
+           match later in the archive could override an exact ID
+           match, and a stamp carrying only the derived Tour ID
+           matched nothing at all.) */
         var out = { kind: 'none', arcId: '' };
         try {
           var cur = S.tournament || {};
-          if ((tid && cur.id && tid === cur.id) || (cur.name && cur.name === tname)){ out.kind = 'current'; return out; }
-          tournamentsArchive().forEach(function(a){
-            if (!a || !a.data) return;
-            if ((tid && (a.id === tid || a.data.id === tid)) || a.data.name === tname || a.name === tname){ out.kind = 'arc'; out.arcId = a.id; }
-          });
+          if (tid){
+            if (cur.id && String(tid) === String(cur.id)){ out.kind = 'current'; return out; }
+            if (cur.name && String(tid) === tourIdFor(cur.name)){ out.kind = 'current'; return out; }
+            var arcHit = '';
+            tournamentsArchive().forEach(function(a){
+              if (!a || !a.data || arcHit) return;
+              if (String(tid) === String(a.id) || (a.data.id && String(tid) === String(a.data.id)) || (a.data.name && String(tid) === tourIdFor(a.data.name))) arcHit = a.id;
+            });
+            if (arcHit){ out.kind = 'arc'; out.arcId = arcHit; return out; }
+          }
+          if (tname && cur.name && cur.name === tname){ out.kind = 'current'; return out; }
+          if (tname){
+            tournamentsArchive().forEach(function(a){
+              if (!a || !a.data) return;
+              if (a.data.name === tname || a.name === tname){ out.kind = 'arc'; out.arcId = a.id; }
+            });
+          }
         } catch(e){}
         return out;
       }
@@ -13196,6 +13225,17 @@
         tpData.ms.forEach(function(x){ if (String(x.id) === String(id)) m = x; });
         if (!m || !m.tournamentName) return;
         tpOpenTnTarget(tpTnTarget(String(m.tournamentId || ''), String(m.tournamentName)));
+      }
+      /* The scoreboard's View Tournament bars (Summary / Info tab
+         heads, v231): renderScoreboardCB stashes the tournament of
+         the match ON SHOW here on every render; tapping a bar opens
+         exactly that tournament — by its own ID when it is an
+         archived one, the current tournament page when it is the
+         current one — never a different tournament. */
+      var sbVtTarget = null;   /* { tid, tname } of the match on show, or null */
+      function sbViewShownTournament(){
+        if (!sbVtTarget) return;
+        tpOpenTnTarget(tpTnTarget(sbVtTarget.tid, sbVtTarget.tname));
       }
       var tpTnList = [];
       function tpOpenTournamentFromTeamPage(i){
@@ -15284,17 +15324,6 @@
         var grid = $('sbTeamsGrid');
         normalizeTournament();
         var tn = S.tournament;
-        var ctaCard = $('sbTourCtaCard');
-        if (ctaCard){
-          /* The Tournament segment in the scoreboard Info tab exists
-             ONLY for a tournament match. A Single Match shows no
-             tournament card at all — even though tournament teams and
-             data exist in the app — so visibility follows the match
-             itself (S.matchKind), never the tournament's contents. */
-          var isTournamentMatch = S.matchKind === 'tournament';
-          ctaCard.hidden = !isTournamentMatch;
-          ctaCard.style.display = isTournamentMatch ? '' : 'none';
-        }
         if (!grid) return;
         if (sbSelectedTeam && tn.teams.indexOf(sbSelectedTeam) === -1) sbSelectedTeam = null;
         grid.innerHTML = tn.teams.length
@@ -15513,6 +15542,12 @@
       }
 
       function renderTournament(){
+        /* The viewed tournament (when one is open by ID) is the
+           only tournament this page may render — resolve it first,
+           so direct calls that bypass renderAll (an auth change, a
+           bracket edit) can never paint the current tournament's
+           bodies under a viewed tournament's name, or vice versa. */
+        try { tnViewResolve(); } catch(e){}
         normalizeTournament();
         var tn = S.tournament;
         $('tnTitle').textContent = tn.name.trim() || 'Tournament';
@@ -15610,6 +15645,10 @@
         var tnViewHeld = null;
         if (tnViewCtx){
           try { tournamentsArchive().forEach(function(a){ if (a.id === tnViewCtx.arcId) a.data = deep(tnViewCtx.viewObj); }); } catch(e){}
+          /* The slot now holds exactly the viewed copy, so the
+             resolver's slot signature follows it — the next resolve
+             must not mistake this write-back for a server update. */
+          try { tnViewCtx.arcHash = coldHashOf(tnViewCtx.viewObj || {}); } catch(e){}
           if (S.tournament !== tnViewCtx.viewObj && S.tournament !== tnViewCtx.saved) tnViewCtx.saved = S.tournament;
           tnViewHeld = tnViewCtx.viewObj;
           S.tournament = tnViewCtx.saved;
@@ -24128,27 +24167,33 @@
           if (S.matchId) infoEl.innerHTML += '<div class="cb-info-row"><span>Match ID</span>' + matchIdChipHTML(S.matchId) + '</div>';
           if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) infoEl.innerHTML += '<div class="cb-info-row"><span>Tournament ID</span><button type="button" class="bk-idchip fx" title="Tap to copy the full Tournament ID" onclick="copyIdTap(event,' + fxIdArg(tourIdFor(S.tournament.name)) + ',\'Tournament ID\')">ID ' + esc(tourIdFor(S.tournament.name)) + '</button></div>';
         }
-        /* Tournament segment (Info tab): conditional on the match kind.
-           Tournament match → the TOURNAMENT card with its View
-           Tournament button is shown under Match Info, exactly as in
-           the reference screenshot. Single Match → the card is removed
-           from view entirely (hidden + display:none), so the Info tab
-           carries nothing under Match Info at all. renderSbTeams
-           applies the same rule and fills in the card's summary
-           text. */
-        var tourCardEl = $('sbTourCtaCard');
-        if (tourCardEl){
-          var isTnMatch = S.matchKind === 'tournament';
-          tourCardEl.hidden = !isTnMatch;
-          tourCardEl.style.display = isTnMatch ? '' : 'none';
-        }
+        /* View Tournament bars (v231): at the head of the Summary
+           and Info tabs, shown only when the match ON SHOW is a
+           tournament match, and labelled with that match's own
+           tournament. The target is stashed from this same shown
+           state (S here is the live display state, an archived
+           match's state, or a match view's state — whichever is on
+           show), so the button always opens the tournament THIS
+           match belongs to, resolved from its own stamp — never
+           just whichever tournament happens to be current. A
+           Single Match shows no bar on either tab. */
+        var vtIsTn = S.matchKind === 'tournament' && S.tournament && !!(S.tournament.name || '').trim();
+        sbVtTarget = vtIsTn ? { tid: String(S.tournamentId || S.tournament.id || ''), tname: String(S.tournament.name || '') } : null;
+        [$('sbVtBarSummary'), $('sbVtBarInfo')].forEach(function(barEl){
+          if (!barEl) return;
+          barEl.hidden = !sbVtTarget;
+          barEl.style.display = sbVtTarget ? '' : 'none';
+          var nmEl = barEl.querySelector('.sb-vt-name');
+          if (nmEl) nmEl.textContent = sbVtTarget ? ('• ' + sbVtTarget.tname) : '';
+        });
         /* Summary tab: shown only for a finished match, filled from
            the same state as every other panel. */
         try { renderSummaryPanel(); } catch(e){}
-        /* Nothing else lives under Match Info: a Single Match shows
-           no further card at all, and a tournament match shows only
-           the Follow Tournament card above. (Past Matches keeps its
-           own entries — the Recent Matches landing and the History
+        /* Nothing else lives under Match Info: the tournament is
+           reached from the View Tournament bars at the head of the
+           Summary and Info tabs, and a Single Match shows nothing
+           tournament-related at all. (Past Matches keeps its own
+           entries — the Recent Matches landing and the History
            & Reports home — just not a card here.) */
       }
 
@@ -24159,16 +24204,13 @@
            routing and the Firebase auto-connect that run after it — the
            viewer link then sat on the home chooser in "Local Mode". */
         function step(fn){ try { fn(); } catch(e){} }
-        /* Tournament view mode (v226): if a remote state landed
-           while an archived tournament is being viewed by ID, the
-           adopted state's tournament is the real current one —
-           keep it as the saved current and put the viewed copy
-           back on screen, so the view never silently swaps to a
-           different tournament underneath the reader. */
-        if (tnViewCtx && S.tournament !== tnViewCtx.viewObj){
-          tnViewCtx.saved = S.tournament;
-          S.tournament = tnViewCtx.viewObj;
-        }
+        /* Tournament view mode (v226, resolver v231): if a remote
+           state landed while an archived tournament is being
+           viewed by ID, resolve the viewed tournament from the
+           new state — its own archive slot, by ID — so the page
+           never silently swaps to a different tournament, or keeps
+           a stale copy, underneath the reader. */
+        try { tnViewResolve(); } catch(e){}
         step(function(){ normalizeSquads(); normalizeStateShape(); syncPlayersFromInputsSilent(); });
         /* An open match view (another in-progress match, or a
            fixture, opened from the Recent Matches list) first
@@ -25170,7 +25212,39 @@
          never confused with the current one. Viewers get the same
          page read-only, exactly like the in-page tournament
          viewer, and never see any open/close prompt. */
-      var tnViewCtx = null;   /* { arcId, viewObj, saved, returnView, addedViewerCls } */
+      var tnViewCtx = null;   /* { arcId, viewObj, saved, returnView, addedViewerCls, arcHash } */
+      function tnViewSlotHash(entry){ try { return coldHashOf((entry && entry.data) || {}); } catch(e){ return ''; } }
+      /* The one resolver every tournament-page render goes through
+         (v231). While a tournament is open by ID, the page — the
+         locked head and every tab body alike — renders
+         tnViewCtx.viewObj and nothing else, so a name from one
+         tournament can never sit over another tournament's teams,
+         matches or points. Whenever the state underneath changes
+         (a Firebase library adoption, a state adopted from another
+         tab, a restore), the real current tournament is re-taken
+         from the NEW state as the saved one, and the viewed copy
+         is refreshed from the new state's own archive slot for the
+         SAME ID — the viewed tournament follows the server's copy
+         of itself as data lands, and is never swapped for, or
+         mixed with, another tournament. A slot whose content is
+         unchanged since the last resolve leaves the viewed copy
+         (and any edits in progress on it) untouched. */
+      function tnViewResolve(){
+        if (!tnViewCtx) return;
+        if (S.tournament !== tnViewCtx.viewObj && S.tournament !== tnViewCtx.saved) tnViewCtx.saved = S.tournament;
+        var entry = null;
+        tournamentsArchive().forEach(function(a){ if (a && a.id === tnViewCtx.arcId) entry = a; });
+        if (entry && entry.data){
+          var h = tnViewSlotHash(entry);
+          if (h && tnViewCtx.arcHash && h !== tnViewCtx.arcHash){
+            var fresh = deep(entry.data);
+            if (!fresh.id) fresh.id = entry.id;
+            tnViewCtx.viewObj = fresh;
+            tnViewCtx.arcHash = h;
+          }
+        }
+        S.tournament = tnViewCtx.viewObj;
+      }
       function openArchivedTournament(id){
         if (tnViewCtx && tnViewCtx.arcId === id){ setView('tournament'); return; }
         if (!tnViewCtx && S.tournament && S.tournament.id === id){ setView('tournament'); return; }
@@ -25178,13 +25252,30 @@
         var entry = null;
         arc.forEach(function(a){ if (a.id === id) entry = a; });
         if (!entry) return;
+        /* The server's confirmed copy of THIS tournament wins over
+           this device's stored copy once Firebase has answered
+           (v231): opening a tournament shows what the server holds
+           for that tournament — never the phone's older copy, and
+           never another tournament's data. This costs no extra
+           data: the library node is downloaded once per change
+           (see the split sync), so the confirmed copy is already
+           on the device; the local archive slot is refreshed from
+           it, and tnViewResolve keeps the open page following the
+           server's copy from then on. Before the server answers
+           (or offline), the device's own copy opens, exactly as
+           before. */
+        if (fbServerSeen && fbConfirmedState && Array.isArray(fbConfirmedState.tournamentsArchive)){
+          fbConfirmedState.tournamentsArchive.forEach(function(a){
+            if (a && a.id === id && a.data) entry.data = deep(a.data);
+          });
+        }
         var data = deep(entry.data || {});
         if (!data.id) data.id = entry.id;
         var ret = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'tournament') ? currentViewName : 'tournaments';
         if (!tnViewCtx){
-          tnViewCtx = { arcId: id, viewObj: data, saved: S.tournament, returnView: ret, addedViewerCls: false };
+          tnViewCtx = { arcId: id, viewObj: data, saved: S.tournament, returnView: ret, addedViewerCls: false, arcHash: tnViewSlotHash(entry) };
         } else {
-          tnViewCtx.arcId = id; tnViewCtx.viewObj = data;
+          tnViewCtx.arcId = id; tnViewCtx.viewObj = data; tnViewCtx.arcHash = tnViewSlotHash(entry);
         }
         S.tournament = tnViewCtx.viewObj;
         if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')){
@@ -25453,9 +25544,8 @@
             + '</div></div>';
         } else {
           html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="setView(\'tournament\')">'
-            + '<span><span class="tp-name">' + esc(tn.name || 'Current Tournament') + '</span>'
-            + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span>'
-            + '<span class="tp-badge">CURRENT</span></button>'
+            + '<span><span class="tp-name">' + esc(tn.name || 'Tournament') + '</span>'
+            + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span></button>'
             + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
             + '</div>';
         }
@@ -25465,8 +25555,7 @@
           var date = a.at ? fmtDMY(a.at) : '';
           return '<div class="tn-row"><button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
             + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
-            + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span>'
-            + '<span class="tp-open">Open →</span></button>'
+            + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span></button>'
             + (tnDeleteVisible(d.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteArchivedTournament(\'' + esc(a.id) + '\')" aria-label="Delete ' + esc(a.name || d.name || 'this tournament') + '">🗑 Delete</button>' : '')
             + '</div>';
         }).join('');
@@ -25590,7 +25679,7 @@
           if (tn && tn.present !== false && tournamentHasContent(tn)){
             var cName = tn.name || 'Current Tournament';
             if (tnHit(cName, [tournamentKeyOf(tn), tourIdFor(tn.name || '')])){
-              searchHits.tournaments.push({ current: true, name: cName, meta: ((tnViewCtx && tn === tnViewCtx.viewObj) ? 'Viewing now' : 'Current tournament') + ' • ' + (tn.teams || []).length + ((tn.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (tn.matches || []).length + ((tn.matches || []).length === 1 ? ' match' : ' matches') + ' completed • Tour ID ' + tourIdFor(tn.name || '') });
+              searchHits.tournaments.push({ current: true, name: cName, meta: ((tnViewCtx && tn === tnViewCtx.viewObj) ? 'Viewing now • ' : '') + (tn.teams || []).length + ((tn.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (tn.matches || []).length + ((tn.matches || []).length === 1 ? ' match' : ' matches') + ' completed • Tour ID ' + tourIdFor(tn.name || '') });
             }
           }
         } catch(e){}
