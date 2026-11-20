@@ -1320,6 +1320,14 @@
       .ml-group{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:14px 15px 1px}
       .ml-label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted);margin-bottom:6px}
       .ml-lab-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      /* The bold stage label that heads a tournament match card —
+         "• BBEPL-2 • Group-A • Match-1 •" on Recent Matches,
+         "• Group-A • Match-1 •" / "• FINAL •" in the tournament
+         Matches tab (see stageLabelHTML). One line, bold, in the
+         ink colour — it REPLACES the old venue line and the group
+         chip, and it is the only place the stage is named. */
+      .ml-stage{font-weight:800;font-size:13.5px;color:var(--ink);letter-spacing:.02em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .match-row .ml-stage{margin:2px 0 7px}
       .ml-live{flex:none;display:inline-flex;align-items:center;gap:5px;color:#d43a2f;font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
       .ml-live i{width:7px;height:7px;border-radius:50%;background:#d43a2f;flex:none;animation:blinkdot 1.6s infinite}
       .ml-line{display:flex;align-items:baseline;gap:16px;padding:2px 0;font-size:17.5px}
@@ -3837,7 +3845,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v219';
+      var APP_VERSION = 'v221';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14010,6 +14018,124 @@
         return '<div class="ml-label"><span class="ml-lab-text">' + esc(txt.join(' • ') || 'Match') + '</span>'
           + (live ? '<span class="ml-live"><i></i>Live</span>' : '') + '</div>';
       }
+      /* ---------- match stage labels (owner's format) ----------
+         A tournament match card is headed by ONE bold bullet
+         label naming the tournament and the stage — never the
+         ground, and never the stage twice:
+           Recent Matches:  • BBEPL-2 • Group-A • Match-1 •
+                            • BBEPL-2 • Quarter Final-1 •
+                            • BBEPL-2 • FINAL •
+           Matches tab:     • Group-A • Match-1 •   /   • FINAL •
+         A group match is its group (hyphenated, as the owner
+         writes it) plus its Match-N — N counted in playing order
+         among the league matches of that same group: saved results
+         in stored order, then the live match, then the fixtures.
+         A knockout match is its bracket label with the number
+         hyphenated on (Quarter-final 1 → Quarter Final-1); the
+         Final is simply FINAL, and a Final card carries no group
+         segment and no second Final marker anywhere below. */
+      function stageHyphen(s){ return String(s || '').trim().replace(/\s+/g, '-'); }
+      function bracketStageText(bm){
+        if (!bm) return '';
+        if (bm.isFinal || bm.stage === 'F') return 'FINAL';
+        var lab = String(bm.label || '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+        lab = lab.replace(/(^|\s)(\S)/g, function(mm, p, c){ return p + c.toUpperCase(); });
+        lab = lab.replace(/\s+(\d+)$/, '-$1');
+        return lab || String(bm.stage || '');
+      }
+      function matchIsKnockout(m){
+        if (!m) return false;
+        if (typeof m.bracketId === 'string' && m.bracketId) return true;
+        if (m.stage === 'F') return true;
+        return false;
+      }
+      function matchNumberInStage(m){
+        if (!m || matchIsKnockout(m)) return 0;
+        var tn = S.tournament;
+        if (!tn || !Array.isArray(tn.matches)) return 0;
+        function keyOf(x){ try { return matchGroupName(x) || ''; } catch(e){ return ''; } }
+        var gKey = keyOf(m);
+        var seq = [];
+        tn.matches.forEach(function(x){ if (x) seq.push(x); });
+        var lv = null;
+        try { lv = liveTournamentRecord(); } catch(e){}
+        var lvInSeq = false;
+        if (lv){
+          lvInSeq = seq.some(function(x){ return String(x.id) === String(lv.id); });
+          if (!lvInSeq) seq.push(lv);
+        }
+        (tn.fixtures || []).forEach(function(x){ if (x) seq.push(x); });
+        var n = 0, found = 0;
+        seq.forEach(function(x){
+          if (matchIsKnockout(x)) return;
+          if (keyOf(x) !== gKey) return;
+          n++;
+          if (x === m || (m.id != null && x.id != null && String(x.id) === String(m.id))) found = n;
+        });
+        if (found) return found;
+        /* Not in the sequence (a parked match's slice): it numbers
+           after the played and live league matches of its group. */
+        var played = 0;
+        tn.matches.forEach(function(x){ if (x && !matchIsKnockout(x) && keyOf(x) === gKey) played++; });
+        if (lv && !lvInSeq && !matchIsKnockout(lv) && keyOf(lv) === gKey) played++;
+        return played + 1;
+      }
+      /* The stage segments of one match (no tournament name):
+         ['FINAL'], ['Quarter Final-1'], ['Group-A','Match-1'],
+         ['Match-1'] for a groupless league match, [] when the
+         match carries no stage at all. */
+      function matchStageSegs(m){
+        if (!m) return [];
+        if (resultIsFinal(m)) return ['FINAL'];
+        if (typeof m.bracketId === 'string' && m.bracketId){
+          var bm = null;
+          try { bm = bracketMatchById(m.bracketId); } catch(e){}
+          var bt = bracketStageText(bm);
+          if (bt) return [bt];
+        }
+        if (m.stage === 'F') return ['FINAL'];
+        var g = null;
+        try { g = matchGroupName(m); } catch(e){}
+        var num = matchNumberInStage(m);
+        var segs = [];
+        if (g) segs.push(stageHyphen(g));
+        if (num) segs.push('Match-' + num);
+        return segs;
+      }
+      function stageLabelHTML(segs){
+        var clean = (segs || []).filter(function(s){ return !!String(s || '').trim(); });
+        if (!clean.length) return '';
+        return '<div class="ml-stage">• ' + clean.map(function(s){ return esc(s); }).join(' • ') + ' •</div>';
+      }
+      /* Recent Matches form: tournament name first, then the stage. */
+      function recentStageLabelHTML(m, tnName){
+        var segs = [];
+        if (tnName) segs.push(tnName);
+        return stageLabelHTML(segs.concat(matchStageSegs(m)));
+      }
+      /* A stage-shaped record for the match on the scoring pad or
+         for another in-progress match's slice: both carry their
+         bracket tag, group and teams under their own key names. */
+      function stageRecordFor(src){
+        return {
+          id: (src.matchId != null ? src.matchId : (src.id != null ? src.id : null)),
+          bracketId: src.bracketMatchId || src.bracketId || '',
+          group: src.matchGroup || src.group || '',
+          stage: src.stage || '',
+          innings: [{ battingTeam: src.teamA || '', bowlingTeam: src.teamB || '' }]
+        };
+      }
+      /* The Recent Matches label for the pad match itself: the
+         bold stage label for a tournament match (FINAL whenever
+         the live match is the Final, bracket or designated), the
+         old venue label for a Single Match. */
+      function liveRowLabelHTML(tnName){
+        if (!tnName) return mlLabel([S.venue, tnName], false);
+        var segs = [tnName];
+        if (liveMatchIsFinal()) segs.push('FINAL');
+        else segs = segs.concat(matchStageSegs(stageRecordFor(S)));
+        return stageLabelHTML(segs);
+      }
       /* The status pill at the top of a match row: red In Progress
          for a match being played, Completed for a finished match,
          Upcoming for a fixture. */
@@ -14094,7 +14220,7 @@
            exist, and Back from there resurfaced the ghost. */
         if (!(S.teamA && S.teamB)){
           return '<div class="ml-row">'
-            + mlLabel([S.venue, tnName], false)
+            + liveRowLabelHTML(tnName)
             + lines
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
@@ -14114,7 +14240,7 @@
             var awAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
             return '<div class="ml-row tap"' + mlTapAttrs('openCurrentMatch()', awAria) + '>'
               + mlPill(S.abandoned ? 'done' : 'live')
-              + mlLabel([S.venue, tnName], false)
+              + liveRowLabelHTML(tnName)
               + lines
               + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
               + '</div>';
@@ -14122,7 +14248,7 @@
           var finAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' — completed match';
           return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(S.matchId)) + ')', finAria) + '>'
             + mlPill('done')
-            + mlLabel([S.venue, tnName], false)
+            + liveRowLabelHTML(tnName)
             + lines
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
@@ -14130,7 +14256,7 @@
         var aria = 'Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
         return '<div class="ml-row tap"' + mlTapAttrs('openLiveMatch()', aria) + '>'
           + mlPill('live')
-          + mlLabel([S.venue, tnName], false)
+          + liveRowLabelHTML(tnName)
           + lines
           + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
@@ -14141,14 +14267,13 @@
         var res = matchResultText(m);
         var aria = 'View ' + (m.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (m.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + ' — completed match';
         return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', aria) + '>'
-          + mlPill('done') + mlLabel([m.venue, tnName], false) + lines
+          + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName) : mlLabel([m.venue, tnName], false)) + lines
           + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
       }
       function fixtureRowHTML(f, tnName){
         var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
         return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', aria) + '>'
-          + mlPill('up') + mlLabel([dmyLabel(f.label), tnName], false)
-          + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '')
+          + mlPill('up') + (tnName ? recentStageLabelHTML(f, tnName) : mlLabel([dmyLabel(f.label), tnName], false))
           + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
           + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
           + '</div>';
@@ -14174,7 +14299,7 @@
         var tnName = slice.matchKind === 'tournament' ? ((S.tournament && S.tournament.name) || '') : '';
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
         return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
-          + mlPill('live') + mlLabel([slice.venue, tnName], false) + lines
+          + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice)))) : mlLabel([slice.venue, tnName], false)) + lines
           + '<div class="ml-status muted">' + esc(status) + '</div></div>';
       }
       /* Live Matches is a viewer surface: it renders ONLY the
@@ -14826,6 +14951,7 @@
           var liveDone = (S.status === 'finished');
           out.push('<div class="match-row tap"' + mlTapAttrs('openTnLiveMatch()', 'Open the live match') + '>'
             + mlPill(liveDone ? 'done' : 'live')
+            + stageLabelHTML(matchStageSegs(lv))
             + tnVsTitleHTML(l0.battingTeam, l0.bowlingTeam)
             + tnInnLinesHTML(lv)
             + ((liveDone && lv.innings.length >= 2) ? '<div class="mr-result">' + esc(matchResultText(lv)) + '</div>' : '')
@@ -14850,9 +14976,9 @@
           out.push('<div class="match-row tap"' + mlTapAttrs('tnResultRowTap(' + fxIdArg(String(m.id)) + ',event)', 'Open match result') + '>'
             + mlPill('done')
             + title
-            + (mGrp ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(mGrp) + '</span></div>' : '')
+            + stageLabelHTML(matchStageSegs(m))
             + tnInnLinesHTML(m)
-            + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === finMatchId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div>'
+            + '<div class="mr-result">' + esc(matchResultText(m)) + '</div>'
             + '<div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>');
         });
         /* Upcoming fixtures. */
@@ -14863,8 +14989,8 @@
           out.push('<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '>'
             + mlPill('up')
             + tnVsTitleHTML(f.teamA, f.teamB)
-            + (fGrp ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(fGrp) + '</span></div>' : '')
-            + (f.label ? '<div class="note">' + esc(dmyLabel(f.label)) + '</div>' : '')
+            + stageLabelHTML(matchStageSegs(f))
+            + ((f.date || f.time) ? '<div class="note">' + esc([f.date ? fmtDateShort(f.date) : '', f.time || ''].filter(Boolean).join(' • ')) + '</div>' : '')
             + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
             + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>');
         });
@@ -14898,14 +15024,14 @@
           sbExtraHtml = extraStatsHTML();
           var dFix = dtn.fixtures.filter(function(f){ return !bkFixtureDecided(f); });
           sbFixHtml = dFix.length
-            ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(dmyLabel(f.label)) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
+            ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + stageLabelHTML(matchStageSegs(f)) + ((f.date || f.time) ? '<div class="note">' + esc([f.date ? fmtDateShort(f.date) : '', f.time || ''].filter(Boolean).join(' • ')) + '</div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
             : '<p class="note">No fixtures yet.</p>';
           var dFin = tournamentFinalResult();
           var dFinId = dFin ? dFin.match.id : null;
           sbMatchHtml = dtn.matches.length
             ? dtn.matches.slice().reverse().map(function(m){
                 var lines = (m.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
-                return '<div class="match-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', 'Open match result') + '>' + lines + '<div class="mr-result">' + esc(matchResultText(m)) + (m.id === dFinId ? '<span class="stat-cap">🏆 Final</span>' : '') + '</div></div>';
+                return '<div class="match-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', 'Open match result') + '>' + stageLabelHTML(matchStageSegs(m)) + lines + '<div class="mr-result">' + esc(matchResultText(m)) + '</div></div>';
               }).join('')
             : '<p class="note">No results yet.</p>';
         });
