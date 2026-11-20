@@ -3837,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v227';
+      var APP_VERSION = 'v229';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11365,6 +11365,31 @@
         try { repairHistoryInfoFields(); } catch(e){}
         try { repairOrphanedTournamentResults(); } catch(e){}
       }
+      /* Toss facts the owner supplied himself for matches whose
+         own records lost them (v228). The BBEPL-2 Final's history
+         entry was destroyed before its toss had been copied
+         anywhere else (see v227), so no surviving record carries
+         it; on 20/11/2026 the owner stated the fact himself —
+         BB POWER STRIKERS won the toss and chose to bat first —
+         and asked for it to be filled in. Keyed by Match ID, in
+         the app's own toss-sentence format (the exact sentence
+         applyToss writes), so the Info tab's Toss Won By /
+         Decided To rows and the Summary coin read it exactly
+         like a recorded toss. It only ever fills an EMPTY
+         tossInfo — a toss recorded by any surviving record of
+         the match always wins. */
+      var OWNER_SUPPLIED_TOSS = { '1795085103810': 'BB POWER STRIKERS won the toss and chose to bat.' };
+      function ownerSuppliedToss(id){ return OWNER_SUPPLIED_TOSS[String(id)] || ''; }
+      /* Match formats the owner supplied himself, under the same
+         rule (v229): the Final's format existed only in its lost
+         history entry too, and on 20/11/2026 the owner stated it
+         himself — Custom (the played match was 15 overs a side,
+         which no preset names) — and asked for it to be filled
+         in. Keyed by Match ID; fills only an EMPTY matchFormat,
+         in the permanent backfill, the orphaned-entry rebuild
+         and the display merge, exactly like the toss above. */
+      var OWNER_SUPPLIED_FORMAT = { '1795085103810': 'Custom' };
+      function ownerSuppliedFormat(id){ return OWNER_SUPPLIED_FORMAT[String(id)] || ''; }
       /* Backfill of the Match Info fields (v226): permanent history
          entries filed before those fields existed — the BBEPL-2
          Final among them — carry no tournament name, season, ball
@@ -11423,6 +11448,12 @@
             fill('tossInfo', S.tossInfo || '');
             if (e.matchKind === 'tournament'){ try { fill('tournamentName', liveMatchTournamentName()); } catch(err){} }
           }
+          /* A toss the owner supplied himself for a match whose
+             own records lost it (v228) — his stated fact, in the
+             app's own toss-sentence format. Fills only an empty
+             tossInfo; a recorded toss is never overwritten. */
+          fill('tossInfo', ownerSuppliedToss(id));
+          fill('matchFormat', ownerSuppliedFormat(id));
           /* Date & time fall back to the entry's own recorded
              finish time — the day the match was played and the
              moment it ended (for the BBEPL-2 Final, 20/11/2026
@@ -11464,7 +11495,9 @@
          (innings, players, POTM, result, venue, finish time) and
          its holding tournament (name, season, ball type, owner).
          Format and toss are carried only when a surviving record
-         of the match itself carries them — never invented; the
+         of the match itself carries them — never invented —
+         except what the owner has himself supplied for the match
+         (OWNER_SUPPLIED_TOSS, v228; OWNER_SUPPLIED_FORMAT, v229); the
          date & time fall back to the recorded finish time, the
          same convention repairHistoryInfoFields uses. The
          tombstone is then lifted on Firebase, so the restored
@@ -11501,10 +11534,10 @@
               tournamentName: (tn.name || '').trim(),
               tournamentId: rec.tournamentId || tournamentKeyOf(tn),
               matchKind: 'tournament',
-              tossInfo: rec.tossInfo || '',
+              tossInfo: rec.tossInfo || ownerSuppliedToss(id) || '',
               group: rec.group || '',
               season: tn.season || '',
-              matchFormat: rec.matchFormat || '', ballType: rec.ballType || tn.ballType || '',
+              matchFormat: rec.matchFormat || ownerSuppliedFormat(id) || '', ballType: rec.ballType || tn.ballType || '',
               matchDate: rec.matchDate || '', matchTime: rec.matchTime || '',
               scorerEmailHash: rec.scorerEmailHash || '',
               oversLimit: (typeof rec.oversLimit === 'number') ? rec.oversLimit : null,
@@ -18879,6 +18912,7 @@
           fill('group', rec.group || '');
           if (!m.bracketId && rec.bracketId) m.bracketId = rec.bracketId;
           if (!m.stage && rec.stage) m.stage = rec.stage;
+          fill('tossInfo', rec.tossInfo || '');
           fill('resultText', rec.resultText || '');
           fill('potmName', rec.potmName || '');
           fill('potmTeam', rec.potmTeam || '');
@@ -18915,6 +18949,12 @@
           fill('matchTime', S.matchTime || '');
           fill('tossInfo', S.tossInfo || '');
         }
+        /* A toss the owner supplied himself for a match whose own
+           records lost it (v228) — read into the display on every
+           device at once, ahead of the owner-side repair
+           publishing it into the permanent entry. */
+        fill('tossInfo', ownerSuppliedToss(id));
+        fill('matchFormat', ownerSuppliedFormat(id));
         /* Team names from the innings when the record omits them
            (the same derivation openResultMatch has always used). */
         if (m.innings && m.innings.length){
