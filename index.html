@@ -3837,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v222';
+      var APP_VERSION = 'v224';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -3960,6 +3960,19 @@
           superOver: null,
           matchId: Date.now(),
           archivedMatchId: null,
+          /* The ONE tournament this live match belongs to, stamped
+             when the match is started from that tournament (its id,
+             or the Tour ID derived from its name — the same key the
+             saved result will carry). '' for a Single Match, and for
+             a live match started before stamping existed. The live
+             state outlives the tournament it was played in — it is
+             still sitting there, finished, when the NEXT tournament
+             is created — so tournament pages count the live match
+             ONLY when this stamp names the tournament being viewed
+             (see liveTournamentRecord). Without the stamp check, a
+             previous tournament's Final leaked its Top Players and
+             boundary counts into a brand-new tournament. */
+          tournamentId: '',
           /* Ownership: the Google account (Firebase Auth UID) that
              created this match is its admin — only that signed-in
              account can score, edit or delete it; everyone else is
@@ -4299,7 +4312,7 @@
          ever dropped: a split write always lands the library BEFORE
          the first hot-only write replaces liveMatch, and a denied
          library write leaves liveMatch untouched. */
-      var HOT_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsEndReady','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName','updatedAt'];
+      var HOT_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsEndReady','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName','updatedAt'];
       var COLD_KEYS = ['nicknames','players','playerIds','teamRegistry','teamLogos','singleFixtures','pausedMatches','lastFinishedSingle','tournamentsArchive','myTeams','tournament'];
       var fbLibRef = null;      /* the liveLibrary node */
       var fbHotState = null;    /* the last liveMatch payload Firebase is known to hold (hot-only, or a legacy whole state) */
@@ -6040,6 +6053,10 @@
            from, copied onto the saved tournament result as its
            group, exactly like bracketMatchId above. */
         if (typeof S.matchGroup !== 'string') S.matchGroup = '';
+        /* The tournament this live match belongs to, stamped at
+           match start ('' when it is not that tournament's match —
+           see freshState). Older states carry no stamp at all. */
+        if (typeof S.tournamentId !== 'string') S.tournamentId = '';
         /* Anything not explicitly a tournament match is a Single
            Match — the safe default, so an older state can never leak
            a single match into a tournament. */
@@ -8041,6 +8058,18 @@
            READ (above, via squadForMatch) to load the players. */
         S.matchKind = (pendingMatchKind === 'tournament') ? 'tournament' : 'single';
         pendingMatchKind = null;
+        /* Stamp the match with the ONE tournament it belongs to —
+           the same key its saved result will carry — so every
+           tournament page can tell this live match apart from any
+           other tournament's. The live state survives the
+           tournament it was played in (creating the next
+           tournament does not clear it), so without the stamp a
+           finished match would feed the statistics of whatever
+           tournament is opened afterwards. A Single Match is
+           stamped with nothing. */
+        S.tournamentId = (S.matchKind === 'tournament' && S.tournament)
+          ? (S.tournament.id || (S.tournament.name ? tourIdFor(S.tournament.name) : ''))
+          : '';
         if (S.matchKind === 'tournament'){
           ensureTournamentTeam(S.teamA); ensureTournamentTeam(S.teamB);
           /* The tournament squads are NOT seeded from the match
@@ -11172,6 +11201,72 @@
       function liveTournamentRecord(){
         if (!S || !S.current) return null;
         if (S.matchKind !== 'tournament') return null;
+        /* The live state outlives the tournament it was played
+           in: a finished match is still sitting there when the
+           NEXT tournament is created and opened, and creating a
+           tournament does not clear it. The record therefore
+           belongs to a tournament page ONLY when the stamp the
+           match was started with names the tournament being
+           viewed — its id, or the Tour ID derived from its name
+           (a tournament can gain its id after the match was
+           stamped, so either form of the key counts). A live
+           match with no stamp at all (started before stamping
+           existed, e.g. a previous tournament's Final still
+           sitting in the live state) belongs to NO tournament
+           page — counting it everywhere is exactly how that
+           Final's Top Players and boundary counts once appeared
+           inside a brand-new tournament. Its figures return the
+           moment the match is filed as a saved result of its own
+           tournament, which the saved-results path counts as
+           before. */
+        var stamp = (typeof S.tournamentId === 'string') ? S.tournamentId : '';
+        if (!stamp) return null;
+        var tnNow = S.tournament;
+        if (!tnNow) return null;
+        var stampOk = !!((tnNow.id && stamp === tnNow.id)
+          || (tnNow.name && stamp === tourIdFor(tnNow.name)));
+        if (!stampOk) return null;
+        /* A word on "Completed": it is ONLY a display label — the
+           pill the Recent Matches list draws over a finished match.
+           S.status has exactly three values ('live', 'inningsBreak',
+           'finished'); there is NO 'Completed' status value, and
+           nothing in the code ever sets one. This statistics path
+           therefore never keys off status wording: it keys off
+           (1) the match still occupying the live slot (S / the
+           Firebase liveMatch record), (2) the tournament stamp
+           checked above, and (3) whether the match has been FILED
+           as a saved result. finishMatch() files the result but
+           leaves the match sitting in the live slot, so a finished
+           match keeps feeding statistics until its saved copy steps
+           in for it. The saved-copy check further down only covers
+           the tournament currently open; the guard here is wider:
+           once a finished match is filed ANYWHERE — in any
+           tournament's saved results (the open one or an archived
+           one) or in the permanent match history (HIST) — its live
+           record is withdrawn everywhere, so its figures can never
+           be counted twice or leak onto another tournament's page.
+           An unfinished live match is untouched by this guard: it
+           keeps feeding its own tournament's live statistics ball
+           by ball, exactly as before. (The Recent Matches list and
+           the scoreboard-open path are separate code and DO read
+           S.status === 'finished' directly; they are unchanged.) */
+        if (S.status === 'finished'){
+          var fmid = S.matchId || S.updatedAt || 1;
+          var filed = false;
+          function filedIn(list){
+            (list || []).forEach(function(m){ if (m && String(m.id) === String(fmid)) filed = true; });
+          }
+          filedIn(tnNow.matches);
+          if (!filed){
+            try {
+              tournamentsArchive().forEach(function(a){ if (!filed) filedIn(a && a.data && a.data.matches); });
+            } catch(e){}
+          }
+          if (!filed){
+            try { if (typeof HIST !== 'undefined' && HIST && HIST[String(fmid)]) filed = true; } catch(e){}
+          }
+          if (filed) return null;
+        }
         if (S.abandoned) return null;
         var prev = S.prevInnings, cur = S.current, decided = (S.status === 'finished');
         if (superOverActive() && S.superOver){
@@ -23574,7 +23669,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
