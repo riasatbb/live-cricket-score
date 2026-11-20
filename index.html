@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141c17" />
     <link rel="icon" href="data:," />
     <title>CricCast — Live Cricket Score</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -83,6 +85,15 @@
         --red:#c0392b; --red-bg:#fdecea; --blue:#175d8f; --chip:#eef3ee;
         --shadow:0 10px 30px rgba(14,50,35,.10);
         --radius:14px;
+        /* Device safe areas: with viewport-fit=cover the WebView in
+           the Android app draws edge-to-edge, UNDER the status bar
+           at the top and the gesture bar at the bottom. These are
+           the system-reported clearances; the safe-area block at
+           the end of this stylesheet spends them wherever content
+           can reach a screen edge. They are 0 in a normal desktop
+           or phone browser, so nothing moves there. */
+        --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+        --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
       }
       @media (prefers-color-scheme: dark){
         :root{
@@ -1104,7 +1115,7 @@
       .fxg-team.sel{border-color:var(--green);background:var(--green);color:#fff}
       .bk-idchip.fx{margin-left:0}
 
-      /* ---------- tournament groups (Matches tab) ---------- */
+      /* ---------- tournament groups (Teams tab) ---------- */
       .grp-chip{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--green);border:1px solid var(--line);border-radius:999px;padding:1px 8px;background:var(--surface);white-space:nowrap}
       .grp-teamrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line)}
       .grp-teamrow:last-child{border-bottom:none}
@@ -1260,9 +1271,9 @@
       .lead-line .pl-link{font-size:13.5px}
       /* Team Page squad, grouped by playing role (reference layout):
          a round photo / initials avatar, the player's name with its
-         (C) / (VC) / (Wk) suffix, and the jersey number at the right.
+         (C) / (VC) / (WK) suffix, and the jersey number at the right.
          Tapping the name opens the player's maintenance panel inline
-         — career Matches / Runs / Wickets, the C · VC · Wk pickers
+         — career Matches / Runs / Wickets, the C · VC · WK pickers
          and View Profile — right under the row. */
       .tp-group{margin-top:14px}
       .tp-group:first-child{margin-top:2px}
@@ -1719,8 +1730,8 @@
          then a centred "Playing XI" bar and the two XI columns
          side by side, then a "Bench" bar and columns when a squad
          runs past eleven. Each player row carries the round photo
-         (initials when no photo is set), the name with its (c) /
-         (vc) / (wk) suffix on ONE line in regular weight — a long
+         (initials when no photo is set), the name with its (C) /
+         (VC) / (WK) suffix on ONE line in regular weight — a long
          name auto-shrinks to fit (see fitCbxNames) instead of
          wrapping — and the playing role in small type underneath.
          No jersey number and no ↑ / ↓ markers here. A player who
@@ -2434,6 +2445,32 @@
          always-dark band — the same bright green as the other
          dark-panel headings. */
       .cbx-sec{color:#4cc38a}
+
+      /* ---------- safe areas: keep content out of the status bar ----------
+         The app header used to be drawn UNDER the Android status
+         bar in the edge-to-edge APK (the status-bar clock sat on
+         top of "CricCast"): the page opts into the full screen
+         with viewport-fit=cover but never spent the safe-area
+         insets. The header keeps its own background across the
+         inset strip — no blank bar is added — and every screen
+         whose header is hidden gets the same clearance at the top
+         of <main> instead, so no page can slide under the status
+         bar. The two full-height views (tournament, viewer Recent
+         Matches) shrink by the insets they now sit inside, and the
+         bottom-anchored pieces (toast, scoring popup, modal
+         sheets) lift by the gesture-bar inset. On screens without
+         insets every value below reduces to the old number. */
+      .topbar{padding-top:var(--sat);padding-left:var(--sal);padding-right:var(--sar)}
+      body:not(.home-chrome) main{padding-top:calc(10px + var(--sat))}
+      body.viewer-mode main,body.scoreboard-clean main{padding-top:calc(10px + var(--sat))}
+      main{padding-bottom:calc(34px + var(--sab))}
+      body.scoreboard-clean main{padding-bottom:calc(34px + var(--sab))}
+      @media (min-width:700px){body.scoreboard-clean main{padding-top:calc(14px + var(--sat));padding-bottom:calc(28px + var(--sab))}}
+      #view-tournament.show{height:calc(100vh - 44px - var(--sat) - var(--sab));height:calc(100dvh - 44px - var(--sat) - var(--sab))}
+      body.viewer-mode #view-live.show{height:calc(100vh - 44px - var(--sat) - var(--sab));height:calc(100dvh - 44px - var(--sat) - var(--sab))}
+      .toast{bottom:calc(22px + var(--sab))}
+      #view-scorer>.card.pop{bottom:calc(10px + var(--sab))}
+      .modal{padding-bottom:calc(18px + var(--sab))}
     </style>
   </head>
   <body>
@@ -2606,7 +2643,7 @@
           </div>
           <div style="margin-top:18px"><label for="omVenue">Venue</label><input id="omVenue" placeholder="e.g. Sheikh Abu Naser Stadium" /></div>
           <div class="grid2" style="margin-top:12px">
-            <div><label for="omDate">Date</label><input id="omDate" type="date" /></div>
+            <div><label for="omDate">Date</label><input id="omDate" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" /></div>
             <div><label for="omTime">Time</label><input id="omTime" type="time" /></div>
           </div>
           <div style="margin-top:12px">
@@ -3143,7 +3180,15 @@
 
           <!-- TEAMS -->
           <div class="tn-panel" id="tnPanel-teams">
-            <div class="card">
+            <div class="card" id="tnGroupsCard">
+              <h2>Groups</h2>
+              <div class="grp-actions" style="margin-top:12px">
+                <label for="grpNewName">New group name</label>
+                <div class="rowflex"><input id="grpNewName" placeholder="e.g. Group A" style="flex:1;min-width:0" /><button class="btn sm" onclick="createGroup()">Create Group</button></div>
+              </div>
+              <div id="tnGroups" style="margin-top:12px"></div>
+            </div>
+            <div class="card" id="tnTeamsCard">
               <h2>Teams</h2>
               <div class="rowflex names-row" style="margin-bottom:14px">
                 <div class="ac-wrap grow"><textarea id="tnNewTeam" data-tac class="namebox" rows="1" placeholder="Team names — one per line"></textarea></div>
@@ -3155,14 +3200,6 @@
 
           <!-- MATCHES -->
           <div class="tn-panel" id="tnPanel-matches">
-            <div class="card" id="tnGroupsCard">
-              <h2>Groups</h2>
-              <div class="grp-actions" style="margin-top:12px">
-                <label for="grpNewName">New group name</label>
-                <div class="rowflex"><input id="grpNewName" placeholder="e.g. Group A" style="flex:1;min-width:0" /><button class="btn sm" onclick="createGroup()">Create Group</button></div>
-              </div>
-              <div id="tnGroups" style="margin-top:12px"></div>
-            </div>
             <div class="card"><h2>Matches</h2><div id="tnFixtures"></div></div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Add Fixture</button>
@@ -3183,7 +3220,7 @@
               <div style="margin-top:10px"><label>Teams</label><div class="fxg-teams" id="fxgTeams"></div>
               <div class="rowflex" style="margin-top:8px"><button type="button" class="btn ghost sm" onclick="fxGenSelectAll()">Select All</button><button type="button" class="btn ghost sm" onclick="fxGenClearSel()">Clear</button><span class="note" id="fxgCount"></span></div></div>
               <div class="grid2" style="margin-top:12px">
-                <div><label for="fxgDate">Start date — Round 1</label><input id="fxgDate" type="date" /></div>
+                <div><label for="fxgDate">Start date — Round 1</label><input id="fxgDate" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" /></div>
                 <div><label for="fxgVenue">Venue</label><input id="fxgVenue" placeholder="Venue for every fixture" /></div>
               </div>
               <div class="rowflex" style="margin-top:12px"><button class="btn gold" onclick="generateRoundRobin()">Generate Fixtures</button></div>
@@ -3283,11 +3320,11 @@
             <div class="tne-dates">
               <div class="tne-field">
                 <label for="tneStart">Start Date</label>
-                <input id="tneStart" type="date" />
+                <input id="tneStart" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" />
               </div>
               <div class="tne-field">
                 <label for="tneEnd">End Date</label>
-                <input id="tneEnd" type="date" />
+                <input id="tneEnd" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" />
               </div>
             </div>
             <div class="tne-field">
@@ -3586,7 +3623,7 @@
         </div>
         <p class="sub" id="bkSchedTeams" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
         <div class="grid2" style="margin-top:12px">
-          <div><label for="bkSchedDate">Date</label><input id="bkSchedDate" type="date" /></div>
+          <div><label for="bkSchedDate">Date</label><input id="bkSchedDate" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" /></div>
           <div><label for="bkSchedTime">Time</label><input id="bkSchedTime" type="time" /></div>
         </div>
         <div style="margin-top:12px"><label for="bkSchedVenue">Venue</label><input id="bkSchedVenue" placeholder="e.g. KU Playground" /></div>
@@ -3690,7 +3727,7 @@
           <div><label for="heVenue">Venue</label><input id="heVenue" placeholder="e.g. KU Playground" /></div>
           <div><label for="heTournament">Tournament name</label><input id="heTournament" placeholder="Leave blank for a Single Match" /></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div><label for="heDate">Match date</label><input id="heDate" type="date" /></div>
+            <div><label for="heDate">Match date</label><input id="heDate" type="text" inputmode="numeric" autocomplete="off" placeholder="dd/mm/yyyy" /></div>
             <div><label for="heTime">Match time</label><input id="heTime" type="time" /></div>
           </div>
           <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /></div>
@@ -3800,7 +3837,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v214';
+      var APP_VERSION = 'v219';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8224,9 +8261,9 @@
         S.status='finished';
         var inn=S.current, t=target(), txt='';
         if (S.inningsNo===2 && t){
-          if (inn.runs >= t){ var wk=wicketsLimit()-inn.wickets; txt = inn.battingTeam + ' won by ' + wicketW(wk) + '. 🏆'; }
+          if (inn.runs >= t){ var wk=wicketsLimit()-inn.wickets; txt = inn.battingTeam + ' won by ' + wicketW(wk) + '.'; }
           else if (inn.runs === t-1){ txt = 'Match drawn / tied.'; }
-          else { txt = S.prevInnings.battingTeam + ' won by ' + runW((t-1)-inn.runs) + '. 🏆'; }
+          else { txt = S.prevInnings.battingTeam + ' won by ' + runW((t-1)-inn.runs) + '.'; }
         } else { txt = 'Match finished — ' + inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets + '.'; }
         S.resultText = txt;
         if (auto){
@@ -8384,7 +8421,7 @@
            (no separate Finish Match tap is owed). */
         S.awaitingFinish = false;
         S.resultText = winner
-          ? ('Match tied — ' + so.resultText + ' 🏆')
+          ? ('Match tied — ' + so.resultText)
           : 'Match tied — the Super Over was tied too.';
         commit(auto ? 'Super Over finished: ' + so.resultText : so.resultText);
         try { archiveFinishedMatch(); } catch(e){}
@@ -9063,7 +9100,7 @@
            tournament each keep their own. */
         S.tournament.leadership = normLeadershipArr(S.tournament.leadership);
         /* Groups: [{id, name, teams:[team names]}]. NO group exists
-           until the controller creates one on the Matches tab —
+           until the controller creates one on the Teams tab —
            nothing is pre-made or seeded. A group only holds teams
            that are in the tournament (teams enter on the Teams tab
            first), and a team sits in at most one group — the first
@@ -9266,7 +9303,7 @@
       }
       /* ---------- tournament groups ----------
          A tournament no longer has to run as one single group.
-         The controller creates groups on the Fixtures (Matches)
+         The controller creates groups on the Teams
          tab — NO group exists beforehand, and a group can be
          named anything (Group A, Group B, Pool 1…). Only after a
          group exists are teams put into it, and the teams offered
@@ -9278,7 +9315,7 @@
          bracket seeds from the group standings (group winners
          first, then runners-up…). A tournament with no groups
          behaves exactly as it always did: one table, one league. */
-      var tnGroupOpenId = null; /* the group whose own page is open inside the Matches tab */
+      var tnGroupOpenId = null; /* the group whose own page is open inside the Teams tab */
       var grpPickValue = '';    /* the team picked in the open group's add-team dropdown */
       var fxGenGroup = '';      /* the Auto Fixture Generator's group ('' = all teams) */
       function rawGroups(){
@@ -9435,7 +9472,7 @@
             toast(nm + ' deleted — its teams are ungrouped now');
           });
       }
-      /* The Matches tab's Groups card: the list of groups, or —
+      /* The Teams tab's Groups card: the list of groups, or —
          when one is opened — that group's own page (its teams,
          the add-team dropdown, its points table, rename & delete).
          Tapping a group goes INTO its page (🔙 at the top of the
@@ -9842,14 +9879,60 @@
         if (a.runs > b.runs) return a.battingTeam;
         return 'Tie';
       }
+      /* The 🏆 belongs to the tournament Final ONLY, and it LEADS
+         the result line ("🏆 BB YOUNG BLOODS won by 7 wickets.") —
+         never trails it, and never appears on any other match's
+         result (owner's rule). A result record is the Final when it
+         carries the Final designation (stage 'F', set on a saved
+         result in a bracket-less tournament) or when it is the
+         knockout bracket's own Final (its bracketId is the bracket
+         Final's ID). Result text recorded before this rule carried
+         a trailing 🏆 on EVERY decisive match; matchResultText
+         strips every 🏆 from the text and re-adds the single
+         leading one for the Final alone, so old and new records
+         alike render by the rule. */
+      function resultIsFinal(m){
+        if (!m) return false;
+        if (m.stage === 'F') return true;
+        if (m.bracketId){
+          var bf = null;
+          try { bf = bracketFinalMatch(); } catch(e){}
+          if (bf && m.bracketId === bf.id) return true;
+        }
+        return false;
+      }
+      /* The same question for the match on the scoring pad (or the
+         one a scoreboard is showing): its own bracket slot, or the
+         saved tournament result that carries its Final designation. */
+      function liveMatchIsFinal(){
+        if (!S || S.matchKind !== 'tournament') return false;
+        if (S.bracketMatchId){
+          var bf = null;
+          try { bf = bracketFinalMatch(); } catch(e){}
+          if (bf && bf.id === S.bracketMatchId) return true;
+        }
+        var mid = (S.archivedMatchId != null) ? S.archivedMatchId : S.matchId;
+        if (mid != null && S.tournament && Array.isArray(S.tournament.matches)){
+          var rec = null, fin = null;
+          S.tournament.matches.forEach(function(m){ if (m && String(m.id) === String(mid)) rec = m; });
+          if (rec && resultIsFinal(rec)) return true;
+          try { fin = tournamentFinalResult(); } catch(e){}
+          if (fin && fin.match && String(fin.match.id) === String(mid)) return true;
+        }
+        return false;
+      }
       function matchResultText(match){
-        if (match.resultText) return fixResultText(match.resultText);
-        if (match.superOver && match.superOver.winner && match.superOver.resultText) return asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
-        if (!match.innings || match.innings.length < 2) return '';
-        var a = match.innings[0], b = match.innings[1];
-        if (b.runs > a.runs) return b.battingTeam + ' won by ' + wicketW((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + '.';
-        if (a.runs > b.runs) return a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
-        return 'Match tied.';
+        var txt = '';
+        if (match.resultText) txt = fixResultText(String(match.resultText).replace(/🏆/g, ''));
+        else if (match.superOver && match.superOver.winner && match.superOver.resultText) txt = asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
+        else if (match.innings && match.innings.length >= 2){
+          var a = match.innings[0], b = match.innings[1];
+          if (b.runs > a.runs) txt = b.battingTeam + ' won by ' + wicketW((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + '.';
+          else if (a.runs > b.runs) txt = a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
+          else txt = 'Match tied.';
+        }
+        if (txt && resultIsFinal(match)) txt = '🏆 ' + txt;
+        return txt;
       }
       /* The silent core of saving this match's result into the
          tournament: builds the result record from the live state and
@@ -11161,6 +11244,21 @@
         S.tournament.teams.forEach(function(n){ rowFor(n); });
         tournamentStatMatches().forEach(function(m){
           if (!m.innings || m.innings.length < 2) return;
+          /* Knockout matches never count in any points table —
+             the table is the group stage only. A result is a
+             knockout match when it was played from the knockout
+             bracket (it carries the bracket match's BK- ID as
+             bracketId — the live record carries it too) or when
+             it is the designated Final of a bracket-less
+             tournament (stage 'F'). A knockout between two teams
+             of the same group would otherwise pass the group
+             filter below through matchGroupName and add a match,
+             a win/loss and NRR runs to that group's table. The
+             match still counts everywhere else — player
+             statistics, records, the podium — only the table
+             skips it. */
+          if (m.bracketId) return;
+          if (m.stage === 'F') return;
           if (filter){
             var mg = matchGroupName(m);
             if (filter.group){ if (mg !== filter.group) return; }
@@ -11861,10 +11959,10 @@
         });
         document.querySelectorAll('.tn-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tntab') === tab); });
         if (tab === 'teams'){ try { renderTnTeamsGallery(); } catch(e){} }
-        /* Leaving the Matches tab also leaves any open group page;
-           coming back to Matches re-renders the Groups card. */
-        if (tab !== 'matches' && tnGroupOpenId){ tnGroupOpenId = null; grpPickValue = ''; }
-        if (tab === 'matches'){ try { renderTnGroups(); } catch(e){} }
+        /* Leaving the Teams tab also leaves any open group page;
+           coming back to Teams re-renders the Groups card. */
+        if (tab !== 'teams' && tnGroupOpenId){ tnGroupOpenId = null; grpPickValue = ''; }
+        if (tab === 'teams'){ try { renderTnGroups(); } catch(e){} }
         /* A tab switch is a screen change too: push it, so system
            Back returns to the previous tournament tab. */
         if (navInitDone && !navFromPop && currentViewName === 'tournament'){
@@ -11890,7 +11988,7 @@
          a player Captain clears them as Vice-Captain and vice
          versa), but the Wicket-keeper role is independent: the
          Captain or the Vice-Captain may ALSO be the Wicket-keeper,
-         shown beside the name as (C) (Wk) or (VC) (Wk). Removing a
+         shown beside the name as (C) (WK) or (VC) (WK). Removing a
          player from a squad clears their roles with it, and a
          rename carries the roles to the new name. */
       var LEAD_ROLES = [['c', 'Captain', 'C'], ['vc', 'Vice-Captain', 'VC'], ['wk', 'Wicket-keeper', 'WK']];
@@ -12004,7 +12102,7 @@
         if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
         /* Ownership decides what is SHOWN, not just what works: the
            add-players box, the logo badge control, the remove-team
-           trash icon, the per-player trash and the C / VC / Wk panel render
+           trash icon, the per-player trash and the C / VC / WK panel render
            only for the account that owns this data — the admin who
            created the tournament / teams, signed in with that same
            Google account. A guest, or any other signed-in account,
@@ -12466,9 +12564,9 @@
         if (fx.length){
           h += fx.map(function(f){
             var metaBits = [];
-            if (f.label) metaBits.push(f.label);
+            if (f.label) metaBits.push(dmyLabel(f.label));
             if (f.stage) metaBits.push(f.stage);
-            if (f.matchDate || f.date) metaBits.push(f.matchDate || f.date);
+            if (f.matchDate || f.date) metaBits.push(fmtDateShort(f.matchDate || f.date));
             if (f.matchTime) metaBits.push(f.matchTime);
             if (f.venue) metaBits.push(f.venue);
             return '<div class="tp-sched"><span class="tp-sched-badges">' + teamBadgeHTML(f.teamA, 0) + teamBadgeHTML(f.teamB, 1) + '</span><span class="tp-sched-main"><b>' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</b>' + (metaBits.length ? '<span>' + esc(metaBits.join(' • ')) + '</span>' : '') + '</span></div>';
@@ -12485,7 +12583,7 @@
         var d = profileDataFor(team, p, '');
         var pid = d.pid || lookupPlayerId(team, p);
         var sfx = '';
-        LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx += ' <span class="tp-sfx ' + r[0] + '">(' + (r[0] === 'wk' ? 'Wk' : r[2]) + ')</span>'; });
+        LEAD_ROLES.forEach(function(r){ if (L[r[0]] === p) sfx += ' <span class="tp-sfx ' + r[0] + '">(' + r[2] + ')</span>'; });
         var open = editable && (tpOpenName === p);
         var row = '<div class="tp-prow' + (open ? ' open' : '') + '">'
           + '<span class="tp-ava">' + (d.photo ? '<img src="' + esc(d.photo) + '" alt="" loading="lazy" />' : esc(initialsOf(p))) + '</span>'
@@ -12509,7 +12607,7 @@
             + '<div class="tp-panel-actions">'
             + LEAD_ROLES.map(function(r){
                 var on = L[r[0]] === p;
-                return '<button type="button" class="tp-rolebtn' + (on ? ' on-' + r[0] : '') + '" onclick="tpToggleLead(\'' + r[0] + '\',' + pi + ')" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? ('Remove ' + r[1] + ' from ' + esc(p)) : ('Make ' + esc(p) + ' the ' + r[1])) + '">' + (r[0] === 'wk' ? 'Wk' : r[2]) + '</button>';
+                return '<button type="button" class="tp-rolebtn' + (on ? ' on-' + r[0] : '') + '" onclick="tpToggleLead(\'' + r[0] + '\',' + pi + ')" aria-pressed="' + (on ? 'true' : 'false') + '" title="' + (on ? ('Remove ' + r[1] + ' from ' + esc(p)) : ('Make ' + esc(p) + ' the ' + r[1])) + '">' + r[2] + '</button>';
               }).join('')
             + '<button type="button" class="btn ghost sm tp-viewbtn" onclick="tpViewProfile(' + pi + ')">View Profile</button>'
             + '</div>'
@@ -12561,8 +12659,8 @@
       }
       function tpMatchCardHTML(m){
         var date = '';
-        if (m.at) date = new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        else if (m.matchDate) date = String(m.matchDate);
+        if (m.at) date = fmtDMY(m.at);
+        else if (m.matchDate) date = fmtDateShort(m.matchDate);
         var fmt = String(m.matchFormat || '').trim();
         var head = (m.stage ? m.stage : (m.tournamentName ? 'Tournament Match' : 'Open Match'))
           + (fmt && fmt !== 'Other' ? ', ' + pfFmtShort(fmt) : '') + (date ? ', ' + date : '');
@@ -13001,7 +13099,7 @@
         tpOpenName = (tpOpenName === name) ? null : name;
         renderTeamPage();
       }
-      /* The round C / VC / Wk buttons in the panel: tapping assigns
+      /* The round C / VC / WK buttons in the panel: tapping assigns
          the role to this player (setLeadershipRole also takes it
          off whoever held it before; for this player it only clears
          the clashing C / VC counterpart, so C+WK and VC+WK combos
@@ -13555,10 +13653,10 @@
         if (!m) return '';
         var mo = parseInt(m[2], 10);
         if (mo < 1 || mo > 12) return '';
-        return m[3] + ' ' + TN_MONTHS[mo - 1] + ' ' + m[1];
+        return m[3] + '/' + m[2] + '/' + m[1];
       }
       /* The dates line for the Home tab: the structured start / end
-         dates when they are set ("03 Apr 2026 - 04 Apr 2026"), else
+         dates when they are set ("03/04/2026 - 04/04/2026"), else
          the older free-text dates line, else nothing. Saving Edit
          Info composes the free-text line from the structured dates
          too, so surfaces that read `dates` keep showing the range. */
@@ -13566,10 +13664,19 @@
         var s = fmtTnDate(tn.startDate), e = fmtTnDate(tn.endDate);
         if (s && e) return s === e ? s : (s + ' - ' + e);
         if (s || e) return s || e;
-        return (tn.dates || '').trim();
+        return dmyLabel((tn.dates || '').trim());
       }
       function parseTnDateText(txt){
         var out = [];
+        /* dd/mm/yyyy — the app-wide display format (and what
+           tnDatesText now composes into the free-text line): one
+           date, or a start - end range of them. */
+        var dmyRe = /(\d{1,2})\/(\d{1,2})\/(\d{4})/g, dmyM, dmyHits = [];
+        while ((dmyM = dmyRe.exec(String(txt || ''))) !== null){
+          var dD = parseInt(dmyM[1], 10), dM = parseInt(dmyM[2], 10);
+          if (dD >= 1 && dD <= 31 && dM >= 1 && dM <= 12) dmyHits.push(dmyM[3] + '-' + ('0' + dM).slice(-2) + '-' + ('0' + dD).slice(-2));
+        }
+        if (dmyHits.length) return dmyHits.slice(0, 2);
         /* The common local range form first: "03-04 April 2027". */
         var rm = /(?:^|[^\d])(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})(?!\d)/.exec(String(txt || ''));
         if (rm){
@@ -13824,9 +13931,9 @@
       function openTournamentViewerInPage(){
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
-        var vSub = document.querySelector('#tnPanel-teams .card .sub');
+        var vSub = document.querySelector('#tnTeamsCard .sub');
         if (vSub) vSub.textContent = '';
-        var vH = document.querySelector('#tnPanel-teams .card h2');
+        var vH = document.querySelector('#tnTeamsCard h2');
         if (vH) vH.textContent = 'Teams';
         try { renderTournament(); } catch(e){}
         try { renderTournamentHome(); } catch(e){}
@@ -13841,9 +13948,9 @@
          anyone else goes back to the Tournaments list. There is no
          "Back to …" text bar on this page any more. */
       function tnBack(){
-        /* Inside an open group page (Matches tab), 🔙 steps back
+        /* Inside an open group page (Teams tab), 🔙 steps back
            to the group list instead of leaving the tournament. */
-        if (currentTnTab === 'matches' && tnGroupOpenId){ closeGroupPage(); return; }
+        if (currentTnTab === 'teams' && tnGroupOpenId){ closeGroupPage(); return; }
         /* Inside a drilled-in Statistics view, 🔙 steps back one
            level (category → section → the three boxes) instead of
            leaving the tournament page. */
@@ -13953,6 +14060,9 @@
         var status = '', statusMuted = false;
         if (S.abandoned) status = fixResultText(String(S.resultText || 'Match abandoned').replace(/🏆/g, ''));
         else if (finished) status = fixResultText(String(S.resultText || 'Match finished').replace(/🏆/g, ''));
+        /* The 🏆 leads the result line ONLY when this finished
+           match is the tournament Final (see resultIsFinal). */
+        if (finished && !S.abandoned && status && liveMatchIsFinal()) status = '🏆 ' + status;
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '') + '.';
         else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet.' : 'No match is being scored right now.'; statusMuted = true; }
         else if (S.inningsNo === 2 && S.prevInnings && t){
@@ -14037,7 +14147,7 @@
       function fixtureRowHTML(f, tnName){
         var aria = 'View ' + (f.teamA || 'Team 1') + ' vs ' + (f.teamB || 'Team 2') + ' — upcoming match';
         return '<div class="ml-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', aria) + '>'
-          + mlPill('up') + mlLabel([f.label, tnName], false)
+          + mlPill('up') + mlLabel([dmyLabel(f.label), tnName], false)
           + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '')
           + mlTeamLine(f.teamA) + mlTeamLine(f.teamB)
           + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
@@ -14601,7 +14711,7 @@
             }).join(''));
           }
           if (tm.upcoming.length){
-            parts.push('<p class="note" style="margin:10px 0 6px"><b>Upcoming</b></p>' + tm.upcoming.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + '</div>'; }).join(''));
+            parts.push('<p class="note" style="margin:10px 0 6px"><b>Upcoming</b></p>' + tm.upcoming.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(dmyLabel(f.label)) + '</div>' : '') + '</div>'; }).join(''));
           }
           body = parts.length ? parts.join('') : '<p class="note">No matches for this team yet.</p>';
         } else {
@@ -14754,7 +14864,7 @@
             + mlPill('up')
             + tnVsTitleHTML(f.teamA, f.teamB)
             + (fGrp ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(fGrp) + '</span></div>' : '')
-            + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '')
+            + (f.label ? '<div class="note">' + esc(dmyLabel(f.label)) + '</div>' : '')
             + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '')
             + '<div class="rowflex" style="margin-top:8px"><button class="btn sm" onclick="startFixture(' + fxIdArg(f.id) + ')">Score This Match →</button><button class="btn ghost sm" onclick="removeFixture(' + fxIdArg(f.id) + ')">Remove</button></div></div>');
         });
@@ -14788,7 +14898,7 @@
           sbExtraHtml = extraStatsHTML();
           var dFix = dtn.fixtures.filter(function(f){ return !bkFixtureDecided(f); });
           sbFixHtml = dFix.length
-            ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(f.label) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
+            ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + (f.label ? '<div class="note">' + esc(dmyLabel(f.label)) + '</div>' : '') + (f.group ? '<div style="margin-top:4px"><span class="grp-chip">' + esc(f.group) + '</span></div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
             : '<p class="note">No fixtures yet.</p>';
           var dFin = tournamentFinalResult();
           var dFinId = dFin ? dFin.match.id : null;
@@ -17371,8 +17481,8 @@
         return d.mw.map(function(rw, i){
           var m = rw.m;
           var date = '';
-          if (m.at) date = new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-          else if (m.matchDate) date = String(m.matchDate);
+          if (m.at) date = fmtDMY(m.at);
+          else if (m.matchDate) date = fmtDateShort(m.matchDate);
           var head = (m.stage ? m.stage : (m.tournamentName ? 'Tournament Match' : 'Open Match'))
             + (rw.fmt && rw.fmt !== 'Other' ? ', ' + pfFmtShort(rw.fmt) : '') + (date ? ', ' + date : '');
           var res = '';
@@ -17547,7 +17657,7 @@
           if (!d.mw.length) return h + '<p class="note">No recorded matches yet.</p>';
           return h + d.mw.map(function(rw){
             var m = rw.m;
-            var date = m.at ? new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+            var date = m.at ? fmtDMY(m.at) : '';
             var title = (rw.fmt && rw.fmt !== 'Other' ? pfFmtShort(rw.fmt) + ' - ' : '') + date + (rw.opp ? ' vs ' + rw.opp.toUpperCase() : '');
             function cell(l, v){ return '<div><span>' + l + '</span><b>' + v + '</b></div>'; }
             var bat = rw.bat, bowl = rw.bowl;
@@ -18122,7 +18232,7 @@
         base.teamLogos = deep((S.teamLogos || []).filter(function(x){ return x && (x.t === e.teamA || x.t === e.teamB); }));
         base.tournament.teamLogos = base.teamLogos.map(function(x){ return { t: x.t, logo: x.logo }; });
         /* The archive entry stores no leadership picks, but the
-           scoreboard tables resolve the (c) / (vc) / (wk) suffix from
+           scoreboard tables resolve the (C) / (VC) / (WK) suffix from
            the (swapped) state's stores — carry this device's current
            picks for the two teams into the display state so an
            archived scorecard marks its captain, vice-captain and
@@ -18432,7 +18542,7 @@
       function closeHistoryMatch(){ var m = $('histModal'); if (m) m.classList.remove('show'); }
       /* ---------- one match card for the Past Matches panel ---------- */
       function histMatchCardHTML(e){
-        var date = e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+        var date = e.at ? fmtDMYTime(e.at) : '';
         var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
         var res = e.live
           ? (e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : '● Match in progress.')
@@ -18488,7 +18598,7 @@
         return 'CricCast — ' + title.toUpperCase() + '\n'
           + 'Scope: ' + scopeTxt + (filt.length ? ' • ' + filt.join(' • ') : '') + '\n'
           + 'Matches in scope: ' + count + '\n'
-          + 'Generated: ' + new Date().toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) + '\n'
+          + 'Generated: ' + fmtDMYTime(new Date()) + '\n'
           + '----------------------------------------\n';
       }
       function generateReport(){
@@ -18513,8 +18623,8 @@
           return r || 'No result recorded.';
         }
         function dateOf(e){
-          if (e.matchDate) return e.matchDate + (e.matchTime ? ' ' + e.matchTime : '');
-          return e.at ? new Date(e.at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+          if (e.matchDate) return fmtDateShort(e.matchDate) + (e.matchTime ? ' ' + e.matchTime : '');
+          return e.at ? fmtDMYTime(e.at) : '';
         }
         function innLine(inn){ return (inn.battingTeam || '—') + ' ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)'; }
         if (type === 'results'){
@@ -18989,7 +19099,7 @@
         var when = '';
         if (S.matchDate){
           var dt = new Date(S.matchDate + 'T' + (S.matchTime || '00:00'));
-          if (!isNaN(dt.getTime())) when = dt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+          if (!isNaN(dt.getTime())) when = fmtDMYTime(dt);
         }
         var finished = S.status === 'finished' || !!S.abandoned || !!S.resultText;
         var result = finished ? summaryResultText(inns) : '';
@@ -19452,7 +19562,7 @@
         var when = '';
         if (S.matchDate){
           var dt = new Date(S.matchDate + 'T' + (S.matchTime || '00:00'));
-          if (!isNaN(dt.getTime())) when = dt.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+          if (!isNaN(dt.getTime())) when = fmtDMYTime(dt);
         }
         /* --- masthead --- */
         d.fill(0, 0, 595, 118, MRC.band);
@@ -19984,7 +20094,7 @@
         c.fillText(mcWrap(c, leftLine, 320, 1)[0] || '', PAD, fy);
         var dateText = '';
         if (S.matchDate){ try { dateText = fmtDateShort(S.matchDate); } catch(e){} }
-        if (!dateText && S.updatedAt) dateText = new Date(S.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (!dateText && S.updatedAt) dateText = fmtDMY(S.updatedAt);
         if (dateText){
           c.fillStyle = MUT; c.font = '500 24px ' + SANS;
           c.fillText(dateText, PAD, fy + 32);
@@ -20165,7 +20275,7 @@
         }
         var dateText = '';
         if (S.matchDate) dateText = fmtDateShort(S.matchDate) + (S.matchTime ? ' • ' + S.matchTime : '');
-        else if (S.updatedAt) dateText = new Date(S.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        else if (S.updatedAt) dateText = fmtDMY(S.updatedAt);
         var superText = '';
         if (S.superOver && S.superOver.id && !finished){
           superText = S.superOver.active ? '⚡ Super Over in progress.' : (S.superOver.resultText ? '⚡ Super Over: ' + fixResultText(S.superOver.resultText) : '');
@@ -21000,13 +21110,13 @@
         return { winner: winner, resultText: rt };
       }
       /* The result a set of innings produces on its own — display
-         form and the form the live match stores (with the 🏆 a
-         Super Over finish adds). Compared against the stored text
-         to tell an automatic result line from one the scorer
-         worded themselves: only the automatic one is rewritten. */
+         form and the form the live match stores. Compared against
+         the stored text to tell an automatic result line from one
+         the scorer worded themselves: only the automatic one is
+         rewritten. */
       function beResultPair(e, inns, so){
         if (so && so.winner && so.resultText){
-          return { auto: asSentence('Match tied — ' + fixPlurals(so.resultText)), stored: 'Match tied — ' + so.resultText + ' 🏆' };
+          return { auto: asSentence('Match tied — ' + fixPlurals(so.resultText)), stored: 'Match tied — ' + so.resultText };
         }
         var t = matchResultText({ innings: inns, wicketsLimit: e.wicketsLimit, resultText: '', superOver: null });
         return { auto: t, stored: t };
@@ -21562,7 +21672,7 @@
         chips += '<span class="ss-chip">Extras <b>' + innExtras(inn).total + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ', P ' + innExtras(inn).penalty + ')</span>';
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
         else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
-        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">🏆 <b>' + esc(fixResultText(S.resultText)) + '</b></span>';
+        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">' + (liveMatchIsFinal() ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span>';
         if (freeHitPending(inn) && S.status === 'live') chips += '<span class="ss-chip" style="background:#f5b921;color:#241a02;border-color:#f5b921">⚡ <b>FREE HIT</b></span>';
         var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
@@ -21590,7 +21700,7 @@
         return '—';
       }
       /* Leadership suffix for scoreboard names — the same
-         " (c)" / " (vc)" / " (wk)" text the Squads tab prints after
+         " (C)" / " (VC)" / " (WK)" text the Squads tab prints after
          a player's name, resolved from the team's C / VC / WK picks
          (tournament store first, then the All Teams pool, via
          cbxLeadership). Empty when no pick names this player, so a
@@ -21605,9 +21715,9 @@
         if (!team || !name) return '';
         var L = cbxLeadership(team);
         var s = '';
-        if (L.c === name) s += ' (c)';
-        if (L.vc === name) s += ' (vc)';
-        if (L.wk === name) s += ' (wk)';
+        if (L.c === name) s += ' (C)';
+        if (L.vc === name) s += ' (VC)';
+        if (L.wk === name) s += ' (WK)';
         return s;
       }
       /* Display name WITH the leadership suffix, for the places
@@ -21616,7 +21726,7 @@
          Summary JPG and the shareable Match Card. The suffix is
          resolved from the FULL stored name (the picks hold full
          names), then appended to the nickname the PDFs and images
-         print, so a captain shows as "RIASAT (c)" there exactly
+         print, so a captain shows as "RIASAT (C)" there exactly
          as on the scoreboard. BATTER NAMES ONLY, same rule as
          leadSuffix above: bowler names in these outputs print
          through plain dispName() with no suffix. */
@@ -22681,7 +22791,7 @@
          the reference: a header bar with both team names, a Playing
          XI section (the first eleven of each squad, in squad order)
          and a Bench section for everyone past eleven. A player's
-         (c) / (vc) / (wk) suffix comes ONLY from the team's leadership
+         (C) / (VC) / (WK) suffix comes ONLY from the team's leadership
          picks (tournament store first, then the All Teams pool) —
          the (wk) suffix never follows the profile playing role alone.
          The role line uses the reference labels (WK-Batter /
@@ -22721,9 +22831,9 @@
         var d = profileDataFor(team, name, '');
         var isWk = (L.wk === name);
         var sfx = '';
-        if (L.c === name) sfx += ' (c)';
-        if (L.vc === name) sfx += ' (vc)';
-        if (isWk) sfx += ' (wk)';
+        if (L.c === name) sfx += ' (C)';
+        if (L.vc === name) sfx += ' (VC)';
+        if (isWk) sfx += ' (WK)';
         var hasPlayed = !!played[name];
         var cls = 'cbx-row';
         if (hasPlayed) cls += ' played';
@@ -23046,7 +23156,7 @@
              full commentary back the moment the page renders. */
           var feedAll = '';
           if (S.status === 'finished' && S.resultText){
-            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">🏆 <b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
+            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">' + (liveMatchIsFinal() ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
           }
           feedAll += feedHTMLFor(inn);
           if (S.prevInnings){
@@ -23157,9 +23267,7 @@
           irow2('Venue', S.venue || '');
           var whenTxt = '';
           if (S.matchDate){
-            var dmm = String(S.matchDate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            var mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            whenTxt = dmm ? (dmm[3] + ' ' + (mons[parseInt(dmm[2], 10) - 1] || '') + ' ' + dmm[1]) : fmtDateShort(S.matchDate);
+            whenTxt = fmtDateShort(S.matchDate);
             if (S.matchTime) whenTxt += '  ' + S.matchTime;
           } else if (S.matchTime) whenTxt = S.matchTime;
           irow2('Date & Time', whenTxt);
@@ -23724,11 +23832,111 @@
         }
       }
       function pad2(n){ return (n < 10 ? '0' : '') + n; }
+      /* Date display follows the user's corrected rule: a numeric
+         date is always dd/mm/yyyy — day first, zero-padded — and
+         a date written in text form stays text with a zero-padded
+         day ("03 May 2026", see dmyLabel below). fmtDateShort
+         takes the stored ISO yyyy-mm-dd value; fmtDMY takes a
+         Date / timestamp / ISO string; fmtDMYTime appends the
+         time of day. */
       function fmtDateShort(iso){
-        var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!m) return String(iso || '');
-        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return parseInt(m[3], 10) + ' ' + (months[parseInt(m[2], 10) - 1] || '') + ' ' + m[1];
+        var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return m[3] + '/' + m[2] + '/' + m[1];
+        var d = new Date(iso);
+        if (iso && !isNaN(d.getTime())) return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+        return String(iso || '');
+      }
+      function fmtDMY(input){
+        if (input === null || input === undefined || input === '') return '';
+        if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}/.test(input)) return fmtDateShort(input);
+        var d = (input instanceof Date) ? input : new Date(input);
+        if (isNaN(d.getTime())) return '';
+        return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+      }
+      function fmtDMYTime(input){
+        var base = fmtDMY(input);
+        if (!base) return '';
+        var d = (input instanceof Date) ? input : new Date(input);
+        if (isNaN(d.getTime())) return base;
+        return base + ', ' + d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+      }
+      /* Dates inside stored text (fixture labels, the free-text
+         tournament dates line) are written in the text form
+         "3 May 2026"; at display time they KEEP that text form —
+         only the day gains its leading zero: "03 May 2026" (the
+         user's corrected rule: numeric dates are dd/mm/yyyy,
+         text dates stay text with a padded day). The shared-month
+         range form is padded the same way: "3-4 April 2027"
+         becomes "03-04 April 2027". Numeric dd/mm/yyyy dates the
+         app itself composed into a label pass through untouched. */
+      function dmyLabel(str){
+        return String(str || '')
+          .replace(/(^|[^\d])(\d{1,2})\s*[-\u2013]\s*(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{4})/g, function(all, pre, d1, d2, mon, y){ return pre + ('0' + parseInt(d1, 10)).slice(-2) + '-' + ('0' + parseInt(d2, 10)).slice(-2) + ' ' + mon + ' ' + y; })
+          .replace(/(^|[^\d])(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+(\d{4})/g, function(all, pre, d, mon, y){ return pre + ('0' + parseInt(d, 10)).slice(-2) + ' ' + mon + ' ' + y; });
+      }
+      /* ---------- date entry fields: dd/mm/yyyy on screen, ISO in .value ----------
+         A native <input type="date"> renders in the PHONE's locale
+         format (mm/dd/yyyy on a US-locale device), which no page
+         setting can override — so the six date fields are text
+         inputs upgraded here: the user sees and types dd/mm/yyyy
+         (slashes are inserted as they type), while every existing
+         read and write of the field's .value keeps speaking the
+         stored ISO yyyy-mm-dd, so no call site changes. Parsing
+         accepts d/m/yyyy as typed, dd/mm/yyyy, and an ISO value
+         pasted in; an entry that cannot be read as a real date
+         restores the field's previous value on change. */
+      function dmyParseToIso(txt){
+        var t = String(txt || '').trim();
+        if (!t) return '';
+        var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+        if (m) return dmyIsoIfReal(+m[1], +m[2], +m[3]);
+        m = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(t);
+        if (m) return dmyIsoIfReal(+m[3], +m[2], +m[1]);
+        return null;
+      }
+      function dmyIsoIfReal(y, mo, d){
+        if (!(y >= 1900 && y <= 2100 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+        var dt = new Date(y, mo - 1, d);
+        if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+        return y + '-' + pad2(mo) + '-' + pad2(d);
+      }
+      function setupDateFields(){
+        var protoDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+        if (!protoDesc || !protoDesc.get || !protoDesc.set) return;
+        ['omDate', 'fxgDate', 'tneStart', 'tneEnd', 'bkSchedDate', 'heDate'].forEach(function(id){
+          var el = $(id);
+          if (!el || el.__dmyField) return;
+          el.__dmyField = true;
+          el.__dmyIso = '';
+          Object.defineProperty(el, 'value', {
+            configurable: true, enumerable: true,
+            get: function(){ return el.__dmyIso; },
+            set: function(v){
+              var iso = dmyParseToIso(v);
+              el.__dmyIso = iso || '';
+              protoDesc.set.call(el, el.__dmyIso ? fmtDateShort(el.__dmyIso) : '');
+            }
+          });
+          el.addEventListener('input', function(){
+            var digits = protoDesc.get.call(el).replace(/\D/g, '').slice(0, 8);
+            var disp = digits;
+            if (digits.length > 4) disp = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+            else if (digits.length > 2) disp = digits.slice(0, 2) + '/' + digits.slice(2);
+            protoDesc.set.call(el, disp);
+            el.__dmyIso = (digits.length === 8) ? (dmyParseToIso(disp) || '') : '';
+          });
+          el.addEventListener('change', function(){
+            var iso = dmyParseToIso(protoDesc.get.call(el));
+            if (iso === null){
+              protoDesc.set.call(el, el.__dmyIso ? fmtDateShort(el.__dmyIso) : '');
+              var nowD = new Date();
+              toast('Date must be dd/mm/yyyy — e.g. ' + pad2(nowD.getDate()) + '/' + pad2(nowD.getMonth() + 1) + '/' + nowD.getFullYear());
+              return;
+            }
+            el.__dmyIso = iso;
+            protoDesc.set.call(el, iso ? fmtDateShort(iso) : '');
+          });
+        });
       }
       function openMatchScreen(){
         om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
@@ -24356,7 +24564,7 @@
         var arc = tournamentsArchive().slice().reverse();
         html += arc.map(function(a){
           var d = a.data || {};
-          var date = a.at ? new Date(a.at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+          var date = a.at ? fmtDMY(a.at) : '';
           return '<div class="tn-row"><button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
             + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span>'
@@ -24472,7 +24680,7 @@
               var d = (a && a.data) || {};
               var aName = (a && a.name) || d.name || 'Tournament';
               if (!tnHit(aName, [tournamentKeyOf(d), tourIdFor(aName), a && a.id])) return;
-              var date = a.at ? new Date(a.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+              var date = a.at ? fmtDMY(a.at) : '';
               searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
             });
           } catch(e){}
@@ -24926,6 +25134,9 @@
 
       /* ---------- init from URL ---------- */
       (function init(){
+        /* The six date fields become dd/mm/yyyy entry fields (see
+           setupDateFields) before anything reads or writes them. */
+        try { setupDateFields(); } catch(e){}
         /* Viewer sessions are SERVER-ONLY: a session that arrives
            through the viewer link (or on a device remembered as a
            viewer, without the control link) never loads ANY
@@ -24985,9 +25196,9 @@
         if (q.indexOf('viewer')>-1){
           document.body.classList.add('viewer-mode');
           document.body.classList.add('viewer-inpage');
-          var vSub = document.querySelector('#tnPanel-teams .card .sub');
+          var vSub = document.querySelector('#tnTeamsCard .sub');
           if (vSub) vSub.textContent = '';
-          var vH = document.querySelector('#tnPanel-teams .card h2');
+          var vH = document.querySelector('#tnTeamsCard h2');
           if (vH) vH.textContent = 'Teams';
         }
         /* Two separate links, two separate doors into this page:
