@@ -240,7 +240,19 @@
       .brand-text .brand-rest{grid-column:2;grid-row:1}
       .brand-text .live-dot{grid-column:3;grid-row:1;margin-left:8px}
       .brand-text small{grid-column:2/-1;grid-row:2}
-      .conn{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:999px;background:var(--chip);border:1px solid var(--line);white-space:nowrap}
+      /* Connection pill (v241): the pill no longer shares the brand
+         row. It sits on its OWN full-width row directly under the
+         brand row (order:3 + flex-basis:100% inside .topbar-in), at a
+         fixed height, so its box can never move, wrap to another
+         line, or change the header's height — no matter how long the
+         current status text is. Inside it, the label is left-aligned
+         and may ellipsis, and the elapsed-seconds readout lives in
+         its own fixed-width slot at the right end, so the per-second
+         ticker updates only that slot and never shifts the label. */
+      .conn{order:3;flex:0 0 100%;width:100%;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:999px;background:var(--chip);border:1px solid var(--line);white-space:nowrap;overflow:hidden}
+      .conn-label{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+      .conn-timer{flex:0 0 46px;width:46px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .conn-timer[hidden]{display:none}
       .conn.on{background:#e3f4e9;border-color:#9ed3ae;color:#14532d}
       @media (prefers-color-scheme: dark){.conn.on{background:#173527;color:#9fe6bb;border-color:#2c5c40}}
 
@@ -1424,10 +1436,17 @@
       /* The bold stage label that heads a tournament match card —
          "• BBEPL-2 • Group-A • Match-1 •" on Recent Matches,
          "• Group-A • Match-1 •" / "• FINAL •" in the tournament
-         Matches tab (see stageLabelHTML). One line, bold, in the
-         ink colour — it REPLACES the old venue line and the group
-         chip, and it is the only place the stage is named. */
-      .ml-stage{font-weight:800;font-size:13.5px;color:var(--ink);letter-spacing:.02em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+         Matches tab (see stageLabelHTML). One line, bold — it
+         REPLACES the old venue line and the group chip, and it is
+         the only place the stage is named. v243: the label is no
+         longer in the plain ink colour — the owner could not pick
+         the Final out of the Recent Matches list because the label
+         blended into the card. The whole line now sits in the
+         gold-ink accent, and the FINAL segment itself is a solid
+         gold pill (see stageLabelHTML), so a Final catches the
+         eye at a glance in either colour scheme. */
+      .ml-stage{font-weight:800;font-size:13.5px;color:var(--gold-ink);letter-spacing:.02em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ml-stage .st-final{display:inline-block;background:var(--gold);color:#241a02;padding:1px 9px 2px;border-radius:99px;letter-spacing:.05em}
       .match-row .ml-stage{margin:2px 0 7px}
       .ml-live{flex:none;display:inline-flex;align-items:center;gap:5px;color:#d43a2f;font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
       .ml-live i{width:7px;height:7px;border-radius:50%;background:#d43a2f;flex:none;animation:blinkdot 1.6s infinite}
@@ -2623,7 +2642,7 @@
             <small>by Riasat Ali</small>
           </div>
         </div>
-        <span class="conn" id="connPill">● Local Mode — Live across tabs in this browser</span>
+        <span class="conn" id="connPill"><span class="conn-label" id="connLabel">● Local Mode — Live across tabs in this browser</span><span class="conn-timer" id="connTimer" hidden aria-hidden="true"></span></span>
         <div class="dots-wrap">
           <button type="button" class="dots-btn" id="homeDotsBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false" onclick="toggleDotsMenu(event)">⋮</button>
           <div class="dots-menu" id="homeDotsMenu" hidden role="menu" aria-label="Home options">
@@ -2655,11 +2674,11 @@
               <div class="lb-sub">by Riasat Ali</div>
             </div>
           </div>
+          <button type="button" class="btn ghost hist-entry-btn" style="margin:10px 0 4px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
           <div class="mode-intro">
             <h2>Recent Matches</h2>
           </div>
         </div>
-        <button type="button" class="btn ghost hist-entry-btn" style="margin:0 0 14px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
@@ -3979,7 +3998,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v240';
+      var APP_VERSION = 'v243';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4287,6 +4306,25 @@
         return false;
       }
       /* ---------- connection status (always honest) ---------- */
+      /* v241: the pill's text is written ONLY through here, into the
+         label span — never into the pill element itself (whose
+         textContent would wipe the label/timer spans). The timer
+         slot is shown only while connecting; the per-second ticker
+         updates just that fixed-width slot, and the label changes
+         only when this function or a stage change says so, so the
+         pill's position and size never change while it counts. */
+      function setConnPill(labelText, showTimer){
+        var pill = $('connPill'); if (!pill) return;
+        pill.removeAttribute('data-stage-txt');
+        var label = $('connLabel');
+        if (label){ if (label.textContent !== labelText) label.textContent = labelText; }
+        else if (pill.textContent !== labelText) pill.textContent = labelText;
+        var timer = $('connTimer');
+        if (timer){
+          if (showTimer){ timer.hidden = false; }
+          else { timer.hidden = true; timer.textContent = ''; }
+        }
+      }
       function setConnStatus(mode, detail){
         var pill = $('connPill'); if (!pill) return;
         /* The dot beside the title mirrors this status: green and
@@ -4294,10 +4332,10 @@
            Local Mode, while connecting, and on error. */
         var dot = $('brandDot'); if (dot) dot.classList.toggle('on', mode === 'live');
         pill.classList.remove('on'); pill.classList.remove('err');
-        if (mode === 'live'){ pill.textContent = '● Firebase Live — Everyone online is watching'; pill.classList.add('on'); }
-        else if (mode === 'connecting'){ pill.textContent = (fbStage === 'lib-loading') ? '● Loading the Firebase library…' : (fbStage === 'db-waiting') ? '● Connected — loading the live match…' : '● Connecting to Firebase…'; }
-        else if (mode === 'error'){ pill.textContent = '● Firebase problem — viewers may not be updating'; pill.classList.add('err'); }
-        else { pill.textContent = '● Local Mode — Live across tabs in this browser'; }
+        if (mode === 'live'){ setConnPill('● Firebase Live — Everyone online is watching', false); pill.classList.add('on'); }
+        else if (mode === 'connecting'){ setConnPill((fbStage === 'lib-loading') ? '● Loading the Firebase library…' : (fbStage === 'db-waiting') ? '● Connected — loading the live match…' : '● Connecting to Firebase…', true); }
+        else if (mode === 'error'){ setConnPill('● Firebase problem — viewers may not be updating', false); pill.classList.add('err'); }
+        else { setConnPill('● Local Mode — Live across tabs in this browser', false); }
         if (detail){
           fbStatusDetail = detail;
           var st = $('fbStatus'); if (st) st.textContent = detail;
@@ -4439,19 +4477,33 @@
         document.querySelectorAll('.conn-elapsed').forEach(function(el){ el.textContent = Math.max(0, Math.round((now - fbStageAt) / 1000)) + 's'; });
         if (fbRetryAt) document.querySelectorAll('.conn-countdown').forEach(function(el){ el.textContent = Math.max(0, Math.ceil((fbRetryAt - now) / 1000)) + 's'; });
         /* While the first connection is still being attempted, the
-           pill itself carries the current stage AND the elapsed
-           seconds, so "Connecting…" visibly shows WHAT it is doing
-           and how long it has been trying (v237; per-stage label
-           added v238, so a stall names the stage it is stuck in).
-           A pill already showing the honest error state (the 'err'
-           class) is left alone — the ticker must never paint over
-           "Firebase problem" with "Connecting…". */
+           pill itself carries the current stage, so "Connecting…"
+           visibly shows WHAT it is doing (v237; per-stage label
+           added v238, so a stall names the stage it is stuck in),
+           and the elapsed seconds tick in the pill's fixed-width
+           timer slot. v241: the label is rewritten ONLY when the
+           stage text actually changes — the old ticker rewrote the
+           whole pill text every second, and each new length resized
+           the pill and shifted it around the header. A pill already
+           showing the honest error state (the 'err' class) is left
+           alone — the ticker must never paint over "Firebase
+           problem" with "Connecting…". */
         var pill = $('connPill');
         if (pill && !fbReady && !pill.classList.contains('err') && (fbConnecting || fbStage === 'lib-loading' || fbStage === 'lib-failed')){
           var stageTxt = (fbStage === 'lib-loading' || fbStage === 'lib-failed') ? 'Connecting to Firebase — loading the library'
             : (fbStage === 'db-waiting') ? 'Connected — loading the live match'
             : 'Connecting to Firebase';
-          pill.textContent = '● ' + stageTxt + '… (' + Math.max(0, Math.round((now - fbBootAt) / 1000)) + 's)';
+          var stageLabel = '● ' + stageTxt + '…';
+          if (pill.getAttribute('data-stage-txt') !== stageLabel){
+            setConnPill(stageLabel, true);
+            pill.setAttribute('data-stage-txt', stageLabel);
+          }
+          var timer = $('connTimer');
+          if (timer){
+            timer.hidden = false;
+            var secs = Math.max(0, Math.round((now - fbBootAt) / 1000)) + 's';
+            if (timer.textContent !== secs) timer.textContent = secs;
+          }
         }
       }, 1000);
 
@@ -9668,8 +9720,15 @@
       var tnGroupOpenId = null; /* the group whose own page is open inside the Teams tab */
       var grpPickValue = '';    /* the team picked in the open group's add-team dropdown */
       var fxGenGroup = '';      /* the Auto Fixture Generator's group ('' = all teams) */
-      function rawGroups(){
-        return (S.tournament && Array.isArray(S.tournament.groups)) ? S.tournament.groups : [];
+      /* The groups of one tournament: the open one by default, or
+         an explicit owner tournament (v243) — Recent Matches lists
+         results held by ARCHIVED tournaments while another
+         tournament is open, and those rows' stage labels must be
+         read from the tournament that actually holds the match,
+         never from whichever tournament happens to be open. */
+      function rawGroups(ownerTn){
+        var t = ownerTn || S.tournament;
+        return (t && Array.isArray(t.groups)) ? t.groups : [];
       }
       function newGroupId(){
         var existing = {};
@@ -9685,15 +9744,15 @@
         rawGroups().forEach(function(g){ if (g && g.id === id) found = g; });
         return found;
       }
-      function groupByName(name){
+      function groupByName(name, ownerTn){
         var found = null;
-        rawGroups().forEach(function(g){ if (g && g.name === name) found = g; });
+        rawGroups(ownerTn).forEach(function(g){ if (g && g.name === name) found = g; });
         return found;
       }
-      function groupOfTeam(name){
+      function groupOfTeam(name, ownerTn){
         if (!name) return null;
         var found = null;
-        rawGroups().forEach(function(g){ if (g && Array.isArray(g.teams) && g.teams.indexOf(name) > -1) found = g; });
+        rawGroups(ownerTn).forEach(function(g){ if (g && Array.isArray(g.teams) && g.teams.indexOf(name) > -1) found = g; });
         return found;
       }
       function ungroupedTeams(){
@@ -9715,14 +9774,14 @@
          when it was fixtured / saved, else the group both of its
          teams are in together. Null when it is not a group match
          (cross-group, knockout, or no groups at all). */
-      function matchGroupName(m){
+      function matchGroupName(m, ownerTn){
         if (!m) return null;
-        if (typeof m.group === 'string' && m.group && groupByName(m.group)) return m.group;
+        if (typeof m.group === 'string' && m.group && groupByName(m.group, ownerTn)) return m.group;
         var a = null, b = null;
         if (m.innings && m.innings.length){ a = m.innings[0].battingTeam; b = m.innings[0].bowlingTeam; }
         else if (m.teamA && m.teamB){ a = m.teamA; b = m.teamB; }
         if (a && b){
-          var ga = groupOfTeam(a), gb = groupOfTeam(b);
+          var ga = groupOfTeam(a, ownerTn), gb = groupOfTeam(b, ownerTn);
           if (ga && gb && ga.id === gb.id) return ga.name;
         }
         return null;
@@ -10241,12 +10300,12 @@
          strips every 🏆 from the text and re-adds the single
          leading one for the Final alone, so old and new records
          alike render by the rule. */
-      function resultIsFinal(m){
+      function resultIsFinal(m, ownerTn){
         if (!m) return false;
         if (m.stage === 'F') return true;
         if (m.bracketId){
           var bf = null;
-          try { bf = bracketFinalMatch(); } catch(e){}
+          try { bf = bracketFinalMatch(ownerTn); } catch(e){}
           if (bf && m.bracketId === bf.id) return true;
         }
         return false;
@@ -10269,9 +10328,9 @@
              open, and the 🏆 must still find it. */
           var rec = null;
           allTournamentObjs().forEach(function(o){
-            (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(mid)) rec = m; });
+            (o.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(mid) && resultIsFinal(m, o.tn)) rec = m; });
           });
-          if (rec && resultIsFinal(rec)) return true;
+          if (rec) return true;
           if (S.tournament && Array.isArray(S.tournament.matches)){
             var fin = null;
             try { fin = tournamentFinalResult(); } catch(e){}
@@ -10280,7 +10339,7 @@
         }
         return false;
       }
-      function matchResultText(match){
+      function matchResultText(match, ownerTn){
         var txt = '';
         if (match.resultText) txt = fixResultText(String(match.resultText).replace(/🏆/g, ''));
         else if (match.superOver && match.superOver.winner && match.superOver.resultText) txt = asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
@@ -10290,7 +10349,7 @@
           else if (a.runs > b.runs) txt = a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
           else txt = 'Match tied.';
         }
-        if (txt && resultIsFinal(match)) txt = '🏆 ' + txt;
+        if (txt && resultIsFinal(match, ownerTn)) txt = '🏆 ' + txt;
         return txt;
       }
       /* The silent core of saving this match's result into the
@@ -10798,7 +10857,14 @@
         } while (existing[id]);
         return id;
       }
-      function bracketMatchById(id){
+      function bracketMatchById(id, ownerTn){
+        if (ownerTn){
+          var ofound = null;
+          if (ownerTn.bracket && Array.isArray(ownerTn.bracket.matches)){
+            ownerTn.bracket.matches.forEach(function(m){ if (m.id === id) ofound = m; });
+          }
+          return ofound;
+        }
         normalizeTournament();
         var found = null;
         if (S.tournament.bracket){
@@ -10837,7 +10903,16 @@
          flagged isFinal when the bracket was built, falling back to
          the match with stage 'F' (every preset, and every bracket
          saved before custom formats existed, has exactly one). */
-      function bracketFinalMatch(){
+      function bracketFinalMatch(ownerTn){
+        if (ownerTn){
+          if (!ownerTn.bracket || !Array.isArray(ownerTn.bracket.matches)) return null;
+          var ofin = null, obyStage = null;
+          ownerTn.bracket.matches.forEach(function(m){
+            if (m.isFinal) ofin = m;
+            if (m.stage === 'F') obyStage = m;
+          });
+          return ofin || obyStage;
+        }
         normalizeTournament();
         if (!S.tournament.bracket) return null;
         var fin = null, byStage = null;
@@ -14928,16 +15003,22 @@
         if (m.stage === 'F') return true;
         return false;
       }
-      function matchNumberInStage(m){
+      function matchNumberInStage(m, ownerTn){
         if (!m || matchIsKnockout(m)) return 0;
-        var tn = S.tournament;
+        var tn = ownerTn || S.tournament;
         if (!tn || !Array.isArray(tn.matches)) return 0;
-        function keyOf(x){ try { return matchGroupName(x) || ''; } catch(e){ return ''; } }
+        function keyOf(x){ try { return matchGroupName(x, ownerTn) || ''; } catch(e){ return ''; } }
         var gKey = keyOf(m);
         var seq = [];
         tn.matches.forEach(function(x){ if (x) seq.push(x); });
+        /* The live record joins the sequence only when counting
+           inside the OPEN tournament — it is stamped with that
+           tournament's identity (liveTournamentRecord checks), so
+           it can never belong to an archived owner's sequence. */
         var lv = null;
-        try { lv = liveTournamentRecord(); } catch(e){}
+        if (!ownerTn || ownerTn === S.tournament){
+          try { lv = liveTournamentRecord(); } catch(e){}
+        }
         var lvInSeq = false;
         if (lv){
           lvInSeq = seq.some(function(x){ return String(x.id) === String(lv.id); });
@@ -14963,19 +15044,19 @@
          ['FINAL'], ['Quarter Final-1'], ['Group-A','Match-1'],
          ['Match-1'] for a groupless league match, [] when the
          match carries no stage at all. */
-      function matchStageSegs(m){
+      function matchStageSegs(m, ownerTn){
         if (!m) return [];
-        if (resultIsFinal(m)) return ['FINAL'];
+        if (resultIsFinal(m, ownerTn)) return ['FINAL'];
         if (typeof m.bracketId === 'string' && m.bracketId){
           var bm = null;
-          try { bm = bracketMatchById(m.bracketId); } catch(e){}
+          try { bm = bracketMatchById(m.bracketId, ownerTn); } catch(e){}
           var bt = bracketStageText(bm);
           if (bt) return [bt];
         }
         if (m.stage === 'F') return ['FINAL'];
         var g = null;
-        try { g = matchGroupName(m); } catch(e){}
-        var num = matchNumberInStage(m);
+        try { g = matchGroupName(m, ownerTn); } catch(e){}
+        var num = matchNumberInStage(m, ownerTn);
         var segs = [];
         if (g) segs.push(stageHyphen(g));
         if (num) segs.push('Match-' + num);
@@ -14984,13 +15065,21 @@
       function stageLabelHTML(segs){
         var clean = (segs || []).filter(function(s){ return !!String(s || '').trim(); });
         if (!clean.length) return '';
-        return '<div class="ml-stage">• ' + clean.map(function(s){ return esc(s); }).join(' • ') + ' •</div>';
+        return '<div class="ml-stage">• ' + clean.map(function(s){
+          return s === 'FINAL' ? '<span class="st-final">FINAL</span>' : esc(s);
+        }).join(' • ') + ' •</div>';
       }
-      /* Recent Matches form: tournament name first, then the stage. */
-      function recentStageLabelHTML(m, tnName){
+      /* Recent Matches form: tournament name first, then the stage.
+         ownerTn is the tournament HOLDING this match (v243): the
+         stage segments are computed from ITS groups, bracket and
+         match sequence — Recent Matches renders archived
+         tournaments' results while a different tournament is open,
+         and reading the open one dropped the FINAL segment, lost
+         the group and numbered every league match "Match-1". */
+      function recentStageLabelHTML(m, tnName, ownerTn){
         var segs = [];
         if (tnName) segs.push(tnName);
-        return stageLabelHTML(segs.concat(matchStageSegs(m)));
+        return stageLabelHTML(segs.concat(matchStageSegs(m, ownerTn)));
       }
       /* A stage-shaped record for the match on the scoring pad or
          for another in-progress match's slice: both carry their
@@ -15012,7 +15101,19 @@
         if (!tnName) return mlLabel([S.venue, tnName], false);
         var segs = [tnName];
         if (liveMatchIsFinal()) segs.push('FINAL');
-        else segs = segs.concat(matchStageSegs(stageRecordFor(S)));
+        else {
+          /* Count the stage inside the match's OWN tournament
+             (v243), resolved from its stamp or its saved-result
+             holder — the same identity liveMatchTournamentName
+             uses for the name printed beside it. */
+          var liveOwner = null;
+          try {
+            var lo = (typeof S.tournamentId === 'string' && S.tournamentId) ? tournamentForKey(S.tournamentId) : null;
+            if (!lo) lo = tournamentHolderOfMatch((S.archivedMatchId != null) ? S.archivedMatchId : S.matchId);
+            if (lo) liveOwner = lo.tn;
+          } catch(e){}
+          segs = segs.concat(matchStageSegs(stageRecordFor(S), liveOwner));
+        }
         return stageLabelHTML(segs);
       }
       /* The status pill at the top of a match row: red In Progress
@@ -15142,13 +15243,13 @@
           + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
       }
-      function resultRowHTML(m, tnName){
+      function resultRowHTML(m, tnName, ownerTn){
         var inns = m.innings || [];
         var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
-        var res = matchResultText(m);
+        var res = matchResultText(m, ownerTn);
         var aria = 'View ' + (m.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (m.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + ' — completed match';
         return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', aria) + '>'
-          + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName) : mlLabel([m.venue, tnName], false)) + lines
+          + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName, ownerTn) : mlLabel([m.venue, tnName], false)) + lines
           + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
       }
       function fixtureRowHTML(f, tnName){
@@ -15177,14 +15278,15 @@
         else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress.';
         else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting.';
         else status = 'Match not started yet.';
-        var tnName = '';
+        var tnName = '', slOwner = null;
         if (slice.matchKind === 'tournament'){
           var slObj = (typeof slice.tournamentId === 'string' && slice.tournamentId) ? tournamentForKey(slice.tournamentId) : null;
           tnName = slObj ? (slObj.tn.name || '') : ((S.tournament && S.tournament.name) || '');
+          slOwner = slObj ? slObj.tn : null;
         }
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
         return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
-          + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice)))) : mlLabel([slice.venue, tnName], false)) + lines
+          + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice), slOwner))) : mlLabel([slice.venue, tnName], false)) + lines
           + '<div class="ml-status muted">' + esc(status) + '</div></div>';
       }
       /* Live Matches is a viewer surface: it renders ONLY the
@@ -15240,16 +15342,16 @@
            itself is stamped with. When the match on top is finished
            and has already been saved to a tournament, its saved
            copy is the same match — don't list it twice. */
-        var resById = {}, resOrder = [], resOwnerName = {}, resHolderKey = {};
+        var resById = {}, resOrder = [], resOwnerName = {}, resHolderKey = {}, resOwnerTn = {};
         allTournamentObjs().forEach(function(o){
           var own = tournamentKeyOf(o.tn);
           (o.tn.matches || []).forEach(function(m){
             if (!m || m.id == null) return;
             var k = String(m.id);
-            if (!(k in resById)){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; resOrder.push(k); return; }
+            if (!(k in resById)){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; resOwnerTn[k] = o.tn; resOrder.push(k); return; }
             /* Duplicate copy: keep the one whose holder IS the
                tournament the record itself is stamped with. */
-            if (String(m.tournamentId || '') === own && String(resById[k].tournamentId || '') !== resHolderKey[k]){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; }
+            if (String(m.tournamentId || '') === own && String(resById[k].tournamentId || '') !== resHolderKey[k]){ resById[k] = m; resOwnerName[k] = (o.tn.name || ''); resHolderKey[k] = own; resOwnerTn[k] = o.tn; }
           });
         });
         var results = resOrder.map(function(k){ return resById[k]; });
@@ -15278,12 +15380,16 @@
              completed matches close the list. */
           resultsHtml = results.map(function(m){
             /* The row's tournament is the one HOLDING this result
-               (resOwnerName, v225) — never just the open one. */
+               (resOwnerName, v225) — never just the open one. Its
+               stage label is computed from that same holder
+               (resOwnerTn, v243): name AND stage now both come
+               from the match's own tournament. */
             var rowTnName = resOwnerName[String(m.id)] || tnName;
-            if (lastFin && String(m.id) === String(lastFin.id)) rowTnName = '';
-            if (m && m.matchKind === 'single') rowTnName = '';
+            var rowOwnerTn = resOwnerTn[String(m.id)] || null;
+            if (lastFin && String(m.id) === String(lastFin.id)){ rowTnName = ''; rowOwnerTn = null; }
+            if (m && m.matchKind === 'single'){ rowTnName = ''; rowOwnerTn = null; }
             if (m && typeof m.tournamentName === 'string' && m.tournamentName) rowTnName = m.tournamentName;
-            return resultRowHTML(m, rowTnName);
+            return resultRowHTML(m, rowTnName, rowOwnerTn);
           }).join('');
         }
         /* A fixture whose match is already being scored (live now, or
@@ -19494,7 +19600,7 @@
           base.isFinalDisplay = resultIsFinal(e);
           if (!base.isFinalDisplay){
             var holdObj = tournamentHolderOfMatch(e.id);
-            if (holdObj) (holdObj.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m)) base.isFinalDisplay = true; });
+            if (holdObj) (holdObj.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m, holdObj.tn)) base.isFinalDisplay = true; });
           }
         } catch(err){}
         /* Team logos live in the global store (v191): carry this
