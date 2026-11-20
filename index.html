@@ -2598,6 +2598,19 @@
       .toast{bottom:calc(22px + var(--sab))}
       #view-scorer>.card.pop{bottom:calc(10px + var(--sab))}
       .modal{padding-bottom:calc(18px + var(--sab))}
+      /* The Player Profile is a full-screen page, not a sheet: its
+         panel fills the whole viewport and lives OUTSIDE <main>, so
+         the main clearance above never reached it and its heading
+         (hard-coded 14px top padding) slid under the status bar.
+         Spend the insets on the panel itself, on all four sides. */
+      #playerModal .modal{padding:calc(14px + var(--sat)) calc(16px + var(--sar)) calc(26px + var(--sab)) calc(16px + var(--sal))}
+      /* Blanket guard for every modal backdrop: the flex area a
+         sheet or dialog is laid out in starts below the status
+         bar, so no present or future full-screen overlay can put
+         content under it. Bottom-anchored sheets are unaffected
+         (they hang from the bottom of that same area). */
+      .modal-back{padding-top:var(--sat);padding-left:var(--sal);padding-right:var(--sar)}
+      @media (min-width:640px){.modal-back{padding-top:max(18px,var(--sat));padding-left:max(18px,var(--sal));padding-right:max(18px,var(--sar))}}
     </style>
   </head>
   <body>
@@ -3966,7 +3979,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v239';
+      var APP_VERSION = 'v240';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
