@@ -4058,7 +4058,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v248';
+      var APP_VERSION = 'v249';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4106,6 +4106,7 @@
              no tournament statistics; its data lives only in the
              general match history and the players' own profiles. */
           matchKind: 'single',
+          matchNo: 0, /* the permanent Match-N (v249) stamped from the tournament fixture this match was started from; 0 = none, counted in playing order instead */
           status: 'live', /* live | inningsBreak | finished */
           /* Play over but not yet completed: when the last ball ends
              the match, status becomes 'finished' (the result stands
@@ -6399,6 +6400,10 @@
            group, exactly like bracketMatchId above. */
         if (typeof S.matchGroup !== 'string') S.matchGroup = '';
         if (typeof S.matchStage !== 'string') S.matchStage = '';
+        /* The live match's permanent Match-N (v249), stamped from
+           the fixture it was started from: 0 when it carries none,
+           in which case its number is counted in playing order. */
+        if (typeof S.matchNo !== 'number') S.matchNo = 0;
         /* The tournament this live match belongs to, stamped at
            match start ('' when it is not that tournament's match —
            see freshState). Older states carry no stamp at all. */
@@ -8539,6 +8544,7 @@
           if (pfx && ((pfx.teamA === newA && pfx.teamB === newB) || (pfx.teamA === newB && pfx.teamB === newA))){
             if (pfs.kind === 'tournament') S.matchGroup = (typeof pfx.group === 'string') ? pfx.group : '';
             if (pfs.kind === 'tournament') S.matchStage = (typeof pfx.stage === 'string') ? pfx.stage : '';
+            if (pfs.kind === 'tournament') S.matchNo = (typeof pfx.matchNo === 'number') ? pfx.matchNo : 0;
             if (pfs.kind === 'tournament') S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return x.id !== pfs.id; });
             else S.singleFixtures = S.singleFixtures.filter(function(x){ return x.id !== pfs.id; });
           }
@@ -10466,6 +10472,10 @@
              it drives the stage label, keeps the match out of the
              points table, and an 'F' here IS the tournament Final. */
           stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
+          /* The match's permanent Match-N (v249), stamped on the
+             fixture it was started from (see S.matchNo): the saved
+             result keeps the number the fixture was born with. */
+          matchNo: (typeof S.matchNo === 'number') ? S.matchNo : 0,
           /* The Super Over that settled this match (if any) rides
              with the tournament result, so the bracket and podium
              read its winner through matchWinner. */
@@ -10498,6 +10508,7 @@
            correcting the Final's score never opens the podium. */
         if (replaced && tgtTn.matches[existingIdx].stage) match.stage = tgtTn.matches[existingIdx].stage;
         if (replaced && !match.group && tgtTn.matches[existingIdx].group) match.group = tgtTn.matches[existingIdx].group;
+        if (replaced && !match.matchNo && tgtTn.matches[existingIdx].matchNo) match.matchNo = tgtTn.matches[existingIdx].matchNo;
         if (replaced) tgtTn.matches[existingIdx] = match;
         else tgtTn.matches.push(match);
         S.archivedMatchId = mid;
@@ -10619,6 +10630,45 @@
         if (S.matchKind === 'tournament' && S.oversLimit) return { overs: S.oversLimit, format: S.matchFormat || '', wickets: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), ballType: S.ballType || '' };
         return null;
       }
+      /* The permanent number a tournament fixture is born with
+         (v249): counted across the tournament's WHOLE order —
+         saved results, the live match (started or not), parked
+         matches and the fixtures already listed — within the
+         fixture's own group, or within its round for a knockout
+         fixture. The number is stamped on the fixture, rides
+         into the live match when it starts (S.matchNo) and on
+         into its saved result and history entry, and the stage
+         label reads it back — so no match is ever renumbered
+         when another match starts, finishes or is removed, and
+         two matches can never share one number. Bracket fixtures
+         keep their bracket label instead and are not numbered;
+         the Final is simply FINAL. Call AFTER the fixture has
+         been pushed into S.tournament.fixtures. */
+      function bornMatchNo(fx){
+        if (!fx || fx.bracketId) return 0;
+        if (fx.stage === 'F') return 0;
+        if (fx.stage === 'R16' || fx.stage === 'QF' || fx.stage === 'SF'){
+          var tn = S.tournament;
+          if (!tn || !Array.isArray(tn.matches)) return 0;
+          var n = 0;
+          tn.matches.forEach(function(x){ if (x && x.stage === fx.stage) n++; });
+          var lv = null;
+          try { lv = liveTournamentRecord(); } catch(e){}
+          if (!lv){ try { lv = liveSlotRecord(null); } catch(e){} }
+          if (lv && lv.stage === fx.stage && !tn.matches.some(function(x){ return String(x.id) === String(lv.id); })) n++;
+          try {
+            (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(p){
+              var rec = parkedStageRecord(p, tn);
+              if (rec && rec.stage === fx.stage && rec.id != null
+                && !tn.matches.some(function(x){ return String(x.id) === String(rec.id); })
+                && (!lv || String(rec.id) !== String(lv.id))) n++;
+            });
+          } catch(e){}
+          (tn.fixtures || []).forEach(function(x){ if (x && x.stage === fx.stage) n++; });
+          return n;
+        }
+        return matchNumberInStage(fx);
+      }
       function addFixture(){
         if (!requireTnOwner('edit this tournament')) return;
         normalizeTournament();
@@ -10636,6 +10686,7 @@
         var seed = fixtureFormatSeed();
         if (seed){ fxNew.overs = seed.overs; fxNew.format = seed.format; fxNew.wickets = seed.wickets; fxNew.ballType = seed.ballType; }
         S.tournament.fixtures.push(fxNew);
+        fxNew.matchNo = bornMatchNo(fxNew);
         ensureTournamentTeam(a); ensureTournamentTeam(b);
         $('fxTeamA').value=''; $('fxTeamB').value=''; $('fxLabel').value='';
         commit('Fixture added', true); toast('Fixture added');
@@ -10825,6 +10876,7 @@
         normalizeTournament();
         var fx = tnFxBuildFixture(); if (!fx) return;
         S.tournament.fixtures.push(fx);
+        fx.matchNo = bornMatchNo(fx);
         ensureTournamentTeam(fx.teamA); ensureTournamentTeam(fx.teamB);
         om.tnFx = null;
         commit('Fixture added', true);
@@ -10843,6 +10895,7 @@
         normalizeTournament();
         var fx = tnFxBuildFixture(); if (!fx) return false;
         S.tournament.fixtures.push(fx);
+        fx.matchNo = bornMatchNo(fx);
         ensureTournamentTeam(fx.teamA); ensureTournamentTeam(fx.teamB);
         pendingFixtureStart = { kind: 'tournament', id: fx.id };
         pendingMatchKind = 'tournament';
@@ -11057,6 +11110,7 @@
             var fxSeed = fixtureFormatSeed();
             if (fxSeed){ fxGen.overs = fxSeed.overs; fxGen.format = fxSeed.format; fxGen.wickets = fxSeed.wickets; fxGen.ballType = fxSeed.ballType; }
             S.tournament.fixtures.push(fxGen);
+            fxGen.matchNo = bornMatchNo(fxGen);
             added++;
           }
           arr.splice(1, 0, arr.pop()); /* rotate the circle, first team fixed */
@@ -12353,6 +12407,7 @@
           bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
           stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
+          matchNo: (typeof S.matchNo === 'number') ? S.matchNo : 0,
           players: playersSnapshot(), playerIds: deep(S.playerIds || [])
         };
       }
@@ -15284,8 +15339,49 @@
         if (m.stage === 'R16' || m.stage === 'QF' || m.stage === 'SF') return true;
         return false;
       }
+      /* A stage-shaped record for the match sitting in the live
+         slot when it belongs to the tournament being counted —
+         INCLUDING before play has begun, which is exactly when
+         liveTournamentRecord still returns null. Null when the
+         slot holds another tournament's match, a Single Match, a
+         finished or abandoned match (a finished match's place is
+         carried by its record / saved result), or when the match
+         is already filed as a saved result of this tournament. */
+      function liveSlotRecord(ownerTn){
+        if (!S || !S.current) return null;
+        if (S.matchKind !== 'tournament') return null;
+        if (S.status === 'finished' || S.abandoned) return null;
+        if (!S.teamA || !S.teamB) return null;
+        var stamp = (typeof S.tournamentId === 'string') ? S.tournamentId : '';
+        if (!stamp) return null;
+        var tn = ownerTn || S.tournament;
+        if (!tn) return null;
+        var ok = !!((tn.id && stamp === tn.id) || (tn.name && stamp === tourIdFor(tn.name)));
+        if (!ok) return null;
+        var mid = (S.matchId != null) ? S.matchId : null;
+        if (mid != null && Array.isArray(tn.matches) && tn.matches.some(function(x){ return x && String(x.id) === String(mid); })) return null;
+        return stageRecordFor(S);
+      }
+      /* A stage-shaped record for a PARKED match (a pausedMatches
+         slice) when it belongs to the tournament being counted —
+         parked matches are in progress too, so they hold their
+         places in the numbering like the live match does. */
+      function parkedStageRecord(p, tn){
+        if (!p || p.matchKind !== 'tournament' || !tn) return null;
+        var stamp = (typeof p.tournamentId === 'string') ? p.tournamentId : '';
+        if (!stamp) return null;
+        var ok = !!((tn.id && stamp === tn.id) || (tn.name && stamp === tourIdFor(tn.name)));
+        if (!ok) return null;
+        return stageRecordFor(p);
+      }
       function matchNumberInStage(m, ownerTn){
         if (!m || matchIsKnockout(m)) return 0;
+        /* A match born with a permanent number (stamped on its
+           fixture at creation — see bornMatchNo — and carried
+           into the live match and its saved result) always shows
+           THAT number: starting, parking or removing another
+           match can never renumber it. */
+        if (typeof m.matchNo === 'number' && m.matchNo > 0) return m.matchNo;
         var tn = ownerTn || S.tournament;
         if (!tn || !Array.isArray(tn.matches)) return 0;
         function keyOf(x){ try { return matchGroupName(x, ownerTn) || ''; } catch(e){ return ''; } }
@@ -15300,11 +15396,28 @@
         if (!ownerTn || ownerTn === S.tournament){
           try { lv = liveTournamentRecord(); } catch(e){}
         }
+        /* liveTournamentRecord speaks only once play has begun;
+           a match whose toss is done but which has not started
+           yet still holds its place in the order, so the slot
+           record stands in for it — without it, the fixtures
+           behind such a match counted from 1 again while the
+           match itself also showed Match-1 (the duplicate the
+           owner reported in BBEPL-3, v249). */
+        if (!lv){ try { lv = liveSlotRecord(ownerTn); } catch(e){} }
         var lvInSeq = false;
         if (lv){
           lvInSeq = seq.some(function(x){ return String(x.id) === String(lv.id); });
           if (!lvInSeq) seq.push(lv);
         }
+        /* Parked matches of this tournament hold their places
+           too, between the live match and the fixtures. */
+        try {
+          (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(p){
+            var rec = parkedStageRecord(p, tn);
+            if (rec && rec.id != null && !seq.some(function(x){ return String(x.id) === String(rec.id); })) seq.push(rec);
+          });
+        } catch(e){}
+        var preFixture = seq.slice();
         (tn.fixtures || []).forEach(function(x){ if (x) seq.push(x); });
         var n = 0, found = 0;
         seq.forEach(function(x){
@@ -15314,11 +15427,10 @@
           if (x === m || (m.id != null && x.id != null && String(x.id) === String(m.id))) found = n;
         });
         if (found) return found;
-        /* Not in the sequence (a parked match's slice): it numbers
-           after the played and live league matches of its group. */
+        /* Not in the sequence: it numbers after the played, live
+           and parked league matches of its group. */
         var played = 0;
-        tn.matches.forEach(function(x){ if (x && !matchIsKnockout(x) && keyOf(x) === gKey) played++; });
-        if (lv && !lvInSeq && !matchIsKnockout(lv) && keyOf(lv) === gKey) played++;
+        preFixture.forEach(function(x){ if (x && !matchIsKnockout(x) && keyOf(x) === gKey) played++; });
         return played + 1;
       }
       /* The stage segments of one match (no tournament name):
@@ -15362,12 +15474,25 @@
         if (!ownerTn || ownerTn === S.tournament){
           try { lv = liveTournamentRecord(); } catch(e){}
         }
+        /* The not-yet-started live match and parked matches of
+           this round hold their places too (v249 — see
+           matchNumberInStage). */
+        if (!lv){ try { lv = liveSlotRecord(ownerTn); } catch(e){} }
         if (lv && lv.stage === m.stage && !seq.some(function(x){ return String(x.id) === String(lv.id); })) seq.push(lv);
+        try {
+          (Array.isArray(S.pausedMatches) ? S.pausedMatches : []).forEach(function(p){
+            var rec = parkedStageRecord(p, tn);
+            if (rec && rec.stage === m.stage && rec.id != null && !seq.some(function(x){ return String(x.id) === String(rec.id); })) seq.push(rec);
+          });
+        } catch(e){}
         (tn.fixtures || []).forEach(function(x){ if (x && x.stage === m.stage) seq.push(x); });
-        if (seq.length <= 1) return name;
         var pos = 0;
         seq.forEach(function(x, i){ if (!pos && (x === m || (m.id != null && x.id != null && String(x.id) === String(m.id)))) pos = i + 1; });
-        return pos ? (name + '-' + pos) : name;
+        if (seq.length + (pos ? 0 : 1) <= 1) return name;
+        /* A permanent number stamped at creation wins over the
+           counted position, exactly as in the league sequence. */
+        var num = (typeof m.matchNo === 'number' && m.matchNo > 0) ? m.matchNo : pos;
+        return num ? (name + '-' + num) : name;
       }
       function stageLabelHTML(segs){
         var clean = (segs || []).filter(function(s){ return !!String(s || '').trim(); });
@@ -15397,6 +15522,7 @@
           bracketId: src.bracketMatchId || src.bracketId || '',
           group: src.matchGroup || src.group || '',
           stage: src.matchStage || src.stage || '',
+          matchNo: (typeof src.matchNo === 'number') ? src.matchNo : 0,
           innings: [{ battingTeam: src.teamA || '', bowlingTeam: src.teamB || '' }]
         };
       }
@@ -17492,6 +17618,7 @@
              its Match Title ("Group A Match") and Season rows. */
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
           stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
+          matchNo: (typeof S.matchNo === 'number') ? S.matchNo : 0,
           season: (S.matchKind === 'tournament' && ownTn && ownTn.season) ? ownTn.season : '',
           matchFormat: S.matchFormat || '', ballType: S.ballType || '',
           matchDate: S.matchDate || '', matchTime: S.matchTime || '',
@@ -19865,6 +19992,7 @@
         base.tossInfo = e.tossInfo || '';
         base.matchGroup = e.group || '';
         base.matchStage = e.stage || '';
+        base.matchNo = (typeof e.matchNo === 'number') ? e.matchNo : 0;
         base.matchFormat = e.matchFormat || ''; base.ballType = e.ballType || '';
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
         /* An entry filed before the schedule fields existed shows
@@ -25401,7 +25529,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','matchStage','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','matchStage','matchNo','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
