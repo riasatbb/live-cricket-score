@@ -4067,7 +4067,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v253';
+      var APP_VERSION = 'v254';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5069,6 +5069,31 @@
           .replace(/\b1 overs\b/g, '1 over');
       }
       function fixResultText(s){ return asSentence(fixPlurals(s)); }
+      /* A finished match's Result is the won-by sentence — never
+         the live chase-status line. "X have reached the target of
+         N." describes a chase WHILE it is live (cbStatusText and
+         friends build it for the situation line); a finished
+         match's record that carries it in the result's place has
+         the status sentence saved as its result. That exact
+         sentence is recognised here and the real result is
+         recomputed from the innings wherever the record is read
+         or re-filed, so every screen — and the next save of the
+         record — shows and stores the won-by result. Any other
+         stored wording (a scorer's own result text included) is
+         left exactly as recorded. */
+      function isChaseStatusText(s){
+        return / have reached the target of \d+\.?$/i.test(String(s == null ? '' : s).replace(/🏆/g, '').trim());
+      }
+      function healedResultText(text, innings, wicketsLimit){
+        var t = String(text == null ? '' : text);
+        if (!isChaseStatusText(t)) return t;
+        if (!innings || innings.length < 2 || !innings[0] || !innings[1]) return t;
+        var a = innings[0], b = innings[1];
+        var wl = (typeof wicketsLimit === 'number') ? wicketsLimit : 10;
+        if (b.runs > a.runs) return b.battingTeam + ' won by ' + wicketW(wl - b.wickets) + '.';
+        if (a.runs > b.runs) return a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
+        return t; /* level scores: a chase cannot end level, so the record's own tie wording stands */
+      }
       function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
       /* No pop-up messages anywhere (owner's rule): the floating
          confirmation toast is retired — actions speak through the
@@ -6354,6 +6379,22 @@
         if (typeof S.potmName !== 'string') S.potmName = '';
         if (typeof S.potmTeam !== 'string') S.potmTeam = '';
         if (typeof S.potmPid !== 'string') S.potmPid = '';
+        /* Result healing (v254): a finished match whose stored
+           result is the live chase-status sentence ("X have reached
+           the target of N.") gets its real won-by result back,
+           recomputed from the innings — on the pad state itself, on
+           its saved tournament copies (open and archived) and on
+           the viewer-home finished-Single record alike. This runs
+           on every load, adopt and commit, so the next commit
+           publishes the correction and no screen ever shows the
+           status sentence as a result. */
+        try {
+          if (S.status === 'finished' && S.resultText && S.prevInnings && S.current) S.resultText = healedResultText(S.resultText, [S.prevInnings, S.current], S.wicketsLimit);
+          var healRec = function(m){ if (m && m.resultText) m.resultText = healedResultText(m.resultText, m.innings, m.wicketsLimit); };
+          if (S.tournament && Array.isArray(S.tournament.matches)) S.tournament.matches.forEach(healRec);
+          if (Array.isArray(S.tournamentsArchive)) S.tournamentsArchive.forEach(function(tn){ if (tn && tn.data && Array.isArray(tn.data.matches)) tn.data.matches.forEach(healRec); });
+          if (S.lastFinishedSingle) healRec(S.lastFinishedSingle);
+        } catch(e){}
         /* Super Over: states saved before it existed carry no field;
            a malformed one (no stable ID) is dropped rather than
            trusted — an ID-less Super Over could never be told apart
@@ -8436,7 +8477,7 @@
           ownerUid: S.ownerUid || '', ownerName: S.ownerName || '',
           teamA: S.teamA || '', teamB: S.teamB || '',
           venue: S.venue || '',
-          resultText: S.resultText || '',
+          resultText: healedResultText(S.resultText || '', inns, (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10),
           abandoned: !!S.abandoned,
           wicketsLimit: (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10,
           innings: inns
@@ -10429,7 +10470,8 @@
       }
       function matchResultText(match, ownerTn){
         var txt = '';
-        if (match.resultText) txt = fixResultText(String(match.resultText).replace(/🏆/g, ''));
+        var storedRt = match.resultText ? healedResultText(String(match.resultText).replace(/🏆/g, ''), match.innings, match.wicketsLimit) : '';
+        if (storedRt) txt = fixResultText(storedRt);
         else if (match.superOver && match.superOver.winner && match.superOver.resultText) txt = asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
         else if (match.innings && match.innings.length >= 2){
           var a = match.innings[0], b = match.innings[1];
@@ -10478,7 +10520,7 @@
              by this stamp, never by team names alone. */
           tournamentId: ownKey,
           oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
-          innings: inningsArr, resultText: S.resultText || '',
+          innings: inningsArr, resultText: healedResultText(S.resultText || '', inningsArr, wicketsLimit()),
           /* Set when this match was started from the knockout
              bracket: the bracket match's own stable ID, so the
              bracket can claim this result as its own even if the
@@ -17651,7 +17693,7 @@
           dlTarget: (typeof S.dlTarget === 'number') ? S.dlTarget : null,
           dlOvers: (typeof S.dlOvers === 'number') ? S.dlOvers : null,
           abandoned: !!S.abandoned,
-          resultText: S.resultText || '',
+          resultText: healedResultText(S.resultText || '', inns, wicketsLimit()),
           /* The Super Over that settled a tie travels into the
              archive with the match — its own stable ID, its two
              innings and its result — so the record of the match is
@@ -20081,7 +20123,7 @@
         base.finalSquadA = deep(e.squadA || []); base.finalSquadB = deep(e.squadB || []);
         base.squadConfirmed = !!((e.squadA || []).length || (e.squadB || []).length);
         base.potmName = e.potmName || ''; base.potmTeam = e.potmTeam || ''; base.potmPid = e.potmPid || '';
-        base.resultText = e.resultText || matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }) || '';
+        base.resultText = healedResultText(e.resultText || '', e.innings, e.wicketsLimit) || matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }) || '';
         base.superOver = deep(e.superOver || null);
         base.matchId = e.id; base.archivedMatchId = e.id;
         base.ownerUid = e.ownerUid || ''; base.ownerName = e.ownerName || '';
@@ -20393,9 +20435,10 @@
       function histMatchCardHTML(e){
         var date = e.at ? fmtDMYTime(e.at) : '';
         var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+        var resTxt = e.live ? (e.resultText || '') : healedResultText(e.resultText || '', e.innings, e.wicketsLimit);
         var res = e.live
-          ? (e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : '● Match in progress.')
-          : (e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
+          ? (resTxt ? fixResultText(String(resTxt).replace(/ 🏆/g, '')) : '● Match in progress.')
+          : (resTxt ? fixResultText(String(resTxt).replace(/ 🏆/g, '')) : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
         var potm = e.potmName
           ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
           : (!e.live && !e.abandoned ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: Not Decided Yet</div>' : '');
@@ -20467,7 +20510,8 @@
         function resOf(e){
           if (e.live) return e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : 'Match in progress.';
           if (e.abandoned) return 'Match abandoned.';
-          var r = e.resultText ? fixResultText(String(e.resultText).replace(/ 🏆/g, '')) : '';
+          var healedR = healedResultText(e.resultText || '', e.innings, e.wicketsLimit);
+          var r = healedR ? fixResultText(String(healedR).replace(/ 🏆/g, '')) : '';
           if (!r){ try { r = matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }); } catch(err){} }
           return r || 'No result recorded.';
         }
@@ -22497,7 +22541,7 @@
         var tEl = $('heTournament'); if (tEl) e.tournamentName = tEl.value.trim();
         var dEl = $('heDate'); if (dEl) e.matchDate = dEl.value || '';
         var tmEl = $('heTime'); if (tmEl) e.matchTime = tmEl.value || '';
-        var rEl = $('heResult'); if (rEl) e.resultText = rEl.value.trim();
+        var rEl = $('heResult'); if (rEl) e.resultText = healedResultText(rEl.value.trim(), e.innings, e.wicketsLimit);
         var sel = $('hePotm');
         if (sel){
           if (sel.value === ''){ e.potmName = ''; e.potmTeam = ''; e.potmPid = ''; }
@@ -23367,7 +23411,7 @@
           var newPair = beResultPair(e, e.innings, e.superOver || null);
           var curNorm = fixResultText(e.resultText || '').replace(/\s*🏆\s*$/, '');
           var oldNorm = (oldPair.auto || '').replace(/\s*🏆\s*$/, '');
-          if (!e.resultText || curNorm === oldNorm) e.resultText = newPair.stored;
+          if (!e.resultText || curNorm === oldNorm || isChaseStatusText(e.resultText)) e.resultText = newPair.stored;
         }
         /* A correction can take the Player of the Match out of the
            match altogether (their only entry was the wrong one) —
