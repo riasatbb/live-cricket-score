@@ -4067,7 +4067,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v252';
+      var APP_VERSION = 'v253';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -24925,10 +24925,21 @@
          itself in this same sequence, for the scorer and, through
          the synced state, for viewers alike. */
       function cbTossBlockHTML(){
-        var hasToss = !!(S.tossWinner && S.tossDecision);
-        var winner = S.tossWinner;
+        /* The live state carries the two toss picks; an archived
+           display state (a finished match opened from History)
+           keeps only the combined toss sentence, so the picks are
+           read back out of it — the same read-back the Info tab
+           does. Without it the whole "Teams:" + Playing XI + toss
+           sentence part of this block vanished on a finished match
+           and only "Squads:" survived. */
+        var winner = S.tossWinner || '', decision = S.tossDecision || '';
+        if ((!winner || !decision) && S.tossInfo){
+          var tpm = String(S.tossInfo).match(/^(.+?) won the toss and chose to (bat|bowl)/i);
+          if (tpm){ if (!winner) winner = tpm[1]; if (!decision) decision = tpm[2].toLowerCase(); }
+        }
+        var hasToss = !!(winner && decision);
         var other = (winner === S.teamA) ? S.teamB : S.teamA;
-        var batFirst = hasToss ? ((S.tossDecision === 'bat') ? winner : other) : S.teamA;
+        var batFirst = hasToss ? ((decision === 'bat') ? winner : other) : S.teamA;
         var sides = [batFirst, (batFirst === S.teamA) ? S.teamB : S.teamA];
         function namesWithSuffix(team, list){
           var L = cbxLeadership(team);
@@ -24959,7 +24970,7 @@
         if (hasToss){
           html += '<div class="cb-toss-h">Teams:</div>'
             + (anyXI ? xiLines : '<p class="cb-toss-line cb-toss-tbc">Playing XI not confirmed yet.</p>')
-            + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '.</div>';
+            + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (decision === 'bat' ? 'bat' : 'field') + '.</div>';
         }
         if (sqLines) html += '<div class="cb-toss-h">Squads:</div>' + sqLines;
         return html;
