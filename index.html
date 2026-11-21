@@ -1559,8 +1559,6 @@
       .cb-toss-line b{color:#fff}
       .cb-toss-sentence{font-size:15.5px;font-weight:700;color:#fff;line-height:1.55;margin:12px 0 2px}
       .cb-toss-tbc{color:#bdbdbd;font-style:italic}
-      .cb-crease{background:#2b2b2b;color:#fff;font-size:15.5px;font-weight:600;line-height:1.55;padding:12px 16px;border-bottom:1px solid #3d3d3d}
-      .cb-crease[hidden]{display:none}
       /* Scorecard tab (per reference): a situation band on top, then
          one collapsible row per innings — team name left, the score
          as runs-wickets (overs) right, and a chevron — expanding in
@@ -3155,7 +3153,9 @@
                  where they belong. -->
             <div class="cb-main" id="cbMainScore"></div>
             <div class="cb-pship" id="cbPship"></div>
-            <div class="cb-crease" id="cbCreaseLine" hidden></div>
+            <!-- No crease line above the batter table: who is at the
+                 crease and who is on strike is said ONCE, in the
+                 commentary's one-time green innings-start entry. -->
             <div class="cb-table" id="cbBatterTable"></div>
             <div class="cb-table" id="cbBowlerTable"></div>
             <div class="cb-comm" id="cbCommentary"></div>
@@ -4058,7 +4058,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v249';
+      var APP_VERSION = 'v250';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -25038,25 +25038,11 @@
               + projHtml;
           }
         }
-        /* The crease line, like the reference: who is at the crease
-           and — the part that was never spelled out at a glance —
-           who is ON STRIKE, with the opening bowler named before
-           the first ball ("C will open the attack"). It sits
-           directly above the batter table, is rebuilt from the
-           live pair on every render (so it is correct at the start
-           of the innings and after every wicket alike), and is
-           gone at the innings break and on a finished match, where
-           there is no current pair. */
-        var crEl = $('cbCreaseLine');
-        if (crEl){
-          var crHtml = '';
-          if (!finished && S.status !== 'inningsBreak' && inn && inn.striker && inn.nonStriker){
-            crHtml = '<b>' + plLink(inn.battingTeam, inn.striker) + '</b> and <b>' + plLink(inn.battingTeam, inn.nonStriker) + '</b> are at the crease. <b>' + plLink(inn.battingTeam, inn.striker) + '</b> is on strike.';
-            if (inningsNotStarted(inn) && inn.bowler) crHtml += ' <b>' + plLink(inn.bowlingTeam, inn.bowler) + '</b> will open the attack.';
-          }
-          crEl.innerHTML = crHtml;
-          crEl.hidden = !crHtml;
-        }
+        /* No crease line above the batter table: the crease pair
+           and who is on strike are announced ONCE, in the
+           commentary's green innings-start entry ("A & B come to
+           the crease. A is on strike. C will open the attack."),
+           so the same fact never shows twice on the LIVE tab. */
         /* batter table — current pair, like the reference. A finished
            match has no "current pair" table: the finished header, the
            Player of the Match band and the feed carry the page, and
