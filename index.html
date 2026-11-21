@@ -1239,7 +1239,6 @@
       .tnfx-opt:active{transform:scale(.99)}
       .tnfx-opt .tnfx-ic{font-size:26px;line-height:1;flex:none}
       .tnfx-opt .tnfx-t{display:block;font-size:17.5px;font-weight:800}
-      .tnfx-opt .tnfx-d{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:2px;line-height:1.4}
       body.viewer-mode .grp-actions{display:none !important}
       body.tn-locked .grp-actions{display:none !important}
       .ac-idline{font-variant-numeric:tabular-nums;letter-spacing:.01em}
@@ -2846,12 +2845,12 @@
             <h3 class="om-h">Match Type</h3>
             <button type="button" class="tnfx-opt" onclick="tnFxShowStep('group')">
               <span class="tnfx-ic" aria-hidden="true">🏆</span>
-              <span style="flex:1;min-width:0"><span class="tnfx-t">Group</span><span class="tnfx-d">A league match inside one group — pick which group on the next step, or create a new group there.</span></span>
+              <span style="flex:1;min-width:0"><span class="tnfx-t">Group</span></span>
               <span class="tns-chev" aria-hidden="true">›</span>
             </button>
             <button type="button" class="tnfx-opt" onclick="tnFxShowStep('stage')">
               <span class="tnfx-ic" aria-hidden="true">⚔️</span>
-              <span style="flex:1;min-width:0"><span class="tnfx-t">Knockout</span><span class="tnfx-d">A knockout match — pick the round on the next step: Round of 16, Quarter Final, Semifinal or Final.</span></span>
+              <span style="flex:1;min-width:0"><span class="tnfx-t">Knockout</span></span>
               <span class="tns-chev" aria-hidden="true">›</span>
             </button>
           </div>
@@ -2864,7 +2863,6 @@
                 <input id="tnFxNewGroup" style="flex:1;min-width:0" placeholder="e.g. Group A" autocomplete="off" />
                 <button type="button" class="btn sm" onclick="tnFxCreateGroup()">Create Group</button>
               </div>
-              <p class="note" style="margin:8px 0 0">Creating a group here selects it straight away. Groups can also be created — and filled with teams — from the Teams tab.</p>
             </div>
             <div class="rowflex" style="margin-top:14px"><button type="button" class="btn ghost sm" onclick="tnFxShowStep('type')">← Match Type</button></div>
           </div>
@@ -2994,7 +2992,7 @@
           <div id="mcBowler"></div>
           <div class="mc-balls" id="mcBalls"></div>
           <div class="mc-notes">
-            <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase — loading the live match first. Scoring unlocks as soon as it loads, so a refresh can never wipe the real score.</div>
+            <div class="sync-gate" id="syncGateNote" role="status">⏳ Connecting to Firebase…</div>
             <div class="owner-note" id="ownerLockNote" role="status"></div>
             <div class="mc-hint" id="slotHint" role="status"></div>
             <div class="mc-so-banner" id="mcSoBanner" hidden></div>
@@ -3417,7 +3415,6 @@
                   <input id="grpNewName" style="flex:1;min-width:0" placeholder="e.g. Group A" autocomplete="off" />
                   <button type="button" class="btn sm" onclick="createGroup()">Create Group</button>
                 </div>
-                <p class="note" style="margin:8px 0 0">Create a group, then tap it below to add its teams — each group gets its own points table. Group fixtures are added from the Matches tab’s ADD FIXTURE button.</p>
               </div>
               <div id="tnGroups" style="margin-top:12px"></div>
             </div>
@@ -3428,7 +3425,6 @@
             <div class="card"><h2>Matches</h2><div id="tnFixtures"></div></div>
             <div class="card tn-addfx-card">
               <button type="button" class="btn gold" style="width:100%;padding:14px 10px;font-size:16.5px" onclick="openTnAddFixture()">➕ ADD FIXTURE</button>
-              <p class="note" style="margin:8px 0 0;text-align:center">Group match or knockout — pick the type, then the group or the round, then the two teams. Save Fixture adds it to this tournament’s fixtures.</p>
             </div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Auto Fixture Generator</button>
@@ -3888,7 +3884,6 @@
           <h2 id="fixTossTitle">🪙 Fix Toss</h2>
           <button class="sq-x big" onclick="closeFixToss()" aria-label="Close">×</button>
         </div>
-        <p class="sub" style="color:var(--muted);font-size:14px;margin:6px 0 0">No ball has been bowled yet, so the toss can still be corrected. If the correction changes which team bats first, the batter and bowler picks are cleared and picked again.</p>
         <h3 class="om-h">Who won the toss?</h3>
         <div class="toss-grid" id="fixTossGrid"></div>
         <h3 class="om-h">Decided to?</h3>
@@ -4054,7 +4049,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v244';
+      var APP_VERSION = 'v246';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -10698,8 +10693,7 @@
         normalizeTournament();
         var groups = rawGroups();
         var html = '<button type="button" class="tns-row" onclick="tnFxPickGroup(\'\')">'
-          + '<span style="flex:1;min-width:0"><span style="display:block">League Match — no group</span>'
-          + '<span class="note" style="display:block;font-weight:400">A plain league fixture, counted in the one points table</span></span>'
+          + '<span style="flex:1;min-width:0"><span style="display:block">League Match — no group</span></span>'
           + '<span class="tns-chev" aria-hidden="true">›</span></button>';
         html += groups.map(function(g){
           return '<button type="button" class="tns-row" onclick="tnFxPickGroup(' + fxIdArg(g.name) + ')">'
@@ -10708,7 +10702,7 @@
             + '<span class="note" style="flex:none">' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + '</span>'
             + '<span class="tns-chev" aria-hidden="true">›</span></button>';
         }).join('');
-        if (!groups.length) html += '<p class="note" style="margin-top:10px">No groups yet in this tournament — create the first one below.</p>';
+        if (!groups.length) html += '<p class="note" style="margin-top:10px">No groups yet in this tournament.</p>';
         box.innerHTML = html;
       }
       function tnFxRenderStages(){
@@ -10719,8 +10713,7 @@
           S.tournament.matches.forEach(function(m){ if (m && m.stage === st.code) n++; });
           S.tournament.fixtures.forEach(function(f){ if (f && f.stage === st.code) n++; });
           return '<button type="button" class="tns-row" onclick="tnFxPickStage(\'' + st.code + '\')">'
-            + '<span style="flex:1;min-width:0"><span style="display:block">' + st.name + '</span>'
-            + '<span class="note" style="display:block;font-weight:400">' + (st.code === 'F' ? 'The winner takes the tournament' : 'Knockout — never counts in the points table') + '</span></span>'
+            + '<span style="flex:1;min-width:0"><span style="display:block">' + st.name + '</span></span>'
             + (n ? '<span class="note" style="flex:none">' + n + (n === 1 ? ' match' : ' matches') + '</span>' : '')
             + '<span class="tns-chev" aria-hidden="true">›</span></button>';
         }).join('');
@@ -10783,7 +10776,7 @@
           banner.hidden = !tnFxMode;
           if (tnFxMode){
             var what = om.tnFx.stage ? ('Knockout • ' + koStageName(om.tnFx.stage)) : (om.tnFx.group ? ('Group Match • ' + om.tnFx.group) : 'League Match');
-            banner.innerHTML = '🏆 ' + esc(S.tournament.name.trim() || 'Tournament') + '<br><span class="note" style="font-weight:600">' + esc(what) + ' — SAVE FIXTURE adds this match to the tournament’s fixtures</span>';
+            banner.innerHTML = '🏆 ' + esc(S.tournament.name.trim() || 'Tournament') + '<br><span class="note" style="font-weight:600">' + esc(what) + '</span>';
           }
         }
       }
@@ -25971,7 +25964,7 @@
             + tpBadgeHTML(n, i)
             + '<span class="tp-main"><span class="tp-name">' + esc(n) + '</span>'
             + '<span class="tp-id">Team ID: <span class="id-tap" title="Tap to copy the full Team ID" onclick="copyIdTap(event,' + fxIdArg(teamIdFor(n)) + ',\'Team ID\')">' + esc(teamIdFor(n)) + '</span>' + (taken ? ' • Already picked' : '') + '</span></span></button>';
-        }).join('') : '<p class="note">' + ((tnFxGroupOnly && !q) ? ('No teams in ' + esc(om.tnFx.group) + ' yet — create one with Create New Team above and it joins the group.') : 'No teams found.') + '</p>';
+        }).join('') : '<p class="note">' + ((tnFxGroupOnly && !q) ? ('No teams in ' + esc(om.tnFx.group) + ' yet.') : 'No teams found.') + '</p>';
       }
       function pickTeamIdx(i){ var n = tpCurrentList[i]; if (n) pickTeam(n); }
       function pickTeam(name){
@@ -26721,21 +26714,11 @@
             toast('🗑 ' + label + ' deleted — its matches and player statistics from it were removed too');
           });
       }
-      /* A tournament's Delete button is RENDERED only for the
-         account allowed to use it: the admin who created that
-         tournament, signed in with the same Google account — or,
-         for a tournament saved before ownership existed (no owner
-         recorded), any signed-in account on the control side.
-         Guests, other Google accounts and every viewer never see
-         a Delete button here at all; the delete handlers re-check
-         exactly the same rule before anything is removed. */
-      function tnDeleteVisible(ownerUid){
-        if (isViewerSession()) return false;
-        if (document.body.classList.contains('viewer-mode') || document.body.classList.contains('link-viewer')) return false;
-        var o = ownerUid || '';
-        if (!o) return !!currentUid();
-        return o === currentUid();
-      }
+      /* The Tournaments list renders NO Delete button (v245): a
+         tournament is deleted from one place only — the 🗑 icon
+         at the top-right of its Edit Tournament Info page
+         (tnEditDelete → deleteCurrentTournament, which re-checks
+         ownership before anything is removed). */
       function renderTournamentList(){
         var el = $('tnList'); if (!el) return;
         try { normalizeTournament(); } catch(e){}
@@ -26756,7 +26739,6 @@
           html = '<div class="tn-row"><button type="button" class="tn-pick" onclick="openCurrentTournament()">'
             + '<span><span class="tp-name">' + esc(tn.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(tn)) + '</span></span></button>'
-            + (tnDeleteVisible(tn.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteCurrentTournament()" aria-label="Delete the current tournament">🗑 Delete</button>' : '')
             + '</div>';
         }
         var arc = tournamentsArchive().slice().reverse();
@@ -26766,7 +26748,6 @@
           return '<div class="tn-row"><button type="button" class="tn-pick" onclick="openArchivedTournament(\'' + esc(a.id) + '\')">'
             + '<span><span class="tp-name">' + esc(a.name || d.name || 'Tournament') + '</span>'
             + '<span class="tp-meta">' + esc(meta(d)) + (date ? ' • Saved ' + esc(date) : '') + '</span></span></button>'
-            + (tnDeleteVisible(d.ownerUid) ? '<button type="button" class="btn red sm tn-delbtn" onclick="deleteArchivedTournament(\'' + esc(a.id) + '\')" aria-label="Delete ' + esc(a.name || d.name || 'this tournament') + '">🗑 Delete</button>' : '')
             + '</div>';
         }).join('');
         el.innerHTML = html;
