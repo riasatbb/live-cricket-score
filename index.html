@@ -1233,6 +1233,13 @@
       .grp-teamrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line)}
       .grp-teamrow:last-child{border-bottom:none}
       .grp-teamname{flex:1;min-width:0;font-size:15.5px;word-break:break-word}
+      /* ---------- Add Fixture flow (Matches tab → type → group / round → form) ---------- */
+      .om-tnfx-banner{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:14px;text-align:center;font-weight:800;font-size:15.5px;line-height:1.35}
+      .tnfx-opt{display:flex;align-items:center;gap:12px;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:16px 14px;margin-top:10px;color:var(--ink);cursor:pointer;text-align:left;font:inherit}
+      .tnfx-opt:active{transform:scale(.99)}
+      .tnfx-opt .tnfx-ic{font-size:26px;line-height:1;flex:none}
+      .tnfx-opt .tnfx-t{display:block;font-size:17.5px;font-weight:800}
+      .tnfx-opt .tnfx-d{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:2px;line-height:1.4}
       body.viewer-mode .grp-actions{display:none !important}
       body.tn-locked .grp-actions{display:none !important}
       .ac-idline{font-variant-numeric:tabular-nums;letter-spacing:.01em}
@@ -1273,6 +1280,8 @@
          hidden here is one that would have refused anyway; hiding is
          now the first line, the handler check stays as the second. */
       body.tn-locked #view-tournament .card.fold{display:none !important}
+      body.viewer-mode #tnPanel-matches .tn-addfx-card{display:none !important}
+      body.tn-locked #view-tournament .tn-addfx-card{display:none !important}
       body.tn-locked #view-tournament .sq-x{display:none !important}
       body.tn-locked #view-tournament .logo-edit{display:none !important}
       body.tn-locked #tnPanel-matches .match-row .rowflex{display:none !important}
@@ -2784,10 +2793,11 @@
       <!-- ================= OPEN MATCH: START SINGLE MATCH SETUP ================= -->
       <section class="view" id="view-openmatch">
         <div class="clean-top">
-          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">🔙</button>
-          <h2>Open Match</h2>
+          <button type="button" class="clean-back" onclick="omBackTap()" aria-label="Back">🔙</button>
+          <h2 id="omTitle">Open Match</h2>
         </div>
         <div class="card om-card">
+          <div class="om-tnfx-banner" id="omTnFxBanner" hidden></div>
           <div class="om-teams">
             <div class="om-slot">
               <div class="om-lab">Select Team</div>
@@ -2821,6 +2831,48 @@
         <div class="card om-card" id="omFxCard" hidden>
           <h2>Saved Fixtures</h2>
           <div id="omFxList"></div>
+        </div>
+      </section>
+
+      <!-- ================= ADD FIXTURE: TOURNAMENT FIXTURE FLOW ================= -->
+      <section class="view" id="view-tnaddfx">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="tnFxBack()" aria-label="Back to Tournament">🔙</button>
+          <h2>Add Fixture</h2>
+        </div>
+        <p class="note" id="tnFxTnName" style="text-align:center;margin:-6px 0 12px"></p>
+        <div class="card om-card">
+          <div id="tnFxStepType">
+            <h3 class="om-h">Match Type</h3>
+            <button type="button" class="tnfx-opt" onclick="tnFxShowStep('group')">
+              <span class="tnfx-ic" aria-hidden="true">🏆</span>
+              <span style="flex:1;min-width:0"><span class="tnfx-t">Group</span><span class="tnfx-d">A league match inside one group — pick which group on the next step, or create a new group there.</span></span>
+              <span class="tns-chev" aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="tnfx-opt" onclick="tnFxShowStep('stage')">
+              <span class="tnfx-ic" aria-hidden="true">⚔️</span>
+              <span style="flex:1;min-width:0"><span class="tnfx-t">Knockout</span><span class="tnfx-d">A knockout match — pick the round on the next step: Round of 16, Quarter Final, Semifinal or Final.</span></span>
+              <span class="tns-chev" aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div id="tnFxStepGroup" hidden>
+            <h3 class="om-h">Select Group</h3>
+            <div id="tnFxGroupList"></div>
+            <div style="margin-top:16px">
+              <label for="tnFxNewGroup">Create a new group</label>
+              <div class="rowflex">
+                <input id="tnFxNewGroup" style="flex:1;min-width:0" placeholder="e.g. Group A" autocomplete="off" />
+                <button type="button" class="btn sm" onclick="tnFxCreateGroup()">Create Group</button>
+              </div>
+              <p class="note" style="margin:8px 0 0">Creating a group here selects it straight away. Groups can also be created — and filled with teams — from the Teams tab.</p>
+            </div>
+            <div class="rowflex" style="margin-top:14px"><button type="button" class="btn ghost sm" onclick="tnFxShowStep('type')">← Match Type</button></div>
+          </div>
+          <div id="tnFxStepStage" hidden>
+            <h3 class="om-h">Select Knockout Round</h3>
+            <div id="tnFxStageList"></div>
+            <div class="rowflex" style="margin-top:14px"><button type="button" class="btn ghost sm" onclick="tnFxShowStep('type')">← Match Type</button></div>
+          </div>
         </div>
       </section>
 
@@ -3357,22 +3409,26 @@
               </div>
               <div id="tnTeamsGrid"></div>
             </div>
+            <div class="card" id="tnGroupsCard">
+              <h2>Groups</h2>
+              <div class="grp-actions">
+                <label for="grpNewName">New group name</label>
+                <div class="rowflex">
+                  <input id="grpNewName" style="flex:1;min-width:0" placeholder="e.g. Group A" autocomplete="off" />
+                  <button type="button" class="btn sm" onclick="createGroup()">Create Group</button>
+                </div>
+                <p class="note" style="margin:8px 0 0">Create a group, then tap it below to add its teams — each group gets its own points table. Group fixtures are added from the Matches tab’s ADD FIXTURE button.</p>
+              </div>
+              <div id="tnGroups" style="margin-top:12px"></div>
+            </div>
           </div>
 
           <!-- MATCHES -->
           <div class="tn-panel" id="tnPanel-matches">
             <div class="card"><h2>Matches</h2><div id="tnFixtures"></div></div>
-            <div class="card fold">
-              <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Add Fixture</button>
-              <div class="fold-body" hidden>
-              <div class="grid2">
-                <div><label for="fxTeamA">Team 1</label><input id="fxTeamA" list="dlTeams" placeholder="Team 1" /></div>
-                <div><label for="fxTeamB">Team 2</label><input id="fxTeamB" list="dlTeams" placeholder="Team 2" /></div>
-              </div>
-              <div style="margin-top:10px"><label for="fxLabel">Date / Venue (optional)</label><input id="fxLabel" placeholder="e.g. Sat 14 Nov • Sheikh Abu Naser Stadium" /></div>
-              <div style="margin-top:10px"><label for="fxGroup">Group (optional)</label><select id="fxGroup" class="tn-select"><option value="">No group</option></select></div>
-              <div class="rowflex" style="margin-top:12px"><button class="btn sm" onclick="addFixture()">Add Fixture</button></div>
-              </div>
+            <div class="card tn-addfx-card">
+              <button type="button" class="btn gold" style="width:100%;padding:14px 10px;font-size:16.5px" onclick="openTnAddFixture()">➕ ADD FIXTURE</button>
+              <p class="note" style="margin:8px 0 0;text-align:center">Group match or knockout — pick the type, then the group or the round, then the two teams. Save Fixture adds it to this tournament’s fixtures.</p>
             </div>
             <div class="card fold">
               <button type="button" class="fold-sum" onclick="toggleFold(this)" aria-expanded="false">Auto Fixture Generator</button>
@@ -3998,7 +4054,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v243';
+      var APP_VERSION = 'v244';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -4568,7 +4624,7 @@
          ever dropped: a split write always lands the library BEFORE
          the first hot-only write replaces liveMatch, and a denied
          library write leaves liveMatch untouched. */
-      var HOT_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsEndReady','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName','updatedAt'];
+      var HOT_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsEndReady','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','matchStage','ownerUid','ownerName','updatedAt'];
       var COLD_KEYS = ['nicknames','players','playerIds','teamRegistry','teamLogos','singleFixtures','pausedMatches','lastFinishedSingle','tournamentsArchive','myTeams','tournament'];
       var fbLibRef = null;      /* the liveLibrary node */
       var fbHotState = null;    /* the last liveMatch payload Firebase is known to hold (hot-only, or a legacy whole state) */
@@ -6338,6 +6394,7 @@
            from, copied onto the saved tournament result as its
            group, exactly like bracketMatchId above. */
         if (typeof S.matchGroup !== 'string') S.matchGroup = '';
+        if (typeof S.matchStage !== 'string') S.matchStage = '';
         /* The tournament this live match belongs to, stamped at
            match start ('' when it is not that tournament's match —
            see freshState). Older states carry no stamp at all. */
@@ -8477,6 +8534,7 @@
           (pList || []).forEach(function(x){ if (x.id === pfs.id) pfx = x; });
           if (pfx && ((pfx.teamA === newA && pfx.teamB === newB) || (pfx.teamA === newB && pfx.teamB === newA))){
             if (pfs.kind === 'tournament') S.matchGroup = (typeof pfx.group === 'string') ? pfx.group : '';
+            if (pfs.kind === 'tournament') S.matchStage = (typeof pfx.stage === 'string') ? pfx.stage : '';
             if (pfs.kind === 'tournament') S.tournament.fixtures = S.tournament.fixtures.filter(function(x){ return x.id !== pfs.id; });
             else S.singleFixtures = S.singleFixtures.filter(function(x){ return x.id !== pfs.id; });
           }
@@ -10399,6 +10457,11 @@
           /* The group this match belongs to, stamped from the
              fixture it was started from (see S.matchGroup). */
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
+          /* The knockout stage the fixture carried ('R16' / 'QF' /
+             'SF' / 'F'), stamped the same way (see S.matchStage):
+             it drives the stage label, keeps the match out of the
+             points table, and an 'F' here IS the tournament Final. */
+          stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
           /* The Super Over that settled this match (if any) rides
              with the tournament result, so the bracket and podium
              read its winner through matchWinner. */
@@ -10572,6 +10635,220 @@
         ensureTournamentTeam(a); ensureTournamentTeam(b);
         $('fxTeamA').value=''; $('fxTeamB').value=''; $('fxLabel').value='';
         commit('Fixture added', true); toast('Fixture added');
+      }
+      /* ---------- Add Fixture flow (v244) ----------
+         The Matches tab's ADD FIXTURE button opens its own page
+         (view-tnaddfx): first the match type — Group or Knockout.
+         Group asks WHICH group: an existing one, a brand-new one
+         created right there (the group-creation entry point the
+         Teams tab's Groups card also offers), or no group for a
+         plain league fixture. Knockout asks the round — Round of
+         16, Quarter Final, Semifinal or Final. Either choice lands
+         on the Open Match form (the very screen a single match is
+         set up on, second reference picture) in tournament-fixture
+         mode (om.tnFx): SAVE FIXTURE there files the fixture into
+         THIS tournament's fixture list with the group / stage
+         stamped on it, and START MATCH files it and starts it in
+         one go. A knockout fixture carries its stage code ('R16' /
+         'QF' / 'SF' / 'F'); the code rides fixture → live match
+         (S.matchStage) → saved result → history, so the stage
+         label, the points table (knockouts never count) and the
+         podium (a played 'F' IS the Final) all read it the same
+         way everywhere. */
+      var TN_KO_STAGES = [
+        { code:'R16', name:'Round of 16' },
+        { code:'QF', name:'Quarter Final' },
+        { code:'SF', name:'Semifinal' },
+        { code:'F', name:'Final' }
+      ];
+      function koStageName(code){
+        for (var i = 0; i < TN_KO_STAGES.length; i++) if (TN_KO_STAGES[i].code === code) return TN_KO_STAGES[i].name;
+        return '';
+      }
+      var tnFx = { step:'type', group:'', stage:'' };
+      function openTnAddFixture(){
+        if (!requireTnOwner('add a fixture')) return;
+        normalizeTournament();
+        tnFx = { step:'type', group:'', stage:'' };
+        var nm = $('tnFxTnName');
+        if (nm) nm.textContent = '🏆 ' + (S.tournament.name.trim() || 'Tournament') + ' — the saved fixture joins this tournament’s Matches list.';
+        tnFxShowStep('type');
+        setView('tnaddfx');
+      }
+      function tnFxShowStep(step){
+        tnFx.step = step;
+        var t = $('tnFxStepType'), g = $('tnFxStepGroup'), s = $('tnFxStepStage');
+        if (t) t.hidden = step !== 'type';
+        if (g) g.hidden = step !== 'group';
+        if (s) s.hidden = step !== 'stage';
+        if (step === 'group') tnFxRenderGroups();
+        if (step === 'stage') tnFxRenderStages();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      /* The flow page's 🔙: from a selection step back to the
+         match-type step; from there back to the tournament page
+         (the Matches tab it was opened from is still selected). */
+      function tnFxBack(){
+        if (tnFx.step === 'group' || tnFx.step === 'stage'){ tnFxShowStep('type'); return; }
+        om.tnFx = null;
+        setView('tournament');
+      }
+      function tnFxRenderGroups(){
+        var box = $('tnFxGroupList'); if (!box) return;
+        normalizeTournament();
+        var groups = rawGroups();
+        var html = '<button type="button" class="tns-row" onclick="tnFxPickGroup(\'\')">'
+          + '<span style="flex:1;min-width:0"><span style="display:block">League Match — no group</span>'
+          + '<span class="note" style="display:block;font-weight:400">A plain league fixture, counted in the one points table</span></span>'
+          + '<span class="tns-chev" aria-hidden="true">›</span></button>';
+        html += groups.map(function(g){
+          return '<button type="button" class="tns-row" onclick="tnFxPickGroup(' + fxIdArg(g.name) + ')">'
+            + '<span style="flex:1;min-width:0"><span style="display:block">' + esc(g.name) + '</span>'
+            + '<span class="note" style="display:block;font-weight:400">' + (g.teams.length ? esc(g.teams.join(' • ')) : 'No teams in this group yet') + '</span></span>'
+            + '<span class="note" style="flex:none">' + g.teams.length + (g.teams.length === 1 ? ' team' : ' teams') + '</span>'
+            + '<span class="tns-chev" aria-hidden="true">›</span></button>';
+        }).join('');
+        if (!groups.length) html += '<p class="note" style="margin-top:10px">No groups yet in this tournament — create the first one below.</p>';
+        box.innerHTML = html;
+      }
+      function tnFxRenderStages(){
+        var box = $('tnFxStageList'); if (!box) return;
+        normalizeTournament();
+        box.innerHTML = TN_KO_STAGES.map(function(st){
+          var n = 0;
+          S.tournament.matches.forEach(function(m){ if (m && m.stage === st.code) n++; });
+          S.tournament.fixtures.forEach(function(f){ if (f && f.stage === st.code) n++; });
+          return '<button type="button" class="tns-row" onclick="tnFxPickStage(\'' + st.code + '\')">'
+            + '<span style="flex:1;min-width:0"><span style="display:block">' + st.name + '</span>'
+            + '<span class="note" style="display:block;font-weight:400">' + (st.code === 'F' ? 'The winner takes the tournament' : 'Knockout — never counts in the points table') + '</span></span>'
+            + (n ? '<span class="note" style="flex:none">' + n + (n === 1 ? ' match' : ' matches') + '</span>' : '')
+            + '<span class="tns-chev" aria-hidden="true">›</span></button>';
+        }).join('');
+      }
+      function tnFxCreateGroup(){
+        if (!requireTnOwner('edit this tournament')) return;
+        normalizeTournament();
+        var inp = $('tnFxNewGroup');
+        var name = inp ? inp.value.trim() : '';
+        if (!name) name = nextGroupName();
+        var clash = rawGroups().some(function(g){ return g.name.toLowerCase() === name.toLowerCase(); });
+        if (clash){ toast('A group named “' + name + '” already exists in this tournament'); return; }
+        S.tournament.groups.push({ id: newGroupId(), name: name, teams: [] });
+        if (inp) inp.value = '';
+        commit('Group created', true);
+        toast('✓ ' + name + ' created — now pick its two teams');
+        tnFxPickGroup(name);
+      }
+      function tnFxPickGroup(name){
+        tnFx.group = name || '';
+        tnFx.stage = '';
+        tnFxToForm();
+      }
+      function tnFxPickStage(code){
+        tnFx.stage = code || '';
+        tnFx.group = '';
+        tnFxToForm();
+      }
+      /* The form step IS the Open Match screen, in tournament
+         mode: the same team circles, venue, date, time, format and
+         scorer fields as a single match — only the title, the
+         banner and what SAVE FIXTURE / START MATCH do change
+         (see om.tnFx in omSaveFixture / omStartMatchTap). The
+         format is seeded from the tournament's recent matches, so
+         a tournament already under way does not ask twice. */
+      function tnFxToForm(){
+        om.tnFx = { group: tnFx.group, stage: tnFx.stage };
+        om.teamA = ''; om.teamB = '';
+        var seed = fixtureFormatSeed();
+        om.overs = seed ? seed.overs : null; om.format = seed ? seed.format : ''; om.wickets = seed ? seed.wickets : 10; om.ballType = seed ? seed.ballType : '';
+        om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        var now = new Date();
+        var vEl = $('omVenue'); if (vEl) vEl.value = S.tournament.venue || '';
+        var dEl = $('omDate'); if (dEl) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+        var tEl = $('omTime'); if (tEl) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+        var sEl = $('omScorer'); if (sEl) sEl.value = '';
+        omApplyModeChrome();
+        omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
+        setView('openmatch');
+      }
+      /* The Open Match screen's dress in each mode: the plain
+         single-match setup, or the Add Fixture form (title +
+         banner naming the tournament and the chosen group /
+         round, so SAVE FIXTURE's destination is never in doubt). */
+      function omApplyModeChrome(){
+        var tnFxMode = !!om.tnFx;
+        var title = $('omTitle'); if (title) title.textContent = tnFxMode ? 'Add Fixture' : 'Open Match';
+        var banner = $('omTnFxBanner');
+        if (banner){
+          banner.hidden = !tnFxMode;
+          if (tnFxMode){
+            var what = om.tnFx.stage ? ('Knockout • ' + koStageName(om.tnFx.stage)) : (om.tnFx.group ? ('Group Match • ' + om.tnFx.group) : 'League Match');
+            banner.innerHTML = '🏆 ' + esc(S.tournament.name.trim() || 'Tournament') + '<br><span class="note" style="font-weight:600">' + esc(what) + ' — SAVE FIXTURE adds this match to the tournament’s fixtures</span>';
+          }
+        }
+      }
+      /* The Open Match screen's 🔙: inside the Add Fixture flow
+         it returns to the flow's selection steps; everywhere else
+         to the Scorer Console, as always. */
+      function omBackTap(){
+        if (om.tnFx){ setView('tnaddfx'); return; }
+        setView('console');
+      }
+      /* Build the tournament fixture from the Open Match form in
+         tnFx mode, or toast why not and return null. A group
+         fixture's two teams must both be IN that group — the same
+         rule the old Add Fixture form enforced. */
+      function tnFxBuildFixture(){
+        var ctx = om.tnFx; if (!ctx) return null;
+        if (ctx.group){
+          var g = groupByName(ctx.group);
+          if (!g){ toast('That group no longer exists — go back and pick it again'); return null; }
+          if (g.teams.indexOf(om.teamA) === -1 || g.teams.indexOf(om.teamB) === -1){
+            toast('Both teams must be in ' + ctx.group + ' for a ' + ctx.group + ' fixture — add a team to the group from the Teams tab, or create it in the team picker');
+            return null;
+          }
+        }
+        var v = omFormValues();
+        return {
+          id: newFixtureId(), teamA: om.teamA, teamB: om.teamB, label: '',
+          group: ctx.group || '', stage: ctx.stage || '',
+          venue: v.venue, date: v.date, time: v.time,
+          overs: om.overs, format: om.format, wickets: om.wickets, ballType: om.ballType,
+          scorerEmailHash: v.scorerEmail ? hashEmail(v.scorerEmail) : ''
+        };
+      }
+      function tnFxSaveFixture(){
+        if (!requireTnOwner('add a fixture')) return;
+        if (!omValidate()) return;
+        normalizeTournament();
+        var fx = tnFxBuildFixture(); if (!fx) return;
+        S.tournament.fixtures.push(fx);
+        ensureTournamentTeam(fx.teamA); ensureTournamentTeam(fx.teamB);
+        om.tnFx = null;
+        commit('Fixture added', true);
+        omApplyModeChrome();
+        setView('tournament');
+        setTnTab('matches');
+        toast('✓ Fixture added — ' + fx.teamA + ' vs ' + fx.teamB + (fx.stage ? ' (' + koStageName(fx.stage) + ')' : (fx.group ? ' (' + fx.group + ')' : '')));
+      }
+      /* START MATCH in tnFx mode: file the fixture first, then run
+         the ordinary toss → start path with the fixture armed, so
+         doStartMatch consumes it (and stamps its group / stage on
+         the live match) exactly like a fixture started from the
+         Matches list. Cancelling the toss leaves the fixture
+         filed in the list, ready to score any time. */
+      function tnFxArmStart(){
+        normalizeTournament();
+        var fx = tnFxBuildFixture(); if (!fx) return false;
+        S.tournament.fixtures.push(fx);
+        ensureTournamentTeam(fx.teamA); ensureTournamentTeam(fx.teamB);
+        pendingFixtureStart = { kind: 'tournament', id: fx.id };
+        pendingMatchKind = 'tournament';
+        pendingBracketStart = null; pendingBracketTeams = null;
+        om.tnFx = null;
+        omApplyModeChrome();
+        commit('Fixture added', true);
+        return true;
       }
       function removeFixture(id){
         if (!requireTnOwner('edit this tournament')) return;
@@ -12073,6 +12350,7 @@
           venue: S.venue || '', innings: inns, resultText: '',
           bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
+          stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
           players: playersSnapshot(), playerIds: deep(S.playerIds || [])
         };
       }
@@ -12133,7 +12411,7 @@
              statistics, records, the podium — only the table
              skips it. */
           if (m.bracketId) return;
-          if (m.stage === 'F') return;
+          if (m.stage === 'F' || m.stage === 'QF' || m.stage === 'SF' || m.stage === 'R16') return;
           if (filter){
             var mg = matchGroupName(m);
             if (filter.group){ if (mg !== filter.group) return; }
@@ -15001,6 +15279,7 @@
         if (!m) return false;
         if (typeof m.bracketId === 'string' && m.bracketId) return true;
         if (m.stage === 'F') return true;
+        if (m.stage === 'R16' || m.stage === 'QF' || m.stage === 'SF') return true;
         return false;
       }
       function matchNumberInStage(m, ownerTn){
@@ -15054,6 +15333,7 @@
           if (bt) return [bt];
         }
         if (m.stage === 'F') return ['FINAL'];
+        if (m.stage === 'R16' || m.stage === 'QF' || m.stage === 'SF') return [knockoutStageSeg(m, ownerTn)];
         var g = null;
         try { g = matchGroupName(m, ownerTn); } catch(e){}
         var num = matchNumberInStage(m, ownerTn);
@@ -15061,6 +15341,31 @@
         if (g) segs.push(stageHyphen(g));
         if (num) segs.push('Match-' + num);
         return segs;
+      }
+      /* The label of a fixture / result stamped with a knockout
+         stage code by the Add Fixture flow (no bracket behind
+         it): the round's name, numbered like a bracket label
+         (Quarter Final-1) when the round holds more than one
+         match — counted in playing order across the tournament's
+         saved results, the live match and its fixtures, the same
+         sequence the league Match-N counts. */
+      function knockoutStageSeg(m, ownerTn){
+        var name = koStageName(m.stage);
+        if (!name) return '';
+        var tn = ownerTn || S.tournament;
+        if (!tn || !Array.isArray(tn.matches)) return name;
+        var seq = [];
+        tn.matches.forEach(function(x){ if (x && x.stage === m.stage) seq.push(x); });
+        var lv = null;
+        if (!ownerTn || ownerTn === S.tournament){
+          try { lv = liveTournamentRecord(); } catch(e){}
+        }
+        if (lv && lv.stage === m.stage && !seq.some(function(x){ return String(x.id) === String(lv.id); })) seq.push(lv);
+        (tn.fixtures || []).forEach(function(x){ if (x && x.stage === m.stage) seq.push(x); });
+        if (seq.length <= 1) return name;
+        var pos = 0;
+        seq.forEach(function(x, i){ if (!pos && (x === m || (m.id != null && x.id != null && String(x.id) === String(m.id)))) pos = i + 1; });
+        return pos ? (name + '-' + pos) : name;
       }
       function stageLabelHTML(segs){
         var clean = (segs || []).filter(function(s){ return !!String(s || '').trim(); });
@@ -15089,7 +15394,7 @@
           id: (src.matchId != null ? src.matchId : (src.id != null ? src.id : null)),
           bracketId: src.bracketMatchId || src.bracketId || '',
           group: src.matchGroup || src.group || '',
-          stage: src.stage || '',
+          stage: src.matchStage || src.stage || '',
           innings: [{ battingTeam: src.teamA || '', bowlingTeam: src.teamB || '' }]
         };
       }
@@ -17184,6 +17489,7 @@
              archive too, so an archived match's Info tab can show
              its Match Title ("Group A Match") and Season rows. */
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
+          stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
           season: (S.matchKind === 'tournament' && ownTn && ownTn.season) ? ownTn.season : '',
           matchFormat: S.matchFormat || '', ballType: S.ballType || '',
           matchDate: S.matchDate || '', matchTime: S.matchTime || '',
@@ -19556,6 +19862,7 @@
         base.venue = e.venue || '';
         base.tossInfo = e.tossInfo || '';
         base.matchGroup = e.group || '';
+        base.matchStage = e.stage || '';
         base.matchFormat = e.matchFormat || ''; base.ballType = e.ballType || '';
         base.matchDate = e.matchDate || ''; base.matchTime = e.matchTime || '';
         /* An entry filed before the schedule fields existed shows
@@ -25086,7 +25393,7 @@
       /* The per-match slice of the state: everything that belongs to
          one match and nothing shared (tournament, nicknames, the
          parked list itself and the tournaments archive stay global). */
-      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','ownerUid','ownerName'];
+      var MATCH_SLICE_KEYS = ['teamA','teamB','oversLimit','wicketsLimit','targetOverride','dlTarget','dlOvers','abandoned','pendingPenalty','venue','tossInfo','tossWinner','tossDecision','matchFormat','ballType','matchDate','matchTime','scorerEmailHash','matchKind','tournamentId','status','awaitingFinish','inningsNo','current','prevInnings','squadA','squadB','potmName','potmTeam','potmPid','squadConfirmed','finalSquadA','finalSquadB','resultText','superOver','matchId','archivedMatchId','bracketMatchId','matchGroup','matchStage','ownerUid','ownerName'];
       function matchSlice(){
         var o = {};
         MATCH_SLICE_KEYS.forEach(function(k){ o[k] = (S[k] === undefined) ? null : deep(S[k]); });
@@ -25296,7 +25603,7 @@
         var e = String(email || '').trim().toLowerCase();
         return e ? sha256Hex(e) : '';
       }
-      var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '' };
+      var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '', tnFx: null };
       var OM_FORMATS = ['T10','T20','Club','L-4i','100','One Day','Test Match'];
       var OM_FORMAT_OVERS = { 'T10': 10, 'T20': 20, 'One Day': 50 };
       /* The raw Team ID computation (name-derived). On its own it
@@ -25571,11 +25878,13 @@
       function openMatchScreen(){
         om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        om.tnFx = null;
         var now = new Date();
         var vEl = $('omVenue'); if (vEl) vEl.value = '';
         var dEl = $('omDate'); if (dEl) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
         var tEl = $('omTime'); if (tEl) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
         var sEl = $('omScorer'); if (sEl) sEl.value = '';
+        omApplyModeChrome();
         omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
         setView('openmatch');
       }
@@ -25585,10 +25894,12 @@
          simply show it for the toss. Date / time default to now only
          when the caller left them empty. */
       function openMatchScreenPrefilled(){
+        om.tnFx = null;
         var now = new Date();
         var dEl = $('omDate'); if (dEl && !dEl.value) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
         var tEl = $('omTime'); if (tEl && !tEl.value) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
         var sEl = $('omScorer'); if (sEl) sEl.value = '';
+        omApplyModeChrome();
         omRenderTeams(); omRenderFormatSummary(); renderOmFixtures();
         setView('openmatch');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -25639,8 +25950,18 @@
            are offered too, marked as such: they live on in the team
            registry, and picking one reuses its original Team ID. */
         var knownNow = allKnownTeams();
+        /* Add Fixture flow, group step: the picker offers ONLY
+           that group's teams — a group fixture is played between
+           two teams of the group — and the removed-teams registry
+           supplement below must not smuggle any other team in. */
+        var tnFxGroupOnly = !!(om.tnFx && om.tnFx.group);
+        if (tnFxGroupOnly){
+          var tnFxGrp = null;
+          try { tnFxGrp = groupByName(om.tnFx.group); } catch(e){}
+          knownNow = tnFxGrp ? tnFxGrp.teams.slice() : [];
+        }
         var entries = knownNow.map(function(n){ return { n: n, old: false }; });
-        try { teamRegistryNames().forEach(function(n){ if (knownNow.indexOf(n) === -1) entries.push({ n: n, old: true }); }); } catch(e){}
+        if (!tnFxGroupOnly){ try { teamRegistryNames().forEach(function(n){ if (knownNow.indexOf(n) === -1) entries.push({ n: n, old: true }); }); } catch(e){} }
         var teams = entries.filter(function(en){ return !q || en.n.toLowerCase().indexOf(q) > -1; });
         tpCurrentList = teams.map(function(en){ return en.n; });
         el.innerHTML = teams.length ? teams.map(function(en, i){
@@ -25650,7 +25971,7 @@
             + tpBadgeHTML(n, i)
             + '<span class="tp-main"><span class="tp-name">' + esc(n) + '</span>'
             + '<span class="tp-id">Team ID: <span class="id-tap" title="Tap to copy the full Team ID" onclick="copyIdTap(event,' + fxIdArg(teamIdFor(n)) + ',\'Team ID\')">' + esc(teamIdFor(n)) + '</span>' + (taken ? ' • Already picked' : '') + '</span></span></button>';
-        }).join('') : '<p class="note">No teams found.</p>';
+        }).join('') : '<p class="note">' + ((tnFxGroupOnly && !q) ? ('No teams in ' + esc(om.tnFx.group) + ' yet — create one with Create New Team above and it joins the group.') : 'No teams found.') + '</p>';
       }
       function pickTeamIdx(i){ var n = tpCurrentList[i]; if (n) pickTeam(n); }
       function pickTeam(name){
@@ -25690,6 +26011,14 @@
         /* A team created from the match picker joins the All Teams
            pool — never a tournament it was not entered into. */
         ensurePoolTeam(name);
+        /* …except in the Add Fixture flow for one group: there the
+           new team joins that group (and its tournament) at once,
+           so the fixture being built can actually use it. */
+        if (om.tnFx && om.tnFx.group){
+          var cg = null;
+          try { cg = groupByName(om.tnFx.group); } catch(e){}
+          if (cg && !groupOfTeam(name)){ cg.teams.push(name); ensureTournamentTeam(name); }
+        }
         commit('Team entered', true);
         if (inp) inp.value = '';
         toast(exists ? '✓ ' + name + ' is already in your teams — selected' : '✓ ' + name + ' created and selected');
@@ -25760,6 +26089,7 @@
         return S.singleFixtures;
       }
       function omSaveFixture(){
+        if (om.tnFx){ tnFxSaveFixture(); return; }
         if (!requireSignIn('save a fixture')) return;
         if (!omValidate()) return;
         var v = omFormValues();
@@ -25786,6 +26116,10 @@
       function renderOmFixtures(){
         var card = $('omFxCard'), el = $('omFxList');
         if (!card || !el) return;
+        /* In Add Fixture mode the Saved Fixtures card (single
+           matches) stays out of the way — this form files into
+           the tournament instead. */
+        if (om.tnFx){ card.hidden = true; el.innerHTML = ''; return; }
         var list = singleFixtures().slice().reverse();
         card.hidden = !list.length;
         el.innerHTML = list.map(function(f){
@@ -25851,6 +26185,7 @@
       /* ----- Toss, then Start Scoring ----- */
       function omStartMatchTap(){
         if (!omValidate()) return;
+        if (om.tnFx && !tnFxArmStart()) return;
         om.tossWinner = ''; om.tossDecision = '';
         renderTossModal();
         $('tossModal').classList.add('show');
@@ -26649,7 +26984,7 @@
            is restored before the new view renders. The tournament
            page's own sub-pages (team page, Edit Info, Select
            Winner) keep the viewed tournament on screen. */
-        if (tnViewCtx && v !== 'tournament' && v !== 'teampage' && v !== 'tnedit' && v !== 'tnwinner'){ try { exitTnView(); } catch(e){} }
+        if (tnViewCtx && v !== 'tournament' && v !== 'teampage' && v !== 'tnedit' && v !== 'tnwinner' && v !== 'tnaddfx'){ try { exitTnView(); } catch(e){} }
         /* Leaving the scoreboard also ends the scorer's detour from
            the scoring pad: the "Back to Scoring Pad" bar belongs
            only to a scoreboard the scorer opened from the pad. */
@@ -26805,7 +27140,9 @@
         if (v === 'tnedit'){ closeTnEdit(); return true; }
         if (v === 'tnwinner'){ closeTnWinner(); return true; }
         if (v === 'overlay'){ setView('scorer'); return true; }
-        if (v === 'myteams' || v === 'openmatch' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
+        if (v === 'tnaddfx'){ tnFxBack(); return true; }
+        if (v === 'openmatch'){ omBackTap(); return true; }
+        if (v === 'myteams' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
         /* home / live / console: landing pages with no on-screen
            back control — Back stays on the page. */
         return false;
