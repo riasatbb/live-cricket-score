@@ -748,12 +748,21 @@
       .mc-pname.on{color:var(--ink)}
       .mc-striker-pill{display:inline-block;background:#f59e0b;color:#241a02;border-radius:7px;padding:3px 10px;font-weight:700}
       .mc-missing{color:var(--muted);font-style:italic}
-      .mc-balls{display:flex;gap:8px;padding:11px 14px;flex-wrap:wrap;align-items:center}
-      .mc-ball{width:38px;height:38px;flex:none;border-radius:50%;background:#8a8f8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;font-family:"Barlow Condensed",sans-serif}
+      /* This-over balls: ALWAYS one single line in a fixed-height
+         strip (11px padding + one 38px ball row = 60px, empty or
+         full). The balls never wrap to a second line, so the strip
+         never grows and the pad and everything below it never shift
+         as balls are added. An over with more balls than fit (many
+         wides / no-balls) scrolls sideways INSIDE the strip only;
+         renderScorerCentre pins that scroll to the end so the
+         newest ball is always in view. */
+      .mc-balls{display:flex;gap:8px;padding:11px 14px;flex-wrap:nowrap;align-items:center;height:60px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      .mc-balls::-webkit-scrollbar{display:none}
+      .mc-ball{width:38px;height:38px;flex:none;border-radius:50%;background:#8a8f8a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px;font-family:"Barlow Condensed",sans-serif;white-space:nowrap}
       .mc-ball.b4{background:#0d9488}
       .mc-ball.b6{background:#2563eb}
       .mc-ball.bw{background:#c0392b}
-      .mc-balls .mc-noballs{font-size:13.5px;color:var(--muted)}
+      .mc-balls .mc-noballs{font-size:13.5px;color:var(--muted);white-space:nowrap}
       .mc-notes{padding:12px 14px 0}
       .mc-notes:empty{display:none}
       /* Player of the Match picker — appears in the Scorer Centre once
@@ -4058,7 +4067,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v250';
+      var APP_VERSION = 'v252';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7887,13 +7896,24 @@
         } else {
           $('mcBowler').innerHTML = bwHead + '<tr><td><span class="mc-missing">Select bowler</span></td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr></tbody></table>';
         }
-        var groups = groupOvers(inn).filter(function(g){ return g.balls.some(function(b){ return !b.evt; }); });
-        var curG = groups.length ? groups[groups.length - 1] : null;
+        /* "This over" is the over in progress, numbered by the same
+           legal-ball count groupOvers uses — NOT the last group that
+           has deliveries. The last-group pick kept the just-finished
+           over's balls on the pad after the new bowler was picked
+           for the next over, until its first ball was bowled. */
+        var curOverNo = Math.floor(inn.legalBalls / 6) + 1;
+        var curG = null;
+        groupOvers(inn).forEach(function(g){ if (g.no === curOverNo) curG = g; });
         var curBalls = curG ? curG.balls.filter(function(b){ return !b.evt; }) : [];
         $('mcBalls').innerHTML = curBalls.length ? curBalls.map(function(b){
           var cls = isWicketBall(b) ? 'bw' : (b.text === '4' ? 'b4' : (b.text === '6' ? 'b6' : ''));
           return '<span class="mc-ball ' + cls + '">' + esc(b.text) + '</span>';
         }).join('') : '<span class="mc-noballs">This over: no balls yet</span>';
+        /* The strip is one fixed-height line (see .mc-balls CSS):
+           when an over has more balls than fit on screen, the
+           overflow scrolls inside the strip — pin it to the end so
+           the ball just bowled is always the one in view. */
+        var mbStrip = $('mcBalls'); if (mbStrip) mbStrip.scrollLeft = mbStrip.scrollWidth;
         /* Persistent hint: exactly which slot is still missing, so a
            blocked pad never fails silently behind a fading toast. */
         var hint = $('slotHint'), msg = '', showOpen = false;
