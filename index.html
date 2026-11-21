@@ -4067,7 +4067,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v255';
+      var APP_VERSION = 'v256';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -15717,8 +15717,23 @@
           status = srl ? srl.replace(/^🏆 /, '') : fixResultText(String(S.resultText || 'Match finished').replace(/🏆/g, ''));
         }
         /* The 🏆 leads the result line ONLY when this finished
-           match is the tournament Final (see resultIsFinal). */
-        if (finished && !S.abandoned && status && liveMatchIsFinal()) status = '🏆 ' + status;
+           match is the tournament Final (see resultIsFinal). A
+           finished or abandoned match's line is SETTLED by the
+           block above — the live-situation chain below must never
+           run for it. That chain used to hang off this trophy test
+           as plain else-ifs, so every finished match that was NOT
+           the Final fell through into the chase branch and its
+           result was overwritten by the live line "X have reached
+           the target of N." — the exact sentence that kept showing
+           on the BBEPL-3 Match-1 row (v256) even though every
+           stored record (liveMatch, matchHistory and the
+           tournament result alike) already carried the real
+           won-by result and the Summary tab showed it correctly.
+           Live matches are untouched: not finished and not
+           abandoned, they drop into the same chain as before. */
+        if (finished || S.abandoned){
+          if (finished && !S.abandoned && status && liveMatchIsFinal()) status = '🏆 ' + status;
+        }
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '') + '.';
         else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet.' : 'No match is being scored right now.'; statusMuted = true; }
         else if (S.inningsNo === 2 && S.prevInnings && t){
