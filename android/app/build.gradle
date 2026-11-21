@@ -16,7 +16,23 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        debug {
+            // Fixed debug keystore shared with the Control app (same file, byte-identical).
+            // Referenced by relative path because the keystore is a binary file already
+            // committed at control-app/android/app/debug.keystore; the Viewer copy is not
+            // committed. Cert SHA-1 2D:D0:8D:AE:EA:E5:38:3F:AE:A8:5A:D8:6F:1E:6B:A7:13:85:48:7D.
+            storeFile file('../../control-app/android/app/debug.keystore')
+            storeType 'PKCS12'
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
