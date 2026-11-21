@@ -1546,11 +1546,14 @@
       .cb-panel.show{display:block}
       .cb-status{color:#f07a5f;font-size:16.5px;font-weight:500;line-height:1.4;padding:14px 16px 4px;background:#2b2b2b}
       .cb-status:empty{display:none}
-      /* Toss + teams block on the LIVE tab (per reference): the toss
-         headline, the two Playing XIs, the toss sentence and the two
-         full squads, in that order, once the squad is confirmed. */
+      /* Toss + teams block (per reference): the toss headline, the
+         two Playing XIs, the toss sentence and the two full squads,
+         in that order, once the squad is confirmed. It renders
+         INSIDE the LIVE tab's commentary section, at the foot of
+         the feed (the pre-match entries are the oldest in the
+         newest-first feed) — never as a block above the score. */
       .cb-tossblock{background:#2b2b2b;padding:2px 16px 14px;border-bottom:1px solid #3d3d3d}
-      .cb-tossblock[hidden]{display:none}
+      .cb-comm .cb-tossblock{border-bottom:none;border-top:1px solid #3d3d3d;margin-top:4px}
       .cb-toss-head{color:#f0ab3c;font-size:17.5px;font-weight:700;text-align:center;padding:10px 0 4px}
       .cb-toss-h{font-size:16.5px;font-weight:700;color:#fff;margin:14px 0 6px}
       .cb-toss-line{font-size:15.5px;line-height:1.65;color:#e2e2e2;margin:0 0 10px}
@@ -2193,9 +2196,12 @@
       .tp-msub{display:block;font-size:12px;color:var(--muted);letter-spacing:.03em;margin-top:8px}
       .tp-mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px}
       .tp-vtn{flex:none;background:none;border:none;font:inherit;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
-      /* View Tournament bar in the scoreboard header, above the tab
-         strip (v232 — moved up from the Summary / Info tab heads) */
+      /* View Tournament bar: pinned in the scoreboard header above
+         the tab strip for a COMPLETED match; while a match is in
+         play the same bar sits at the top of the Info tab only
+         (v247), as the .sb-vt-bar-info copy inside that panel. */
       .sb-vt-bar{padding:12px 12px 0;background:#191919}
+      .sb-vt-bar-info{background:transparent;padding-bottom:12px}
       .sb-vt-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px 16px;border:none;border-radius:12px;background:var(--green);color:#fff;font:inherit;font-size:15.5px;font-weight:700;cursor:pointer}
       .sb-vt-btn .sb-vt-name{font-weight:600;opacity:.88;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
       .tp-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
@@ -3110,16 +3116,16 @@
       <section class="view" id="view-scoreboard">
         <div id="sbLive" hidden></div>
         <div class="cb-wrap">
-          <!-- View Tournament sits at the very top of the
-               scoreboard (v236) — the two header lines swapped
-               places at the user's direction, so the button is
-               ABOVE the BACK / title / RESULT line, the first
-               thing on the page on every tab: for a tournament
-               match it opens THAT match's own tournament, resolved
-               from the match's own tournament stamp — never simply
-               whichever tournament is current. Shown and labelled
-               by renderScoreboardCB on every render; hidden for a
-               Single Match. -->
+          <!-- View Tournament bar pinned at the very top of the
+               scoreboard, ABOVE the BACK / title / RESULT line —
+               shown for a COMPLETED tournament match only (v247).
+               A match still in play carries the same button at the
+               top of its Info tab instead (sbVtBarInfo below), not
+               above every tab. Either way it opens THAT match's own
+               tournament, resolved from the match's own tournament
+               stamp — never simply whichever tournament is current.
+               Shown and labelled by renderScoreboardCB on every
+               render; hidden for a Single Match. -->
           <div class="sb-vt-bar" id="sbVtBarTop" hidden style="display:none">
             <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
           </div>
@@ -3144,7 +3150,10 @@
           <!-- LIVE -->
           <div class="cb-panel show" id="cbPanel-live">
             <div class="cb-status" id="cbStatusLine"></div>
-            <div class="cb-tossblock" id="cbTossBlock" hidden></div>
+            <!-- No toss block up here: the toss headline, Playing
+                 XIs, toss sentence and squads render inside the
+                 commentary section below (foot of #cbCommentary),
+                 where they belong. -->
             <div class="cb-main" id="cbMainScore"></div>
             <div class="cb-pship" id="cbPship"></div>
             <div class="cb-crease" id="cbCreaseLine" hidden></div>
@@ -3164,18 +3173,19 @@
 
           <!-- INFO -->
           <div class="cb-panel" id="cbPanel-info">
+            <!-- View Tournament for a match still in play lives
+                 HERE, at the top of the Info tab only (v247) — the
+                 pinned header bar above the tab strip is kept for
+                 completed matches alone. Shown and labelled by
+                 renderScoreboardCB; hidden for a Single Match and
+                 whenever the pinned bar is the one on show. -->
+            <div class="sb-vt-bar sb-vt-bar-info" id="sbVtBarInfo" hidden style="display:none">
+              <button type="button" class="sb-vt-btn" onclick="sbViewShownTournament()">🏆 View Tournament<span class="sb-vt-name"></span></button>
+            </div>
             <div class="card" style="margin-bottom:0">
               <h2>Match Info</h2>
               <div id="cbInfoBody"></div>
             </div>
-            <!-- Nothing lives under Match Info any more (v231): the
-                 old Follow Tournament card at the bottom of this tab
-                 was easy to miss and opened whichever tournament was
-                 current rather than this match's own — the tournament
-                 is now reached from the View Tournament bar in the
-                 scoreboard header above the tab strip (v232). A
-                 Single Match shows nothing tournament-related here
-                 at all. -->
           </div>
 
           <!-- SCORECARD — per reference: the situation band, then
@@ -4049,7 +4059,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v246';
+      var APP_VERSION = 'v247';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -20155,7 +20165,15 @@
         var ps = $('cbPship'); if (ps){ ps.innerHTML = ''; ps.style.display = 'none'; }
         var bt = $('cbBatterTable'); if (bt) bt.innerHTML = '';
         var bw = $('cbBowlerTable'); if (bw) bw.innerHTML = '';
-        var cm = $('cbCommentary'); if (cm) cm.innerHTML = '<p class="cb-empty">Match is not started yet.</p>';
+        var cm = $('cbCommentary');
+        if (cm){
+          /* The squads half of the toss block stays in the
+             commentary section for a fixture too (no toss yet, so
+             that is all the block holds). */
+          var fxTb = '';
+          try { fxTb = cbTossBlockHTML(); } catch(e){ fxTb = ''; }
+          cm.innerHTML = '<p class="cb-empty">Match is not started yet.</p>' + (fxTb ? '<div class="cb-tossblock">' + fxTb + '</div>' : '');
+        }
         var ov = $('cbOversList'); if (ov) ov.innerHTML = '<p class="ov-empty">Match is not started yet.</p>';
         var sw = $('cbOversSwitch'); if (sw) sw.innerHTML = '';
       }
@@ -24728,8 +24746,9 @@
         if (tn && tn.squads && Array.isArray(tn.squads[team]) && tn.squads[team].length) return tn.squads[team];
         return null;
       }
-      /* The toss + teams block for the LIVE tab (per reference),
-         in ONE fixed sequence whose slots never move: (1) the
+      /* The toss + teams block for the LIVE tab's commentary
+         section (per reference), in ONE fixed sequence whose slots
+         never move: (1) the
          toss-decision headline ("<winner> opt to bat/bowl"), (2)
          "Teams:" — each side's Playing XI as a comma list,
          batting-first side first, with (c)/(vc)/(w) suffixes from
@@ -24814,27 +24833,13 @@
         var t = target();
         var status = cbStatusText();
         var stEl = $('cbStatusLine'); if (stEl) stEl.textContent = status;
-        /* Toss + teams block: at the TOP of the Live tab (directly
-           under the status line, as in the reference) until the
-           first ball is bowled; once play is under way the same
-           block moves to the BOTTOM of the tab, under the
-           commentary, so the live score keeps the top of the screen
-           and the toss sequence stays on the tab permanently. */
-        var tbEl = $('cbTossBlock');
-        if (tbEl){
-          var tbHtml = '';
-          try { tbHtml = cbTossBlockHTML(); } catch(e){ tbHtml = ''; }
-          tbEl.innerHTML = tbHtml;
-          tbEl.hidden = !tbHtml;
-          if (tbHtml){
-            var livePanel = $('cbPanel-live');
-            var ballsPlayed = !!((inn && inn.balls && inn.balls.length) || S.prevInnings || finished);
-            if (livePanel){
-              if (ballsPlayed) livePanel.appendChild(tbEl);
-              else if (stEl && tbEl.previousSibling !== stEl) livePanel.insertBefore(tbEl, stEl.nextSibling);
-            }
-          }
-        }
+        /* Toss + teams block: it belongs to the COMMENTARY section,
+           not the top of the scoreboard — it is built here and
+           appended to the foot of the commentary feed below (the
+           pre-match entries are the oldest in the newest-first
+           feed), where it stays for the whole match. */
+        var tbHtml = '';
+        try { tbHtml = cbTossBlockHTML(); } catch(e){ tbHtml = ''; }
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
         var rr = rrr();
@@ -25086,6 +25091,11 @@
             feedAll += '<div class="cb-comm-row banner"><span class="cb-comm-over"></span><span class="cb-comm-text">' + ibHtml + '</span></div>';
             feedAll += feedHTMLFor(pv);
           }
+          /* The toss + teams block closes the feed: headline,
+             Playing XIs, toss sentence and squads, in the
+             commentary section where they belong — never above
+             the score. */
+          if (tbHtml) feedAll += '<div class="cb-tossblock">' + tbHtml + '</div>';
           commEl.innerHTML = feedAll
             ? feedAll
             : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
@@ -25210,31 +25220,36 @@
           if (S.matchId) infoEl.innerHTML += '<div class="cb-info-row"><span>Match ID</span>' + matchIdChipHTML(S.matchId) + '</div>';
           if (S.matchKind === 'tournament' && S.tournament && S.tournament.name) infoEl.innerHTML += '<div class="cb-info-row"><span>Tournament ID</span><button type="button" class="bk-idchip fx" title="Tap to copy the full Tournament ID" onclick="copyIdTap(event,' + fxIdArg(tourIdFor(S.tournament.name)) + ',\'Tournament ID\')">ID ' + esc(tourIdFor(S.tournament.name)) + '</button></div>';
         }
-        /* View Tournament bar (v231, moved into the scoreboard
-           header above the tab strip in v232): shown only when the
-           match ON SHOW is a tournament match, and labelled with
-           that match's own tournament. The target is stashed from
-           this same shown state (S here is the live display state,
-           an archived match's state, or a match view's state —
+        /* View Tournament button: shown only when the match ON
+           SHOW is a tournament match, and labelled with that
+           match's own tournament. The target is stashed from this
+           same shown state (S here is the live display state, an
+           archived match's state, or a match view's state —
            whichever is on show), so the button always opens the
            tournament THIS match belongs to, resolved from its own
            stamp — never just whichever tournament happens to be
-           current. A Single Match shows no bar at all. */
+           current. A Single Match shows no button at all.
+           Placement (v247): a COMPLETED match keeps the bar pinned
+           at the very top of the scoreboard, above every tab, as
+           before; a match still in play shows the button at the
+           top of the Info tab only — not above the other tabs. */
         var vtIsTn = S.matchKind === 'tournament' && S.tournament && !!(S.tournament.name || '').trim();
         sbVtTarget = vtIsTn ? { tid: String(S.tournamentId || S.tournament.id || ''), tname: String(S.tournament.name || '') } : null;
-        [$('sbVtBarTop')].forEach(function(barEl){
-          if (!barEl) return;
-          barEl.hidden = !sbVtTarget;
-          barEl.style.display = sbVtTarget ? '' : 'none';
+        [[$('sbVtBarTop'), finished], [$('sbVtBarInfo'), !finished]].forEach(function(pair){
+          var barEl = pair[0]; if (!barEl) return;
+          var showBar = !!sbVtTarget && pair[1];
+          barEl.hidden = !showBar;
+          barEl.style.display = showBar ? '' : 'none';
           var nmEl = barEl.querySelector('.sb-vt-name');
-          if (nmEl) nmEl.textContent = sbVtTarget ? ('• ' + sbVtTarget.tname) : '';
+          if (nmEl) nmEl.textContent = showBar ? ('• ' + sbVtTarget.tname) : '';
         });
         /* Summary tab: shown only for a finished match, filled from
            the same state as every other panel. */
         try { renderSummaryPanel(); } catch(e){}
         /* Nothing else lives under Match Info: the tournament is
-           reached from the View Tournament bar in the scoreboard
-           header above the tab strip, and a Single Match shows
+           reached from the View Tournament button — the pinned
+           header bar for a completed match, the Info tab's own bar
+           while the match is in play — and a Single Match shows
            nothing tournament-related at all. (Past Matches keeps
            its own entries — the Recent Matches landing and the
            History & Reports home — just not a card here.) */
