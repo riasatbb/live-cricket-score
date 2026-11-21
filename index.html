@@ -4067,7 +4067,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v254';
+      var APP_VERSION = 'v255';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7878,7 +7878,7 @@
           + (S.status === 'inningsBreak' ? ' — Innings Break' : (S.status === 'finished' ? ' — Match Finished' : ''));
         $('mcScore').textContent = inn.runs + '-' + inn.wickets;
         var status = '';
-        if (S.status === 'finished' && S.resultText) status = fixResultText(S.resultText);
+        if (S.status === 'finished' && S.resultText) status = stateResultLine() || fixResultText(S.resultText);
         else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — Target ' + target() + '.';
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, bl = effMaxBalls() - inn.legalBalls;
@@ -10470,17 +10470,60 @@
       }
       function matchResultText(match, ownerTn){
         var txt = '';
-        var storedRt = match.resultText ? healedResultText(String(match.resultText).replace(/🏆/g, ''), match.innings, match.wicketsLimit) : '';
+        /* The result a match shows is the one its Summary tab
+           shows (owner's rule, v255) — and the Summary tab reads
+           the match's permanent History record, so when a History
+           entry exists for this match it is the text source here
+           too, on every list, card and report. The record at hand
+           (a tournament result, the finished Single record) is
+           only the fallback for a match never filed to History.
+           The History entry's own stored sentence passes through
+           the same healing below, so a chase-status sentence
+           saved there is replaced by its real result exactly as
+           it is on the Summary tab. */
+        var src = match;
+        if (match && match.id != null && typeof HIST !== 'undefined' && HIST){
+          var he = HIST[String(match.id)];
+          if (he && !he.live && (he.resultText || (he.innings && he.innings.length >= 2))) src = he;
+        }
+        var storedRt = src.resultText ? healedResultText(String(src.resultText).replace(/🏆/g, ''), src.innings, src.wicketsLimit) : '';
         if (storedRt) txt = fixResultText(storedRt);
-        else if (match.superOver && match.superOver.winner && match.superOver.resultText) txt = asSentence('Match tied — ' + fixPlurals(match.superOver.resultText));
-        else if (match.innings && match.innings.length >= 2){
-          var a = match.innings[0], b = match.innings[1];
-          if (b.runs > a.runs) txt = b.battingTeam + ' won by ' + wicketW((typeof match.wicketsLimit === 'number' ? match.wicketsLimit : 10) - b.wickets) + '.';
+        else if (src.superOver && src.superOver.winner && src.superOver.resultText) txt = asSentence('Match tied — ' + fixPlurals(src.superOver.resultText));
+        else if (src.innings && src.innings.length >= 2){
+          var a = src.innings[0], b = src.innings[1];
+          if (b.runs > a.runs) txt = b.battingTeam + ' won by ' + wicketW((typeof src.wicketsLimit === 'number' ? src.wicketsLimit : 10) - b.wickets) + '.';
           else if (a.runs > b.runs) txt = a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
           else txt = 'Match tied.';
         }
-        if (txt && resultIsFinal(match, ownerTn)) txt = '🏆 ' + txt;
+        if (txt && (resultIsFinal(match, ownerTn) || (src !== match && resultIsFinal(src, ownerTn)))) txt = '🏆 ' + txt;
         return txt;
+      }
+      /* The result line of the match on show (in S) — the same
+         text the Summary tab's Winner line carries, shared by
+         every surface that prints this match's result (the Live
+         tab's finished block and centre line, the Info tab's
+         Result row, the commentary banner, the scorer's strip
+         and status line, the match card): the state's own result
+         text, with a stored live chase-status sentence replaced
+         by the real result, every recorded 🏆 stripped, and the
+         single leading 🏆 re-added for the tournament Final
+         alone (owner's rule: a Final's result is led by 🏆, no
+         other match's is, and it never trails). '' when the
+         match carries no result at all. */
+      function stateResultLine(){
+        var txt = fixResultText(String(S.resultText || '').replace(/🏆/g, ''));
+        if (!txt || isChaseStatusText(txt)){
+          var inns = [];
+          if (S.prevInnings) inns.push(S.prevInnings);
+          if (S.current) inns.push(S.current);
+          var alt = '';
+          try { alt = matchResultText({ id: (S.archivedMatchId != null ? S.archivedMatchId : S.matchId), innings: inns, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), resultText: '', superOver: S.superOver }); } catch(e){ alt = ''; }
+          if (alt) txt = fixResultText(alt.replace(/🏆/g, ''));
+        }
+        if (!txt || S.abandoned) return txt;
+        var fin = false;
+        try { fin = !!S.isFinalDisplay || liveMatchIsFinal(); } catch(e){ fin = false; }
+        return fin ? ('🏆 ' + txt) : txt;
       }
       /* The silent core of saving this match's result into the
          tournament: builds the result record from the live state and
@@ -15662,7 +15705,17 @@
         var t = target();
         var status = '', statusMuted = false;
         if (S.abandoned) status = fixResultText(String(S.resultText || 'Match abandoned').replace(/🏆/g, ''));
-        else if (finished) status = fixResultText(String(S.resultText || 'Match finished').replace(/🏆/g, ''));
+        else if (finished){
+          /* The finished match's row shows the match's own result
+             line (v255 — stateResultLine, the Summary tab's text),
+             never the raw stored sentence: a live chase-status
+             line left in the record is replaced by the real
+             result here as everywhere else. The 🏆 step below
+             re-adds the Final's trophy, so it is stripped here. */
+          var srl = '';
+          try { srl = stateResultLine(); } catch(e){ srl = ''; }
+          status = srl ? srl.replace(/^🏆 /, '') : fixResultText(String(S.resultText || 'Match finished').replace(/🏆/g, ''));
+        }
         /* The 🏆 leads the result line ONLY when this finished
            match is the tournament Final (see resultIsFinal). */
         if (finished && !S.abandoned && status && liveMatchIsFinal()) status = '🏆 ' + status;
@@ -20439,6 +20492,18 @@
         var res = e.live
           ? (resTxt ? fixResultText(String(resTxt).replace(/ 🏆/g, '')) : '● Match in progress.')
           : (resTxt ? fixResultText(String(resTxt).replace(/ 🏆/g, '')) : matchResultText({ innings: e.innings, wicketsLimit: e.wicketsLimit, resultText: '' }));
+        /* A Final's result is led by its 🏆 here too (owner's
+           rule, v255) — the same line the match lists and the
+           Summary tab show: the entry's own Final designation, or
+           the saved result that holds it in its tournament. */
+        if (res && !e.live && !e.abandoned && res.indexOf('🏆') !== 0){
+          var hcFin = false;
+          try {
+            hcFin = resultIsFinal(e);
+            if (!hcFin){ var hcHold = tournamentHolderOfMatch(e.id); if (hcHold) (hcHold.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m, hcHold.tn)) hcFin = true; }); }
+          } catch(err){ hcFin = false; }
+          if (hcFin) res = '🏆 ' + res;
+        }
         var potm = e.potmName
           ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
           : (!e.live && !e.abandoned ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: Not Decided Yet</div>' : '');
@@ -22112,9 +22177,8 @@
         try { t = target(); } catch(e){}
         if (finished){
           pill = 'RESULT'; statusKind = 'result';
-          statusText = String(S.resultText || 'Match finished').replace(/🏆/g, '').trim();
-          if (!statusText){ try { statusText = matchResultText({ innings: inns, wicketsLimit: S.wicketsLimit, resultText: '' }) || 'Match finished'; } catch(e){ statusText = 'Match finished'; } }
-          statusText = fixResultText(statusText);
+          try { statusText = stateResultLine(); } catch(e){ statusText = ''; }
+          if (!statusText) statusText = 'Match finished';
         } else if (!started){
           pill = 'FIXTURE'; statusKind = 'fixture';
           statusText = 'Match not started yet.';
@@ -23655,7 +23719,7 @@
         chips += '<span class="ss-chip">Extras <b>' + innExtras(inn).total + '</b> (Wd ' + inn.extras.wide + ', Nb ' + inn.extras.noball + ', B ' + inn.extras.bye + ', Lb ' + inn.extras.legbye + ', P ' + innExtras(inn).penalty + ')</span>';
         if (S.superOver && S.superOver.active) chips += '<span class="ss-chip">⚡ <b>SUPER OVER</b></span>';
         else if (S.superOver && S.superOver.status === 'finished' && S.superOver.resultText) chips += '<span class="ss-chip">⚡ <b>' + esc(fixResultText(S.superOver.resultText)) + '</b></span>';
-        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip">' + (liveMatchIsFinal() ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span>';
+        if (S.status==='finished' && S.resultText) chips += '<span class="ss-chip"><b>' + esc(stateResultLine() || fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span>';
         if (freeHitPending(inn) && S.status === 'live') chips += '<span class="ss-chip" style="background:#f5b921;color:#241a02;border-color:#f5b921">⚡ <b>FREE HIT</b></span>';
         var recent = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         var ballsHtml = recent.map(function(b){ return '<span class="ball '+(b.cls||'')+'" title="Over '+esc(b.over)+'">'+esc(b.text)+'</span>'; }).join('');
@@ -24114,7 +24178,7 @@
            nothing else — no partnership line, no run rate (that
            lives once, in the bowler panel). */
         var centreSub;
-        if (S.status==='finished' && S.resultText){ centreSub = esc(fixResultText(S.resultText)); }
+        if (S.status==='finished' && S.resultText){ centreSub = esc(stateResultLine() || fixResultText(S.resultText)); }
         else if (S.superOver && S.superOver.active){ centreSub = 'Super Over' + (t ? ' • Target <b>' + t + '</b>' : ''); }
         else if (t){ centreSub = 'Target <b>' + t + '</b>'; }
         else { centreSub = 'v ' + esc(teamShort(inn.bowlingTeam || S.teamB || '')); }
@@ -24427,10 +24491,14 @@
         return inns;
       }
       function summaryResultText(inns){
-        var resTxt = fixResultText(String(S.resultText || '').replace(/ 🏆/g, ''));
-        if (!resTxt && !S.abandoned){
-          try { resTxt = matchResultText({ innings: inns, wicketsLimit: (typeof S.wicketsLimit === 'number' ? S.wicketsLimit : 10), resultText: '', superOver: S.superOver }); } catch(e){ resTxt = ''; }
-        }
+        /* The Winner line IS the match's result line (v255):
+           stateResultLine builds it — the recorded result, a
+           stored chase-status sentence replaced by the real
+           result, and the leading 🏆 when this match is the
+           Final — so the Summary tab and every other surface
+           print one and the same text. */
+        var resTxt = '';
+        try { resTxt = stateResultLine(); } catch(e){ resTxt = ''; }
         if (!resTxt) resTxt = S.abandoned ? 'Match abandoned.' : 'Match finished.';
         return resTxt;
       }
@@ -25066,7 +25134,7 @@
             var finHtml = '';
             if (S.prevInnings) finHtml += finRow(S.prevInnings, true);
             finHtml += finRow(inn, false);
-            var resTxt = fixResultText(String(S.resultText || 'Match finished').replace(/ 🏆/g, ''));
+            var resTxt = stateResultLine() || fixResultText(String(S.resultText || 'Match finished').replace(/ 🏆/g, ''));
             finHtml += '<div class="cb-fin-result">' + esc(resTxt) + '</div>';
             mainEl.innerHTML = finHtml;
           } else {
@@ -25256,7 +25324,7 @@
              full commentary back the moment the page renders. */
           var feedAll = '';
           if (S.status === 'finished' && S.resultText){
-            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text">' + (((typeof S.isFinalDisplay !== 'undefined' && S.isFinalDisplay) || liveMatchIsFinal()) ? '🏆 ' : '') + '<b>' + esc(fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
+            feedAll += '<div class="cb-comm-row banner result"><span class="cb-comm-over"></span><span class="cb-comm-text"><b>' + esc(stateResultLine() || fixResultText(String(S.resultText).replace(/🏆/g, ''))) + '</b></span></div>';
           }
           feedAll += feedHTMLFor(inn);
           if (S.prevInnings){
@@ -25393,10 +25461,8 @@
                re-added for the tournament Final alone — a group
                match never shows one here, and the Final's never
                trails the text. */
-            var infoRes = fixResultText(String(S.resultText).replace(/🏆/g, ''));
-            var infoFin = false;
-            try { infoFin = !!S.isFinalDisplay || liveMatchIsFinal(); } catch(e){}
-            rows.push(['Result', (infoFin ? '🏆 ' : '') + infoRes]);
+            var infoRes = stateResultLine() || fixResultText(String(S.resultText).replace(/🏆/g, ''));
+            rows.push(['Result', infoRes]);
           }
           infoEl.innerHTML = infoHead + rows.map(function(r){ return '<div class="cb-info-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('');
           if (S.superOver && S.superOver.id){
