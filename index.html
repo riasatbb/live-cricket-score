@@ -1554,7 +1554,6 @@
          newest-first feed) — never as a block above the score. */
       .cb-tossblock{background:#2b2b2b;padding:2px 16px 14px;border-bottom:1px solid #3d3d3d}
       .cb-comm .cb-tossblock{border-bottom:none;border-top:1px solid #3d3d3d;margin-top:4px}
-      .cb-toss-head{color:#f0ab3c;font-size:17.5px;font-weight:700;text-align:center;padding:10px 0 4px}
       .cb-toss-h{font-size:16.5px;font-weight:700;color:#fff;margin:14px 0 6px}
       .cb-toss-line{font-size:15.5px;line-height:1.65;color:#e2e2e2;margin:0 0 10px}
       .cb-toss-line b{color:#fff}
@@ -4059,7 +4058,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v247';
+      var APP_VERSION = 'v248';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -24748,13 +24747,15 @@
       }
       /* The toss + teams block for the LIVE tab's commentary
          section (per reference), in ONE fixed sequence whose slots
-         never move: (1) the
-         toss-decision headline ("<winner> opt to bat/bowl"), (2)
+         never move: (1)
          "Teams:" — each side's Playing XI as a comma list,
          batting-first side first, with (c)/(vc)/(w) suffixes from
-         the leadership picks, (3) the toss sentence ("<winner>
-         have won the toss and have opted to bat/field"), (4)
-         "Squads:" — each side's full squad the same way. The two
+         the leadership picks, (2) the toss sentence ("<winner>
+         have won the toss and have opted to bat/field."), (3)
+         "Squads:" — each side's full squad the same way. There is
+         deliberately NO toss headline in this block: the decision
+         itself is already stated once, by the orange status line
+         above the score ("<winner> chose to bat."). The two
          lists come from two different places, on purpose: the
          Playing XI is THIS match's confirmed final squad's first
          eleven (the per-match confirmation, exactly as the Squads
@@ -24766,8 +24767,8 @@
          The slots fill in as the match takes shape, in place: an
          upcoming match (no toss yet) shows just "Squads:", so a
          viewer opening it sees both teams' squads at once; once
-         the toss is recorded the headline and the toss sentence
-         appear around a "Teams:" slot that keeps its fixed place
+         the toss is recorded the toss sentence
+         appears after a "Teams:" slot that keeps its fixed place
          — reading "Playing XI not confirmed yet" until the XI is
          confirmed, then the confirmed eleven in that same slot.
          It is rebuilt from the state on every render, so whenever
@@ -24808,10 +24809,9 @@
         if (!hasToss && !sqLines) return '';
         var html = '';
         if (hasToss){
-          html += '<div class="cb-toss-head">' + esc(winner) + ' opt to ' + (S.tossDecision === 'bat' ? 'bat' : 'bowl') + '</div>'
-            + '<div class="cb-toss-h">Teams:</div>'
+          html += '<div class="cb-toss-h">Teams:</div>'
             + (anyXI ? xiLines : '<p class="cb-toss-line cb-toss-tbc">Playing XI not confirmed yet.</p>')
-            + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '</div>';
+            + '<div class="cb-toss-sentence">' + esc(winner) + ' have won the toss and have opted to ' + (S.tossDecision === 'bat' ? 'bat' : 'field') + '.</div>';
         }
         if (sqLines) html += '<div class="cb-toss-h">Squads:</div>' + sqLines;
         return html;
