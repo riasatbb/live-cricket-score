@@ -4130,7 +4130,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v257';
+      var APP_VERSION = 'v260';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -10506,11 +10506,63 @@
         }
         return false;
       }
+      /* Is this match its tournament's Final — by ANY durable
+         signal? (Owner's rule, v260: a Final's label is FINAL
+         alone — never a Match-N — on every surface, in every
+         tournament, for finals already played and finals yet to
+         come.) resultIsFinal reads the record's own stage /
+         bracket slot, but a Final's identity can survive in a
+         SIBLING copy when this copy lost it: the permanent
+         History entry (which carries the stage), another saved
+         result of the same match, the bracket match its
+         bracketId names in ANY tournament (a custom bracket's
+         Final carries isFinal, not stage 'F'), the live match
+         itself, or a fixture label naming it the Final. Every
+         signal is resolved here, once, so the one label builder
+         (matchStageSegs — behind the Matches tab, Recent Matches
+         and the scoreboard lists) answers the same way
+         everywhere. */
+      function matchIsFinal(m, ownerTn){
+        if (!m) return false;
+        if (resultIsFinal(m, ownerTn)) return true;
+        if (m.stage === 'F') return true;
+        if (/\bfinal\b/i.test(String(m.label || m.round || ''))) return true;
+        if (m.bracketId){
+          var bm = null;
+          try { bm = bracketMatchById(m.bracketId, ownerTn); } catch(e){}
+          if (!bm){
+            try { allTournamentObjs().forEach(function(o){ if (!bm) bm = bracketMatchById(m.bracketId, o.tn); }); } catch(e){}
+          }
+          if (bm && (bm.isFinal || bm.stage === 'F' || bracketStageText(bm) === 'FINAL')) return true;
+        }
+        var mid = (m.id != null) ? m.id : (m.matchId != null ? m.matchId : null);
+        if (mid != null){
+          try {
+            if (typeof HIST !== 'undefined' && HIST){
+              var he = HIST[String(mid)];
+              if (he && he.stage === 'F') return true;
+            }
+          } catch(e){}
+          var found = false;
+          try {
+            allTournamentObjs().forEach(function(o){
+              (o.tn.matches || []).forEach(function(x){ if (x && String(x.id) === String(mid) && resultIsFinal(x, o.tn)) found = true; });
+            });
+          } catch(e){}
+          if (found) return true;
+          try {
+            var smid = (S.archivedMatchId != null) ? S.archivedMatchId : S.matchId;
+            if (smid != null && String(smid) === String(mid) && liveMatchIsFinal()) return true;
+          } catch(e){}
+        }
+        return false;
+      }
       /* The same question for the match on the scoring pad (or the
          one a scoreboard is showing): its own bracket slot, or the
          saved tournament result that carries its Final designation. */
       function liveMatchIsFinal(){
         if (!S || S.matchKind !== 'tournament') return false;
+        if (S.matchStage === 'F') return true;
         if (S.bracketMatchId){
           var bf = null;
           try { bf = bracketFinalMatch(); } catch(e){}
@@ -10734,6 +10786,18 @@
         };
         var existingIdx = -1;
         tgtTn.matches.forEach(function(m, i){ if (m && String(m.id) === String(mid)) existingIdx = i; });
+        /* A re-filing keeps the identity the stored record already
+           carries — the same preservation saveResultToTournamentCore
+           applies — so filing an abandoned match can never strip
+           its stage / bracket slot and demote a Final to a
+           Match-N (v260). */
+        if (existingIdx > -1){
+          var prevRec = tgtTn.matches[existingIdx];
+          if (!match.stage && prevRec.stage) match.stage = prevRec.stage;
+          if (!match.bracketId && prevRec.bracketId) match.bracketId = prevRec.bracketId;
+          if (!match.group && prevRec.group) match.group = prevRec.group;
+          if (!match.matchNo && prevRec.matchNo) match.matchNo = prevRec.matchNo;
+        }
         if (existingIdx > -1) tgtTn.matches[existingIdx] = match; else tgtTn.matches.push(match);
         S.archivedMatchId = mid;
         return existingIdx > -1 ? 'updated' : 'saved';
@@ -12573,7 +12637,7 @@
           var has = false;
           (tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(id)) has = true; });
           if (has) return;
-          var bracketId = '';
+          var bracketId = e.bracketId || '';
           (tn.fixtures || []).forEach(function(f){
             if (bracketId || !f || !f.bracketId) return;
             if ((f.teamA === e.teamA && f.teamB === e.teamB) || (f.teamA === e.teamB && f.teamB === e.teamA)) bracketId = f.bracketId;
@@ -15772,6 +15836,7 @@
       }
       function matchNumberInStage(m, ownerTn){
         if (!m || matchIsKnockout(m)) return 0;
+        if (matchIsFinal(m, ownerTn)) return 0; /* a Final is never numbered (v260) */
         /* A match born with a permanent number (stamped on its
            fixture at creation — see bornMatchNo — and carried
            into the live match and its saved result) always shows
@@ -15835,7 +15900,10 @@
          match carries no stage at all. */
       function matchStageSegs(m, ownerTn){
         if (!m) return [];
-        if (resultIsFinal(m, ownerTn)) return ['FINAL'];
+        /* A Final shows FINAL and nothing else — no group, no
+           Match-N (owner's rule, v260) — however its identity is
+           carried (see matchIsFinal). */
+        if (matchIsFinal(m, ownerTn)) return ['FINAL'];
         if (typeof m.bracketId === 'string' && m.bracketId){
           var bm = null;
           try { bm = bracketMatchById(m.bracketId, ownerTn); } catch(e){}
@@ -16832,8 +16900,12 @@
              designated the Final (or un-designated) here, which
              is what fills the podium on the Home tab. With a
              bracket, its own Final decides — no marking. An
-             abandoned match is never marked: it decided nothing. */
-          var finBtn = (tn.bracket || mAb) ? '' : (m.stage === 'F'
+             abandoned match CAN be marked too (v260): marking
+             names its label only — the points table, the
+             statistics and the podium keep skipping abandoned
+             records, so an abandoned Final is labelled FINAL
+             (never a Match-N) without crowning a champion. */
+          var finBtn = tn.bracket ? '' : (m.stage === 'F'
             ? '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',false)">Unmark Final</button>'
             : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
           /* The admin's way back for an abandoned match: reopen
@@ -18048,6 +18120,11 @@
           /* The group and the tournament season ride into the
              archive too, so an archived match's Info tab can show
              its Match Title ("Group A Match") and Season rows. */
+          /* The knockout bracket slot rides into the archive too
+             (v260): a Final started from the bracket is identified
+             by it, and an entry that dropped it could no longer be
+             told apart from a league match. */
+          bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
           group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
           stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
           matchNo: (typeof S.matchNo === 'number') ? S.matchNo : 0,
@@ -20465,13 +20542,7 @@
            the 🏆 rule (Final only, leading), since the display
            state's own tournament stub holds no results to check. */
         base.isFinalDisplay = false;
-        try {
-          base.isFinalDisplay = resultIsFinal(e);
-          if (!base.isFinalDisplay){
-            var holdObj = tournamentHolderOfMatch(e.id);
-            if (holdObj) (holdObj.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m, holdObj.tn)) base.isFinalDisplay = true; });
-          }
-        } catch(err){}
+        try { base.isFinalDisplay = matchIsFinal(e); } catch(err){}
         /* Team logos live in the global store (v191): carry this
            device's logos for the two teams into the display state,
            so an archived scorecard shows the real logos exactly like
@@ -20815,10 +20886,7 @@
            the saved result that holds it in its tournament. */
         if (res && !e.live && !e.abandoned && res.indexOf('🏆') !== 0){
           var hcFin = false;
-          try {
-            hcFin = resultIsFinal(e);
-            if (!hcFin){ var hcHold = tournamentHolderOfMatch(e.id); if (hcHold) (hcHold.tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(e.id) && resultIsFinal(m, hcHold.tn)) hcFin = true; }); }
-          } catch(err){ hcFin = false; }
+          try { hcFin = matchIsFinal(e); } catch(err){ hcFin = false; }
           if (hcFin) res = '🏆 ' + res;
         }
         var potm = e.potmName
@@ -26221,7 +26289,9 @@
           function irow2(k, v){ if (v) rows.push([k, String(v)]); }
           var isTnMatch = S.matchKind === 'tournament' && S.tournament && S.tournament.name;
           if (isTnMatch) irow2('Tournament', S.tournament.name);
-          irow2('Match Title', S.matchGroup ? (S.matchGroup + ' Match') : ((S.teamA || '—') + ' vs ' + (S.teamB || '—')));
+          var isFinalMt = false;
+          try { isFinalMt = (S.matchStage === 'F') || !!S.isFinalDisplay || liveMatchIsFinal(); } catch(e){}
+          irow2('Match Title', isFinalMt ? 'Final' : (S.matchGroup ? (S.matchGroup + ' Match') : ((S.teamA || '—') + ' vs ' + (S.teamB || '—'))));
           irow2('Format', S.matchFormat || '');
           irow2('Ball Type', S.ballType || '');
           if (isTnMatch) irow2('Season', S.tournament.season || '');
