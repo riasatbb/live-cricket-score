@@ -1753,22 +1753,23 @@
       .be-summary{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:14.5px;line-height:1.55}
       .be-summary .be-res{font-weight:800;color:var(--green)}
       .be-del{border-color:#7a3a34 !important;color:#ffab9e !important}
+      /* ---------- completed-match chooser (admin) ----------
+         Tapping a Completed match the signed-in owner may edit
+         opens a small chooser — View Match or Edit Match — and Edit
+         Match opens the four editors (Edit Information, Edit Balls,
+         Edit Scoreboard, Replace Player) as full-width option rows. */
+      .cm-opts{display:grid;gap:10px;margin-top:14px}
+      .cm-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink)}
+      .cm-opt:active{transform:scale(.99)}
+      .cm-opt .cm-ic{font-size:19px;line-height:1;flex:none}
       /* ---------- scorecard player editor (replace a wrongly-added player) ----------
-         Owner-only, on a FINISHED match: an Edit Mode toggle on the
-         archived Scorecard tab adds a pencil (ball-by-ball edit) and
-         a replace icon to every batting / bowling row, and the
-         Replace Player editor (opened from a row, from Edit Match,
-         or from the Summary tab) swaps one player for another BY
-         PLAYER ID — so two players who share a name stay distinct —
-         moving every batting, bowling and fielding record of the
-         wrong player in this match to the correct one. */
+         Owner-only, on a FINISHED match: the Replace Player editor
+         (opened from the Edit Match menu on a Completed match, from
+         Edit Match, or from the Summary tab) swaps one player for
+         another BY PLAYER ID — so two players who share a name stay
+         distinct — moving every batting, bowling and fielding record
+         of the wrong player in this match to the correct one. */
       #playerEditModal{z-index:110}
-      .sc-editbar{display:flex;justify-content:flex-end;margin:0 0 10px}
-      .sc-editmode{border:1.5px solid var(--gold);background:var(--surface2);color:var(--ink);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
-      .sc-editmode.on{background:var(--gold);color:#231a04}
-      td.sc-acts,th.sc-acts{white-space:nowrap;text-align:right}
-      .sc-act{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:8px;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;font-family:inherit;margin-left:6px;vertical-align:middle;padding:0}
-      .sc-act.rep{border-color:var(--gold);color:var(--gold);font-weight:800;font-size:16px}
       .pe-info{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:11px 13px;font-size:14px;line-height:1.55;margin-top:12px}
       .pe-step{font-weight:800;color:var(--green);font-size:15.5px;margin:16px 0 10px}
       .pe-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 7px;cursor:pointer;font-family:inherit;color:var(--ink)}
@@ -1811,6 +1812,94 @@
       .cb-fin-row.dim{color:#a3a3a3}
       .cb-fin-row.dim .cb-fin-score span{color:#8f8f8f}
       .cb-fin-result{color:#64b5e8;font-size:16.5px;font-weight:500;line-height:1.45;margin-top:10px}
+      .fin-dot{flex:none;width:11px;height:11px;border-radius:50%;align-self:center;display:inline-block}
+      /* ---------- v262 viewer delights (LIVE tab) ----------
+         Hero card, win-probability meter, ball-by-ball timeline,
+         top-performer spotlight, Manhattan momentum chart and the
+         boundary / wicket flash effects. Everything sits inside the
+         always-dark scoreboard wrap, so colours are fixed dark-theme
+         values; each team's own colour arrives as an inline style
+         from teamColor() in the script. */
+      .cb-wrap{position:relative}
+      .hero{position:relative;border:1px solid #454545;border-radius:16px;padding:15px 16px 14px;overflow:hidden;background:linear-gradient(128deg,var(--hca,#333) 0%,#262626 54%,var(--hcb,#333) 135%)}
+      .hero-top{display:flex;align-items:flex-start;gap:10px}
+      .hero-team{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+      .hero-team.right{flex-direction:row-reverse;text-align:right}
+      .hero-badge{flex:none;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#1d1d1d;border:2px solid var(--tc,#555);font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;color:#fff;letter-spacing:.03em}
+      .hero-badge img{width:100%;height:100%;object-fit:cover;display:block}
+      .hero-tname{font-size:16.5px;font-weight:700;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .hero-sub{font-size:12.5px;color:#cfcfcf;margin-top:2px;white-space:nowrap}
+      .hero-live{flex:none;display:inline-flex;align-items:center;gap:6px;background:#c62828;color:#fff;font-size:12px;font-weight:800;letter-spacing:.09em;border-radius:999px;padding:5px 11px;margin-top:4px;box-shadow:0 0 0 0 rgba(229,57,53,.5);animation:heropulse 1.6s infinite}
+      .hero-live i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blinkdot 1.2s infinite}
+      .hero-live.brk{background:#8a5a00;animation:none;box-shadow:none}
+      .hero-live.brk i{animation:none}
+      @keyframes heropulse{0%{box-shadow:0 0 0 0 rgba(229,57,53,.45)}70%{box-shadow:0 0 0 9px rgba(229,57,53,0)}100%{box-shadow:0 0 0 0 rgba(229,57,53,0)}}
+      .hero-score{font-size:54px;font-weight:800;line-height:1.05;color:#fff;font-variant-numeric:tabular-nums;margin-top:10px;letter-spacing:.01em}
+      .hero-score .hw{font-weight:800}
+      .hero-score .hov{font-size:22px;font-weight:500;color:#d8d8d8}
+      .hero-score.bump{animation:herobump .55s ease}
+      @keyframes herobump{0%{transform:scale(1)}30%{transform:scale(1.07)}100%{transform:scale(1)}}
+      /* Boundary count-up: while the big number is counting up run
+         by run it stays gold, and every single run it passes gets
+         its own little tick pulse — the counting itself is the
+         show, not the bump around it. */
+      .hero-score.counting #heroRuns{color:#ffd98a}
+      #heroRuns{display:inline-block}
+      #heroRuns.tick{animation:herotick .18s ease}
+      @keyframes herotick{0%{transform:scale(1)}40%{transform:scale(1.17)}100%{transform:scale(1)}}
+      .hero-rates{display:flex;gap:18px;flex-wrap:wrap;margin-top:7px}
+      .hero-rates .hr .rlab{font-size:12px;color:#bdbdbd;letter-spacing:.06em}
+      .hero-rates .hr .rval{font-size:18px;color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+      .hero-prog{height:10px;border-radius:99px;background:rgba(0,0,0,.45);margin-top:13px;overflow:hidden}
+      .hero-prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pf,#64b5e8),#fff);transition:width .7s ease}
+      .hero-prog-lab{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:#e2e2e2;margin-top:6px;font-variant-numeric:tabular-nums}
+      .hero-prog-lab b{color:#fff}
+      .hero-prev{font-size:13.5px;color:#c9c9c9;margin-top:9px;line-height:1.45}
+      .hero-prev b{color:#fff}
+      .btl{background:#2b2b2b;padding:11px 16px 13px;border-top:1px solid #3a3a3a}
+      .btl-lab{font-size:12px;font-weight:700;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:8px}
+      .btl-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+      .btl-chip{min-width:31px;height:31px;padding:0 6px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:#3a3a3a;border:1px solid #4c4c4c;color:#e9e9e9;font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+      .btl-chip.wide{border-radius:99px;font-size:11.5px}
+      .btl-chip.f4{background:#2470b8;border-color:#2470b8;color:#fff}
+      .btl-chip.f6{background:#1f9d63;border-color:#1f9d63;color:#fff}
+      .btl-chip.fw{background:#c0392b;border-color:#c0392b;color:#fff}
+      .btl-chip.dot{color:#9a9a9a}
+      .btl-chip.new{animation:fxpop .5s ease}
+      @keyframes fxpop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+      .wp{background:#262626;border-top:1px solid #3a3a3a;border-bottom:1px solid #3a3a3a;padding:12px 16px 13px}
+      .wp-lab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:#bdbdbd;margin-bottom:8px}
+      .wp-lab .wp-t{font-weight:700;letter-spacing:.09em;text-transform:uppercase;font-size:12px;color:#a8a8a8}
+      .wp-bar{display:flex;height:15px;border-radius:99px;overflow:hidden;background:#191919}
+      .wp-seg{height:100%;transition:width .7s ease;min-width:0}
+      .wp-names{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:14px;font-variant-numeric:tabular-nums}
+      .wp-names b{color:#fff;font-size:16px}
+      .wp-names .r{text-align:right}
+      .spot{background:#2b2b2b;padding:14px 16px 4px}
+      .spot-head,.mh-head{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#f0ab3c;margin-bottom:11px}
+      .spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+      @media (max-width:520px){.spot-grid{grid-template-columns:1fr}}
+      .spot-card{display:flex;gap:12px;align-items:center;background:#262626;border:1px solid #3d3d3d;border-top:3px solid var(--tc,#f0ab3c);border-radius:13px;padding:12px 13px;min-width:0}
+      .spot-ava{flex:none;width:56px;height:56px;border-radius:50%;background:#e6e6e6;color:#555;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:800;font-size:18px;font-family:"Barlow Condensed",sans-serif}
+      .spot-ava img{width:100%;height:100%;object-fit:cover;display:block}
+      .spot-info{min-width:0}
+      .spot-role{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+      .spot-name{font-size:17px;font-weight:700;color:#fff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .spot-team{font-size:12.5px;color:#bdbdbd}
+      .spot-stats{font-size:13.5px;color:#e2e2e2;margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.45}
+      .spot-stats b{color:#fff;font-size:15.5px}
+      .mh{background:#2b2b2b;padding:14px 16px 12px}
+      .mh svg{display:block;width:100%;height:auto}
+      .mh-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:#d8d8d8}
+      .mh-legend .li{display:inline-flex;align-items:center;gap:6px}
+      .mh-legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+      .mh-note{font-size:12.5px;color:#9a9a9a;margin-top:5px}
+      #fxFlash{position:absolute;inset:0;pointer-events:none;z-index:6;opacity:0;overflow:hidden}
+      #fxFlash.go{animation:fxflash .8s ease-out}
+      @keyframes fxflash{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+      #fxFlash .fx-confetti{position:absolute;top:-16px;width:8px;height:13px;border-radius:2px;animation-name:fxfall;animation-timing-function:cubic-bezier(.2,.6,.6,1);animation-fill-mode:forwards}
+      @keyframes fxfall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(46vh) rotate(560deg);opacity:0}}
+      @media (prefers-reduced-motion: reduce){.hero-live{animation:none}.hero-live i{animation:none}.hero-score.bump{animation:none}#heroRuns.tick{animation:none}.btl-chip.new{animation:none}.hero-prog-fill,.wp-seg{transition:none}#fxFlash.go{animation:none}#fxFlash .fx-confetti{animation:none;display:none}}
       .cb-potm-wrap{background:#2b2b2b;border-top:1px solid #3a3a3a;padding:14px 16px 16px}
       .cb-potm-lab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:10px}
       .cb-potm-row{display:flex;align-items:center;gap:14px}
@@ -3197,12 +3286,20 @@
                  commentary section below (foot of #cbCommentary),
                  where they belong. -->
             <div class="cb-main" id="cbMainScore"></div>
+            <!-- v262: ball-by-ball timeline + win-probability meter,
+                 filled by renderScoreboardCB under the hero card. -->
+            <div id="cbBallRow"></div>
+            <div id="cbWinProb"></div>
             <div class="cb-pship" id="cbPship"></div>
             <!-- No crease line above the batter table: who is at the
                  crease and who is on strike is said ONCE, in the
                  commentary's one-time green innings-start entry. -->
             <div class="cb-table" id="cbBatterTable"></div>
             <div class="cb-table" id="cbBowlerTable"></div>
+            <!-- v262: top-performer spotlight + Manhattan momentum
+                 chart, filled by renderScoreboardCB. -->
+            <div id="cbSpotlight"></div>
+            <div id="cbManhattan"></div>
             <div class="cb-comm" id="cbCommentary"></div>
             <div id="cbOverSummary"></div>
           </div>
@@ -4062,6 +4159,22 @@
       </div>
     </div>
 
+    <!-- Completed-match chooser (admin): tapping a Completed match
+         the owner may edit offers View Match / Edit Match; Edit Match
+         offers Edit Information, Edit Balls, Edit Scoreboard and
+         Replace Player. Viewers and non-owners never see this — their
+         tap opens the match directly, as before. -->
+    <div class="modal-back" id="cmModal" onclick="if(event.target===this)closeMatchChooser()">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
+        <div class="modal-head">
+          <h2 id="cmTitle">Match</h2>
+          <button class="sq-x big" onclick="closeMatchChooser()" aria-label="Close">×</button>
+        </div>
+        <p class="sub" id="cmSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div id="cmBody"></div>
+      </div>
+    </div>
+
     <div class="modal-back" id="shareCardModal" onclick="if(event.target===this)closeShareCard()">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shareCardTitle">
         <div class="modal-head">
@@ -4130,7 +4243,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v261';
+      var APP_VERSION = 'v264';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -14383,7 +14496,7 @@
           + '<span class="tp-mfoot">' + (m.tournamentName ? '<button type="button" class="tp-vtn" onclick="event.stopPropagation();tpOpenTournamentOfMatch(\'' + esc(m.id) + '\')">View Tournament</button>' : '<span></span>')
           + (res ? '<span class="pf-mres" style="margin:0">' + esc(res) + '</span>' : '') + '</span>';
         if (m.live) return '<div class="pf-mcard">' + inner + '</div>';
-        return '<div class="pf-mcard tap" role="button" tabindex="0" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</div>';
+        return '<div class="pf-mcard tap" role="button" tabindex="0" onclick="completedMatchTapHist(\'' + esc(m.id) + '\')">' + inner + '</div>';
       }
       function tpMatchesTabHTML(team){
         if (!tpData.ms.length) return '<div class="card"><p class="note" style="margin:0">No matches recorded for this team yet.</p></div>';
@@ -16182,7 +16295,7 @@
               + '</div>';
           }
           var finAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' — completed match';
-          return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(S.matchId)) + ')', finAria) + '>'
+          return '<div class="ml-row tap"' + mlTapAttrs('completedMatchTap(' + fxIdArg(String(S.matchId)) + ')', finAria) + '>'
             + mlPill('done')
             + liveRowLabelHTML(tnName)
             + lines
@@ -16202,7 +16315,7 @@
         var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
         var res = matchResultText(m, ownerTn);
         var aria = 'View ' + (m.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (m.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + ' — completed match';
-        return '<div class="ml-row tap"' + mlTapAttrs('openResultMatch(' + fxIdArg(String(m.id)) + ')', aria) + '>'
+        return '<div class="ml-row tap"' + mlTapAttrs('completedMatchTap(' + fxIdArg(String(m.id)) + ')', aria) + '>'
           + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName, ownerTn) : mlLabel([m.venue, tnName], false)) + lines
           + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
       }
@@ -19717,7 +19830,7 @@
             + (res ? '<span class="pf-mres">' + esc(res) + '</span>' : '')
             + (m.tournamentName ? '<span class="pf-mtn"><b>' + esc(String(m.tournamentName).toUpperCase()) + '</b><span>View Tournament</span></span>' : '');
           if (m.live) return '<div class="pf-mcard">' + inner + '</div>';
-          return '<button type="button" class="pf-mcard" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</button>';
+          return '<button type="button" class="pf-mcard" onclick="completedMatchTapHist(\'' + esc(m.id) + '\')">' + inner + '</button>';
         }).join('');
       }
       /* ---------- profile Teams tab (v144) ----------
@@ -19891,7 +20004,7 @@
             var inner = '<span class="pf-mw-top"><span class="pf-mw-title">' + esc(title) + '</span>' + (m.live ? '<span class="pf-mw-tag">● LIVE</span>' : '') + '</span>'
               + '<span class="pf-mw-grid">' + grid + '</span>';
             if (m.live) return '<div class="pf-mw">' + inner + '</div>';
-            return '<button type="button" class="pf-mw" onclick="openHistoryMatch(\'' + esc(m.id) + '\')">' + inner + '</button>';
+            return '<button type="button" class="pf-mw" onclick="completedMatchTapHist(\'' + esc(m.id) + '\')">' + inner + '</button>';
           }).join('');
         }
         if (!d.fmtList.length) return h + '<p class="note">No recorded matches yet.</p>';
@@ -20758,7 +20871,83 @@
          never the row's. */
       function tnResultRowTap(id, ev){
         if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+        completedMatchTap(id);
+      }
+      /* ============================================================
+         COMPLETED-MATCH CHOOSER — View Match / Edit Match (admin)
+         In the admin app, tapping a Completed match the signed-in
+         owner may edit no longer opens it straight away: a chooser
+         offers View Match (the match opens exactly as it always
+         has) and Edit Match, which offers the four editors — Edit
+         Information (the match details), Edit Balls (the ball-by-ball
+         editor), Edit Scoreboard (the scorecard editor — the same
+         ball-by-ball editor, under its own title) and Replace Player.
+         The gate is the same owner check every edit action already
+         uses (histEntryDeletable): anyone else — a viewer, or an
+         admin who does not own the match — skips the chooser and
+         their tap opens the match directly, unchanged.
+         ============================================================ */
+      var cmId = '';
+      function cmEditableEntry(id){
+        var e = (typeof HIST !== 'undefined' && HIST) ? HIST[String(id)] : null;
+        if (!e) return null;
+        var ok = false;
+        try { ok = histEntryDeletable(e); } catch(err){ ok = false; }
+        return ok ? e : null;
+      }
+      /* Completed rows that today open through openResultMatch
+         (Recent Matches, the tournament Matches tab). */
+      function completedMatchTap(id){
+        var e = cmEditableEntry(id);
+        if (!e){ openResultMatch(id); return; }
+        cmShowChooser(id, e);
+      }
+      /* Completed cards that today open through openHistoryMatch
+         (team page and player profile match cards). */
+      function completedMatchTapHist(id){
+        var e = cmEditableEntry(id);
+        if (!e){ openHistoryMatch(id); return; }
+        cmShowChooser(id, e);
+      }
+      function cmShowChooser(id, e){
+        cmId = String(id);
+        var t = $('cmTitle'); if (t) t.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
+        var s = $('cmSub');
+        if (s) s.textContent = [e.tournamentName, e.venue].filter(Boolean).join(' • ') || (e.at ? fmtDMYTime(e.at) : '');
+        cmRenderStep(1);
+        var m = $('cmModal'); if (m) m.classList.add('show');
+      }
+      function closeMatchChooser(){
+        var m = $('cmModal'); if (m) m.classList.remove('show');
+      }
+      function cmRenderStep(step){
+        var body = $('cmBody'); if (!body) return;
+        if (step === 2){
+          body.innerHTML = '<div class="cm-opts">'
+            + '<button type="button" class="cm-opt" onclick="cmDoEdit(\'info\')"><span class="cm-ic">✏️</span><span>Edit Information</span></button>'
+            + '<button type="button" class="cm-opt" onclick="cmDoEdit(\'balls\')"><span class="cm-ic">🏏</span><span>Edit Balls</span></button>'
+            + '<button type="button" class="cm-opt" onclick="cmDoEdit(\'scoreboard\')"><span class="cm-ic">📋</span><span>Edit Scoreboard</span></button>'
+            + '<button type="button" class="cm-opt" onclick="cmDoEdit(\'replace\')"><span class="cm-ic">👥</span><span>Replace Player</span></button>'
+            + '</div>'
+            + '<div class="rowflex" style="margin-top:12px"><button type="button" class="btn ghost" onclick="cmRenderStep(1)">← Back</button></div>';
+          return;
+        }
+        body.innerHTML = '<div class="cm-opts">'
+          + '<button type="button" class="cm-opt" onclick="cmChooseView()"><span class="cm-ic">👁</span><span>View Match</span></button>'
+          + '<button type="button" class="cm-opt" onclick="cmRenderStep(2)"><span class="cm-ic">✏️</span><span>Edit Match</span></button>'
+          + '</div>';
+      }
+      function cmChooseView(){
+        var id = cmId;
+        closeMatchChooser();
         openResultMatch(id);
+      }
+      function cmDoEdit(kind){
+        var id = cmId;
+        closeMatchChooser();
+        if (kind === 'info') editHistoryMatch(id);
+        else if (kind === 'replace') openPlayerEditor(id);
+        else openBallEditor(id); /* 'balls' and 'scoreboard' — one ball-by-ball scorecard editor */
       }
       function openResultMatch(id){
         id = String(id);
@@ -23966,10 +24155,10 @@
 
       /* ============================================================
          SCORECARD PLAYER EDITOR — replacing a wrongly-added player
-         The owner opens it from Edit Match (Replace Player), from
-         the Replace Player button at the foot of the archived
-         match's Summary tab, or from the ⇄ icon on a scorecard row
-         in Edit Mode. Step 1 picks the player who was added by
+         The owner opens it from the Edit Match menu on a Completed
+         match (Replace Player), from Edit Match, or from the
+         Replace Player button at the foot of the archived match's
+         Summary tab. Step 1 picks the player who was added by
          mistake; step 2 picks the correct player from a list that
          shows every candidate's Player ID beside his name — the
          whole point: two players can share the name "Md. Ashraful
@@ -24614,48 +24803,30 @@
         if (!name) return '';
         return dispName(team, name) + leadSuffix(team, name);
       }
-      /* Edit Mode action cell for one scorecard row (see
-         renderScorecardPanel): a pencil that opens the ball-by-ball
-         editor on this innings, and a replace icon that opens the
-         Scorecard Player Editor with this player picked as the one
-         to replace. Rendered only while the owner has Edit Mode on
-         for an archived match they own — scEditCtx is set for the
-         duration of that one render and cleared right after, so no
-         other surface (live scorecard, Super Over section, viewer)
-         ever shows the icons. The row's identity travels by index
-         into scEditRows, never as a name string in the markup. */
-      function scActCell(kind, inn, rec){
-        if (!scEditCtx || !rec || !rec.name) return '';
-        var idx = scEditRows.length;
-        scEditRows.push({ kind: kind, innIdx: scEditCtx.innIdx, name: rec.name, team: kind === 'bat' ? (inn.battingTeam || '') : (inn.bowlingTeam || ''), pid: rec.pid || '' });
-        return '<td class="sc-acts"><button type="button" class="sc-act" title="Edit — ball by ball" aria-label="Edit this player ball by ball" onclick="peRowEdit(' + idx + ')">✏️</button><button type="button" class="sc-act rep" title="Replace this player with the correct player" aria-label="Replace this player" onclick="peRowReplace(' + idx + ')">⇄</button></td>';
-      }
       function battingTableHTML(inn){
         if (!inn.batters.length) return '<p class="note">No one has batted yet.</p>';
-        var edit = !!scEditCtx, editInn = edit ? scEditCtx.innIdx : -1;
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
           return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout pname':'pname')+'">' + plLink(inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
             + (b.out ? '<span class="howout dism">' + esc(dispHowOut(inn.bowlingTeam, b.howOut||'out')) + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
-            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td>' + scActCell('bat', inn, b) + '</tr>';
+            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
         }).join('');
         var ex = innExtras(inn);
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td>' + (edit ? '<td class="sc-acts"></td>' : '') + '</tr>' : '';
-        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th>' + (edit ? '<th class="sc-acts"></th>' : '') + '</tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td>' + (edit ? '<td class="sc-acts"></td>' : '') + '</tr>'
-          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td>' + (edit ? '<td class="sc-acts"><button type="button" class="sc-act" title="Edit this innings — ball by ball" aria-label="Edit this innings ball by ball" onclick="peEditInnings(' + editInn + ')">✏️</button></td>' : '') + '</tr>'
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
+        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
+          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td></tr>'
+          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
       function bowlingTableHTML(inn){
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
-        var edit = !!scEditCtx;
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td>' + scActCell('bowl', inn, b) + '</tr>';
+          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
         }).join('');
-        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th>' + (edit ? '<th class="sc-acts"></th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
       }
       /* ---------- Scorecard: Fall of Wickets + Partnerships ----------
          Both sections are rebuilt from the stored ball-by-ball record
@@ -24754,25 +24925,6 @@
          match, an archived match and a viewed match all render
          identically. */
       var scInnOpenState = {}, scInnOpenFor = '';
-      /* Scorecard Edit Mode (owner, archived match): scEditCtx is
-         non-null only while renderScorecardPanel builds the tables
-         of an innings in edit mode; scEditRows collects the identity
-         of every row that got action icons in that render. */
-      var scEditMode = false, scEditCtx = null, scEditRows = [], scEditMatchId = '';
-      function toggleScEditMode(){ scEditMode = !scEditMode; renderScorecardPanel(); }
-      function peEditInnings(innIdx){
-        if (!scEditMatchId) return;
-        openBallEditor(scEditMatchId);
-        try { beSetTab(innIdx); } catch(e){}
-      }
-      function peRowEdit(i){
-        var r = scEditRows[i]; if (!r) return;
-        peEditInnings(r.innIdx);
-      }
-      function peRowReplace(i){
-        var r = scEditRows[i]; if (!r || !scEditMatchId) return;
-        openPlayerEditor(scEditMatchId, { name: r.name, team: r.team, pid: r.pid });
-      }
       function toggleScInn(idx){
         var sec = $('scInn' + idx); if (!sec) return;
         var open = !sec.classList.contains('open');
@@ -24794,29 +24946,16 @@
         if (S.prevInnings) inns.push(S.prevInnings);
         if (S.current) inns.push(S.current);
         inns = inns.filter(function(inn){ return !!inn && (((inn.batters || []).length > 0) || ((inn.bowlers || []).length > 0) || inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0); });
-        /* Edit Mode is offered only on an archived match the signed-in
-           owner may edit (the same gate as Edit / Edit Balls at the
-           foot of the Summary tab) — never on a live match, never to
-           a viewer. */
-        var peId = '';
-        if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
-          try { if (histEntryDeletable(archiveView.entry)) peId = String(archiveView.id); } catch(e){ peId = ''; }
-        }
-        scEditMatchId = peId;
-        scEditRows = [];
-        scEditCtx = null;
         if (!inns.length){ host.innerHTML = '<p class="cb-empty">Match is not started yet.</p>'; return; }
         var key = String(S.matchId || ((S.teamA || '') + ' v ' + (S.teamB || '')));
-        if (key !== scInnOpenFor){ scInnOpenFor = key; scInnOpenState = {}; scEditMode = false; }
-        var editBar = peId ? '<div class="sc-editbar"><button type="button" class="sc-editmode' + (scEditMode ? ' on' : '') + '" onclick="toggleScEditMode()">' + (scEditMode ? '✓ Edit Mode On' : '✏️ Edit Mode') + '</button></div>' : '';
-        var entryInnCount = (peId && archiveView.entry && Array.isArray(archiveView.entry.innings)) ? archiveView.entry.innings.length : inns.length;
-        host.innerHTML = editBar + inns.map(function(inn, i){
+        if (key !== scInnOpenFor){ scInnOpenFor = key; scInnOpenState = {}; }
+        host.innerHTML = inns.map(function(inn, i){
           var open = Object.prototype.hasOwnProperty.call(scInnOpenState, key + ':' + i) ? scInnOpenState[key + ':' + i] : (i === inns.length - 1);
           var fp = '';
           try { fp = fowPshipSectionsHTML(inn); } catch(e){ fp = ''; }
-          scEditCtx = (scEditMode && peId) ? { innIdx: (i === 0 ? 0 : Math.max(0, entryInnCount - 1)) } : null;
-          return '<div class="cb-inn' + (open ? ' open' : '') + '" id="scInn' + i + '">'
+          return '<div class="cb-inn' + (open ? ' open' : '') + '" id="scInn' + i + '" style="border-left:4px solid ' + teamColor(inn.battingTeam, inn.bowlingTeam) + '">'
             + '<button type="button" class="cb-inn-head" onclick="toggleScInn(' + i + ')" aria-expanded="' + (open ? 'true' : 'false') + '">'
+            + '<span class="fin-dot" style="background:' + teamColor(inn.battingTeam, inn.bowlingTeam) + '"></span>'
             + '<span class="cb-inn-team">' + esc(inn.battingTeam || '') + '</span>'
             + '<span class="cb-inn-score">' + inn.runs + '-' + inn.wickets + ' <span>(' + oversText(inn.legalBalls) + ')</span></span>'
             + '<span class="cb-inn-chev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>'
@@ -24827,7 +24966,6 @@
             + (fp ? '<div class="cb-table">' + fp + '</div>' : '')
             + '</div></div>';
         }).join('');
-        scEditCtx = null;
       }
       /* The Fall of Wickets + Partnerships sections inside one
          innings' expanded card: sub-headed blocks appended after
@@ -25977,6 +26115,367 @@
         if (sqLines) html += '<div class="cb-toss-h">Squads:</div>' + sqLines;
         return html;
       }
+      /* ============================================================
+         v262 — VIEWER DELIGHTS on the LIVE tab: each team's own
+         colour, the live hero card, the win-probability meter, the
+         ball-by-ball timeline, the top-performer spotlight, the
+         Manhattan momentum chart and the boundary / wicket screen
+         effects. Everything is derived at render time from the
+         state on show — nothing new is stored — so the live match,
+         a viewed match and an archived match all render the same.
+         ============================================================ */
+      /* A team's own colour: a stable pick from a fixed palette,
+         hashed from the team name, so a team wears the same colour
+         on every screen and device. When the two teams of a match
+         would land on the same colour, the second pick steps
+         forward until it differs. */
+      var TEAM_PALETTE = ['#ef5350','#f5a623','#42a5f5','#ab47bc','#26a69a','#ec407a','#7cb342','#5c6bc0','#ff7043','#26c6da','#d4a017','#8bc34a','#e2533e','#4db6ac','#ba68c8','#64b5e8'];
+      function teamColorIdx(name){
+        var s = String(name || '').toUpperCase(), h = 0;
+        for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        return h % TEAM_PALETTE.length;
+      }
+      function teamColor(name, otherName){
+        var idx = teamColorIdx(name);
+        if (otherName && teamColorIdx(otherName) === idx) idx = (idx + 5) % TEAM_PALETTE.length;
+        return TEAM_PALETTE[idx];
+      }
+      function hexRgba(hex, a){
+        var n = parseInt(String(hex).slice(1), 16);
+        return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+      }
+      function heroBadgeHTML(team, color){
+        var logo = teamLogoFor(team);
+        if (logo) return '<span class="hero-badge" style="--tc:' + color + '"><img src="' + esc(logo) + '" alt="" loading="lazy" /></span>';
+        return '<span class="hero-badge" style="--tc:' + color + ';background:' + hexRgba(color, .32) + '">' + esc(tnInitials(team)) + '</span>';
+      }
+      /* ---------- (1) live hero card ---------- */
+      function heroHTML(inn, t){
+        var bat = inn.battingTeam || '', bowl = inn.bowlingTeam || '';
+        var cA = teamColor(bat, bowl), cB = teamColor(bowl, bat);
+        var brk = S.status === 'inningsBreak';
+        var badge = brk
+          ? '<span class="hero-live brk">Innings Break</span>'
+          : '<span class="hero-live"><i></i>LIVE</span>';
+        var rates = '<div class="hero-rates"><div class="hr"><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
+        var rr = rrr();
+        if (t && rr !== null) rates += '<div class="hr"><div class="rlab">REQ</div><div class="rval">' + rr.toFixed(2) + '</div></div>';
+        if (t) rates += '<div class="hr"><div class="rlab">Target</div><div class="rval">' + t + '</div></div>';
+        rates += '</div>';
+        var prog = '';
+        if (t && S.inningsNo === 2){
+          var pct = Math.max(0, Math.min(100, inn.runs / t * 100));
+          var need = t - inn.runs;
+          var ballsLeft = effMaxBalls() - inn.legalBalls;
+          prog = '<div class="hero-prog"><div class="hero-prog-fill" style="width:' + pct.toFixed(1) + '%;--pf:' + cA + '"></div></div>'
+            + '<div class="hero-prog-lab"><span>' + (need > 0 ? 'Need <b>' + need + '</b> off <b>' + (isFinite(ballsLeft) ? ballsLeft : '—') + '</b> balls' : '<b>Target reached</b>') + '</span><span>Target <b>' + t + '</b></span></div>';
+        }
+        var prev = '';
+        if (S.prevInnings) prev = '<div class="hero-prev">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '-' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ')</b> • Bowling now: ' + esc(bowl) + '</div>';
+        if (S.superOver && S.superOver.active) prev += '<div class="hero-prev">⚡ <b>SUPER OVER</b> in progress</div>';
+        return '<div class="hero" style="--hca:' + hexRgba(cA, .40) + ';--hcb:' + hexRgba(cB, .40) + '">'
+          + '<div class="hero-top">'
+          + '<div class="hero-team">' + heroBadgeHTML(bat, cA) + '<div style="min-width:0"><div class="hero-tname">' + esc(bat || '—') + '</div><div class="hero-sub">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' innings • batting</div></div></div>'
+          + badge
+          + '<div class="hero-team right">' + heroBadgeHTML(bowl, cB) + '<div style="min-width:0"><div class="hero-tname">' + esc(bowl || '—') + '</div><div class="hero-sub">bowling</div></div></div>'
+          + '</div>'
+          + '<div class="hero-score' + (heroCountOn(inn) ? ' counting' : '') + '"><span id="heroRuns">' + heroDisplayRuns(inn) + '</span><span class="hw">/' + inn.wickets + '</span> <span class="hov">(' + oversText(inn.legalBalls) + ' ov)</span></div>'
+          + rates + prog + prev
+          + '</div>';
+      }
+      /* ---------- (4) win probability ---------- */
+      /* Estimated win chance (0–100) for the BATTING side, from the
+         match situation alone, recalculated on every render — i.e.
+         on every ball. In a chase: the runs still needed are set
+         against what the balls and wickets left can be expected to
+         produce (a remaining ball is worth less as wickets fall).
+         In the first innings: the projected total is set against a
+         par of 8 runs an over. An estimate for the viewer, never a
+         stored figure. */
+      function winProbBatting(){
+        if (typeof superOverActive === 'function' && superOverActive()) return null;
+        var inn = S.current;
+        var maxB = effMaxBalls();
+        var totalBalls = isFinite(maxB) ? maxB : ((S.oversLimit || 20) * 6);
+        var ballsLeft = Math.max(0, totalBalls - inn.legalBalls);
+        var wkLim = wicketsLimit();
+        var wktsLeft = Math.max(0, wkLim - inn.wickets);
+        var t = target();
+        var p;
+        if (t && S.inningsNo === 2){
+          var need = t - inn.runs;
+          if (need <= 0) return 100;
+          if (!ballsLeft || !wktsLeft) return 1;
+          var perBall = 0.55 + 0.77 * (wktsLeft / wkLim);
+          var margin = inn.runs + ballsLeft * perBall - t;
+          p = 100 / (1 + Math.exp(-margin / (6 + need * 0.08)));
+        } else if (S.inningsNo === 1){
+          if (inn.legalBalls < 6 || !ballsLeft) return null;
+          var par = (S.oversLimit || 20) * 8;
+          var rateNow = inn.runs / (inn.legalBalls / 6);
+          var capRate = (0.55 + 0.77 * (wktsLeft / wkLim)) * 6;
+          var proj = inn.runs + (rateNow * 0.45 + capRate * 0.55) * (ballsLeft / 6);
+          p = 100 / (1 + Math.exp(-(proj - par) / 15));
+        } else return null;
+        return Math.max(1, Math.min(99, Math.round(p)));
+      }
+      function winProbHTML(){
+        if (S.status !== 'live') return '';
+        var p = winProbBatting();
+        if (p === null || typeof p !== 'number' || isNaN(p)) return '';
+        var bat = S.current.battingTeam || '', bowl = S.current.bowlingTeam || '';
+        var cA = teamColor(bat, bowl), cB = teamColor(bowl, bat);
+        return '<div class="wp"><div class="wp-lab"><span class="wp-t">Win probability</span><span>estimate</span></div>'
+          + '<div class="wp-bar"><div class="wp-seg" style="width:' + p + '%;background:' + cA + '"></div><div class="wp-seg" style="width:' + (100 - p) + '%;background:' + cB + '"></div></div>'
+          + '<div class="wp-names"><span>' + esc(teamShort(bat)) + ' <b>' + p + '%</b></span><span class="r"><b>' + (100 - p) + '%</b> ' + esc(teamShort(bowl)) + '</span></div></div>';
+      }
+      /* ---------- (5) ball-by-ball timeline ---------- */
+      function ballTimelineHTML(inn, markNew){
+        var balls = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-14);
+        if (!balls.length) return '';
+        var chips = balls.map(function(b, i){
+          var tx = String(b.text || '');
+          var cls = 'btl-chip';
+          if (isWicketBall(b)) cls += ' fw';
+          else if (tx === '4') cls += ' f4';
+          else if (tx === '6') cls += ' f6';
+          else if (tx === '0') cls += ' dot';
+          if (tx.length > 2) cls += ' wide';
+          if (markNew && i === balls.length - 1) cls += ' new';
+          return '<span class="' + cls + '" title="Over ' + esc(b.over || '') + '">' + esc(tx === '0' ? '•' : tx) + '</span>';
+        }).join('');
+        return '<div class="btl"><div class="btl-lab">Recent balls</div><div class="btl-row">' + chips + '</div></div>';
+      }
+      /* ---------- (6) top-performer spotlight ---------- */
+      function spotlightHTML(){
+        var inns = [];
+        if (S.prevInnings) inns.push(S.prevInnings);
+        if (S.current) inns.push(S.current);
+        var bestBat = null, bestBowl = null;
+        inns.forEach(function(ix){
+          if (!ix) return;
+          (ix.batters || []).forEach(function(b){
+            if (!b || !b.name || (b.runs <= 0 && b.balls <= 0)) return;
+            var sr = b.balls > 0 ? b.runs / b.balls * 100 : 0;
+            if (!bestBat || b.runs > bestBat.runs || (b.runs === bestBat.runs && sr > bestBat.sr))
+              bestBat = { name: b.name, team: ix.battingTeam || '', pid: b.pid || '', runs: b.runs, balls: b.balls, fours: b.fours || 0, sixes: b.sixes || 0, sr: sr };
+          });
+          (ix.bowlers || []).forEach(function(b){
+            if (!b || !b.name || !b.balls) return;
+            if (!bestBowl || b.wickets > bestBowl.wickets || (b.wickets === bestBowl.wickets && b.runs < bestBowl.runs))
+              bestBowl = { name: b.name, team: ix.bowlingTeam || '', pid: b.pid || '', wickets: b.wickets, runs: b.runs, balls: b.balls };
+          });
+        });
+        if (!bestBat && !bestBowl) return '';
+        function ava(team, name, pid){
+          var d = profileDataFor(team, name, pid);
+          return d.photo
+            ? '<span class="spot-ava"><img src="' + esc(d.photo) + '" alt="" loading="lazy" /></span>'
+            : '<span class="spot-ava">' + esc(initialsOf(name)) + '</span>';
+        }
+        var cards = '';
+        if (bestBat){
+          cards += '<div class="spot-card" style="--tc:' + teamColor(bestBat.team, '') + '">'
+            + ava(bestBat.team, bestBat.name, bestBat.pid)
+            + '<div class="spot-info"><div class="spot-role">Top Batter</div>'
+            + '<div class="spot-name">' + plLink(bestBat.team, bestBat.name) + '</div>'
+            + '<div class="spot-team">' + esc(bestBat.team) + '</div>'
+            + '<div class="spot-stats"><b>' + bestBat.runs + '</b> (' + bestBat.balls + ') runs • SR ' + bestBat.sr.toFixed(1) + ' • ' + bestBat.fours + '×4 • ' + bestBat.sixes + '×6</div></div></div>';
+        }
+        if (bestBowl){
+          var econ = bestBowl.balls > 0 ? (bestBowl.runs / (bestBowl.balls / 6)).toFixed(2) : '0.00';
+          cards += '<div class="spot-card" style="--tc:' + teamColor(bestBowl.team, '') + '">'
+            + ava(bestBowl.team, bestBowl.name, bestBowl.pid)
+            + '<div class="spot-info"><div class="spot-role">Top Bowler</div>'
+            + '<div class="spot-name">' + plLink(bestBowl.team, bestBowl.name) + '</div>'
+            + '<div class="spot-team">' + esc(bestBowl.team) + '</div>'
+            + '<div class="spot-stats"><b>' + bestBowl.wickets + '</b> wickets • ' + oversText(bestBowl.balls) + ' ov • ' + bestBowl.runs + ' runs • Econ ' + econ + '</div></div></div>';
+        }
+        return '<div class="spot"><div class="spot-head">Top Performers</div><div class="spot-grid">' + cards + '</div></div>';
+      }
+      /* ---------- (3) Manhattan momentum chart ---------- */
+      function manhattanHTML(){
+        var all = [];
+        if (S.prevInnings) all.push(S.prevInnings);
+        if (S.current) all.push(S.current);
+        var series = [];
+        all.forEach(function(ix){
+          if (!ix) return;
+          var snaps = [];
+          try { snaps = overSnapshots(ix); } catch(e){ snaps = []; }
+          var data = snaps.filter(function(s){ return s.balls.some(function(b){ return !b.evt; }); }).map(function(s){
+            return { no: s.no, runs: s.runs, wkts: s.balls.filter(function(b){ return !b.evt && isWicketBall(b); }).length };
+          });
+          if (data.length) series.push({ team: ix.battingTeam || '', color: teamColor(ix.battingTeam, ix.bowlingTeam), data: data });
+        });
+        if (!series.length) return '';
+        var maxOv = 0, maxRuns = 6;
+        series.forEach(function(sr){ sr.data.forEach(function(d){ if (d.no > maxOv) maxOv = d.no; if (d.runs > maxRuns) maxRuns = d.runs; }); });
+        var groupW = 30, barW = series.length > 1 ? 11 : 16, plotH = 74, topPad = 17, labH = 15;
+        var W = Math.max(300, maxOv * groupW + 8), H = topPad + plotH + labH;
+        var baseY = topPad + plotH;
+        var svg = '';
+        for (var o = 1; o <= maxOv; o++){
+          var gx = 4 + (o - 1) * groupW;
+          series.forEach(function(sr, si){
+            var d = null;
+            sr.data.forEach(function(x){ if (x.no === o) d = x; });
+            if (!d) return;
+            var bh = Math.max(2, Math.round(d.runs / maxRuns * plotH));
+            var bx = gx + (groupW - barW * series.length) / 2 + si * barW;
+            var by = baseY - bh;
+            svg += '<rect x="' + bx.toFixed(1) + '" y="' + by + '" width="' + (barW - 1) + '" height="' + bh + '" rx="2" fill="' + sr.color + '"><title>Over ' + o + ' — ' + esc(sr.team) + ': ' + d.runs + ' runs' + (d.wkts ? ', ' + d.wkts + (d.wkts === 1 ? ' wicket' : ' wickets') : '') + '</title></rect>';
+            svg += '<text x="' + (bx + (barW - 1) / 2).toFixed(1) + '" y="' + (by - 3) + '" text-anchor="middle" font-size="9" fill="#d8d8d8">' + d.runs + '</text>';
+            for (var wi = 0; wi < Math.min(3, d.wkts); wi++)
+              svg += '<circle cx="' + (bx + (barW - 1) / 2).toFixed(1) + '" cy="' + (by + 6 + wi * 7) + '" r="2.4" fill="#fff" stroke="#c0392b" stroke-width="1.2"><title>' + d.wkts + (d.wkts === 1 ? ' wicket' : ' wickets') + ' this over</title></circle>';
+          });
+          svg += '<text x="' + (gx + groupW / 2) + '" y="' + (baseY + 12) + '" text-anchor="middle" font-size="9" fill="#9a9a9a">' + o + '</text>';
+        }
+        svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Runs scored in each over">'
+          + '<line x1="2" y1="' + baseY + '" x2="' + (W - 2) + '" y2="' + baseY + '" stroke="#4c4c4c" stroke-width="1" />' + svg + '</svg>';
+        var legend = series.map(function(sr){ return '<span class="li"><span class="sw" style="background:' + sr.color + '"></span>' + esc(teamShort(sr.team)) + '</span>'; }).join('');
+        return '<div class="mh"><div class="mh-head">Momentum — runs per over</div>' + svg
+          + '<div class="mh-legend">' + legend + '<span class="li"><span class="sw" style="background:#fff;border:1.6px solid #c0392b;border-radius:50%"></span>wicket</span></div></div>';
+      }
+      /* ---------- (2) boundary / wicket effects ---------- */
+      /* The previous render's ball count and score for the innings
+         on show. A render that ADDS a ball is compared against it:
+         a new 4 or 6 runs the count-up + flash (+ confetti for a
+         six), a new wicket runs the red flash. Renders that change
+         nothing (a Firebase echo, a tab re-render) add no ball, so
+         the effects can never fire twice for the same delivery. */
+      var fxPrev = null;
+      function fxReducedMotion(){
+        try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch(e){ return false; }
+      }
+      function heroFxKey(){
+        return String(S.matchId || ((S.teamA || '') + ' v ' + (S.teamB || ''))) + '|' + S.inningsNo;
+      }
+      /* ---------- boundary count-up ----------
+         On a 4 or a 6 the hero score does not jump to the new
+         total — it COUNTS up to it, one run at a time, each run
+         held long enough to read (200ms a run for a four, 175ms
+         for a six: a six visibly ticks 6 times over ~1s). The old
+         version interpolated the whole jump over 550ms inside one
+         render's element, so all anyone ever saw was the bump —
+         and any re-render landing mid-jump (the scorer's own
+         Firebase echo does exactly that) rebuilt the hero at the
+         final total and killed the count outright. The count is
+         therefore kept as clock-based STATE, not as a closure
+         over one element: heroHTML() prints the count's current
+         value when a count is live for the innings on show, and
+         the ticker re-looks-up #heroRuns on every frame, so a
+         rebuilt hero simply picks the count up where it is. */
+      var heroCount = null;   /* { key, from, to, start, stepMs } */
+      var heroCountRaf = null;
+      function heroCountNow(){
+        return (window.performance && typeof performance.now === 'function') ? performance.now() : Date.now();
+      }
+      function heroCountValue(){
+        if (!heroCount) return null;
+        var steps = heroCount.to - heroCount.from;
+        if (steps <= 0) return heroCount.to;
+        var idx = Math.floor((heroCountNow() - heroCount.start) / heroCount.stepMs);
+        if (idx >= steps) return heroCount.to;
+        if (idx < 0) idx = 0;
+        return heroCount.from + idx;
+      }
+      function heroCountOn(inn){
+        if (!heroCount || !inn || heroCount.key !== heroFxKey() || heroCount.to !== inn.runs) return false;
+        var v = heroCountValue();
+        return v !== null && v < heroCount.to;
+      }
+      function heroDisplayRuns(inn){
+        if (!heroCountOn(inn)) return inn.runs;
+        return heroCountValue();
+      }
+      function heroCountTick(){
+        heroCountRaf = null;
+        if (!heroCount) return;
+        var v = heroCountValue();
+        var done = v >= heroCount.to;
+        var el = $('heroRuns');
+        if (el && S.current && heroCount.key === heroFxKey() && S.current.runs === heroCount.to){
+          if (String(v) !== el.textContent){
+            el.textContent = v;
+            el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick');
+          }
+          if (done){
+            var sc = el.closest ? el.closest('.hero-score') : null;
+            if (sc) sc.classList.remove('counting');
+          }
+        }
+        if (done){ heroCount = null; return; }
+        heroCountRaf = requestAnimationFrame(heroCountTick);
+      }
+      /* After any render, (re)start the ticker if a count is live
+         but its loop was lost with the element it was painting. */
+      function ensureHeroCountTick(){
+        if (heroCount && !heroCountRaf && heroCountValue() < heroCount.to)
+          heroCountRaf = requestAnimationFrame(heroCountTick);
+        else if (heroCount && heroCountValue() >= heroCount.to)
+          heroCount = null;
+      }
+      function startHeroCount(fx){
+        var delta = fx.toRuns - fx.fromRuns;
+        var stepMs = fx.kind === 'six' ? 175 : 200;
+        if (delta > 6) stepMs = Math.max(120, Math.floor(1100 / delta));
+        heroCount = { key: fx.key, from: fx.fromRuns, to: fx.toRuns, start: heroCountNow(), stepMs: stepMs };
+        var el = $('heroRuns');
+        if (el){
+          el.textContent = fx.fromRuns;
+          var sc = el.closest ? el.closest('.hero-score') : null;
+          if (sc){ sc.classList.add('counting'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
+        }
+        if (heroCountRaf) cancelAnimationFrame(heroCountRaf);
+        heroCountRaf = requestAnimationFrame(heroCountTick);
+      }
+      function heroFxCheck(inn){
+        var balls = (inn.balls || []).filter(function(b){ return !b.evt; });
+        var key = heroFxKey();
+        var cur = { key: key, runs: inn.runs, n: balls.length };
+        var prev = fxPrev; fxPrev = cur;
+        if (!prev || prev.key !== key || cur.n <= prev.n) return null;
+        if (archiveView || S.status !== 'live') return null;
+        if (typeof currentViewName === 'undefined' || currentViewName !== 'scoreboard') return null;
+        var fresh = balls.slice(prev.n);
+        var kind = null;
+        if (fresh.some(function(b){ return isWicketBall(b); })) kind = 'wkt';
+        else if (fresh.some(function(b){ return b.text === '6'; })) kind = 'six';
+        else if (fresh.some(function(b){ return b.text === '4'; })) kind = 'four';
+        return { newBall: true, kind: kind, fromRuns: prev.runs, toRuns: cur.runs, key: key };
+      }
+      function heroFxRun(fx){
+        if (!fx || !fx.kind) return;
+        /* The count-up starts even before the reduced-motion gate
+           below is consulted for the flash: with reduced motion the
+           score simply lands on the final total at once (no count
+           is started), exactly as the media query stills the rest. */
+        if ((fx.kind === 'four' || fx.kind === 'six') && fx.toRuns > fx.fromRuns && !fxReducedMotion())
+          startHeroCount(fx);
+        if (fxReducedMotion()) return;
+        var wrap = document.querySelector('.cb-wrap'); if (!wrap) return;
+        var fl = $('fxFlash');
+        if (!fl){ fl = document.createElement('div'); fl.id = 'fxFlash'; wrap.appendChild(fl); }
+        var col = fx.kind === 'wkt' ? 'rgba(229,57,53,.34)' : (fx.kind === 'six' ? 'rgba(245,185,33,.30)' : 'rgba(66,165,245,.30)');
+        fl.style.background = 'radial-gradient(ellipse at 50% 28%, ' + col + ' 0%, rgba(0,0,0,0) 68%)';
+        fl.innerHTML = '';
+        if (fx.kind === 'six' || fx.kind === 'four'){
+          var cols = ['#f5b921','#42a5f5','#1f9d63','#ef5350','#ab47bc','#ffffff'];
+          var n = fx.kind === 'six' ? 26 : 14;
+          for (var i = 0; i < n; i++){
+            var sp = document.createElement('span');
+            sp.className = 'fx-confetti';
+            sp.style.left = (4 + Math.random() * 92) + '%';
+            sp.style.background = cols[i % cols.length];
+            sp.style.animationDuration = (0.9 + Math.random() * 0.7) + 's';
+            sp.style.animationDelay = (Math.random() * 0.25) + 's';
+            fl.appendChild(sp);
+          }
+        }
+        fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+      }
+
       function renderScoreboardCB(){
         var inn = S.current;
         var titleEl = $('cbMatchTitle');
@@ -26001,6 +26500,10 @@
            feed), where it stays for the whole match. */
         var tbHtml = '';
         try { tbHtml = cbTossBlockHTML(); } catch(e){ tbHtml = ''; }
+        /* v262: detect a ball added since the last render (the
+           boundary / wicket effects run once the hero is in the DOM). */
+        var fx = null;
+        try { fx = heroFxCheck(inn); } catch(e){ fx = null; }
         /* main score block */
         var rates = '<div><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
         var rr = rrr();
@@ -26019,7 +26522,7 @@
                the Player of the Match band and the ball-by-ball feed
                follow below. */
             function finRow(x, dim){
-              return '<div class="cb-fin-row' + (dim ? ' dim' : '') + '"><span class="cb-fin-team">' + esc(teamShort(x.battingTeam)) + '</span><span class="cb-fin-score">' + x.runs + '-' + x.wickets + ' <span>(' + oversText(x.legalBalls) + ')</span></span></div>';
+              return '<div class="cb-fin-row' + (dim ? ' dim' : '') + '"><span class="fin-dot" style="background:' + teamColor(x.battingTeam, x.bowlingTeam) + '"></span><span class="cb-fin-team">' + esc(teamShort(x.battingTeam)) + '</span><span class="cb-fin-score">' + x.runs + '-' + x.wickets + ' <span>(' + oversText(x.legalBalls) + ')</span></span></div>';
             }
             var finHtml = '';
             if (S.prevInnings) finHtml += finRow(S.prevInnings, true);
@@ -26027,6 +26530,11 @@
             var resTxt = stateResultLine() || fixResultText(String(S.resultText || 'Match finished').replace(/ 🏆/g, ''));
             finHtml += '<div class="cb-fin-result">' + esc(resTxt) + '</div>';
             mainEl.innerHTML = finHtml;
+          } else if (S.status === 'live' || S.status === 'inningsBreak'){
+            /* v262: the live hero card — both teams' logos, the big
+               score, the pulsing LIVE badge and, in a chase, the
+               target progress bar. */
+            mainEl.innerHTML = heroHTML(inn, t);
           } else {
             mainEl.innerHTML = '<div class="cb-main-top"><div>'
               + '<div class="cb-teamline"><span class="cb-teamshort">' + esc(teamShort(inn.battingTeam)) + '</span><span class="cb-innlab">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' inn</span></div>'
@@ -26034,6 +26542,11 @@
               + '<div class="cb-rates">' + rates + '</div></div>' + prevLine;
           }
         }
+        try { heroFxRun(fx); } catch(e){}
+        /* A re-render that added no ball (a Firebase echo landing
+           mid-count) rebuilt the hero at the count's current value;
+           make sure the ticker loop is still running to finish it. */
+        try { ensureHeroCountTick(); } catch(e){}
         /* partnership (since the last wicket) + projected score line */
         var bat1 = cbBatterFull(inn, inn.striker), bat2 = cbBatterFull(inn, inn.nonStriker);
         var pship = partnershipFigures(inn);
@@ -26250,6 +26763,18 @@
         /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
         if (sumEl) sumEl.innerHTML = '';
+        /* v262: ball-by-ball timeline, win-probability meter,
+           top-performer spotlight and the Manhattan chart. Each
+           builder returns '' when the match has nothing to show,
+           so an upcoming fixture and a brand-new innings stay clean. */
+        var btlEl = $('cbBallRow');
+        if (btlEl) btlEl.innerHTML = finished ? '' : ballTimelineHTML(inn, !!(fx && fx.newBall));
+        var wpEl = $('cbWinProb');
+        if (wpEl){ try { wpEl.innerHTML = winProbHTML(); } catch(e){ wpEl.innerHTML = ''; } }
+        var spotEl = $('cbSpotlight');
+        if (spotEl){ try { spotEl.innerHTML = spotlightHTML(); } catch(e){ spotEl.innerHTML = ''; } }
+        var mhEl = $('cbManhattan');
+        if (mhEl){ try { mhEl.innerHTML = manhattanHTML(); } catch(e){ mhEl.innerHTML = ''; } }
         /* overs panel — the reference design, for the live match and
            an archived match alike: innings switcher pills on top
            (1st inn / 2nd inn), then one row per over, NEWEST over
