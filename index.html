@@ -4130,7 +4130,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v260';
+      var APP_VERSION = 'v261';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11597,6 +11597,24 @@
         }
         return { match: found, winner: (w && w !== 'Tie') ? w : null, loser: loser, tied: w === 'Tie' };
       }
+      /* The abandoned record saved for one bracket match, or null.
+         An abandoned match is filed as Completed (see
+         saveAbandonedToTournamentCore) but decides nothing, so
+         bracketResult above skips it and the slot stays open until
+         the match is reopened and actually played. The bracket card
+         still has to SAY the match was abandoned — with the score
+         as it stood when play stopped — and offer the admin the
+         same Reopen the Matches tab offers, instead of presenting
+         the slot as an unplayed match with a Score button. The
+         latest abandoned record wins, matching bracketResult. */
+      function bracketAbandoned(bm){
+        if (!bm) return null;
+        var found = null;
+        S.tournament.matches.forEach(function(m){
+          if (m && m.bracketId === bm.id && (m.abandoned || /abandon/i.test(m.resultText || ''))) found = m;
+        });
+        return found;
+      }
       /* The bracket match that decides the tournament: the one
          flagged isFinal when the bracket was built, falling back to
          the match with stage 'F' (every preset, and every bracket
@@ -12232,13 +12250,14 @@
       function bracketMatchHTML(bm){
         if (!bm) return '';
         var res = bracketResult(bm);
+        var ab = res ? null : bracketAbandoned(bm);
         var t = bracketTeams(bm);
         var html = '<div class="bk-match' + (bm.stage === 'F' || bm.isFinal ? ' final' : '') + '">'
           + '<div class="bk-head"><span class="bk-title">' + esc(bm.label || bm.stage) + '</span>'
           + '<button type="button" class="bk-idchip" title="Tap to copy this match\'s unique ID" onclick="copyIdValue(\'' + bm.id + '\',\'Match ID\')">ID ' + esc(bm.id) + '</button></div>'
           + bracketTeamRow(t.a, bm.seedA || 0, res, !!(res && res.winner && res.winner === t.a), bkSlotTbd(bm, 'A'))
           + bracketTeamRow(t.b, bm.seedB || 0, res, !!(res && res.winner && res.winner === t.b), bkSlotTbd(bm, 'B'));
-        if ((!res || res.tied) && (bm.date || bm.time || bm.venue)){
+        if ((!res || res.tied) && !ab && (bm.date || bm.time || bm.venue)){
           var schedParts = [];
           if (bm.date) schedParts.push(fmtDateShort(bm.date));
           if (bm.time) schedParts.push(bm.time);
@@ -12249,6 +12268,19 @@
           html += '<div class="bk-result">' + esc(matchResultText(res.match)) + '</div>';
           if (res.tied) html += '<div class="bk-wait">Tied — no team advances from a tie, so this slot stays open for a replay.</div>'
             + '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score the Replay →</button><button class="btn ghost sm" onclick="openBkSchedule(\'' + bm.id + '\')">' + (bm.date || bm.venue ? '📅 Edit Schedule' : '📅 Schedule') + '</button></div>';
+        } else if (ab){
+          /* Abandoned: the match was played and called off, so the
+             card says so — with the score as it stood — and the
+             admin gets Reopen (the same action the Matches tab's
+             Completed row offers), never a Score button for a
+             match that is already filed as Completed. The slot
+             itself stays open: no winner, no champion, until the
+             match is reopened and played to a result. */
+          var abParts = (ab.innings || []).map(function(inn){
+            return inn.battingTeam + ' ' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)';
+          });
+          html += '<div class="bk-result">' + esc(abParts.length ? ('Abandoned — ' + abParts.join(' · ')) : 'Abandoned') + '</div>'
+            + '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="reopenAbandonedMatch(' + fxIdArg(String(ab.id)) + ')">↩ Reopen Match</button></div>';
         } else if (t.a && t.b){
           html += '<div class="rowflex bk-actions" style="margin-top:8px"><button class="btn sm" onclick="startBracketMatch(\'' + bm.id + '\')">Score This Match →</button><button class="btn ghost sm" onclick="openBkSchedule(\'' + bm.id + '\')">' + (bm.date || bm.venue ? '📅 Edit Schedule' : '📅 Schedule') + '</button></div>';
         } else {
