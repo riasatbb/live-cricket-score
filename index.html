@@ -1753,15 +1753,76 @@
       .be-summary{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:14.5px;line-height:1.55}
       .be-summary .be-res{font-weight:800;color:var(--green)}
       .be-del{border-color:#7a3a34 !important;color:#ffab9e !important}
-      /* ---------- completed-match chooser (admin) ----------
+      /* ---------- completed-match pages (admin) ----------
          Tapping a Completed match the signed-in owner may edit
-         opens a small chooser — View Match or Edit Match — and Edit
-         Match opens the four editors (Edit Information, Edit Balls,
-         Edit Scoreboard, Replace Player) as full-width option rows. */
+         opens a full-screen page — View Match or Edit Match — and
+         the Edit Match page opens the four editors (Edit
+         Information, Edit Balls, Edit Scoreboard, Replace Player)
+         as full-width option rows. */
       .cm-opts{display:grid;gap:10px;margin-top:14px}
       .cm-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px 15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink)}
       .cm-opt:active{transform:scale(.99)}
       .cm-opt .cm-ic{font-size:19px;line-height:1;flex:none}
+      /* ---------- match pages, not popups (v265) ----------
+         Tapping a Completed match (owner) no longer opens popup
+         sheets: the View / Edit chooser and every editor it leads
+         to — Edit Match Info, Edit Balls, Edit Scoreboard, Replace
+         Player, and the scorecard's per-player Edit Player — are
+         full-screen PAGES. The 🔙 / ✕ in a page head goes back ONE
+         step (Edit Match Info → the Edit Match page → the match
+         page → the list), never all the way to the start. */
+      .modal-back.pg{align-items:stretch;justify-content:stretch;padding:0;background:var(--bg);z-index:100}
+      .modal-back.pg .modal{width:100%;max-width:none;max-height:none;height:100dvh;border-radius:0;box-shadow:none;padding:16px 16px 30px}
+      .modal-back.pg .modal-head{width:100%}
+      .modal-back.pg .modal>*{max-width:680px;margin-left:auto;margin-right:auto}
+      #scEditModal{z-index:105}
+      #scPlayerModal{z-index:115}
+      .pg-backbtn{flex:none;width:42px;height:42px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface2);font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
+      .pg-backbtn:active{transform:scale(.95)}
+      /* Edit Match Info: the "A vs B" line under the heading is a
+         highlighted, centred banner — each team in its own colour
+         around a gold VS pill — and every field's box name sits
+         centred above its box in gold. */
+      .emi-vs{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;text-align:center;margin:14px 0 4px;padding:13px 10px;border:1.5px solid var(--line);border-radius:13px;background:linear-gradient(135deg,var(--surface2),var(--surface))}
+      .emi-vs .emi-team{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+      .emi-vs .emi-x{flex:none;background:var(--gold);color:#231a04;font-weight:800;font-size:13px;border-radius:999px;padding:4px 11px;letter-spacing:.08em}
+      #histEditModal label{display:block;text-align:center;color:var(--gold);font-weight:700;font-size:14.5px;margin-bottom:6px}
+      /* ---------- Edit Scoreboard page ----------
+         The finished match's scorecard with an edit (✏️) button on
+         every batter and bowler row; tapping one opens the Edit
+         Player page for that player. */
+      .sce-inn{border:1.5px solid var(--line);border-radius:14px;margin-top:14px;overflow:hidden;background:var(--surface)}
+      .sce-innhead{display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--surface2);border-left:5px solid var(--tc,#888)}
+      .sce-innhead .sce-team{font-weight:800;font-size:16.5px}
+      .sce-innhead .sce-score{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .sce-seclab{font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);padding:12px 13px 2px}
+      table.sce-t{width:100%;border-collapse:collapse;font-size:14.5px}
+      table.sce-t th{font-size:11.5px;color:var(--muted);text-align:right;padding:5px 5px;font-weight:700}
+      table.sce-t th:first-child{text-align:left;padding-left:13px}
+      table.sce-t th:last-child,table.sce-t td:last-child{padding-right:9px}
+      table.sce-t td{padding:7px 5px;text-align:right;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);vertical-align:top}
+      table.sce-t td:first-child{text-align:left;padding-left:13px}
+      .sce-name{font-weight:700}
+      .sce-how{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:1px}
+      .sce-edbtn{flex:none;width:32px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface2);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
+      .sce-edbtn:active{transform:scale(.94)}
+      .sce-xline{padding:8px 13px;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+      .sce-xline b{color:var(--ink)}
+      /* ---------- Edit Player page (from Edit Scoreboard) ----------
+         One player's figures in the reference layout: Batting Data
+         and Bowling Data as a row of centred boxes, Wicket Data as
+         dropdowns, one centred SAVE. */
+      .scp-name{text-align:center;font-size:22px;font-weight:800;margin:18px 0 2px}
+      .scp-team{text-align:center;color:var(--gold);font-weight:700;font-size:14.5px}
+      .scp-sec{font-size:19px;font-weight:800;color:var(--green);margin:24px 0 10px}
+      .scp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+      .scp-f label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:5px}
+      .scp-f input{width:100%;box-sizing:border-box;text-align:center;font-size:17px;font-weight:700;padding:11px 2px;border-radius:11px;font-variant-numeric:tabular-nums}
+      .scp-f input[readonly]{opacity:.65}
+      .scp-f2{margin-top:12px}
+      .scp-f2 label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:5px}
+      .scp-f2 select{width:100%;box-sizing:border-box}
+      .scp-save{display:block;width:min(320px,82%);margin:28px auto 4px;padding:14px;font-size:16.5px}
       /* ---------- scorecard player editor (replace a wrongly-added player) ----------
          Owner-only, on a FINISHED match: the Replace Player editor
          (opened from the Edit Match menu on a Completed match, from
@@ -4079,13 +4140,14 @@
       </div>
     </div>
 
-    <div class="modal-back" id="histEditModal">
+    <div class="modal-back pg" id="histEditModal">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="histEditTitle">
         <div class="modal-head">
-          <h2 id="histEditTitle">✏️ Edit Match</h2>
+          <button class="pg-backbtn" onclick="closeHistoryEdit()" aria-label="Back">🔙</button>
+          <h2 id="histEditTitle">Edit Match Info</h2>
           <button class="sq-x big" onclick="closeHistoryEdit()" aria-label="Close edit">×</button>
         </div>
-        <p class="sub" id="histEditSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div id="histEditSub" class="emi-vs"></div>
         <div style="display:grid;gap:12px;margin-top:14px">
           <div><label for="heVenue">Venue</label><input id="heVenue" placeholder="e.g. KU Playground" /></div>
           <div><label for="heTournament">Tournament name</label><input id="heTournament" placeholder="Leave blank for a Single Match" /></div>
@@ -4095,10 +4157,8 @@
           </div>
           <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /></div>
           <div><label for="hePotm">Player of the Match</label><select id="hePotm"></select></div>
-          <div><button type="button" class="btn gold" style="width:100%" onclick="openBallEditorFromDetails()">🏏 Edit Scorecard — Ball by Ball</button></div>
-          <div><button type="button" class="btn" style="width:100%" onclick="openPlayerEditorFromDetails()">👥 Replace Player — Scorecard Player Editor</button></div>
         </div>
-        <div class="rowflex" style="margin-top:16px">
+        <div class="rowflex" style="margin-top:18px;justify-content:center">
           <button type="button" class="btn" onclick="saveHistoryEdit()">Save Changes</button>
           <button type="button" class="btn ghost" onclick="closeHistoryEdit()">Cancel</button>
         </div>
@@ -4108,17 +4168,18 @@
 
     <!-- Ball-by-ball scorecard editor: the owner/admin correction mode
          for a FINISHED match. Tapping Edit Balls on the archived match
-         (or Edit Scorecard inside Edit Match) opens this in editing
+         (or Edit Balls on the Edit Match page) opens this in editing
          mode: every ball of every innings, grouped by over. A ball
          can be corrected (player, outcome, dismissal), deleted, or a
          missing ball added; saving replays each innings from its
          corrected ball record, so the score, scorecard, partnerships,
          statistics and result all rebuild from the corrected balls. -->
-    <div class="modal-back" id="ballEditModal">
+    <div class="modal-back pg" id="ballEditModal">
       <div class="modal be-modal" role="dialog" aria-modal="true" aria-labelledby="beTitle">
         <div class="modal-head">
-          <h2 id="beTitle">✏️ Edit Scorecard</h2>
-          <button class="sq-x big" onclick="closeBallEditor()" aria-label="Close scorecard editor">×</button>
+          <button class="pg-backbtn" onclick="bePageBack()" aria-label="Back">🔙</button>
+          <h2 id="beTitle">🏏 Edit Balls — Ball by Ball</h2>
+          <button class="sq-x big" onclick="bePageBack()" aria-label="Close scorecard editor">×</button>
         </div>
         <p class="sub" id="beSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
         <div class="be-tabs" id="beTabs"></div>
@@ -4148,11 +4209,12 @@
          so the scorecard, tournament copies, points, statistics and
          both players' career records all follow. Owner-only, gated
          exactly like Edit Balls. -->
-    <div class="modal-back" id="playerEditModal">
+    <div class="modal-back pg" id="playerEditModal">
       <div class="modal be-modal" role="dialog" aria-modal="true" aria-labelledby="peTitle">
         <div class="modal-head">
+          <button class="pg-backbtn" onclick="pePageBack()" aria-label="Back">🔙</button>
           <h2 id="peTitle">👥 Replace Player</h2>
-          <button class="sq-x big" onclick="closePlayerEditor()" aria-label="Close player editor">×</button>
+          <button class="sq-x big" onclick="pePageBack()" aria-label="Close player editor">×</button>
         </div>
         <p class="sub" id="peSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
         <div id="peBody"></div>
@@ -4164,14 +4226,51 @@
          offers Edit Information, Edit Balls, Edit Scoreboard and
          Replace Player. Viewers and non-owners never see this — their
          tap opens the match directly, as before. -->
-    <div class="modal-back" id="cmModal" onclick="if(event.target===this)closeMatchChooser()">
+    <div class="modal-back pg" id="cmModal" onclick="if(event.target===this)cmPageBack()">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
         <div class="modal-head">
+          <button class="pg-backbtn" onclick="cmPageBack()" aria-label="Back">🔙</button>
           <h2 id="cmTitle">Match</h2>
-          <button class="sq-x big" onclick="closeMatchChooser()" aria-label="Close">×</button>
+          <button class="sq-x big" onclick="cmPageBack()" aria-label="Close">×</button>
         </div>
-        <p class="sub" id="cmSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <p class="sub" id="cmSub" style="color:var(--muted);font-size:14px;margin:6px 0 0;text-align:center"></p>
         <div id="cmBody"></div>
+      </div>
+    </div>
+
+    <!-- Edit Scoreboard page: the finished match's scorecard, every
+         batter and bowler row carrying an edit (✏️) button. Tapping
+         one opens the Edit Player page for that player; saving there
+         rewrites his ball record so the scorecard, statistics and
+         result all rebuild from the corrected balls. -->
+    <div class="modal-back pg" id="scEditModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scTitle">
+        <div class="modal-head">
+          <button class="pg-backbtn" onclick="scCloseEditor()" aria-label="Back">🔙</button>
+          <h2 id="scTitle">📋 Edit Scoreboard</h2>
+          <button class="sq-x big" onclick="scCloseEditor()" aria-label="Close">×</button>
+        </div>
+        <div id="scVs"></div>
+        <div id="scBody"></div>
+        <div class="rowflex" style="margin-top:18px;justify-content:center">
+          <button type="button" class="btn" onclick="scCloseEditor()">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Player page (opened from Edit Scoreboard): one player's
+         Batting Data (runs, balls, fours, sixes), Wicket Data
+         (dismissal type, fielder) and Bowling Data (overs, runs,
+         maidens, wickets) in the reference layout, with one centred
+         SAVE. -->
+    <div class="modal-back pg" id="scPlayerModal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scpTitle">
+        <div class="modal-head">
+          <button class="pg-backbtn" onclick="scClosePlayerPage()" aria-label="Back">🔙</button>
+          <h2 id="scpTitle">Edit Player</h2>
+          <button class="sq-x big" onclick="scClosePlayerPage()" aria-label="Close">×</button>
+        </div>
+        <div id="scpBody"></div>
       </div>
     </div>
 
@@ -4243,7 +4342,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v264';
+      var APP_VERSION = 'v266';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -7613,7 +7712,7 @@
            consecutive overs), and so is the bowler already bowling. */
         var excl = prevOverBowlers(S.current);
         if (S.current.bowler && excl.indexOf(S.current.bowler) === -1) excl.push(S.current.bowler);
-        openPicker('bowler', { title:'Change Bowler', sub:'Pick the current bowler for ' + S.current.bowlingTeam + '.', exclude: excl });
+        openPicker('bowler', { title:'Change Bowler', exclude: excl });
       }
       function maybeBowlerAsk(){
         var inn = S.current;
@@ -8927,9 +9026,9 @@
            Closing any step without picking lands on the Batters &
            Bowler fold with the still-missing slots marked, exactly
            as closing the old bowler-only picker did. */
-        openPicker('batter', { slot:'striker', title:'New Innings — Opening Striker', sub:'Pick the striker for ' + S.current.battingTeam + ' in innings 2.', after:function(pickedStriker){
+        openPicker('batter', { slot:'striker', title:'New Innings — Opening Striker', after:function(pickedStriker){
           if (!pickedStriker) return;
-          openPicker('batter', { slot:'nonStriker', title:'New Innings — Opening Non-Striker', sub:'Pick the non-striker for ' + S.current.battingTeam + ' in innings 2.', after:function(pickedNonStriker){
+          openPicker('batter', { slot:'nonStriker', title:'New Innings — Opening Non-Striker', after:function(pickedNonStriker){
             if (!pickedNonStriker) return;
             openPicker('bowler', { title:'New Innings — Opening Bowler', sub: S.current.bowlingTeam + ' bowl first in innings 2. Pick the opening bowler.' });
           }});
@@ -12098,7 +12197,7 @@
         $('bkSchedWickets').value = bm.wickets || (seed ? seed.wickets : '') || '';
         $('bkSchedBall').value = bm.ballType || (seed ? (seed.ballType || '') : '');
         $('bkSchedScorer').value = '';
-        $('bkSchedScorerNote').textContent = bm.scorerEmailHash ? 'A designated scorer is set for this match — type a Gmail only to change it.' : '';
+        $('bkSchedScorerNote').textContent = '';
         var rm = $('bkSchedRemove');
         if (rm) rm.hidden = !(bm.date || bm.time || bm.venue);
         $('bkSchedModal').classList.add('show');
@@ -16372,7 +16471,7 @@
            waiting row is shown; the first server snapshot replaces
            it with the real list. */
         if (!fbServerSeen){
-          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server — matches will appear here as soon as it answers…</div></div></div>';
+          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server…</div></div></div>';
           return;
         }
         normalizeTournament();
@@ -18017,8 +18116,8 @@
       }
       function ownerLockMessage(){
         var o = S.ownerUid || '';
-        if (!o) return '🔑 <b>Sign in with Google to score.</b> This match has no owner yet — the first account to sign in on the control side becomes its owner/admin, and only that account can score, edit or delete it.';
-        return '🔒 <b>View-only for this match.</b> It belongs to ' + esc(S.ownerName || 'its owner') + ' — only that signed-in Google account can score, edit or delete it.' + (S.scorerEmailHash ? ' Its designated scorer can also score it.' : '') + (authUser ? ' You are signed in as ' + esc(authDisplayName()) + '.' : ' You are in guest mode.');
+        if (!o) return '🔑 <b>Sign in with Google to score</b>';
+        return '🔒 <b>View-only</b>' + (S.ownerName ? ' — ' + esc(S.ownerName) : '');
       }
       /* Reflect the ownership state in the UI: the account bar, the
          scoring-pad lock + reason note, and the tournament editor's
@@ -18046,8 +18145,8 @@
           if (tnLocked && !inTnViewer){
             var to = tnOwnerUid();
             banner.innerHTML = to
-              ? '🔒 <b>Read-only.</b> This tournament belongs to ' + esc(S.tournament.ownerName || 'its admin') + ' — only that signed-in Google account can edit or delete it.' + (authUser ? ' You are signed in as ' + esc(authDisplayName()) + '.' : ' You are in guest mode.')
-              : '🔑 <b>Sign in with Google to edit this tournament.</b> It has no owner yet — the first account to sign in on the control side becomes its admin.';
+              ? '🔒 <b>Read-only</b>' + (S.tournament.ownerName ? ' — ' + esc(S.tournament.ownerName) : '')
+              : '🔑 <b>Sign in with Google to edit</b>';
           }
         }
         /* Disable the tournament editor's form controls while locked —
@@ -19810,7 +19909,7 @@
       }
       function pfMatchesHTML(){
         var d = pfData;
-        if (!d.mw.length) return '<p class="note">No recorded matches yet — matches this player plays in will appear here.</p>';
+        if (!d.mw.length) return '<p class="note">No recorded matches yet.</p>';
         return d.mw.map(function(rw, i){
           var m = rw.m;
           var date = '';
@@ -19842,7 +19941,7 @@
       function pfTeamsHTML(){
         var d = pfData;
         var list = d.teamsPlayed.length ? d.teamsPlayed : (d.rec && d.rec.teams ? d.rec.teams.map(function(t){ return { name: t, matches: 0 }; }) : []);
-        if (!list.length) return '<p class="note">No team recorded yet — the teams this player plays for will appear here.</p>';
+        if (!list.length) return '<p class="note">No team recorded yet.</p>';
         pfTeamTapList = list;
         return '<div class="pf-teamgrid">' + list.map(function(t, i){
           return '<button type="button" class="pf-team" onclick="pfOpenTeamFromProfile(' + i + ')">' + teamBadgeHTML(t.name, i)
@@ -19883,7 +19982,7 @@
       }
       function pfTournamentsHTML(){
         var d = pfData;
-        if (!d.tournamentsPlayed.length) return '<p class="note">No tournament matches recorded yet — tournaments this player plays in will appear here.</p>';
+        if (!d.tournamentsPlayed.length) return '<p class="note">No tournament matches recorded yet.</p>';
         pfTnTapList = d.tournamentsPlayed.map(function(t){
           var out = { name: t.name, id: t.id, matches: t.matches, banner: '', winner: '', kind: 'none', arcId: '' };
           try {
@@ -19924,7 +20023,7 @@
       }
       function pfOverviewHTML(){
         var d = pfData, rec = d.rec;
-        if (!d.hasMatches) return '<p class="note">No recorded innings yet — this player has not batted or bowled in a recorded match.</p>';
+        if (!d.hasMatches) return '<p class="note">No recorded innings yet.</p>';
         function stat(v, l){ return '<div class="pf-stat"><b>' + v + '</b><span>' + l + '</span></div>'; }
         var batAve = rec.outs > 0 ? (rec.runs / rec.outs).toFixed(1) : '—';
         var bowlAve = rec.wkts > 0 ? (rec.bowlRuns / rec.wkts).toFixed(1) : '—';
@@ -20188,7 +20287,7 @@
       }
       function pfInsightsBatHTML(){
         var d = pfData, ib = d.insBat;
-        if (!d.positions.length && !ib.faced) return '<p class="note">No batting record yet — batting insights appear once this player has batted in a recorded match.</p>';
+        if (!d.positions.length && !ib.faced) return '<p class="note">No batting record yet.</p>';
         var h = '';
         if (d.positions.length){
           h += '<div class="pf-ins-card"><h3>Bat Position Stats</h3>' + pfPosChartHTML(d.positions) + '</div>';
@@ -20208,7 +20307,7 @@
             + '<p class="pf-ins-total">Total Balls Faced : ' + ib.faced + '</p>'
             + pfStripHTML([0, 1, 2, 3, 4, 5, 6].map(function(v){ return { label: v + 's', value: ib.byRuns[v] || 0, color: PF_BALL_COLORS[String(v)] }; })) + '</div>';
         } else if (d.positions.length){
-          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">The ball-by-ball record for this player\u2019s matches is not available, so the distribution charts cannot be drawn.</p></div>';
+          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">No ball-by-ball record available.</p></div>';
         }
         return h;
       }
@@ -20216,7 +20315,7 @@
         var d = pfData, ib = d.insBowl;
         var hasBowl = false;
         d.fmtList.forEach(function(f){ if (d.fmts[f].bowl.inns > 0) hasBowl = true; });
-        if (!hasBowl && !ib.balls && !ib.wide && !ib.nb) return '<p class="note">No bowling record yet — bowling insights appear once this player has bowled in a recorded match.</p>';
+        if (!hasBowl && !ib.balls && !ib.wide && !ib.nb) return '<p class="note">No bowling record yet.</p>';
         var h = '';
         if (ib.concTotal > 0){
           var slices = [1, 2, 3, 4, 5, 6].filter(function(v){ return ib.conc[v] > 0; }).map(function(v){ return { label: String(v), value: ib.conc[v], color: PF_RUN_COLORS[String(v)] }; });
@@ -20241,7 +20340,7 @@
             + pfStripHTML([0, 1, 2, 3, 4, 5, 6].map(function(v){ return { label: v + 's', value: ib.byRuns[v] || 0, color: PF_BALL_COLORS[String(v)] }; })) + '</div>';
         }
         if (!ib.concTotal && !ib.balls && hasBowl){
-          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">The ball-by-ball record for this player\u2019s matches is not available, so the distribution charts cannot be drawn.</p></div>';
+          h += '<div class="pf-ins-card"><h3>Run &amp; Ball Distributions</h3><p class="note" style="margin:0">No ball-by-ball record available.</p></div>';
         }
         h += '<div class="pf-ins-card"><h3>Bowling Dismissals</h3>' + pfDisBars([
           { label: 'Bowled', n: d.bowlDis.bowled }, { label: 'Caught', n: d.bowlDis.caught },
@@ -20433,9 +20532,6 @@
           + '<div class="pf-idrow"><button type="button" class="pf-idpill" title="Tap to copy the full Player ID" onclick="copyIdTap(event,' + fxIdArg(usePid) + ',\'Player ID\')">Profile ID : ' + esc(pidShort(usePid)) + '</button>'
           + (prof.jersey ? '<span class="prof-chip jersey">Jersey #' + esc(prof.jersey) + '</span>' : '')
           + '</div>';
-        if (sameNameCount > 1){
-          html += '<p class="note" style="margin:0 0 12px">Note: ' + sameNameCount + ' different players share the name “' + esc(name) + '” — this profile follows Player ID ' + esc(pidShort(usePid)) + ' only, so their records never mix.</p>';
-        }
         html += '<div id="pfMain">' + pfMainHTML() + '</div>';
         /* No edit form here any more: the profile page stays clean.
            Editing lives in the Edit Profile dialog, opened from the
@@ -20874,14 +20970,18 @@
         completedMatchTap(id);
       }
       /* ============================================================
-         COMPLETED-MATCH CHOOSER — View Match / Edit Match (admin)
+         COMPLETED-MATCH PAGES — View Match / Edit Match (admin)
          In the admin app, tapping a Completed match the signed-in
-         owner may edit no longer opens it straight away: a chooser
+         owner may edit no longer opens it straight away, and no
+         longer opens a popup either (v265): a full-screen page
          offers View Match (the match opens exactly as it always
-         has) and Edit Match, which offers the four editors — Edit
-         Information (the match details), Edit Balls (the ball-by-ball
-         editor), Edit Scoreboard (the scorecard editor — the same
-         ball-by-ball editor, under its own title) and Replace Player.
+         has, but read-only — no edit controls inside) and Edit
+         Match, whose own page offers the four editors — Edit
+         Information (the Edit Match Info page), Edit Balls (the
+         ball-by-ball editor page), Edit Scoreboard (the scorecard
+         page with a per-player Edit Player page) and Replace
+         Player (its own page). Each page's 🔙 / ✕ steps back one
+         page at a time through this flow.
          The gate is the same owner check every edit action already
          uses (histEntryDeletable): anyone else — a viewer, or an
          admin who does not own the match — skips the chooser and
@@ -20909,6 +21009,20 @@
         if (!e){ openHistoryMatch(id); return; }
         cmShowChooser(id, e);
       }
+      /* The chooser is a full-screen PAGE (v265), not a popup: step 1
+         offers View Match / Edit Match, step 2 is the Edit Match
+         page with the four editors. Each editor page opened from
+         here registers a one-shot return hook (pgBackFns) so its
+         🔙 / ✕ lands back on the Edit Match page — one step back,
+         never all the way to the start. Editors opened from
+         anywhere else have no hook and close as they always did. */
+      var cmStep = 1;
+      var cmOpenReadOnly = false;
+      var pgBackFns = {};
+      function pgFireBack(key){
+        var f = pgBackFns[key]; pgBackFns[key] = null;
+        if (f){ try { f(); } catch(e){} }
+      }
       function cmShowChooser(id, e){
         cmId = String(id);
         var t = $('cmTitle'); if (t) t.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
@@ -20920,7 +21034,21 @@
       function closeMatchChooser(){
         var m = $('cmModal'); if (m) m.classList.remove('show');
       }
+      /* 🔙 / ✕ on the match page: from the Edit Match step it goes
+         back to the View / Edit step; from there it closes the page
+         back to the list it was opened from. */
+      function cmPageBack(){
+        if (cmStep === 2){ cmRenderStep(1); return; }
+        closeMatchChooser();
+      }
+      function cmReopenEditMenu(){
+        var e = cmEditableEntry(cmId);
+        if (!e) return;
+        cmShowChooser(cmId, e);
+        cmRenderStep(2);
+      }
       function cmRenderStep(step){
+        cmStep = step;
         var body = $('cmBody'); if (!body) return;
         if (step === 2){
           body.innerHTML = '<div class="cm-opts">'
@@ -20940,14 +21068,31 @@
       function cmChooseView(){
         var id = cmId;
         closeMatchChooser();
+        /* View Match is a true view: the archived scoreboard it
+           opens carries no Edit / Edit Balls / Replace Player /
+           Delete controls (the Summary footer's owner bar is
+           suppressed for a read-only opening) — editing starts
+           only from the Edit Match page. */
+        cmOpenReadOnly = true;
         openResultMatch(id);
+        cmOpenReadOnly = false;
       }
       function cmDoEdit(kind){
         var id = cmId;
         closeMatchChooser();
-        if (kind === 'info') editHistoryMatch(id);
-        else if (kind === 'replace') openPlayerEditor(id);
-        else openBallEditor(id); /* 'balls' and 'scoreboard' — one ball-by-ball scorecard editor */
+        if (kind === 'info'){
+          editHistoryMatch(id);
+          if ($('histEditModal') && $('histEditModal').classList.contains('show')) pgBackFns.histEdit = cmReopenEditMenu;
+        } else if (kind === 'replace'){
+          openPlayerEditor(id);
+          if ($('playerEditModal') && $('playerEditModal').classList.contains('show')) pgBackFns.playerEdit = cmReopenEditMenu;
+        } else if (kind === 'scoreboard'){
+          openScorecardEditor(id);
+          if ($('scEditModal') && $('scEditModal').classList.contains('show')) pgBackFns.scEdit = cmReopenEditMenu;
+        } else {
+          openBallEditor(id);
+          if ($('ballEditModal') && $('ballEditModal').classList.contains('show')) pgBackFns.ballEdit = cmReopenEditMenu;
+        }
       }
       function openResultMatch(id){
         id = String(id);
@@ -20969,6 +21114,7 @@
         closePlayerProfile();
         closeHistoryMatch();
         archiveView = { id: id, entry: e, returnView: (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'scoreboard') ? currentViewName : 'live', returnHistTab: null, state: archiveDisplayState(e) };
+        if (typeof cmOpenReadOnly !== 'undefined' && cmOpenReadOnly) archiveView.readOnly = true;
         cbOversInnSel = -1;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
@@ -21085,6 +21231,7 @@
         closeHistoryMatch();
         var ret = (currentViewName && currentViewName !== 'scoreboard') ? currentViewName : (archiveView ? archiveView.returnView : 'history');
         archiveView = { id: id, entry: e, returnView: ret, returnHistTab: (ret === 'history' ? histTab : null), state: archiveDisplayState(e) };
+        if (typeof cmOpenReadOnly !== 'undefined' && cmOpenReadOnly) archiveView.readOnly = true;
         cbOversInnSel = -1;
         setView('scoreboard');
         /* An archived match is a completed match: it opens on the
@@ -21251,7 +21398,7 @@
         } else if (type === 'potm'){
           var awards = matches.filter(function(e){ return !!e.potmName; });
           if (!awards.length){
-            text += '\nNo Player of the Match has been decided in these matches yet.\nThe scorer chooses the Player of the Match after a match finishes — awards appear here once chosen.\n';
+            text += '\nNo Player of the Match has been decided in these matches yet.\n';
           } else {
             var counts = {};
             awards.forEach(function(e){
@@ -23171,7 +23318,7 @@
         histEditId = id;
         try { closeHistoryMatch(); } catch(err){}
         var sub = $('histEditSub');
-        if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
+        if (sub) sub.innerHTML = '<span class="emi-team" style="color:' + teamColor(e.teamA || '', e.teamB || '') + '">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team" style="color:' + teamColor(e.teamB || '', e.teamA || '') + '">' + esc(e.teamB || '—') + '</span>';
         var vEl = $('heVenue'); if (vEl) vEl.value = e.venue || '';
         var tEl = $('heTournament'); if (tEl) tEl.value = e.tournamentName || '';
         var dEl = $('heDate'); if (dEl) dEl.value = e.matchDate || '';
@@ -23202,7 +23349,7 @@
         }
         var m = $('histEditModal'); if (m) m.classList.add('show');
       }
-      function closeHistoryEdit(){ var m = $('histEditModal'); if (m) m.classList.remove('show'); histEditId = null; }
+      function closeHistoryEdit(){ var m = $('histEditModal'); if (m) m.classList.remove('show'); histEditId = null; pgFireBack('histEdit'); }
       function saveHistoryEdit(){
         if (!histEditId) return;
         var e = HIST[histEditId]; if (!e){ closeHistoryEdit(); return; }
@@ -23267,7 +23414,7 @@
          BALL-BY-BALL SCORECARD EDITOR — correcting a FINISHED match
          The match owner (admin) opens editing mode from Edit Balls
          at the foot of the archived match's Summary tab, or from
-         Edit Match (Edit Scorecard).
+         Edit Match page (Edit Balls).
          Every delivery of every innings is listed by over; a ball
          can be corrected — the WRONG PLAYER replaced by the correct
          one (batter, bowler, the batter who was out, the fielder),
@@ -23292,6 +23439,7 @@
       function openBallEditorFromDetails(){
         var id = histEditId;
         if (!id) return;
+        pgBackFns.histEdit = null;
         closeHistoryEdit();
         openBallEditor(id);
       }
@@ -23310,20 +23458,31 @@
         }
         if (!items.length){ toast('This match has no innings to edit'); return; }
         beCtx = { id: id, entry: e, items: items, tab: 0, edit: null, form: null, dirty: false, changedKey: '', changedIdx: -1 };
+        var bt = $('beTitle'); if (bt) bt.textContent = '🏏 Edit Balls — Ball by Ball';
         var sub = $('beSub'); if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
         beRender();
         var m = $('ballEditModal'); if (m) m.classList.add('show');
+      }
+      /* 🔙 / ✕ on the Edit Balls page: while a single ball's form is
+         open it goes back to the ball list first; only from the list
+         does it leave the page (to the Edit Match page when the page
+         was opened from there). */
+      function bePageBack(){
+        if (beCtx && beCtx.edit){ beCancelForm(); return; }
+        closeBallEditor();
       }
       function closeBallEditor(){
         if (beCtx && beCtx.dirty){
           askVerify('Discard corrections?', 'The corrections made in this editing session have not been saved yet.', function(){
             beCtx = null;
             var m = $('ballEditModal'); if (m) m.classList.remove('show');
+            pgFireBack('ballEdit');
           });
           return;
         }
         beCtx = null;
         var m2 = $('ballEditModal'); if (m2) m2.classList.remove('show');
+        pgFireBack('ballEdit');
       }
       function beSetTab(i){
         if (!beCtx) return;
@@ -23878,7 +24037,7 @@
           var rec = (inn.balls || [])[ed.idx];
           sub = (rec && rec.over ? 'Ball ' + rec.over + ' — ' : '') + esc(dispIn(e.nicknames, inn.bowlingTeam, rec ? rec.bowler : '')) + ' to ' + esc(dispIn(e.nicknames, inn.battingTeam, rec ? rec.batter : ''));
         }
-        var runsLabel = f.type === 'wide' ? 'Extra runs run (on top of the wide)' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : (f.type === 'noball+bye' ? 'Byes on the no ball (the 1 no-ball run is added automatically)' : (f.type === 'noball+legbye' ? 'Leg byes on the no ball (the 1 no-ball run is added automatically)' : 'Runs off the bat'))));
+        var runsLabel = f.type === 'wide' ? 'Extra runs run' : (f.type === 'bye' ? 'Byes' : (f.type === 'legbye' ? 'Leg byes' : (f.type === 'noball+bye' ? 'Byes on the no ball' : (f.type === 'noball+legbye' ? 'Leg byes on the no ball' : 'Runs off the bat'))));
         var h = '<div class="be-form"><h3>' + title + '</h3>' + (sub ? '<p class="be-fsub">' + sub + '</p>' : '')
           + '<label for="beBatterSel">Batter facing</label><select id="beBatterSel" onchange="bePlayerSelChanged(this,\'bat\')">' + opts(beNameList(item, 'bat'), f.batter, inn.battingTeam) + addPlayerOptionHTML() + '</select>'
           + '<label for="beBatterTxt">Correct batter name</label><input id="beBatterTxt" value="' + esc(f.batterTxt || '') + '" placeholder="Only if the right name is not in the list" autocomplete="off" />'
@@ -23902,7 +24061,7 @@
             + '</select>'
             + '<label for="beWOther">Other batter\'s correct name</label><input id="beWOther" value="' + esc(f.wOther || '') + '" placeholder="The other batter at the crease" autocomplete="off" />'
             + '<label for="beWFielder">Fielder (full name) *</label><input id="beWFielder" value="' + esc(f.wFielder || '') + '" placeholder="Catcher / fielder / keeper — mandatory for Caught, Stumped, Run Out" autocomplete="off" />'
-            + '<label for="beWFielder2">Second fielder (full name) — Run Out only, optional</label><input id="beWFielder2" value="' + esc(f.wFielder2 || '') + '" placeholder="The other fielder in the run out — blank if none" autocomplete="off" />'
+            + '<label for="beWFielder2">Second fielder (full name)</label><input id="beWFielder2" value="' + esc(f.wFielder2 || '') + '" placeholder="The other fielder in the run out — blank if none" autocomplete="off" />'
             + '<label for="beWRuns">Runs completed on the ball</label><input id="beWRuns" type="number" min="0" max="36" step="1" value="' + (f.wRuns || 0) + '" />';
         }
         h += '<div class="rowflex" style="margin-top:14px">'
@@ -24138,6 +24297,7 @@
         if (touched) commit('Scorecard corrected', true);
         beCtx = null;
         var m = $('ballEditModal'); if (m) m.classList.remove('show');
+        pgFireBack('ballEdit');
         if (archiveView && String(archiveView.id) === String(id)){
           archiveView.entry = e;
           archiveView.state = archiveDisplayState(e);
@@ -24151,6 +24311,560 @@
         } else {
           toast('✓ Scorecard corrected — score, statistics and result updated everywhere');
         }
+      }
+
+      /* ============================================================
+         EDIT SCOREBOARD — the scorecard with per-player editing
+         Edit Scoreboard (from the Edit Match page) opens the
+         finished match's scorecard as a page: every batter and
+         bowler row carries an edit (✏️) button, and tapping it
+         opens the Edit Player page for that player — Batting Data
+         (runs, balls, fours, sixes), Wicket Data (dismissal type
+         and fielder) and Bowling Data (overs, runs, wickets;
+         maidens are worked out from the overs themselves), in the
+         reference layout. Saving does NOT patch the printed
+         figures: it rewrites the player's own ball record — his
+         scoring balls are re-dealt to the requested runs / balls /
+         boundaries, the dismissal ball is created, converted or
+         re-typed, the bowler's wicket credits, wides and dot balls
+         are adjusted — and the innings is then replayed through
+         beReplayInnings and saved through beApplySave, exactly
+         like a ball-by-ball correction, so the score, scorecard,
+         statistics and result can never disagree with the balls.
+         A figure the ball record cannot express exactly is refused
+         with a message, never silently approximated. Owner-only,
+         gated exactly like Edit Balls.
+         ============================================================ */
+      var scCtx = null;   /* { id, entry, items:[{key,kind,idx,short,orig}] } */
+      var scpCtx = null;  /* { name, team, batPos, bowlPos } — positions in scCtx.items */
+
+      function scBuildItems(e){
+        var items = [];
+        (e.innings || []).forEach(function(inn, i){ items.push({ key: 'm' + i, kind: 'main', idx: i, short: (i === 0 ? '1st Innings' : '2nd Innings'), orig: inn }); });
+        if (e.superOver && Array.isArray(e.superOver.innings)){
+          e.superOver.innings.forEach(function(inn, i){ items.push({ key: 'so' + i, kind: 'so', idx: i, short: 'Super Over ' + (i + 1), orig: inn }); });
+        }
+        return items;
+      }
+      function openScorecardEditor(id){
+        id = String(id);
+        var e = HIST[id]; if (!e) return;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!(e.innings || []).length){ toast('This match has no scorecard to edit'); return; }
+        scCtx = { id: id, entry: e, items: scBuildItems(e) };
+        var vs = $('scVs');
+        if (vs) vs.innerHTML = '<span class="emi-team" style="color:' + teamColor(e.teamA || '', e.teamB || '') + '">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team" style="color:' + teamColor(e.teamB || '', e.teamA || '') + '">' + esc(e.teamB || '—') + '</span>';
+        if (vs) vs.className = 'emi-vs';
+        scRender();
+        var m = $('scEditModal'); if (m) m.classList.add('show');
+      }
+      function scCloseEditor(){
+        var m = $('scEditModal'); if (m) m.classList.remove('show');
+        scCtx = null; scpCtx = null;
+        pgFireBack('scEdit');
+      }
+      function scRender(){
+        if (!scCtx) return;
+        var e = scCtx.entry, body = $('scBody'); if (!body) return;
+        var h = '';
+        scCtx.items.forEach(function(it, pos){
+          var inn = it.orig;
+          var tc = teamColor(inn.battingTeam || '', inn.bowlingTeam || '');
+          h += '<div class="sce-inn"><div class="sce-innhead" style="border-left-color:' + tc + '"><span class="sce-team" style="color:' + tc + '">' + esc(inn.battingTeam || '—') + '</span><span class="sce-score">' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</span></div>';
+          h += '<div class="sce-seclab">' + esc(it.short) + ' · Batting</div>';
+          h += '<table class="sce-t"><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th></th></tr>';
+          (inn.batters || []).forEach(function(b, bi){
+            if (!b || !(b.balls > 0 || b.out || b.retiredHurt)) return;
+            var sr = b.balls ? (100 * b.runs / b.balls).toFixed(1) : '0.0';
+            var how = b.out ? dispHowOutIn(e.nicknames, inn.battingTeam, b.howOut || 'out') : (b.retiredHurt ? 'retired hurt' : 'not out');
+            h += '<tr><td><span class="sce-name">' + esc(dispIn(e.nicknames, inn.battingTeam, b.name)) + '</span><span class="sce-how">' + esc(how) + '</span></td><td><b>' + b.runs + '</b></td><td>' + b.balls + '</td><td>' + (b.fours || 0) + '</td><td>' + (b.sixes || 0) + '</td><td>' + sr + '</td><td><button type="button" class="sce-edbtn" onclick="scEditPlayer(' + pos + ',\'bat\',' + bi + ')" aria-label="Edit ' + esc(b.name) + '">✏️</button></td></tr>';
+          });
+          h += '</table>';
+          var ex = inn.extras || {};
+          var exTot = (ex.wide || 0) + (ex.noball || 0) + (ex.bye || 0) + (ex.legbye || 0) + (ex.penalty || 0);
+          h += '<div class="sce-xline"><span>Extras</span><b>' + exTot + '</b></div>';
+          h += '<div class="sce-xline"><span>Total</span><b>' + inn.runs + '/' + inn.wickets + ' (' + oversText(inn.legalBalls) + ' ov)</b></div>';
+          h += '<div class="sce-seclab">' + esc(it.short) + ' · Bowling</div>';
+          h += '<table class="sce-t"><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th></th></tr>';
+          (inn.bowlers || []).forEach(function(bw, wi){
+            if (!bw || !(bw.balls > 0)) return;
+            var md = 0; try { md = pfBowlExtras(inn, bw.name).maidens; } catch(err){}
+            var econ = bw.balls ? (bw.runs / (bw.balls / 6)).toFixed(2) : '0.00';
+            h += '<tr><td><span class="sce-name">' + esc(dispIn(e.nicknames, inn.bowlingTeam, bw.name)) + '</span></td><td>' + oversText(bw.balls) + '</td><td>' + md + '</td><td>' + bw.runs + '</td><td><b>' + bw.wickets + '</b></td><td>' + econ + '</td><td><button type="button" class="sce-edbtn" onclick="scEditPlayer(' + pos + ',\'bowl\',' + wi + ')" aria-label="Edit ' + esc(bw.name) + '">✏️</button></td></tr>';
+          });
+          h += '</table></div>';
+        });
+        body.innerHTML = h || '<p style="padding:16px 4px;color:var(--muted)">No scorecard to edit for this match.</p>';
+      }
+      /* ---------- one player's figures, read off the ball record ---------- */
+      function scBatBallFigures(inn, name){
+        var f = { runs: 0, balls: 0, fours: 0, sixes: 0 };
+        (inn.balls || []).forEach(function(rec){
+          if (!rec || rec.evt || rec.batter !== name) return;
+          var t = String(rec.text || ''), m;
+          if (isWicketBall(rec)){
+            var k = beWicketKind(t);
+            if (k.extra === 'wide') return; /* a wide is never a ball faced */
+            f.balls++;
+            if (k.extra === 'none' || k.extra === 'noball'){ f.runs += k.runs; if (k.runs === 4) f.fours++; if (k.runs === 6) f.sixes++; }
+            return;
+          }
+          if (/^\d+$/.test(t)){ var n = parseInt(t, 10); f.runs += n; f.balls++; if (n === 4) f.fours++; if (n === 6) f.sixes++; }
+          else if ((m = t.match(/^Nb\+(\d+)$/))){ var n2 = parseInt(m[1], 10); f.runs += n2; f.balls++; if (n2 === 4) f.fours++; if (n2 === 6) f.sixes++; }
+          else if (/^Nb\+(B|Lb)\d+$/.test(t) || /^(B|Lb)\d+$/.test(t)){ f.balls++; }
+        });
+        return f;
+      }
+      function scBowlBallFigures(inn, name){
+        var f = { balls: 0, runs: 0, wickets: 0 };
+        (inn.balls || []).forEach(function(rec){
+          if (!rec || rec.evt || rec.bowler !== name) return;
+          var t = String(rec.text || ''), m;
+          if (isLegalDelivery(t)) f.balls++;
+          if (isWicketBall(rec)){
+            var k = beWicketKind(t);
+            if (k.extra === 'wide' || k.extra === 'noball') f.runs += 1 + k.runs;
+            else if (k.extra === 'noball+bye' || k.extra === 'noball+legbye') f.runs += 1;
+            else if (k.extra === 'none') f.runs += k.runs;
+            var credited = (typeof rec.bowlerWicket === 'boolean') ? rec.bowlerWicket : bowlerCredited(rec.dismissal || '');
+            if (credited) f.wickets++;
+            return;
+          }
+          if (/^\d+$/.test(t)) f.runs += parseInt(t, 10);
+          else if ((m = t.match(/^Nb\+(\d+)$/))) f.runs += 1 + parseInt(m[1], 10);
+          else if (/^Nb\+(B|Lb)\d+$/.test(t)) f.runs += 1;
+          else if (t === 'Wd' || (m = t.match(/^Wd\+(\d+)$/))) f.runs += 1 + (m ? parseInt(m[1], 10) : 0);
+        });
+        return f;
+      }
+      function scDismissalInfo(inn, name){
+        var balls = inn.balls || [];
+        for (var i = 0; i < balls.length; i++){
+          var rec = balls[i];
+          if (!rec) continue;
+          if (rec.evt === 'note' && retiredOutName(rec) === name) return { type: 'retired', ballIdx: -1, noteIdx: i, fielder: '', fielder2: '', bowler: '' };
+          if (!rec.evt && isWicketBall(rec) && (rec.outName || rec.batter) === name){
+            return { type: rec.dismissal || 'bowled', ballIdx: i, fielder: rec.fielderName || beFielderFromHowOut(rec.howOut), fielder2: rec.fielder2Name || '', bowler: rec.bowler || '' };
+          }
+        }
+        return null;
+      }
+      function scAdjustableBalls(inn, name){
+        var out = [];
+        (inn.balls || []).forEach(function(rec, i){
+          if (!rec || rec.evt || rec.batter !== name || isWicketBall(rec)) return;
+          if (/^\d+$/.test(rec.text) || /^Nb\+\d+$/.test(rec.text)) out.push(i);
+        });
+        return out;
+      }
+      /* ---------- apply a batting target to a work innings ----------
+         Returns true, or a short code naming why the ball record
+         cannot express the requested figures. */
+      function scApplyBatting(entry, inn, name, tgt){
+        var balls = inn.balls; if (!Array.isArray(balls)) balls = inn.balls = [];
+        var dis = scDismissalInfo(inn, name);
+        var wantOut = !(tgt.wtype === 'notout' || tgt.wtype === 'retiredhurt');
+        function convertWicketBall(rec){
+          var k = beWicketKind(String(rec.text || '')), nt;
+          if (k.extra === 'wide') nt = k.runs ? 'Wd+' + k.runs : 'Wd';
+          else if (k.extra === 'noball') nt = 'Nb+' + k.runs;
+          else if (k.extra === 'noball+bye') nt = 'Nb+B' + k.runs;
+          else if (k.extra === 'noball+legbye') nt = 'Nb+Lb' + k.runs;
+          else if (k.extra === 'bye') nt = 'B' + k.runs;
+          else if (k.extra === 'legbye') nt = 'Lb' + k.runs;
+          else nt = String(k.runs);
+          rec.text = nt; rec.wkt = false; rec.dismissal = ''; rec.howOut = ''; rec.outName = '';
+          rec.fielderName = ''; rec.fielderPid = ''; rec.fielder2Name = ''; rec.fielder2Pid = ''; rec.bowlerWicket = false;
+        }
+        function removeNote(test){
+          for (var i = balls.length - 1; i >= 0; i--){ var r = balls[i]; if (r && r.evt === 'note' && test(r)) balls.splice(i, 1); }
+        }
+        function isRhNote(r){ return String(r.text || '') === name + ' retired hurt.'; }
+        if (!wantOut){
+          if (dis && dis.ballIdx >= 0) convertWicketBall(balls[dis.ballIdx]);
+          removeNote(function(r){ return retiredOutName(r) === name; });
+          removeNote(isRhNote);
+          if (tgt.wtype === 'retiredhurt') balls.push({ evt: 'note', text: name + ' retired hurt.' });
+          dis = null;
+        } else if (tgt.wtype === 'retired'){
+          if (dis && dis.ballIdx >= 0) convertWicketBall(balls[dis.ballIdx]);
+          removeNote(function(r){ return retiredOutName(r) === name; });
+          removeNote(isRhNote);
+          balls.push({ evt: 'note', text: name + ' retired out.', outName: name, dismissal: 'retired' });
+          dis = { type: 'retired', ballIdx: -1 };
+        } else {
+          removeNote(function(r){ return retiredOutName(r) === name; });
+          removeNote(isRhNote);
+          var fld = tgt.fielder || '', fld2 = tgt.fielder2 || '';
+          var needsFielder = (tgt.wtype === 'caught' || tgt.wtype === 'stumped' || tgt.wtype === 'runout');
+          if (dis && dis.ballIdx >= 0){
+            var rec = balls[dis.ballIdx];
+            var tok = String(rec.text || '');
+            if (/^WdW/.test(tok) && tgt.wtype !== 'stumped' && tgt.wtype !== 'runout'){
+              var kk = beWicketKind(tok);
+              rec.text = kk.runs ? 'W+' + kk.runs : 'W';
+            }
+            rec.wkt = true; rec.dismissal = tgt.wtype; rec.outName = name;
+            rec.bowlerWicket = bowlerCredited(tgt.wtype);
+            rec.fielderName = needsFielder ? fld : '';
+            rec.fielderPid = rec.fielderName ? entryPlayerId(entry, inn.bowlingTeam, rec.fielderName) : '';
+            rec.fielder2Name = (tgt.wtype === 'runout' && fld2) ? fld2 : '';
+            rec.fielder2Pid = rec.fielder2Name ? entryPlayerId(entry, inn.bowlingTeam, rec.fielder2Name) : '';
+            rec.howOut = dismissalHowOut(tgt.wtype, tgt.wtype === 'candbowled' ? '' : fld, rec.bowler || '', fld2);
+          } else {
+            var adj0 = scAdjustableBalls(inn, name);
+            if (adj0.length){
+              var lr = balls[adj0[adj0.length - 1]];
+              var lm = String(lr.text).match(/^Nb\+(\d+)$/);
+              var lruns = /^\d+$/.test(lr.text) ? parseInt(lr.text, 10) : (lm ? parseInt(lm[1], 10) : 0);
+              var keepRuns = tgt.wtype === 'runout' ? lruns : 0;
+              lr.text = keepRuns ? 'W+' + keepRuns : 'W';
+              lr.wkt = true; lr.dismissal = tgt.wtype; lr.outName = name; lr.bowlerWicket = bowlerCredited(tgt.wtype);
+              lr.fielderName = needsFielder ? fld : '';
+              lr.fielderPid = lr.fielderName ? entryPlayerId(entry, inn.bowlingTeam, lr.fielderName) : '';
+              lr.fielder2Name = (tgt.wtype === 'runout' && fld2) ? fld2 : '';
+              lr.fielder2Pid = lr.fielder2Name ? entryPlayerId(entry, inn.bowlingTeam, lr.fielder2Name) : '';
+              lr.howOut = dismissalHowOut(tgt.wtype, tgt.wtype === 'candbowled' ? '' : fld, lr.bowler || '', fld2);
+            } else {
+              var lb = '';
+              for (var i2 = balls.length - 1; i2 >= 0; i2--){ if (balls[i2] && !balls[i2].evt && balls[i2].bowler){ lb = balls[i2].bowler; break; } }
+              var nr = { text: 'W', batter: name, bowler: lb, wkt: true, dismissal: tgt.wtype, outName: name, bowlerWicket: bowlerCredited(tgt.wtype),
+                howOut: dismissalHowOut(tgt.wtype, tgt.wtype === 'candbowled' ? '' : fld, lb, fld2),
+                fielderName: needsFielder ? fld : '', fielderPid: '', fielder2Name: (tgt.wtype === 'runout' && fld2) ? fld2 : '', fielder2Pid: '' };
+              nr.fielderPid = nr.fielderName ? entryPlayerId(entry, inn.bowlingTeam, nr.fielderName) : '';
+              nr.fielder2Pid = nr.fielder2Name ? entryPlayerId(entry, inn.bowlingTeam, nr.fielder2Name) : '';
+              balls.push(nr);
+            }
+          }
+          dis = scDismissalInfo(inn, name);
+        }
+        /* Re-deal his adjustable balls to the requested figures. */
+        var fig = scBatBallFigures(inn, name);
+        var dRuns = 0, dBalls = 0, dFours = 0, dSixes = 0;
+        if (dis && dis.ballIdx >= 0){
+          var drec = balls[dis.ballIdx];
+          if (drec && drec.batter === name){
+            var dk = beWicketKind(String(drec.text || ''));
+            if (dk.extra !== 'wide'){
+              dBalls = 1;
+              if (dk.extra === 'none' || dk.extra === 'noball'){ dRuns = dk.runs; if (dk.runs === 4) dFours = 1; if (dk.runs === 6) dSixes = 1; }
+            }
+          }
+        }
+        var adjIdx = scAdjustableBalls(inn, name);
+        var fixedFaced = fig.balls - dBalls - adjIdx.length;
+        var aNeed = tgt.balls - fixedFaced - dBalls;
+        var aRuns = tgt.runs - dRuns, aF = tgt.fours - dFours, aX = tgt.sixes - dSixes;
+        if (aNeed < 0) return 'balls-below-fixed';
+        if (aF < 0 || aX < 0 || aRuns < 0) return 'runs-below-dismissal';
+        if (aNeed < aF + aX) return 'balls-below-boundaries';
+        var rem = aRuns - 4 * aF - 6 * aX, remBalls = aNeed - aF - aX;
+        if (rem < 0 || rem > 3 * remBalls) return 'runs-not-distributable';
+        var vals = [], vi, left = rem;
+        for (vi = 0; vi < aX; vi++) vals.push(6);
+        for (vi = 0; vi < aF; vi++) vals.push(4);
+        for (vi = 0; vi < remBalls; vi++){ var add = Math.min(3, left); vals.push(add); left -= add; }
+        var nbFlags = adjIdx.map(function(ix){ return /^Nb\+/.test(String(balls[ix].text || '')); });
+        var common = Math.min(aNeed, adjIdx.length);
+        for (vi = 0; vi < common; vi++) balls[adjIdx[vi]].text = (nbFlags[vi] ? 'Nb+' + vals[vi] : String(vals[vi]));
+        if (adjIdx.length > aNeed){
+          adjIdx.slice(aNeed).sort(function(a, b){ return b - a; }).forEach(function(ix){ balls.splice(ix, 1); });
+        }
+        if (aNeed > adjIdx.length){
+          var insertAt = adjIdx.length ? adjIdx[adjIdx.length - 1] + 1 : balls.length;
+          if (!adjIdx.length){
+            for (var i3 = balls.length - 1; i3 >= 0; i3--){ var r3 = balls[i3]; if (r3 && !r3.evt && r3.batter === name){ insertAt = i3 + 1; break; } }
+          }
+          var disNow = scDismissalInfo(inn, name);
+          if (disNow && disNow.ballIdx >= 0 && insertAt > disNow.ballIdx) insertAt = disNow.ballIdx;
+          var nbBowler = '';
+          for (var i4 = Math.min(insertAt, balls.length) - 1; i4 >= 0; i4--){ if (balls[i4] && !balls[i4].evt && balls[i4].bowler){ nbBowler = balls[i4].bowler; break; } }
+          if (!nbBowler) nbBowler = (inn.bowlers && inn.bowlers[0] && inn.bowlers[0].name) || '';
+          var news = [];
+          for (vi = adjIdx.length; vi < aNeed; vi++) news.push({ text: String(vals[vi]), batter: name, bowler: nbBowler });
+          balls.splice.apply(balls, [insertAt, 0].concat(news));
+        }
+        return true;
+      }
+      /* ---------- apply a bowling target to a work innings ---------- */
+      function scApplyBowling(inn, name, tgt){
+        var balls = inn.balls; if (!Array.isArray(balls)) return 'no-balls';
+        function his(){
+          var out = [];
+          balls.forEach(function(r, i){ if (r && !r.evt && r.bowler === name) out.push(i); });
+          return out;
+        }
+        function creditedOf(r){ return (typeof r.bowlerWicket === 'boolean') ? r.bowlerWicket : bowlerCredited(r.dismissal || ''); }
+        var fig = scBowlBallFigures(inn, name), i;
+        if (tgt.wickets !== fig.wickets){
+          var wkIdx = his().filter(function(ix){ return isWicketBall(balls[ix]); });
+          if (tgt.wickets > fig.wickets){
+            var need = tgt.wickets - fig.wickets;
+            for (i = 0; i < wkIdx.length && need > 0; i++){ if (!creditedOf(balls[wkIdx[i]])){ balls[wkIdx[i]].bowlerWicket = true; need--; } }
+            if (need > 0) return 'wickets-unavailable';
+          } else {
+            var need2 = fig.wickets - tgt.wickets;
+            for (i = wkIdx.length - 1; i >= 0 && need2 > 0; i--){ if (creditedOf(balls[wkIdx[i]])){ balls[wkIdx[i]].bowlerWicket = false; need2--; } }
+            if (need2 > 0) return 'wickets-unavailable';
+          }
+        }
+        fig = scBowlBallFigures(inn, name);
+        var rDelta = tgt.runs - fig.runs;
+        if (rDelta > 0){
+          if (rDelta > 60) return 'runs-too-large';
+          var h = his(), anchor = h.length ? h[h.length - 1] : -1;
+          var bat = anchor >= 0 ? (balls[anchor].batter || '') : ((inn.batters && inn.batters[0] && inn.batters[0].name) || '');
+          var news = [];
+          for (i = 0; i < rDelta; i++) news.push({ text: 'Wd', batter: bat, bowler: name });
+          balls.splice.apply(balls, [anchor + 1, 0].concat(news));
+        } else if (rDelta < 0){
+          var need3 = -rDelta;
+          var hIdx = his();
+          for (i = hIdx.length - 1; i >= 0 && need3 > 0; i--){
+            var rec = balls[hIdx[i]], wm = String(rec.text || '').match(/^Wd(?:\+(\d+))?$/);
+            if (!wm) continue;
+            var tot = 1 + (wm[1] ? parseInt(wm[1], 10) : 0);
+            if (need3 >= tot){ balls.splice(hIdx[i], 1); need3 -= tot; }
+            else { var exLeft = (wm[1] ? parseInt(wm[1], 10) : 0) - need3; rec.text = exLeft > 0 ? 'Wd+' + exLeft : 'Wd'; need3 = 0; }
+          }
+          if (need3 > 0){
+            var h2 = his();
+            for (i = 0; i < h2.length && need3 > 0; i++){
+              var m3 = String(balls[h2[i]].text || '').match(/^Nb\+(\d+)$/);
+              if (m3){ balls[h2[i]].text = m3[1]; need3--; }
+            }
+          }
+          /* Last channel: trim runs off the bat on his own balls,
+             biggest first (wicket balls untouched) — the replay
+             then lowers those batters' figures by the same runs,
+             which is exactly what "he never conceded them" means;
+             the whole card stays consistent. */
+          if (need3 > 0){
+            var h5 = his().filter(function(ix){ return !isWicketBall(balls[ix]); });
+            h5.sort(function(a, b){
+              var va = /^\d+$/.test(balls[a].text) ? parseInt(balls[a].text, 10) : (String(balls[a].text).match(/^Nb\+(\d+)$/) ? parseInt(String(balls[a].text).match(/^Nb\+(\d+)$/)[1], 10) : 0);
+              var vb = /^\d+$/.test(balls[b].text) ? parseInt(balls[b].text, 10) : (String(balls[b].text).match(/^Nb\+(\d+)$/) ? parseInt(String(balls[b].text).match(/^Nb\+(\d+)$/)[1], 10) : 0);
+              return vb - va;
+            });
+            for (i = 0; i < h5.length && need3 > 0; i++){
+              var r5 = balls[h5[i]], t5 = String(r5.text || ''), m5 = t5.match(/^Nb\+(\d+)$/);
+              var v5 = /^\d+$/.test(t5) ? parseInt(t5, 10) : (m5 ? parseInt(m5[1], 10) : 0);
+              if (v5 <= 0) continue;
+              var cut = Math.min(v5, need3);
+              r5.text = m5 ? 'Nb+' + (v5 - cut) : String(v5 - cut);
+              need3 -= cut;
+            }
+          }
+          if (need3 > 0) return 'runs-below-minimum';
+        }
+        fig = scBowlBallFigures(inn, name);
+        var bDelta = tgt.balls - fig.balls;
+        if (bDelta > 0){
+          var h3 = his(), anch3 = h3.length ? h3[h3.length - 1] : -1;
+          var bat3 = anch3 >= 0 ? (balls[anch3].batter || '') : ((inn.batters && inn.batters[0] && inn.batters[0].name) || '');
+          var add = [];
+          for (i = 0; i < bDelta; i++) add.push({ text: '0', batter: bat3, bowler: name });
+          balls.splice.apply(balls, [anch3 + 1, 0].concat(add));
+        } else if (bDelta < 0){
+          var need4 = -bDelta, h4 = his();
+          for (i = h4.length - 1; i >= 0 && need4 > 0; i--){
+            if (String(balls[h4[i]].text) === '0' && !isWicketBall(balls[h4[i]])){ balls.splice(h4[i], 1); need4--; }
+          }
+          if (need4 > 0) return 'balls-below-minimum';
+        }
+        return true;
+      }
+      function scErrText(code){
+        switch (code){
+          case 'balls-below-fixed': return 'Balls faced cannot go that low — he also faced byes and no-balls. Use Edit Balls for this fix.';
+          case 'runs-below-dismissal': return 'Runs / 4s / 6s cannot be lower than what his dismissal ball already carries. Use Edit Balls for this fix.';
+          case 'balls-below-boundaries': return 'Balls faced are fewer than the 4s + 6s — increase Balls.';
+          case 'runs-not-distributable': return 'Those runs cannot fit into that many balls — check Runs, Balls, 4s and 6s together.';
+          case 'wickets-unavailable': return 'He did not bowl enough wicket balls for that many wickets.';
+          case 'runs-too-large': return 'That runs change is too large for this editor — use Edit Balls.';
+          case 'runs-below-minimum': return 'Runs cannot go that low — his scoring balls already carry more. Use Edit Balls for this fix.';
+          case 'balls-below-minimum': return 'Overs cannot go that low — he bowled fewer dot balls than that. Use Edit Balls for this fix.';
+          default: return 'Those figures could not be applied — nothing was saved.';
+        }
+      }
+      /* ---------- the Edit Player page ---------- */
+      function scEditPlayer(pos, kind, rowIdx){
+        if (!scCtx) return;
+        var it = scCtx.items[pos]; if (!it) return;
+        var rec = kind === 'bat' ? (it.orig.batters || [])[rowIdx] : (it.orig.bowlers || [])[rowIdx];
+        if (!rec || !rec.name) return;
+        var name = rec.name;
+        var team = kind === 'bat' ? (it.orig.battingTeam || '') : (it.orig.bowlingTeam || '');
+        var batPos = -1, bowlPos = -1;
+        scCtx.items.forEach(function(x, xi){
+          if (batPos < 0 && x.orig.battingTeam === team && (x.orig.batters || []).some(function(b){ return b && b.name === name && (b.balls > 0 || b.out || b.retiredHurt); })) batPos = xi;
+          if (bowlPos < 0 && x.orig.bowlingTeam === team && (x.orig.bowlers || []).some(function(b){ return b && b.name === name && b.balls > 0; })) bowlPos = xi;
+        });
+        if (kind === 'bat') batPos = pos; else bowlPos = pos;
+        scpCtx = { name: name, team: team, batPos: batPos, bowlPos: bowlPos };
+        scRenderPlayerForm();
+        var m = $('scPlayerModal'); if (m) m.classList.add('show');
+      }
+      function scClosePlayerPage(){
+        var m = $('scPlayerModal'); if (m) m.classList.remove('show');
+        scpCtx = null;
+      }
+      function scpNum(id, lab, v){
+        return '<div class="scp-f"><label for="' + id + '">' + lab + '</label><input id="' + id + '" type="number" min="0" step="1" inputmode="numeric" value="' + (v == null ? 0 : v) + '" /></div>';
+      }
+      function scFielderOptions(inn, cur){
+        var e = scCtx.entry, names = [], seen = {};
+        function add(n){ if (n && !seen[n]){ seen[n] = 1; names.push(n); } }
+        var squad = (inn.bowlingTeam === e.teamA) ? (e.squadA || []) : ((inn.bowlingTeam === e.teamB) ? (e.squadB || []) : []);
+        squad.forEach(add);
+        (inn.bowlers || []).forEach(function(b){ add(b.name); });
+        (e.playerIds || []).forEach(function(mm){ if (mm && mm.t === inn.bowlingTeam) add(mm.n); });
+        if (cur) add(cur);
+        names.sort();
+        return '<option value="">— Select —</option>' + names.map(function(n){
+          return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(dispIn(e.nicknames, inn.bowlingTeam, n)) + '</option>';
+        }).join('');
+      }
+      function scRenderPlayerForm(){
+        if (!scpCtx || !scCtx) return;
+        var e = scCtx.entry, name = scpCtx.name;
+        var h = '<div class="scp-name">' + esc(dispIn(e.nicknames, scpCtx.team, name)) + '</div><div class="scp-team">' + esc(scpCtx.team) + '</div>';
+        if (scpCtx.batPos >= 0){
+          var binn = scCtx.items[scpCtx.batPos].orig, b = null;
+          (binn.batters || []).forEach(function(x){ if (x && x.name === name) b = x; });
+          if (b){
+            var dis = scDismissalInfo(binn, name);
+            var wt = 'notout';
+            if (b.out) wt = dis ? dis.type : 'bowled';
+            else if (b.retiredHurt || /retired hurt/i.test(b.howOut || '')) wt = 'retiredhurt';
+            h += '<div class="scp-sec">Batting Data</div><div class="scp-grid">'
+              + scpNum('scpRuns', 'Runs', b.runs) + scpNum('scpBalls', 'Balls', b.balls) + scpNum('scpFours', 'Fours', b.fours || 0) + scpNum('scpSixes', 'Sixes', b.sixes || 0) + '</div>';
+            var types = [['notout', 'Not Out'], ['bowled', 'Bowled'], ['caught', 'Caught'], ['candbowled', 'Caught & Bowled'], ['lbw', 'LBW'], ['stumped', 'Stumped'], ['runout', 'Run Out'], ['hitwicket', 'Hit Wicket'], ['retiredhurt', 'Retired Hurt'], ['retired', 'Retired Out']];
+            h += '<div class="scp-sec">Wicket Data</div>'
+              + '<div class="scp-f2"><label for="scpWtype">Wicket Type</label><select id="scpWtype" onchange="scWicketTypeChanged()">' + types.map(function(t){ return '<option value="' + t[0] + '"' + (t[0] === wt ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>'
+              + '<div class="scp-f2" id="scpFielderRow"><label for="scpFielder">Fielder</label><select id="scpFielder">' + scFielderOptions(binn, dis ? dis.fielder : '') + '</select></div>'
+              + '<div class="scp-f2" id="scpFielder2Row"><label for="scpFielder2">Fielder 2 (optional)</label><select id="scpFielder2">' + scFielderOptions(binn, dis ? dis.fielder2 : '') + '</select></div>';
+          }
+        }
+        if (scpCtx.bowlPos >= 0){
+          var winn = scCtx.items[scpCtx.bowlPos].orig, bw = null;
+          (winn.bowlers || []).forEach(function(x){ if (x && x.name === name) bw = x; });
+          if (bw){
+            var md = 0; try { md = pfBowlExtras(winn, name).maidens; } catch(err){}
+            h += '<div class="scp-sec">Bowling Data</div><div class="scp-grid">'
+              + '<div class="scp-f"><label for="scpOvers">Overs</label><input id="scpOvers" type="text" inputmode="decimal" value="' + oversText(bw.balls) + '" /></div>'
+              + scpNum('scpBRuns', 'Runs', bw.runs)
+              + '<div class="scp-f"><label for="scpMaidens">Maiden</label><input id="scpMaidens" type="text" value="' + md + '" readonly /></div>'
+              + scpNum('scpWickets', 'Wickets', bw.wickets) + '</div>';
+          }
+        }
+        h += '<button type="button" class="btn scp-save" onclick="scSavePlayer()">SAVE</button>';
+        var body = $('scpBody'); if (body) body.innerHTML = h;
+        scWicketTypeChanged();
+      }
+      function scWicketTypeChanged(){
+        var sel = $('scpWtype'); if (!sel) return;
+        var v = sel.value;
+        var r1 = $('scpFielderRow'); if (r1) r1.style.display = (v === 'caught' || v === 'stumped' || v === 'runout') ? '' : 'none';
+        var r2 = $('scpFielder2Row'); if (r2) r2.style.display = (v === 'runout') ? '' : 'none';
+      }
+      function scNum(id){
+        var el = $(id); if (!el) return null;
+        var v = String(el.value).trim();
+        if (!/^\d+$/.test(v)) return null;
+        return parseInt(v, 10);
+      }
+      function scParseOvers(v){
+        var m = String(v || '').trim().match(/^(\d+)(?:\.(\d))?$/);
+        if (!m) return null;
+        var b = m[2] ? parseInt(m[2], 10) : 0;
+        if (b > 5) return null;
+        return parseInt(m[1], 10) * 6 + b;
+      }
+      function scVerifyBatting(inn, name, tgt, workInn){
+        var b = null;
+        (inn.batters || []).forEach(function(x){ if (x && x.name === name) b = x; });
+        if (!b) return false;
+        if (b.runs !== tgt.runs || b.balls !== tgt.balls || (b.fours || 0) !== tgt.fours || (b.sixes || 0) !== tgt.sixes) return false;
+        if (tgt.wtype === 'notout') return !b.out && !b.retiredHurt;
+        if (tgt.wtype === 'retiredhurt') return !b.out && !!(b.retiredHurt || /retired hurt/i.test(b.howOut || ''));
+        if (tgt.wtype === 'retired') return !!b.out && b.howOut === 'retired out';
+        if (!b.out) return false;
+        var d = scDismissalInfo(workInn, name);
+        if (d && d.ballIdx >= 0){
+          var rec = workInn.balls[d.ballIdx];
+          if (rec && rec.howOut && b.howOut !== rec.howOut) return false;
+        }
+        return true;
+      }
+      function scVerifyBowling(inn, name, tgt){
+        var b = null;
+        (inn.bowlers || []).forEach(function(x){ if (x && x.name === name) b = x; });
+        if (!b) return false;
+        return b.balls === tgt.balls && b.runs === tgt.runs && b.wickets === tgt.wickets;
+      }
+      function scSavePlayer(){
+        if (!scpCtx || !scCtx) return;
+        var e = scCtx.entry, name = scpCtx.name;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        var batTgt = null, bowlTgt = null;
+        if (scpCtx.batPos >= 0 && $('scpRuns')){
+          var R = scNum('scpRuns'), B = scNum('scpBalls'), F = scNum('scpFours'), X = scNum('scpSixes');
+          if (R === null || B === null || F === null || X === null){ toast('Batting figures must be whole numbers'); return; }
+          if (4 * F + 6 * X > R){ toast('The 4s and 6s add up to more than the runs'); return; }
+          if (B < F + X){ toast('Balls faced cannot be fewer than the 4s + 6s'); return; }
+          var wt = $('scpWtype') ? $('scpWtype').value : 'notout';
+          batTgt = { runs: R, balls: B, fours: F, sixes: X, wtype: wt,
+            fielder: $('scpFielder') ? $('scpFielder').value : '',
+            fielder2: $('scpFielder2') ? $('scpFielder2').value : '' };
+          if ((wt === 'caught' || wt === 'stumped' || wt === 'runout') && !batTgt.fielder){ toast('Pick the fielder for this dismissal'); return; }
+        }
+        if (scpCtx.bowlPos >= 0 && $('scpOvers')){
+          var balls = scParseOvers($('scpOvers').value);
+          var BR = scNum('scpBRuns'), WK = scNum('scpWickets');
+          if (balls === null){ toast('Overs must look like 2.0 or 3.4'); return; }
+          if (BR === null || WK === null){ toast('Bowling figures must be whole numbers'); return; }
+          bowlTgt = { balls: balls, runs: BR, wickets: WK };
+        }
+        if (!batTgt && !bowlTgt){ scClosePlayerPage(); return; }
+        var works = scCtx.items.map(function(it){ return deep(it.orig); });
+        var err = null, r1, r2;
+        if (batTgt){ r1 = scApplyBatting(e, works[scpCtx.batPos], name, batTgt); if (r1 !== true) err = r1; }
+        if (!err && bowlTgt){ r2 = scApplyBowling(works[scpCtx.bowlPos], name, bowlTgt); if (r2 !== true) err = r2; }
+        if (err){ toast(scErrText(err)); return; }
+        var replayed = [], mainInns = [], soInns = null;
+        scCtx.items.forEach(function(it, i){
+          var r = beReplayInnings(e, works[i], it.orig);
+          replayed.push(r);
+          if (it.kind === 'main') mainInns.push(r); else { soInns = soInns || []; soInns.push(r); }
+        });
+        var wlim = (typeof e.wicketsLimit === 'number') ? e.wicketsLimit : 10;
+        for (var i = 0; i < mainInns.length; i++){
+          if (mainInns[i].wickets > wlim){ toast('⚠️ That would give the ' + (i === 0 ? '1st' : '2nd') + ' innings ' + mainInns[i].wickets + ' wickets — more than this match\'s ' + wlim + '. Nothing was saved.'); return; }
+        }
+        if (soInns) for (var j = 0; j < soInns.length; j++){
+          if (soInns[j].wickets > 2){ toast('⚠️ A Super Over innings cannot have more than 2 wickets. Nothing was saved.'); return; }
+        }
+        if (batTgt && !scVerifyBatting(replayed[scpCtx.batPos], name, batTgt, works[scpCtx.batPos])){
+          toast('Those batting figures could not be applied exactly — nothing was saved. Use Edit Balls for this correction.');
+          return;
+        }
+        if (bowlTgt && !scVerifyBowling(replayed[scpCtx.bowlPos], name, bowlTgt)){
+          toast('Those bowling figures could not be applied exactly — nothing was saved. Use Edit Balls for this correction.');
+          return;
+        }
+        var soRec = null;
+        if (soInns && e.superOver){
+          soRec = { id: e.superOver.id, batFirst: e.superOver.batFirst || '', winner: '', resultText: '', innings: soInns, attempts: deep(e.superOver.attempts || []) };
+          var c0 = beSuperOverResult(soRec); soRec.winner = c0.winner; soRec.resultText = c0.resultText;
+        }
+        scClosePlayerPage();
+        /* Save through the ball editor's apply path: History entry,
+           live state, tournament copies, Recent Results, points and
+           statistics all take the corrected innings. */
+        beCtx = { id: scCtx.id, entry: e, items: [], tab: 0, edit: null, form: null, dirty: true, changedKey: '', changedIdx: -1 };
+        beApplySave(mainInns, soRec);
+        if (scCtx){ scCtx.items = scBuildItems(e); scRender(); }
       }
 
       /* ============================================================
@@ -24274,6 +24988,7 @@
       function openPlayerEditorFromDetails(){
         var id = histEditId;
         if (!id) return;
+        pgBackFns.histEdit = null;
         closeHistoryEdit();
         openPlayerEditor(id);
       }
@@ -24298,6 +25013,15 @@
       function closePlayerEditor(){
         peCtx = null;
         var m = $('playerEditModal'); if (m) m.classList.remove('show');
+        pgFireBack('playerEdit');
+      }
+      /* 🔙 / ✕ on the Replace Player page steps back through its
+         own steps first (confirm → pick correct → pick wrong) and
+         only then leaves the page. */
+      function pePageBack(){
+        if (peCtx && peCtx.step === 3){ peBackToStep2(); return; }
+        if (peCtx && peCtx.step === 2){ peBackToStep1(); return; }
+        closePlayerEditor();
       }
       function peRender(){
         if (!peCtx) return;
@@ -24306,7 +25030,7 @@
         body.innerHTML = peCtx.step === 1 ? peStep1HTML() : (peCtx.step === 2 ? peStep2HTML() : peStep3HTML());
       }
       function peStep1HTML(){
-        var h = '<div class="pe-info">A player was added to this match by mistake? Pick him below, then pick the correct player — every batting, bowling and fielding record of his in this match moves to the correct player, matched by <b>Player ID</b>. The team score does not change, and the correction shows in tournament statistics and both players&rsquo; career records.</div>';
+        var h = '';
         h += '<div class="pe-step">1. Who was added by mistake?</div>';
         h += peCtx.players.map(function(p, i){ return peRowHTML(p, 'pePickWrong(' + i + ')', ''); }).join('');
         h += '<div class="rowflex" style="margin-top:12px"><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
@@ -24324,11 +25048,9 @@
         var w = peCtx.wrong, e = peCtx.entry;
         var h = '<div class="pe-step">2. Who is the correct player?</div>';
         h += peRowHTML(w, 'peBackToStep1()', '');
-        h += '<div class="pe-info">Tap the correct player below. Players with the same name are listed separately — check the <b>Player ID</b> and the team to pick the right one. His records in this match will carry the picked player&rsquo;s ID.</div>';
         h += '<input id="peSearch" class="pe-search" type="text" placeholder="Search by name or Player ID…" autocomplete="off" value="' + esc(peCtx.query || '') + '" oninput="peSetQuery(this.value)" />';
         h += '<div id="peCandList" style="margin-top:10px">' + peCandListHTML() + '</div>';
-        h += '<div class="pe-info" style="margin-top:14px">Not in the list? Type his full name — he is added as a player of ' + esc(w.name ? w.team : '') + ' and the records move to him.'
-          + '<div class="rowflex" style="margin-top:9px"><input id="peNewName" type="text" placeholder="Correct player&rsquo;s full name" autocomplete="off" style="flex:1;min-width:0" /><button type="button" class="btn sm" onclick="pePickNew()">Use This Name</button></div></div>';
+        h += '<div class="rowflex" style="margin-top:14px"><input id="peNewName" type="text" placeholder="Correct player&rsquo;s full name" autocomplete="off" style="flex:1;min-width:0" /><button type="button" class="btn sm" onclick="pePickNew()">Use This Name</button></div>';
         h += '<div class="rowflex" style="margin-top:12px"><button type="button" class="btn ghost" onclick="peBackToStep1()">← Back</button><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
         return h;
       }
@@ -24394,15 +25116,9 @@
         if (w.batFig) wFig.push('Batting ' + w.batFig);
         if (w.bowlFig) wFig.push('Bowling ' + w.bowlFig);
         if (w.fieldFig) wFig.push(w.fieldFig + (w.fieldFig === 1 ? ' fielding dismissal' : ' fielding dismissals'));
-        var h = peCardHTML('Wrong player — records move away from him', 'from', w, wFig);
-        h += '<div class="pe-arrow">⬇ replaced by ⬇</div>';
-        h += peCardHTML('Correct player — records move to him', 'to', r, r.isNew ? ['New player — his Player ID is created for ' + w.team + ' when you confirm'] : []);
-        h += '<ul class="pe-moves">'
-          + '<li>His batting, bowling and fielding records in <b>this match</b> move to the correct player, by Player ID.</li>'
-          + '<li>They are removed from the wrong player — his career and tournament statistics lose them, the correct player&rsquo;s gain them.</li>'
-          + '<li>The team scores, the result and the points do not change.</li>'
-          + (peCtx.entry.potmName && peCtx.entry.potmName === w.name && peCtx.entry.potmTeam === w.team ? '<li>He is this match&rsquo;s Player of the Match — the award moves to the correct player too.</li>' : '')
-          + '</ul>';
+        var h = peCardHTML('Wrong player', 'from', w, wFig);
+        h += '<div class="pe-arrow">⬇</div>';
+        h += peCardHTML('Correct player', 'to', r, []);
         h += '<div class="rowflex" style="margin-top:16px"><button type="button" class="btn" onclick="peConfirm()">✓ Replace Player</button><button type="button" class="btn ghost" onclick="peBackToStep2()">← Back</button><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
         return h;
       }
@@ -25576,7 +26292,7 @@
            Only the match owner sees them, and only when the match
            has a real History entry behind it (the entry the Edit /
            Edit Balls / Delete actions work on). */
-        if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
+        if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && !archiveView.readOnly && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
           var avCan = false;
           try { avCan = histEntryDeletable(archiveView.entry); } catch(e){ avCan = false; }
           if (avCan){
@@ -26758,7 +27474,7 @@
           if (tbHtml) feedAll += '<div class="cb-tossblock">' + tbHtml + '</div>';
           commEl.innerHTML = feedAll
             ? feedAll
-            : '<p class="cb-empty">No balls bowled yet — commentary will appear here ball by ball.</p>';
+            : '<p class="cb-empty">No balls bowled yet.</p>';
         }
         /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
@@ -28773,7 +29489,11 @@
           else if (top.id === 'fixTossModal') closeFixToss();
           else if (top.id === 'histModal') closeHistoryMatch();
           else if (top.id === 'histEditModal') closeHistoryEdit();
-          else if (top.id === 'ballEditModal') closeBallEditor();
+          else if (top.id === 'ballEditModal') bePageBack();
+          else if (top.id === 'playerEditModal') pePageBack();
+          else if (top.id === 'cmModal') cmPageBack();
+          else if (top.id === 'scPlayerModal') scClosePlayerPage();
+          else if (top.id === 'scEditModal') scCloseEditor();
           else if (top.id === 'shareCardModal') closeShareCard();
           else if (top.id === 'tnMoreModal') closeTnMore();
           else if (top.id === 'dlPermModal') closeDlPermPopup();
