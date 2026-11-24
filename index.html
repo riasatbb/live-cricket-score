@@ -1614,6 +1614,26 @@
       .cb-table th:last-child,.cb-table td:last-child{padding-right:16px}
       .pname{color:#64b5e8;font-weight:500}
       .cb-table .yetbat td{color:#9a9a9a;font-size:13.5px;line-height:1.5}
+      /* ---------- Scorecard BOWLING table: pinned bowler name,
+         sideways-scrolling figures ----------
+         The full figure set (O M R W Eco 0s 4s 6s Wd NB) is wider
+         than a phone, so the table sits in its own horizontal
+         scroller: the bowler-name column (header cell included)
+         stays pinned at the left while every figure column —
+         header row and all — slides sideways underneath it,
+         exactly as in the reference video. The pinned cells carry
+         the surface colour of whichever card the table sits in
+         (#2b2b2b inside .cb-table, the #262626 scoreboard card
+         for the Super Over section) so sliding figures never show
+         through them. border-collapse:separate is required —
+         sticky cells misbehave under collapse in Chromium. */
+      .bwl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;--bwl-bg:#262626}
+      .cb-table .bwl-scroll{--bwl-bg:#2b2b2b}
+      .bwl-table{border-collapse:separate;border-spacing:0;width:auto;min-width:100%}
+      .bwl-table th,.bwl-table td{white-space:nowrap}
+      .bwl-table th.r,.bwl-table td.r{min-width:44px}
+      .bwl-table th.bwl-name,.bwl-table td.bwl-name{position:sticky;left:0;z-index:1;background:var(--bwl-bg);border-right:1px solid #3d3d3d;box-shadow:10px 0 12px -10px rgba(0,0,0,.8)}
+      .bwl-table thead th.bwl-name{z-index:2}
       .cb-comm{background:#2b2b2b;padding:6px 0 10px}
       .cb-comm-row{display:flex;gap:16px;padding:13px 16px;align-items:flex-start}
       .cb-comm-row + .cb-comm-row{border-top:1px solid #333}
@@ -1780,11 +1800,12 @@
       .pg-backbtn{flex:none;width:42px;height:42px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface2);font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
       .pg-backbtn:active{transform:scale(.95)}
       /* Edit Match Info: the "A vs B" line under the heading is a
-         highlighted, centred banner — each team in its own colour
-         around a gold VS pill — and every field's box name sits
-         centred above its box in gold. */
-      .emi-vs{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;text-align:center;margin:14px 0 4px;padding:13px 10px;border:1.5px solid var(--line);border-radius:13px;background:linear-gradient(135deg,var(--surface2),var(--surface))}
-      .emi-vs .emi-team{font-family:"Barlow Condensed",sans-serif;font-size:23px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+         highlighted, centred banner — both team names in the same
+         font colour (the page ink), only the VS pill between them
+         in a different colour (gold) — and every field's box name
+         sits centred above its box in gold. */
+      .emi-vs{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:nowrap;text-align:center;margin:14px 0 4px;padding:13px 10px;border:1.5px solid var(--line);border-radius:13px;background:linear-gradient(135deg,var(--surface2),var(--surface))}
+      .emi-vs .emi-team{font-family:"Barlow Condensed",sans-serif;font-size:clamp(14px,4.6vw,23px);font-weight:700;letter-spacing:.02em;text-transform:uppercase;line-height:1.1;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
       .emi-vs .emi-x{flex:none;background:var(--gold);color:#231a04;font-weight:800;font-size:13px;border-radius:999px;padding:4px 11px;letter-spacing:.08em}
       #histEditModal label{display:block;text-align:center;color:var(--gold);font-weight:700;font-size:14.5px;margin-bottom:6px}
       /* ---------- Edit Scoreboard page ----------
@@ -4342,7 +4363,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v266';
+      var APP_VERSION = 'v269';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -23318,7 +23339,7 @@
         histEditId = id;
         try { closeHistoryMatch(); } catch(err){}
         var sub = $('histEditSub');
-        if (sub) sub.innerHTML = '<span class="emi-team" style="color:' + teamColor(e.teamA || '', e.teamB || '') + '">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team" style="color:' + teamColor(e.teamB || '', e.teamA || '') + '">' + esc(e.teamB || '—') + '</span>';
+        if (sub) sub.innerHTML = '<span class="emi-team">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team">' + esc(e.teamB || '—') + '</span>';
         var vEl = $('heVenue'); if (vEl) vEl.value = e.venue || '';
         var tEl = $('heTournament'); if (tEl) tEl.value = e.tournamentName || '';
         var dEl = $('heDate'); if (dEl) dEl.value = e.matchDate || '';
@@ -24353,7 +24374,7 @@
         if (!(e.innings || []).length){ toast('This match has no scorecard to edit'); return; }
         scCtx = { id: id, entry: e, items: scBuildItems(e) };
         var vs = $('scVs');
-        if (vs) vs.innerHTML = '<span class="emi-team" style="color:' + teamColor(e.teamA || '', e.teamB || '') + '">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team" style="color:' + teamColor(e.teamB || '', e.teamA || '') + '">' + esc(e.teamB || '—') + '</span>';
+        if (vs) vs.innerHTML = '<span class="emi-team">' + esc(e.teamA || '—') + '</span><span class="emi-x">VS</span><span class="emi-team">' + esc(e.teamB || '—') + '</span>';
         if (vs) vs.className = 'emi-vs';
         scRender();
         var m = $('scEditModal'); if (m) m.classList.add('show');
@@ -25536,13 +25557,36 @@
           + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
           + '</tbody></table>';
       }
+      /* Scorecard bowling table — the full figure set of the
+         reference video: O, M, R, W, Eco, 0s, 4s, 6s, Wd, NB.
+         Maidens, dots, boundaries conceded and extras bowled are
+         not stored on the bowler record; they are rebuilt from
+         the ball-by-ball record by pfBowlExtras (the same figures
+         the player profile shows), so live, archived and viewed
+         matches all render identically — and a match with no
+         ball record simply shows 0s. The table renders inside
+         .bwl-scroll with a pinned name column (see the CSS):
+         the name stays fixed at the left while the figure
+         columns, header included, scroll sideways. */
       function bowlingTableHTML(inn){
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          var ex = { maidens:0, dots:0, fours:0, sixes:0, wides:0, noballs:0 };
+          try { ex = pfBowlExtras(inn, b.name); } catch(e){}
+          return '<tr><td class="bwl-name"><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td>'
+            + '<td class="r">' + oversText(b.balls) + '</td>'
+            + '<td class="r">' + ex.maidens + '</td>'
+            + '<td class="r">' + b.runs + '</td>'
+            + '<td class="r"><b>' + b.wickets + '</b></td>'
+            + '<td class="r">' + econ + '</td>'
+            + '<td class="r">' + ex.dots + '</td>'
+            + '<td class="r">' + ex.fours + '</td>'
+            + '<td class="r">' + ex.sixes + '</td>'
+            + '<td class="r">' + ex.wides + '</td>'
+            + '<td class="r">' + ex.noballs + '</td></tr>';
         }).join('');
-        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        return '<div class="bwl-scroll"><table class="bwl-table"><thead><tr><th class="bwl-name">Bowler</th><th class="r">O</th><th class="r">M</th><th class="r">R</th><th class="r">W</th><th class="r">Eco</th><th class="r">0s</th><th class="r">4s</th><th class="r">6s</th><th class="r">Wd</th><th class="r">NB</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }
       /* ---------- Scorecard: Fall of Wickets + Partnerships ----------
          Both sections are rebuilt from the stored ball-by-ball record
