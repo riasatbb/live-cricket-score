@@ -1753,6 +1753,42 @@
       .be-summary{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:14.5px;line-height:1.55}
       .be-summary .be-res{font-weight:800;color:var(--green)}
       .be-del{border-color:#7a3a34 !important;color:#ffab9e !important}
+      /* ---------- scorecard player editor (replace a wrongly-added player) ----------
+         Owner-only, on a FINISHED match: an Edit Mode toggle on the
+         archived Scorecard tab adds a pencil (ball-by-ball edit) and
+         a replace icon to every batting / bowling row, and the
+         Replace Player editor (opened from a row, from Edit Match,
+         or from the Summary tab) swaps one player for another BY
+         PLAYER ID — so two players who share a name stay distinct —
+         moving every batting, bowling and fielding record of the
+         wrong player in this match to the correct one. */
+      #playerEditModal{z-index:110}
+      .sc-editbar{display:flex;justify-content:flex-end;margin:0 0 10px}
+      .sc-editmode{border:1.5px solid var(--gold);background:var(--surface2);color:var(--ink);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+      .sc-editmode.on{background:var(--gold);color:#231a04}
+      td.sc-acts,th.sc-acts{white-space:nowrap;text-align:right}
+      .sc-act{border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:8px;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;font-family:inherit;margin-left:6px;vertical-align:middle;padding:0}
+      .sc-act.rep{border-color:var(--gold);color:var(--gold);font-weight:800;font-size:16px}
+      .pe-info{border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:11px 13px;font-size:14px;line-height:1.55;margin-top:12px}
+      .pe-step{font-weight:800;color:var(--green);font-size:15.5px;margin:16px 0 10px}
+      .pe-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 7px;cursor:pointer;font-family:inherit;color:var(--ink)}
+      .pe-row:active{transform:scale(.99)}
+      .pe-ava{flex:none;width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+      .pe-ava-init{display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--green);font-weight:800;font-size:14px}
+      .pe-main{flex:1;min-width:0}
+      .pe-name{display:block;font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pe-sub{display:block;font-size:13px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .pe-id{flex:none;font-size:10.5px;font-weight:700;background:var(--chip);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 7px;font-variant-numeric:tabular-nums}
+      .pe-badge{flex:none;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
+      .pe-badge.play{background:#e8f5ec;border-color:#2f9e6e;color:#1c7a4d}
+      @media (prefers-color-scheme: dark){.pe-badge.play{background:#123324;color:#7ddb9a}}
+      .pe-search{width:100%;box-sizing:border-box;margin-top:12px}
+      .pe-card{border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;background:var(--surface)}
+      .pe-card.from{border-color:#c0564a}
+      .pe-card.to{border-color:var(--green)}
+      .pe-card .pe-lab{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+      .pe-arrow{text-align:center;font-size:20px;color:var(--gold);padding:5px 0}
+      .pe-moves{margin:14px 0 0;padding-left:20px;font-size:14.5px;line-height:1.65}
       /* ---------- shareable match card ---------- */
       .cb-sharebar{padding:12px 16px 16px;background:#2b2b2b;display:flex;flex-direction:column;gap:10px}
       .cb-sharebtn{width:100%;border:1.5px solid var(--gold);background:#3a2c10;color:#ffd98a;border-radius:11px;padding:12px 14px;font-size:15.5px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -3963,6 +3999,7 @@
           <div><label for="heResult">Result text</label><input id="heResult" placeholder="Automatic from the scores" /></div>
           <div><label for="hePotm">Player of the Match</label><select id="hePotm"></select></div>
           <div><button type="button" class="btn gold" style="width:100%" onclick="openBallEditorFromDetails()">🏏 Edit Scorecard — Ball by Ball</button></div>
+          <div><button type="button" class="btn" style="width:100%" onclick="openPlayerEditorFromDetails()">👥 Replace Player — Scorecard Player Editor</button></div>
         </div>
         <div class="rowflex" style="margin-top:16px">
           <button type="button" class="btn" onclick="saveHistoryEdit()">Save Changes</button>
@@ -3996,6 +4033,32 @@
             <button type="button" class="btn ghost" onclick="closeBallEditor()">Cancel</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Scorecard Player Editor: replace a wrongly-added player in a
+         FINISHED match with the correct one. The scorer sometimes
+         picks the wrong player — worst when two players share one
+         name (two "Md. Ashraful Alam"s) — and the wrong man's
+         batting, bowling and fielding figures then sit in his career
+         record. This editor moves every record of the wrong player
+         in this match to the correct player, matched by Player ID
+         (never by name alone, so the two same-named players are
+         never merged), after a confirmation step that shows both
+         players with their IDs. Team totals never change: the
+         corrected innings are replayed from the ball record and
+         saved through the same path as a ball-by-ball correction,
+         so the scorecard, tournament copies, points, statistics and
+         both players' career records all follow. Owner-only, gated
+         exactly like Edit Balls. -->
+    <div class="modal-back" id="playerEditModal">
+      <div class="modal be-modal" role="dialog" aria-modal="true" aria-labelledby="peTitle">
+        <div class="modal-head">
+          <h2 id="peTitle">👥 Replace Player</h2>
+          <button class="sq-x big" onclick="closePlayerEditor()" aria-label="Close player editor">×</button>
+        </div>
+        <p class="sub" id="peSub" style="color:var(--muted);font-size:14px;margin:6px 0 0"></p>
+        <div id="peBody"></div>
       </div>
     </div>
 
@@ -4067,7 +4130,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v256';
+      var APP_VERSION = 'v257';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -9284,6 +9347,10 @@
         /* An abandoned match is a finished match too — it goes into
            permanent history with the score as it stood. */
         try { archiveFinishedMatch(); } catch(e){}
+        /* And into its tournament's results as a COMPLETED match
+           (never an upcoming one), so the tournament Matches list
+           shows it alongside the other finished matches. */
+        try { if (saveAbandonedToTournamentCore()) commit('Match abandoned', true); } catch(e){}
       }
 
       /* ----- Penalty: runs awarded to a team, no ball bowled ----- */
@@ -10495,7 +10562,9 @@
           else if (a.runs > b.runs) txt = a.battingTeam + ' won by ' + runW(a.runs - b.runs) + '.';
           else txt = 'Match tied.';
         }
-        if (txt && (resultIsFinal(match, ownerTn) || (src !== match && resultIsFinal(src, ownerTn)))) txt = '🏆 ' + txt;
+        /* An abandoned match decided nothing — never a 🏆, even
+           when the match it abandoned was the Final. */
+        if (txt && !match.abandoned && !src.abandoned && !/abandon/i.test(txt) && (resultIsFinal(match, ownerTn) || (src !== match && resultIsFinal(src, ownerTn)))) txt = '🏆 ' + txt;
         return txt;
       }
       /* The result line of the match on show (in S) — the same
@@ -10618,6 +10687,130 @@
         else tgtTn.matches.push(match);
         S.archivedMatchId = mid;
         return replaced ? 'updated' : 'saved';
+      }
+      /* The abandoned counterpart of saveResultToTournamentCore:
+         an abandoned match is a COMPLETED match — play ended, with
+         no result — so it is filed into its tournament's results
+         exactly like a finished match, carrying the abandoned flag
+         and the score as it stood. That filing is what puts it in
+         the tournament Matches list's Completed section, never in
+         Upcoming Fixtures. The points table, the player statistics,
+         the bracket and the podium each skip an abandoned record
+         explicitly, so filing it changes nothing they count; and
+         the tournament admin can later REOPEN it (see
+         reopenAbandonedMatch), which removes this record and puts
+         the match back into Upcoming Fixtures to be scheduled and
+         played. Returns 'saved' / 'updated', or null when there is
+         nothing to file (a Single Match, or a match that was not
+         abandoned). */
+      function saveAbandonedToTournamentCore(){
+        normalizeTournament();
+        if (S.matchKind !== 'tournament') return null;
+        if (!S.abandoned || S.status !== 'finished') return null;
+        var mid = S.matchId || S.updatedAt || 1;
+        if (!S.matchId) S.matchId = mid;
+        var ownKey = (typeof S.tournamentId === 'string' && S.tournamentId) ? S.tournamentId : tournamentKeyOf(S.tournament);
+        var tgtObj = tournamentForKey(ownKey);
+        var tgtTn = tgtObj ? tgtObj.tn : S.tournament;
+        if (tgtObj) ownKey = tournamentKeyOf(tgtObj.tn) || ownKey;
+        var inningsArr = [];
+        if (S.prevInnings) inningsArr.push(deep(S.prevInnings));
+        if (S.current && (S.current.batters.length || S.current.bowlers.length || S.current.legalBalls > 0 || S.prevInnings)) inningsArr.push(deep(S.current));
+        var match = {
+          id: mid, at: Date.now(), manual: false,
+          tournamentId: ownKey,
+          teamA: S.teamA || '', teamB: S.teamB || '',
+          oversLimit: S.oversLimit, wicketsLimit: wicketsLimit(), venue: S.venue || '',
+          innings: inningsArr,
+          resultText: healedResultText(S.resultText || 'Match abandoned.', inningsArr, wicketsLimit()),
+          abandoned: true, winner: null,
+          bracketId: (typeof S.bracketMatchId === 'string') ? S.bracketMatchId : '',
+          group: (typeof S.matchGroup === 'string') ? S.matchGroup : '',
+          stage: (typeof S.matchStage === 'string') ? S.matchStage : '',
+          matchNo: (typeof S.matchNo === 'number') ? S.matchNo : 0,
+          superOver: null,
+          potmName: '', potmTeam: '', potmPid: '',
+          players: playersSnapshot(), playerIds: deep(S.playerIds || [])
+        };
+        var existingIdx = -1;
+        tgtTn.matches.forEach(function(m, i){ if (m && String(m.id) === String(mid)) existingIdx = i; });
+        if (existingIdx > -1) tgtTn.matches[existingIdx] = match; else tgtTn.matches.push(match);
+        S.archivedMatchId = mid;
+        return existingIdx > -1 ? 'updated' : 'saved';
+      }
+      /* A fixture is closed — no longer upcoming — once ANY result
+         for it sits in the tournament's saved results: a decided
+         knockout (bkFixtureDecided) or an abandoned one alike. A
+         bracket mirror fixture can outlive the start of its match
+         (a start straight from the bracket card does not consume
+         it), so without this an abandoned Final would sit in
+         Upcoming Fixtures next to its own Completed record. */
+      function fixtureHasResult(f){
+        if (!f || !f.bracketId || !S.tournament) return false;
+        return (S.tournament.matches || []).some(function(m){ return m && m.bracketId && m.bracketId === f.bracketId; });
+      }
+      /* Reopen an abandoned match (tournament admin): the match
+         leaves Completed and goes back to Upcoming Fixtures, where
+         it can be given a new date and started again — until it is
+         reopened, an abandoned match simply stays Completed. The
+         abandoned record (its History entry and every saved result
+         copy) is removed through the same path a History delete
+         uses, so no surface keeps it as a completed match; the
+         fixture that replaces it keeps the match's identity — its
+         bracket slot, stage, group and permanent Match-N — so when
+         it is finally played, its result fills the very place the
+         abandoned match vacated. A match started again gets a fresh
+         Match ID, so the abandoned record's tombstone can never
+         block the new filing. */
+      function reopenAbandonedMatch(id){
+        if (!requireTnOwner('reopen matches')) return;
+        normalizeTournament();
+        id = String(id);
+        var holder = null, m = null;
+        allTournamentObjs().forEach(function(o){
+          (o.tn.matches || []).forEach(function(x){ if (x && String(x.id) === id){ holder = o; m = x; } });
+        });
+        var e = (typeof HIST !== 'undefined' && HIST) ? HIST[id] : null;
+        if (!m && !e){ toast('That match could not be found'); return; }
+        var isAb = !!((m && (m.abandoned || /abandon/i.test(m.resultText || ''))) || (e && e.abandoned));
+        if (!isAb){ toast('Only an abandoned match can be reopened'); return; }
+        var firstInn = (m && m.innings && m.innings[0]) || (e && e.innings && e.innings[0]) || null;
+        var teamA = (m && m.teamA) || (e && e.teamA) || (firstInn ? (firstInn.battingTeam || '') : '');
+        var teamB = (m && m.teamB) || (e && e.teamB) || (firstInn ? (firstInn.bowlingTeam || '') : '');
+        var label = (teamA || 'Team 1') + ' vs ' + (teamB || 'Team 2');
+        askVerify('Reopen this abandoned match?',
+          label + ' — it will leave Completed and go back to Upcoming Fixtures, ready to be given a new date and scored again. The abandoned record is removed from the tournament results and from Past Matches. This cannot be undone.',
+          function(){
+            var bracketId = (m && m.bracketId) || '';
+            var stage = (m && m.stage) || (e && e.stage) || '';
+            var group = (m && m.group) || (e && e.group) || '';
+            var matchNo = (m && m.matchNo) || (e && e.matchNo) || 0;
+            var venue = (m && m.venue) || (e && e.venue) || '';
+            var tgtTn = holder ? holder.tn : null;
+            if (!tgtTn && e && e.tournamentId){ var to = tournamentForKey(e.tournamentId); if (to) tgtTn = to.tn; }
+            if (!tgtTn) tgtTn = S.tournament;
+            try { doDeleteHistoryMatch(id); } catch(err){}
+            allTournamentObjs().forEach(function(o){
+              var before = (o.tn.matches || []).length;
+              o.tn.matches = (o.tn.matches || []).filter(function(x){ return !(x && String(x.id) === id); });
+              if (o.tn.matches.length !== before && String(S.archivedMatchId) === id) S.archivedMatchId = null;
+            });
+            if (bracketId){
+              var hasFx = (tgtTn.fixtures || []).some(function(f){ return f && f.bracketId === bracketId; });
+              if (!hasFx){
+                var fxB = { id: newFixtureId(), bracketId: bracketId, group: group || '', teamA: teamA, teamB: teamB, label: '', date: '', time: '', venue: venue || '', format: '', ballType: '', scorerEmailHash: '' };
+                if (matchNo) fxB.matchNo = matchNo;
+                tgtTn.fixtures.push(fxB);
+              }
+            } else if (teamA && teamB){
+              var hasFx2 = (tgtTn.fixtures || []).some(function(f){ return f && f.teamA === teamA && f.teamB === teamB && (f.stage || '') === (stage || ''); });
+              if (!hasFx2){
+                tgtTn.fixtures.push({ id: newFixtureId(), teamA: teamA, teamB: teamB, label: '', group: group || '', stage: stage || '', matchNo: matchNo || 0, date: '', time: '', venue: venue || '', overs: (m && m.oversLimit) || null, format: '', wickets: (m && m.wicketsLimit) || 10, ballType: '', scorerEmailHash: '' });
+              }
+            }
+            commit('Match reopened', true);
+            toast('↩ Match reopened — ' + label + ' is back in Upcoming Fixtures');
+          });
       }
       function archiveCurrentMatch(){
         if (!requireLiveOwner('save this result')) return;
@@ -11327,7 +11520,10 @@
         if (!bm) return null;
         var found = null;
         S.tournament.matches.forEach(function(m){
-          if (m && m.bracketId === bm.id && m.innings && m.innings.length >= 2) found = m;
+          /* An abandoned match decides nothing: its record is
+             filed as Completed, but the bracket slot stays open
+             until the match is reopened and actually played. */
+          if (m && m.bracketId === bm.id && m.innings && m.innings.length >= 2 && !m.abandoned && !/abandon/i.test(m.resultText || '')) found = m;
         });
         if (!found) return null;
         var w = matchWinner(found);
@@ -11378,7 +11574,7 @@
         }
         var found = null;
         tn.matches.forEach(function(m){
-          if (m && m.stage === 'F' && m.innings && m.innings.length >= 2) found = m;
+          if (m && m.stage === 'F' && m.innings && m.innings.length >= 2 && !m.abandoned && !/abandon/i.test(m.resultText || '')) found = m;
         });
         if (!found) return null;
         var w = matchWinner(found);
@@ -12193,6 +12389,7 @@
         if (stateChanged) commit('Match returned to its own tournament', true);
         try { repairHistoryInfoFields(); } catch(e){}
         try { repairOrphanedTournamentResults(); } catch(e){}
+        try { repairAbandonedTournamentResults(); } catch(e){}
       }
       /* Toss facts the owner supplied himself for matches whose
          own records lost them (v228). The BBEPL-2 Final's history
@@ -12337,6 +12534,71 @@
          this changes nothing. Nothing is deleted and no match is
          duplicated — the entry is keyed by the match's own id,
          the one every list already shows once. */
+      /* Abandoned tournament matches belong in their tournament's
+         results as COMPLETED matches (see
+         saveAbandonedToTournamentCore), but a match abandoned
+         before that filing existed — the BBEPL-3 Final is one —
+         sits only in the permanent History, invisible in its
+         tournament's Matches list: its fixture was consumed when
+         the match started and no result was ever saved. This
+         repair files every such abandoned History entry into its
+         own tournament's results, exactly once — the record is
+         keyed by the match's own id, and a tournament that already
+         holds a copy is left alone. The record carries the
+         abandoned flag, so the points table, the statistics, the
+         bracket and the podium keep skipping it; it only takes
+         its place in Completed. A bracket mirror fixture still
+         naming this pairing identifies the record's bracket slot.
+         Idempotent, owner-side only, under the same guards as the
+         orphaned-results repair below. */
+      function repairAbandonedTournamentResults(){
+        if (!S || typeof HIST === 'undefined' || !HIST) return;
+        if (isViewerSession() || !histCanManage()) return;
+        if (!histSyncedOnce) return;
+        if (!currentUid()) return;
+        if (tnViewCtx) return;
+        var changed = false;
+        Object.keys(HIST).forEach(function(id){
+          var e = HIST[id];
+          if (!e || !e.abandoned || e.matchKind !== 'tournament') return;
+          if (histGone[id]) return;
+          var tgt = e.tournamentId ? tournamentForKey(e.tournamentId) : null;
+          if (!tgt && e.tournamentName){
+            var byName = [];
+            allTournamentObjs().forEach(function(o){ if (((o.tn.name || '').trim()) === e.tournamentName) byName.push(o); });
+            if (byName.length === 1) tgt = byName[0];
+          }
+          if (!tgt) return;
+          var tn = tgt.tn;
+          var has = false;
+          (tn.matches || []).forEach(function(m){ if (m && String(m.id) === String(id)) has = true; });
+          if (has) return;
+          var bracketId = '';
+          (tn.fixtures || []).forEach(function(f){
+            if (bracketId || !f || !f.bracketId) return;
+            if ((f.teamA === e.teamA && f.teamB === e.teamB) || (f.teamA === e.teamB && f.teamB === e.teamA)) bracketId = f.bracketId;
+          });
+          var mid = /^\d+$/.test(String(id)) ? parseInt(id, 10) : id;
+          tn.matches.push({
+            id: mid, at: e.at || parseInt(id, 10) || Date.now(), manual: false,
+            tournamentId: tournamentKeyOf(tn),
+            teamA: e.teamA || '', teamB: e.teamB || '',
+            oversLimit: (typeof e.oversLimit === 'number') ? e.oversLimit : null,
+            wicketsLimit: (typeof e.wicketsLimit === 'number') ? e.wicketsLimit : 10,
+            venue: e.venue || '',
+            innings: deep(e.innings || []),
+            resultText: e.resultText || 'Match abandoned.',
+            abandoned: true, winner: null,
+            bracketId: bracketId,
+            group: e.group || '', stage: e.stage || '', matchNo: (typeof e.matchNo === 'number') ? e.matchNo : 0,
+            superOver: deep(e.superOver || null),
+            potmName: e.potmName || '', potmTeam: e.potmTeam || '', potmPid: e.potmPid || '',
+            players: deep(e.players || []), playerIds: deep(e.playerIds || [])
+          });
+          changed = true;
+        });
+        if (changed) commit('Abandoned matches filed as completed', true);
+      }
       function repairOrphanedTournamentResults(){
         if (!S || typeof HIST === 'undefined' || !HIST) return;
         if (isViewerSession() || !histCanManage()) return;  /* viewers never write */
@@ -12559,6 +12821,21 @@
         S.tournament.teams.forEach(function(n){ rowFor(n); });
         tournamentStatMatches().forEach(function(m){
           if (!m.innings || m.innings.length < 2) return;
+          /* An abandoned match has NO result: it never counts in
+             any points table — no played match, no points, and
+             above all no runs or overs in the NRR columns. The
+             live record already steps aside for an abandoned
+             match and the save path refuses to file one, but a
+             record that still reaches the table — filed by an
+             older build, restored from its History entry, or
+             carrying the abandonment only in its result text
+             ("Match abandoned.") — must not quietly move the
+             group table's NRR with whatever innings were scored
+             before play stopped. The match keeps its place
+             everywhere else it belongs (its History entry, the
+             score as it stood) — only the table skips it. */
+          if (m.abandoned) return;
+          if (m.resultText && /abandon/i.test(m.resultText)) return;
           /* Knockout matches never count in any points table —
              the table is the group stage only. A result is a
              knockout match when it was played from the knockout
@@ -12669,6 +12946,13 @@
            updates these tables at once — the same figures the
            player profiles already show live. */
         tournamentStatMatches().forEach(function(m){
+          /* An abandoned match counts nowhere in the tournament
+             statistics either (mirroring computePoints): it is
+             filed as a Completed match so it shows in the Matches
+             list, but it has no result, and the figures scored
+             before play stopped belong to no one's tournament
+             record here. */
+          if (m.abandoned || (m.resultText && /abandon/i.test(m.resultText))) return;
           (m.innings || []).forEach(function(inn){
             /* Players are keyed by Player ID, never by name alone:
                two different players who share a name hold different
@@ -12739,6 +13023,7 @@
            far (even a first innings still in progress), so they
            move ball by ball while it is being scored. */
         tournamentStatMatches().forEach(function(m){
+          if (m.abandoned || (m.resultText && /abandon/i.test(m.resultText))) return; /* abandoned: filed as Completed, counted nowhere (see computePoints) */
           (m.innings || []).forEach(function(inn){ totalRuns += inn.runs; totalWkts += inn.wickets; });
           if (!m.innings || m.innings.length < 2) return;
           if (m.live && !liveRecordDecided(m)) return;
@@ -12826,6 +13111,7 @@
           return s;
         }
         tournamentStatMatches().forEach(function(m){
+          if (m.abandoned || (m.resultText && /abandon/i.test(m.resultText))) return; /* abandoned: filed as Completed, counted nowhere (see computePoints) */
           (m.innings || []).forEach(function(inn){
             var deliveries = (inn.balls || []).filter(function(x){ return x && !x.evt; });
             var hasBalls = deliveries.length > 0;
@@ -14931,7 +15217,12 @@
         var venueLine = $('tnVenueLine'); if (venueLine) venueLine.textContent = (tn.venue && tn.venue.trim()) ? tn.venue.trim() : '';
         var datesLine = $('tnDatesLine'); if (datesLine) datesLine.textContent = tnDatesText(tn);
         var meta = $('tnMetaLine');
-        if (meta) meta.textContent = (tn.season ? 'Season ' + tn.season + '  •  ' : '') + tn.teams.length + (tn.teams.length===1 ? ' Team' : ' Teams') + '  •  ' + tn.matches.length + (tn.matches.length===1 ? ' Match' : ' Matches') + ' completed  •  ' + tn.fixtures.length + (tn.fixtures.length===1 ? ' Fixture' : ' Fixtures') + ' upcoming';
+        /* The upcoming count counts the fixtures the Matches list
+           actually shows as upcoming — a fixture whose match
+           already has a saved result (decided, or abandoned and
+           filed as Completed) is not upcoming any more. */
+        var upFxCount = tn.fixtures.filter(function(f){ return !bkFixtureDecided(f) && !fixtureHasResult(f); }).length;
+        if (meta) meta.textContent = (tn.season ? 'Season ' + tn.season + '  •  ' : '') + tn.teams.length + (tn.teams.length===1 ? ' Team' : ' Teams') + '  •  ' + tn.matches.length + (tn.matches.length===1 ? ' Match' : ' Matches') + ' completed  •  ' + upFxCount + (upFxCount===1 ? ' Fixture' : ' Fixtures') + ' upcoming';
         /* The ball-type mark under the Share / More buttons: the
            tennis ball for a Tennis Ball tournament, a red leather
            ball for a Leather Ball one, nothing while unset. */
@@ -16529,15 +16820,26 @@
         var finMatchId = finResNow ? finResNow.match.id : null;
         tn.matches.slice().reverse().forEach(function(m){
           var inns = m.innings || [];
-          var title = inns.length ? tnVsTitleHTML(inns[0].battingTeam, inns[0].bowlingTeam || ((inns[1] || {}).battingTeam || '')) : '';
+          /* An abandoned match is a Completed match: it renders
+             here, with its "Match abandoned." line — never in
+             Upcoming. A match abandoned before a ball was bowled
+             may carry no innings at all, so the title falls back
+             to the record's own teams. */
+          var mAb = !!(m.abandoned || (m.resultText && /abandon/i.test(m.resultText)));
+          var title = inns.length ? tnVsTitleHTML(inns[0].battingTeam || m.teamA || '', inns[0].bowlingTeam || ((inns[1] || {}).battingTeam || '') || m.teamB || '') : (m.teamA ? tnVsTitleHTML(m.teamA, m.teamB || '') : '');
           /* The deciding Final carries its badge; in a
              bracket-less tournament any saved result can be
              designated the Final (or un-designated) here, which
              is what fills the podium on the Home tab. With a
-             bracket, its own Final decides — no marking. */
-          var finBtn = tn.bracket ? '' : (m.stage === 'F'
+             bracket, its own Final decides — no marking. An
+             abandoned match is never marked: it decided nothing. */
+          var finBtn = (tn.bracket || mAb) ? '' : (m.stage === 'F'
             ? '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',false)">Unmark Final</button>'
             : '<button class="btn ghost sm" onclick="setResultFinal(' + m.id + ',true)">Mark as Final</button>');
+          /* The admin's way back for an abandoned match: reopen
+             it, and it returns to Upcoming Fixtures to be
+             scheduled and played (see reopenAbandonedMatch). */
+          var reopenBtn = mAb ? '<button class="btn ghost sm" onclick="reopenAbandonedMatch(' + fxIdArg(String(m.id)) + ')">↩ Reopen Match</button>' : '';
           var mGrp = null;
           try { mGrp = matchGroupName(m); } catch(e){}
           out.push('<div class="match-row tap"' + mlTapAttrs('tnResultRowTap(' + fxIdArg(String(m.id)) + ',event)', 'Open match result') + '>'
@@ -16546,11 +16848,11 @@
             + stageLabelHTML(matchStageSegs(m))
             + tnInnLinesHTML(m)
             + '<div class="mr-result">' + esc(matchResultText(m)) + '</div>'
-            + '<div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + finBtn + '</div></div>');
+            + '<div class="rowflex" style="margin-top:8px"><button class="btn ghost sm" onclick="removeArchivedMatch(' + m.id + ')">Remove Result</button>' + reopenBtn + finBtn + '</div></div>');
         });
         /* Upcoming fixtures. */
         tn.fixtures.forEach(function(f){
-          if (bkFixtureDecided(f)) return; /* a decided knockout match's mirror fixture is no longer upcoming */
+          if (bkFixtureDecided(f) || fixtureHasResult(f)) return; /* a knockout match with a saved result — decided or abandoned — is no longer upcoming */
           var fGrp = null;
           try { fGrp = matchGroupName(f); } catch(e){}
           out.push('<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '>'
@@ -16595,7 +16897,7 @@
           sbBatHtml = battingStatsHTML();
           sbBowlHtml = bowlingStatsHTML();
           sbExtraHtml = extraStatsHTML();
-          var dFix = dtn.fixtures.filter(function(f){ return !bkFixtureDecided(f); });
+          var dFix = dtn.fixtures.filter(function(f){ return !bkFixtureDecided(f) && !fixtureHasResult(f); });
           sbFixHtml = dFix.length
             ? dFix.map(function(f){ return '<div class="match-row tap"' + mlTapAttrs('openFixtureMatch(\'tournament\',' + fxIdArg(f.id) + ',event)', 'Open fixture: ' + f.teamA + ' vs ' + f.teamB) + '><div class="mr-score num">' + esc(f.teamA) + ' vs ' + esc(f.teamB) + '</div>' + stageLabelHTML(matchStageSegs(f)) + ((f.date || f.time) ? '<div class="note">' + esc([f.date ? fmtDateShort(f.date) : '', f.time || ''].filter(Boolean).join(' • ')) + '</div>' : '') + (fixtureIdChipHTML(f) ? '<div style="margin-top:6px">' + fixtureIdChipHTML(f) + '</div>' : '') + '</div>'; }).join('')
             : '<p class="note">No fixtures yet.</p>';
@@ -23562,6 +23864,422 @@
         }
       }
 
+      /* ============================================================
+         SCORECARD PLAYER EDITOR — replacing a wrongly-added player
+         The owner opens it from Edit Match (Replace Player), from
+         the Replace Player button at the foot of the archived
+         match's Summary tab, or from the ⇄ icon on a scorecard row
+         in Edit Mode. Step 1 picks the player who was added by
+         mistake; step 2 picks the correct player from a list that
+         shows every candidate's Player ID beside his name — the
+         whole point: two players can share the name "Md. Ashraful
+         Alam", and only the ID tells them apart; step 3 is a
+         confirmation page showing both players with their IDs and
+         exactly what moves. Applying rewrites the ball record and
+         the stored cards of this match so every batting, bowling
+         and fielding mention of the wrong player becomes the
+         correct player — identity matched by Player ID wherever a
+         record carries one, so a different same-named player is
+         never touched — then replays each innings through the same
+         beReplayInnings the ball editor uses and saves through
+         beApplySave, so the scorecard, the result, the tournament
+         copies, the points and statistics and BOTH players' career
+         records all follow, while the team totals cannot change
+         (a replacement moves figures between players, never runs
+         between teams). The entry's players / playerIds snapshots
+         are re-pointed too, and when the two share one name the
+         live registry mapping for that team + name is corrected as
+         well, so the scorer's next pick resolves to the right man.
+         Gated exactly like Edit Balls: match owner only.
+         ============================================================ */
+      var peCtx = null;   /* { id, entry, step, players, wrong, cands, repl, query } */
+
+      function peMatchPlayers(e){
+        var list = [], map = {};
+        function nameForPid(pid){
+          var found = '';
+          (Array.isArray(e.players) ? e.players : []).forEach(function(p){ if (!found && p && p.id === pid) found = p.name || ''; });
+          return found;
+        }
+        function add(name, team, pid, role, fig){
+          if (!name && pid) name = nameForPid(pid);
+          if (!name) return;
+          if (!pid) pid = entryPlayerId(e, team || '', name);
+          /* Keyed by ID + team: one player belongs to one team in
+             a match, so the same ID appearing under both teams is
+             the scorer's mistake itself — two rows, and replacing
+             one moves only that team's records. */
+          var key = pid ? ('id|' + pid + '|' + (team || '')) : ('tn|' + (team || '') + '|' + name);
+          var r = map[key];
+          if (!r){ r = { pid: pid || '', name: name, team: team || '', roles: [], batFig: '', bowlFig: '', fieldFig: 0 }; map[key] = r; list.push(r); }
+          if (role && r.roles.indexOf(role) === -1) r.roles.push(role);
+          if (fig && role === 'Batting') r.batFig = fig;
+          if (fig && role === 'Bowling') r.bowlFig = fig;
+          if (role === 'Fielding') r.fieldFig++;
+        }
+        function scan(inn){
+          if (!inn) return;
+          (inn.batters || []).forEach(function(b){
+            if (!b || !b.name) return;
+            add(b.name, inn.battingTeam, b.pid, 'Batting', b.runs + ' (' + b.balls + ')');
+            if (b.fielderName || b.fielderPid) add(b.fielderName, inn.bowlingTeam, b.fielderPid, 'Fielding');
+            if (b.fielder2Name || b.fielder2Pid) add(b.fielder2Name, inn.bowlingTeam, b.fielder2Pid, 'Fielding');
+          });
+          (inn.bowlers || []).forEach(function(b){
+            if (!b || !b.name) return;
+            add(b.name, inn.bowlingTeam, b.pid, 'Bowling', oversText(b.balls) + ' ov, ' + b.wickets + '/' + b.runs);
+          });
+        }
+        (e.innings || []).forEach(scan);
+        if (e.superOver && Array.isArray(e.superOver.innings)) e.superOver.innings.forEach(scan);
+        return list;
+      }
+      function peCandidates(e, wrong){
+        var out = [], seen = {};
+        var inMatch = {};
+        peMatchPlayers(e).forEach(function(r){ if (r.pid) inMatch[r.pid] = 1; });
+        function add(pid, name, team, badge){
+          if (!name) return;
+          pid = pid || '';
+          if (pid && wrong.pid && pid === wrong.pid) return; /* never offer the wrong player himself */
+          if (!pid && name === wrong.name && team === wrong.team) return;
+          var key = pid ? ('id|' + pid) : ('tn|' + (team || '') + '|' + name);
+          if (seen[key]) return;
+          seen[key] = 1;
+          out.push({ pid: pid, name: name, team: team || '', badge: badge || (pid && inMatch[pid] ? 'In this match' : '') });
+        }
+        (e.squadA || []).forEach(function(n){ add(entryPlayerId(e, e.teamA || '', n), n, e.teamA || '', 'Squad'); });
+        (e.squadB || []).forEach(function(n){ add(entryPlayerId(e, e.teamB || '', n), n, e.teamB || '', 'Squad'); });
+        peMatchPlayers(e).forEach(function(r){ add(r.pid, r.name, r.team, 'In this match'); });
+        knownPlayers().forEach(function(p){ add(p.id, p.name, (p.teams || [])[0] || '', ''); });
+        out.sort(function(a, b){
+          var sa = (a.team === wrong.team ? 0 : 2) + (a.badge ? 0 : 1), sb = (b.team === wrong.team ? 0 : 2) + (b.badge ? 0 : 1);
+          if (sa !== sb) return sa - sb;
+          return a.name.localeCompare(b.name);
+        });
+        return out;
+      }
+      function peAvatarHTML(team, name, pid){
+        var d = { photo: '' };
+        try { d = profileDataFor(team || '', name || '', pid || ''); } catch(e){}
+        if (d.photo) return '<img class="pe-ava" src="' + esc(d.photo) + '" alt="" loading="lazy" />';
+        return '<span class="pe-ava pe-ava-init" aria-hidden="true">' + esc(initialsOf(name || '')) + '</span>';
+      }
+      function peRowHTML(p, onclick, badge){
+        var e = peCtx.entry;
+        var sub = [];
+        if (p.team) sub.push(esc(p.team));
+        if (p.roles && p.roles.length) sub.push(esc(p.roles.join(' • ')));
+        if (p.batFig) sub.push('Bat ' + esc(p.batFig));
+        if (p.bowlFig) sub.push('Bowl ' + esc(p.bowlFig));
+        if (p.fieldFig) sub.push(p.fieldFig + (p.fieldFig === 1 ? ' fielding dismissal' : ' fielding dismissals'));
+        return '<button type="button" class="pe-row" onclick="' + onclick + '">'
+          + peAvatarHTML(p.team, p.name, p.pid)
+          + '<span class="pe-main"><span class="pe-name">' + esc(dispIn(e.nicknames, p.team, p.name)) + '</span>'
+          + (sub.length ? '<span class="pe-sub">' + sub.join(' • ') + '</span>' : '')
+          + '</span>'
+          + (badge ? '<span class="pe-badge play">' + esc(badge) + '</span>' : '')
+          + (p.pid ? '<span class="pe-id">ID ' + esc(pidShort(p.pid)) + '</span>' : '')
+          + '</button>';
+      }
+      function openPlayerEditorFromDetails(){
+        var id = histEditId;
+        if (!id) return;
+        closeHistoryEdit();
+        openPlayerEditor(id);
+      }
+      function openPlayerEditor(id, preset){
+        id = String(id);
+        var e = HIST[id]; if (!e) return;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can replace a player'); return; }
+        var players = peMatchPlayers(e);
+        if (!players.length){ toast('This match has no players on its scorecard'); return; }
+        peCtx = { id: id, entry: e, step: 1, players: players, wrong: null, cands: [], repl: null, query: '' };
+        var sub = $('peSub'); if (sub) sub.textContent = (e.teamA || '—') + ' v ' + (e.teamB || '—');
+        if (preset && preset.name){
+          for (var i = 0; i < players.length; i++){
+            var p = players[i];
+            if ((preset.pid && p.pid && p.pid === preset.pid) || (p.name === preset.name && p.team === preset.team)){ peCtx.wrong = p; break; }
+          }
+          if (peCtx.wrong){ peCtx.step = 2; peCtx.cands = peCandidates(e, peCtx.wrong); }
+        }
+        peRender();
+        var m = $('playerEditModal'); if (m) m.classList.add('show');
+      }
+      function closePlayerEditor(){
+        peCtx = null;
+        var m = $('playerEditModal'); if (m) m.classList.remove('show');
+      }
+      function peRender(){
+        if (!peCtx) return;
+        var t = $('peTitle'); if (t) t.textContent = peCtx.step === 3 ? '👥 Confirm Replacement' : '👥 Replace Player';
+        var body = $('peBody'); if (!body) return;
+        body.innerHTML = peCtx.step === 1 ? peStep1HTML() : (peCtx.step === 2 ? peStep2HTML() : peStep3HTML());
+      }
+      function peStep1HTML(){
+        var h = '<div class="pe-info">A player was added to this match by mistake? Pick him below, then pick the correct player — every batting, bowling and fielding record of his in this match moves to the correct player, matched by <b>Player ID</b>. The team score does not change, and the correction shows in tournament statistics and both players&rsquo; career records.</div>';
+        h += '<div class="pe-step">1. Who was added by mistake?</div>';
+        h += peCtx.players.map(function(p, i){ return peRowHTML(p, 'pePickWrong(' + i + ')', ''); }).join('');
+        h += '<div class="rowflex" style="margin-top:12px"><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
+        return h;
+      }
+      function pePickWrong(i){
+        if (!peCtx) return;
+        peCtx.wrong = peCtx.players[i];
+        peCtx.cands = peCandidates(peCtx.entry, peCtx.wrong);
+        peCtx.query = '';
+        peCtx.step = 2;
+        peRender();
+      }
+      function peStep2HTML(){
+        var w = peCtx.wrong, e = peCtx.entry;
+        var h = '<div class="pe-step">2. Who is the correct player?</div>';
+        h += peRowHTML(w, 'peBackToStep1()', '');
+        h += '<div class="pe-info">Tap the correct player below. Players with the same name are listed separately — check the <b>Player ID</b> and the team to pick the right one. His records in this match will carry the picked player&rsquo;s ID.</div>';
+        h += '<input id="peSearch" class="pe-search" type="text" placeholder="Search by name or Player ID…" autocomplete="off" value="' + esc(peCtx.query || '') + '" oninput="peSetQuery(this.value)" />';
+        h += '<div id="peCandList" style="margin-top:10px">' + peCandListHTML() + '</div>';
+        h += '<div class="pe-info" style="margin-top:14px">Not in the list? Type his full name — he is added as a player of ' + esc(w.name ? w.team : '') + ' and the records move to him.'
+          + '<div class="rowflex" style="margin-top:9px"><input id="peNewName" type="text" placeholder="Correct player&rsquo;s full name" autocomplete="off" style="flex:1;min-width:0" /><button type="button" class="btn sm" onclick="pePickNew()">Use This Name</button></div></div>';
+        h += '<div class="rowflex" style="margin-top:12px"><button type="button" class="btn ghost" onclick="peBackToStep1()">← Back</button><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
+        return h;
+      }
+      function peCandListHTML(){
+        var q = String(peCtx.query || '').trim().toLowerCase();
+        var qid = q.replace(/[\s\-]/g, '');
+        var list = peCtx.cands.filter(function(c){
+          if (!q) return true;
+          if (c.name.toLowerCase().indexOf(q) > -1) return true;
+          return qid.length >= 2 && pidShort(c.pid).toLowerCase().replace(/[\s\-]/g, '').indexOf(qid) > -1;
+        });
+        if (!list.length) return '<p style="padding:10px 4px;color:var(--muted)">No player matches that search.</p>';
+        return list.map(function(c){
+          var gi = peCtx.cands.indexOf(c);
+          return peRowHTML({ pid: c.pid, name: c.name, team: c.team }, 'pePickRepl(' + gi + ')', c.badge);
+        }).join('');
+      }
+      function peSetQuery(v){
+        if (!peCtx) return;
+        peCtx.query = v;
+        var host = $('peCandList'); if (host) host.innerHTML = peCandListHTML();
+      }
+      function pePickRepl(i){
+        if (!peCtx) return;
+        var c = peCtx.cands[i]; if (!c) return;
+        peCtx.repl = { pid: c.pid || '', name: c.name, team: c.team || '', isNew: false };
+        peCtx.step = 3;
+        peRender();
+      }
+      function pePickNew(){
+        if (!peCtx) return;
+        var el = $('peNewName');
+        var name = el ? el.value.trim() : '';
+        if (!name){ toast('Type the correct player\u2019s full name first'); return; }
+        if (name === peCtx.wrong.name){ toast('That is the same name — pick the other player with this name from the list, where his Player ID tells them apart'); return; }
+        peCtx.repl = { pid: '', name: name, team: peCtx.wrong.team, isNew: true };
+        peCtx.step = 3;
+        peRender();
+      }
+      function peBackToStep1(){
+        if (!peCtx) return;
+        peCtx.step = 1; peCtx.repl = null;
+        peRender();
+      }
+      function peBackToStep2(){
+        if (!peCtx) return;
+        peCtx.step = 2;
+        peRender();
+      }
+      function peCardHTML(label, cls, p, figLines){
+        var sub = [];
+        if (p.team) sub.push(esc(p.team));
+        (figLines || []).forEach(function(f){ if (f) sub.push(esc(f)); });
+        return '<div class="pe-card ' + cls + '"><div class="pe-lab">' + label + '</div>'
+          + '<div style="display:flex;align-items:center;gap:11px">' + peAvatarHTML(p.team, p.name, p.pid)
+          + '<span class="pe-main"><span class="pe-name">' + esc(dispIn(peCtx.entry.nicknames, p.team, p.name)) + '</span>'
+          + (sub.length ? '<span class="pe-sub">' + sub.join(' • ') + '</span>' : '') + '</span>'
+          + (p.pid ? '<span class="pe-id">ID ' + esc(pidShort(p.pid)) + '</span>' : '') + '</div></div>';
+      }
+      function peStep3HTML(){
+        var w = peCtx.wrong, r = peCtx.repl;
+        var wFig = [];
+        if (w.batFig) wFig.push('Batting ' + w.batFig);
+        if (w.bowlFig) wFig.push('Bowling ' + w.bowlFig);
+        if (w.fieldFig) wFig.push(w.fieldFig + (w.fieldFig === 1 ? ' fielding dismissal' : ' fielding dismissals'));
+        var h = peCardHTML('Wrong player — records move away from him', 'from', w, wFig);
+        h += '<div class="pe-arrow">⬇ replaced by ⬇</div>';
+        h += peCardHTML('Correct player — records move to him', 'to', r, r.isNew ? ['New player — his Player ID is created for ' + w.team + ' when you confirm'] : []);
+        h += '<ul class="pe-moves">'
+          + '<li>His batting, bowling and fielding records in <b>this match</b> move to the correct player, by Player ID.</li>'
+          + '<li>They are removed from the wrong player — his career and tournament statistics lose them, the correct player&rsquo;s gain them.</li>'
+          + '<li>The team scores, the result and the points do not change.</li>'
+          + (peCtx.entry.potmName && peCtx.entry.potmName === w.name && peCtx.entry.potmTeam === w.team ? '<li>He is this match&rsquo;s Player of the Match — the award moves to the correct player too.</li>' : '')
+          + '</ul>';
+        h += '<div class="rowflex" style="margin-top:16px"><button type="button" class="btn" onclick="peConfirm()">✓ Replace Player</button><button type="button" class="btn ghost" onclick="peBackToStep2()">← Back</button><button type="button" class="btn ghost" onclick="closePlayerEditor()">Cancel</button></div>';
+        return h;
+      }
+      /* Rewrite one innings object in place: every mention of the
+         wrong player becomes the correct player. Ball records match
+         by name within the innings' team context (a delivery only
+         ever names a player of the batting / bowling side), while
+         records that carry a Player ID match by ID — an ID that
+         belongs to a DIFFERENT same-named player blocks the name
+         match, so the other man is never touched. */
+      function peRewriteInnings(inn, e, wrong, repl){
+        if (!inn) return;
+        var batT = (inn.battingTeam || '') === wrong.team, bowlT = (inn.bowlingTeam || '') === wrong.team;
+        function idOk(pid){ return !pid || !wrong.pid || pid === wrong.pid; }
+        function isWrong(name, pid){ return !!name && name === wrong.name && idOk(pid); }
+        (inn.batters || []).forEach(function(b){
+          if (!b) return;
+          if (batT && isWrong(b.name, b.pid)){ b.name = repl.name; b.pid = repl.pid; }
+          /* Fielding belongs to the bowling side: only this
+             innings' bowling team's fielding records can be the
+             wrong player's — the same ID fielding for the OTHER
+             team is that player's own legitimate record. */
+          if (bowlT && ((wrong.pid && b.fielderPid === wrong.pid) || (b.fielderName === wrong.name && idOk(b.fielderPid)))){ b.fielderName = repl.name; b.fielderPid = repl.pid; }
+          if (bowlT && ((wrong.pid && b.fielder2Pid === wrong.pid) || (b.fielder2Name === wrong.name && idOk(b.fielder2Pid)))){ b.fielder2Name = repl.name; b.fielder2Pid = repl.pid; }
+        });
+        (inn.bowlers || []).forEach(function(b){
+          if (b && bowlT && isWrong(b.name, b.pid)){ b.name = repl.name; b.pid = repl.pid; }
+        });
+        if (batT && inn.striker === wrong.name) inn.striker = repl.name;
+        if (batT && inn.nonStriker === wrong.name) inn.nonStriker = repl.name;
+        if (bowlT && inn.bowler === wrong.name) inn.bowler = repl.name;
+        (inn.balls || []).forEach(function(rec){
+          if (!rec) return;
+          if (rec.evt){
+            if (rec.evt === 'start'){
+              if (batT && rec.who === wrong.name) rec.who = repl.name;
+              if (batT && rec.ns === wrong.name) rec.ns = repl.name;
+              if (bowlT && rec.bw === wrong.name) rec.bw = repl.name;
+            } else if (rec.evt === 'crease'){ if (batT && rec.who === wrong.name) rec.who = repl.name; }
+            else if (rec.evt === 'attack'){ if (bowlT && rec.who === wrong.name) rec.who = repl.name; }
+            else if (rec.evt === 'note' && batT && rec.text && rec.text.indexOf(wrong.name + ' retired') === 0){
+              rec.text = repl.name + rec.text.slice(wrong.name.length);
+              if (rec.outName === wrong.name) rec.outName = repl.name;
+            }
+            return;
+          }
+          var fCh = false, bCh = false;
+          if (batT && rec.batter === wrong.name) rec.batter = repl.name;
+          if (batT && rec.outName === wrong.name) rec.outName = repl.name;
+          if (bowlT && rec.bowler === wrong.name){ rec.bowler = repl.name; bCh = true; }
+          if (bowlT && ((wrong.pid && rec.fielderPid === wrong.pid) || (rec.fielderName === wrong.name && idOk(rec.fielderPid)))){ rec.fielderName = repl.name; rec.fielderPid = repl.pid; fCh = true; }
+          if (bowlT && ((wrong.pid && rec.fielder2Pid === wrong.pid) || (rec.fielder2Name === wrong.name && idOk(rec.fielder2Pid)))){ rec.fielder2Name = repl.name; rec.fielder2Pid = repl.pid; fCh = true; }
+          /* The dismissal line names the fielder and the bowler:
+             rebuild it from the corrected identities, exactly as a
+             ball correction does, so no stale name survives. */
+          if (rec.wkt && rec.dismissal && (fCh || bCh) && repl.name !== wrong.name){
+            try { rec.howOut = dismissalHowOut(rec.dismissal, rec.fielderName || '', dispIn(e.nicknames, inn.bowlingTeam, rec.bowler || ''), rec.fielder2Name || ''); } catch(err){}
+          }
+        });
+      }
+      /* Re-point the entry's players / playerIds snapshots at the
+         correct player: the wrong player's snapshot record goes
+         (unless he still genuinely appears), the correct player's
+         arrives, and the (team, name) mappings follow the corrected
+         innings records — the same merge stampHistEntryPids runs. */
+      function peRefreshSnapshots(e, wrong, repl, allInns){
+        var referenced = {};
+        allInns.forEach(function(inn){
+          if (!inn) return;
+          (inn.batters || []).forEach(function(b){ if (!b) return; if (b.pid) referenced[b.pid] = 1; if (b.fielderPid) referenced[b.fielderPid] = 1; if (b.fielder2Pid) referenced[b.fielder2Pid] = 1; });
+          (inn.bowlers || []).forEach(function(b){ if (b && b.pid) referenced[b.pid] = 1; });
+        });
+        if (e.potmPid) referenced[e.potmPid] = 1;
+        var players = (Array.isArray(e.players) ? e.players : []).filter(function(p){ return p && p.id && (p.id !== wrong.pid || referenced[p.id]); });
+        if (repl.pid && !players.some(function(p){ return p.id === repl.pid; })){
+          var rp = null;
+          try { rp = personAnywhere(repl.pid); } catch(err){}
+          players.push(rp ? { id: rp.id, name: rp.name, role: rp.role || '', jersey: rp.jersey || '', nickname: rp.nickname || '' } : { id: repl.pid, name: repl.name });
+        }
+        e.players = players;
+        var mMap = {};
+        (Array.isArray(e.playerIds) ? e.playerIds : []).forEach(function(m){ if (m && m.n && m.id) mMap[(m.t || '') + '|' + m.n + '|' + m.id] = m; });
+        allInns.forEach(function(inn){
+          if (!inn) return;
+          [[inn.batters, inn.battingTeam], [inn.bowlers, inn.bowlingTeam]].forEach(function(pair){
+            (pair[0] || []).forEach(function(b){
+              if (!b || !b.name || !b.pid) return;
+              var k = (pair[1] || '') + '|' + b.name + '|' + b.pid;
+              if (!mMap[k]) mMap[k] = { t: pair[1] || '', n: b.name, id: b.pid };
+            });
+          });
+        });
+        e.playerIds = Object.keys(mMap).map(function(k){ return mMap[k]; });
+        e._pidV = 2;
+      }
+      function peConfirm(){
+        if (!peCtx || !peCtx.wrong || !peCtx.repl) return;
+        var e = peCtx.entry, id = peCtx.id, wrong = peCtx.wrong;
+        if (!histEntryDeletable(e)){ toast('Only the match owner can replace a player'); return; }
+        var repl = { pid: peCtx.repl.pid || '', name: peCtx.repl.name, team: peCtx.repl.team || wrong.team };
+        if (peCtx.repl.isNew || !repl.pid){
+          repl.pid = playerIdFor(wrong.team, repl.name);
+        }
+        if (!repl.pid || repl.pid === wrong.pid){ toast('That is the same player — pick a different one'); return; }
+        /* The entry's (team, wrong name) mapping now resolves to the
+           correct player, so the replay below stamps his ID. */
+        if (Array.isArray(e.playerIds)){
+          e.playerIds = e.playerIds.filter(function(m){ return !(m && m.t === wrong.team && m.n === wrong.name && (!m.id || !wrong.pid || m.id === wrong.pid)); });
+          if (!e.playerIds.some(function(m){ return m && m.t === wrong.team && m.n === repl.name && m.id === repl.pid; })) e.playerIds.push({ t: wrong.team, n: repl.name, id: repl.pid });
+        }
+        /* Player of the Match moves with the records. */
+        var potmChanged = false;
+        if (e.potmName === wrong.name && e.potmTeam === wrong.team && (!e.potmPid || !wrong.pid || e.potmPid === wrong.pid)){
+          e.potmName = repl.name; e.potmPid = repl.pid; potmChanged = true;
+        }
+        /* This match's squad lists name who played: swap the name
+           there too (a same-name swap needs nothing — the name is
+           already his). */
+        if (repl.name !== wrong.name){
+          [['squadA', e.teamA], ['squadB', e.teamB]].forEach(function(pair){
+            if (pair[1] !== wrong.team || !Array.isArray(e[pair[0]])) return;
+            var arr = e[pair[0]], ix = arr.indexOf(wrong.name);
+            if (ix === -1) return;
+            if (arr.indexOf(repl.name) !== -1) arr.splice(ix, 1); else arr[ix] = repl.name;
+          });
+        }
+        /* Rewrite + replay every innings, main and Super Over. The
+           aggregates of BOTH copies are rewritten: an innings with
+           no ball record is returned by the replay untouched, so its
+           stored card must already carry the correct player. */
+        var mainInns = [], soInns = null;
+        (e.innings || []).forEach(function(inn){
+          var work = deep(inn), orig = deep(inn);
+          peRewriteInnings(work, e, wrong, repl);
+          peRewriteInnings(orig, e, wrong, repl);
+          mainInns.push(beReplayInnings(e, work, orig));
+        });
+        var soRec = null;
+        if (e.superOver && Array.isArray(e.superOver.innings) && e.superOver.innings.length){
+          soInns = e.superOver.innings.map(function(inn){
+            var work = deep(inn), orig = deep(inn);
+            peRewriteInnings(work, e, wrong, repl);
+            peRewriteInnings(orig, e, wrong, repl);
+            return beReplayInnings(e, work, orig);
+          });
+          soRec = { id: e.superOver.id, batFirst: e.superOver.batFirst || '', winner: '', resultText: '', innings: soInns, attempts: deep(e.superOver.attempts || []) };
+          var c0 = beSuperOverResult(soRec); soRec.winner = c0.winner; soRec.resultText = c0.resultText;
+        }
+        peRefreshSnapshots(e, wrong, repl, mainInns.concat(soInns || []));
+        /* Save through the ball editor's apply path: History entry,
+           live state, tournament copies and Recent Results all take
+           the corrected innings, with its own sync reporting. */
+        closePlayerEditor();
+        beCtx = { id: id, entry: e, items: [], tab: 0, edit: null, form: null, dirty: true, changedKey: '', changedIdx: -1 };
+        beApplySave(mainInns, soRec);
+        var extra = false;
+        if (potmChanged && syncPotmToTournamentCopy(id, e.potmName, e.potmTeam, e.potmPid)) extra = true;
+        if (repl.name === wrong.name){
+          /* Same name, different man: correct the live registry
+             mapping for this team + name, so the scorer's next pick
+             of that name in this team is the right player. */
+          try { setPlayerMapping(wrong.team, wrong.name, repl.pid); extra = true; } catch(err){}
+        }
+        if (extra) commit('Player replaced', true);
+      }
+
       /* ---------- History & Reports view ---------- */
       function renderHistory(){
         renderHistStatus();
@@ -23796,30 +24514,48 @@
         if (!name) return '';
         return dispName(team, name) + leadSuffix(team, name);
       }
+      /* Edit Mode action cell for one scorecard row (see
+         renderScorecardPanel): a pencil that opens the ball-by-ball
+         editor on this innings, and a replace icon that opens the
+         Scorecard Player Editor with this player picked as the one
+         to replace. Rendered only while the owner has Edit Mode on
+         for an archived match they own — scEditCtx is set for the
+         duration of that one render and cleared right after, so no
+         other surface (live scorecard, Super Over section, viewer)
+         ever shows the icons. The row's identity travels by index
+         into scEditRows, never as a name string in the markup. */
+      function scActCell(kind, inn, rec){
+        if (!scEditCtx || !rec || !rec.name) return '';
+        var idx = scEditRows.length;
+        scEditRows.push({ kind: kind, innIdx: scEditCtx.innIdx, name: rec.name, team: kind === 'bat' ? (inn.battingTeam || '') : (inn.bowlingTeam || ''), pid: rec.pid || '' });
+        return '<td class="sc-acts"><button type="button" class="sc-act" title="Edit — ball by ball" aria-label="Edit this player ball by ball" onclick="peRowEdit(' + idx + ')">✏️</button><button type="button" class="sc-act rep" title="Replace this player with the correct player" aria-label="Replace this player" onclick="peRowReplace(' + idx + ')">⇄</button></td>';
+      }
       function battingTableHTML(inn){
         if (!inn.batters.length) return '<p class="note">No one has batted yet.</p>';
+        var edit = !!scEditCtx, editInn = edit ? scEditCtx.innIdx : -1;
         var rows = inn.batters.map(function(b){
           var isBat = (b.name===inn.striker || b.name===inn.nonStriker) && !b.out;
           var sr = b.balls>0 ? (b.runs/b.balls*100).toFixed(1) : '0.0';
           return '<tr class="'+(b.out?'out':'')+'"><td><span class="'+(isBat?'notout pname':'pname')+'">' + plLink(inn.battingTeam, b.name) + leadSuffix(inn.battingTeam, b.name) + (b.name===inn.striker && !b.out ? ' *':'') + '</span>'
             + (b.out ? '<span class="howout dism">' + esc(dispHowOut(inn.bowlingTeam, b.howOut||'out')) + '</span>' : (isBat ? '<span class="howout">not out</span>' : (b.retiredHurt ? '<span class="howout">retired hurt</span>' : '')))
-            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td></tr>';
+            + '</td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + b.fours + '</td><td class="r">' + b.sixes + '</td><td class="r">' + sr + '</td>' + scActCell('bat', inn, b) + '</tr>';
         }).join('');
         var ex = innExtras(inn);
         var ytb = yetToBatNames(inn);
-        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td></tr>' : '';
-        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + rows + ytbRow
-          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td></tr>'
-          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td></tr>'
+        var ytbRow = ytb.length ? '<tr><td colspan="6"><span class="howout">' + (inningsDone(inn) ? 'Did not bat: ' : 'Yet to bat: ') + ytb.map(function(n){ return plLink(inn.battingTeam, n) + leadSuffix(inn.battingTeam, n); }).join(', ') + '</span></td>' + (edit ? '<td class="sc-acts"></td>' : '') + '</tr>' : '';
+        return '<table><thead><tr><th>Batter</th><th class="r">Runs</th><th class="r">Balls</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th>' + (edit ? '<th class="sc-acts"></th>' : '') + '</tr></thead><tbody>' + rows + ytbRow
+          + '<tr><td>Extras</td><td class="r"><b>' + ex.total + '</b></td><td colspan="4"><span class="exbd">b ' + ex.bye + ', lb ' + ex.legbye + ', w ' + ex.wide + ', nb ' + ex.noball + ', p ' + ex.penalty + '</span></td>' + (edit ? '<td class="sc-acts"></td>' : '') + '</tr>'
+          + '<tr><td><b>Total</b></td><td class="r"><b>' + inn.runs + '/' + inn.wickets + '</b></td><td colspan="4" class="r">(' + oversText(inn.legalBalls) + ' overs)</td>' + (edit ? '<td class="sc-acts"><button type="button" class="sc-act" title="Edit this innings — ball by ball" aria-label="Edit this innings ball by ball" onclick="peEditInnings(' + editInn + ')">✏️</button></td>' : '') + '</tr>'
           + '</tbody></table>';
       }
       function bowlingTableHTML(inn){
         if (!inn.bowlers.length) return '<p class="note">No one has bowled yet.</p>';
+        var edit = !!scEditCtx;
         var rows = inn.bowlers.map(function(b){
           var econ = b.balls>0 ? (b.runs/(b.balls/6)).toFixed(2) : '0.00';
-          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td></tr>';
+          return '<tr><td><span class="pname">' + plLink(inn.bowlingTeam, b.name) + '</span></td><td class="r">' + oversText(b.balls) + '</td><td class="r">' + b.runs + '</td><td class="r"><b>' + b.wickets + '</b></td><td class="r">' + econ + '</td>' + scActCell('bowl', inn, b) + '</tr>';
         }).join('');
-        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        return '<table><thead><tr><th>Bowler</th><th class="r">Overs</th><th class="r">Runs</th><th class="r">Wickets</th><th class="r">Economy</th>' + (edit ? '<th class="sc-acts"></th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table>';
       }
       /* ---------- Scorecard: Fall of Wickets + Partnerships ----------
          Both sections are rebuilt from the stored ball-by-ball record
@@ -23918,6 +24654,25 @@
          match, an archived match and a viewed match all render
          identically. */
       var scInnOpenState = {}, scInnOpenFor = '';
+      /* Scorecard Edit Mode (owner, archived match): scEditCtx is
+         non-null only while renderScorecardPanel builds the tables
+         of an innings in edit mode; scEditRows collects the identity
+         of every row that got action icons in that render. */
+      var scEditMode = false, scEditCtx = null, scEditRows = [], scEditMatchId = '';
+      function toggleScEditMode(){ scEditMode = !scEditMode; renderScorecardPanel(); }
+      function peEditInnings(innIdx){
+        if (!scEditMatchId) return;
+        openBallEditor(scEditMatchId);
+        try { beSetTab(innIdx); } catch(e){}
+      }
+      function peRowEdit(i){
+        var r = scEditRows[i]; if (!r) return;
+        peEditInnings(r.innIdx);
+      }
+      function peRowReplace(i){
+        var r = scEditRows[i]; if (!r || !scEditMatchId) return;
+        openPlayerEditor(scEditMatchId, { name: r.name, team: r.team, pid: r.pid });
+      }
       function toggleScInn(idx){
         var sec = $('scInn' + idx); if (!sec) return;
         var open = !sec.classList.contains('open');
@@ -23939,13 +24694,27 @@
         if (S.prevInnings) inns.push(S.prevInnings);
         if (S.current) inns.push(S.current);
         inns = inns.filter(function(inn){ return !!inn && (((inn.batters || []).length > 0) || ((inn.bowlers || []).length > 0) || inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0); });
+        /* Edit Mode is offered only on an archived match the signed-in
+           owner may edit (the same gate as Edit / Edit Balls at the
+           foot of the Summary tab) — never on a live match, never to
+           a viewer. */
+        var peId = '';
+        if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
+          try { if (histEntryDeletable(archiveView.entry)) peId = String(archiveView.id); } catch(e){ peId = ''; }
+        }
+        scEditMatchId = peId;
+        scEditRows = [];
+        scEditCtx = null;
         if (!inns.length){ host.innerHTML = '<p class="cb-empty">Match is not started yet.</p>'; return; }
         var key = String(S.matchId || ((S.teamA || '') + ' v ' + (S.teamB || '')));
-        if (key !== scInnOpenFor){ scInnOpenFor = key; scInnOpenState = {}; }
-        host.innerHTML = inns.map(function(inn, i){
+        if (key !== scInnOpenFor){ scInnOpenFor = key; scInnOpenState = {}; scEditMode = false; }
+        var editBar = peId ? '<div class="sc-editbar"><button type="button" class="sc-editmode' + (scEditMode ? ' on' : '') + '" onclick="toggleScEditMode()">' + (scEditMode ? '✓ Edit Mode On' : '✏️ Edit Mode') + '</button></div>' : '';
+        var entryInnCount = (peId && archiveView.entry && Array.isArray(archiveView.entry.innings)) ? archiveView.entry.innings.length : inns.length;
+        host.innerHTML = editBar + inns.map(function(inn, i){
           var open = Object.prototype.hasOwnProperty.call(scInnOpenState, key + ':' + i) ? scInnOpenState[key + ':' + i] : (i === inns.length - 1);
           var fp = '';
           try { fp = fowPshipSectionsHTML(inn); } catch(e){ fp = ''; }
+          scEditCtx = (scEditMode && peId) ? { innIdx: (i === 0 ? 0 : Math.max(0, entryInnCount - 1)) } : null;
           return '<div class="cb-inn' + (open ? ' open' : '') + '" id="scInn' + i + '">'
             + '<button type="button" class="cb-inn-head" onclick="toggleScInn(' + i + ')" aria-expanded="' + (open ? 'true' : 'false') + '">'
             + '<span class="cb-inn-team">' + esc(inn.battingTeam || '') + '</span>'
@@ -23958,6 +24727,7 @@
             + (fp ? '<div class="cb-table">' + fp + '</div>' : '')
             + '</div></div>';
         }).join('');
+        scEditCtx = null;
       }
       /* The Fall of Wickets + Partnerships sections inside one
          innings' expanded card: sub-headed blocks appended after
@@ -24573,7 +25343,12 @@
           try { avCan = histEntryDeletable(archiveView.entry); } catch(e){ avCan = false; }
           if (avCan){
             var avId = esc(String(archiveView.id));
-            html += '<div class="sum-manage"><button type="button" onclick="editHistoryMatch(\'' + avId + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + avId + '\')">🏏 Edit Balls</button><button type="button" class="sum-del" onclick="deleteHistoryMatch(\'' + avId + '\')">🗑 Delete</button></div>';
+            /* An abandoned tournament match also offers Reopen:
+               it leaves Completed and returns to the tournament's
+               Upcoming Fixtures (see reopenAbandonedMatch). */
+            var avReopen = (archiveView.entry.abandoned && archiveView.entry.matchKind === 'tournament')
+              ? '<button type="button" onclick="reopenAbandonedMatch(\'' + avId + '\')">↩ Reopen</button>' : '';
+            html += '<div class="sum-manage"><button type="button" onclick="editHistoryMatch(\'' + avId + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + avId + '\')">🏏 Edit Balls</button><button type="button" onclick="openPlayerEditor(\'' + avId + '\')">👥 Replace Player</button>' + avReopen + '<button type="button" class="sum-del" onclick="deleteHistoryMatch(\'' + avId + '\')">🗑 Delete</button></div>';
           }
         }
         html += '</div>';
