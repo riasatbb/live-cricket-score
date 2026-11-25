@@ -3953,7 +3953,6 @@
         <p id="dlPermText" style="font-size:15px;line-height:1.5;margin:12px 0 0"></p>
         <div class="rowflex" style="margin-top:16px">
           <button type="button" class="btn" id="dlPermAllow" onclick="dlPermAllow()">Allow &amp; Download</button>
-          <button type="button" class="btn ghost" id="dlPermShare" onclick="dlPermShareInstead()" hidden>Share Instead</button>
           <button type="button" class="btn ghost" onclick="dlPermCancel()">Not Now</button>
         </div>
       </div>
@@ -4363,7 +4362,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v271';
+      var APP_VERSION = 'v272';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -21571,16 +21570,13 @@
          nowhere to be found. deliverFile therefore tries, in order:
          1. The native app's Filesystem plugin (Capacitor): the file
             is written onto the device for real (Documents, falling
-            back to the app cache) and offered through the native
-            Share sheet when that plugin exists too. The success
-            message is shown only after the write resolves — a failed
-            write says so instead of claiming a download.
-         2. The Web Share API with a real File (Android browsers):
-            the share sheet is how the file leaves the browser; the
-            message says to save it from there, and a cancelled share
-            shows nothing at all.
-         3. A plain browser download (desktop browsers handle the
-            anchor + download attribute properly).
+            back to the app cache). The success message is shown only
+            after the write resolves — a failed write says so instead
+            of claiming a download.
+         2. A plain browser download (the anchor + download
+            attribute).
+         Downloads are downloads: no step opens a share sheet or any
+         share option — the file goes straight onto the device.
          Files and media permission: saving into the device's shared
          storage can need the Files and media access permission. When
          that permission has not been granted yet, deliverFile does
@@ -21590,10 +21586,11 @@
          triggers the phone's own system permission popup (through
          the Filesystem plugin's requestPermissions) and the file is
          saved only if access is granted. If it is refused, the
-         popup stays honest about that and offers the share sheet
-         instead, which needs no storage permission. When access is
-         already granted — or the save path needs none (app cache,
-         browser, desktop) — no popup appears at all. */
+         popup stays honest about that, and its Try Again saves the
+         file into the app's own storage instead, which needs no
+         permission. When access is already granted — or the save
+         path needs none (app cache, browser, desktop) — no popup
+         appears at all. */
       function blobToBase64(blob, cb){
         var r = new FileReader();
         r.onload = function(){ var s = String(r.result || ''); var i = s.indexOf(','); cb(i > -1 ? s.slice(i + 1) : s); };
@@ -21630,15 +21627,14 @@
       function showDlPermPopup(denied){
         var p = dlPermPending; if (!p) return;
         p.denied = !!denied;
-        var title = $('dlPermTitle'), text = $('dlPermText'), allow = $('dlPermAllow'), share = $('dlPermShare');
+        var title = $('dlPermTitle'), text = $('dlPermText'), allow = $('dlPermAllow');
         if (title) title.textContent = denied ? 'Files Access Not Allowed' : 'Allow Files Access?';
         if (text){
           text.innerHTML = denied
-            ? 'Files and media access was not allowed, so <span class="dlperm-file">' + esc(p.filename) + '</span> could not be saved on this device. Tap <b>Allow &amp; Download</b> to try again — your phone will show its own permission popup. If it no longer asks, open <b>Settings → Apps → CricCast → Permissions</b> and allow <b>Files and media</b>. Or use <b>Share Instead</b> — sharing needs no storage permission.'
+            ? 'Files and media access was not allowed, so <span class="dlperm-file">' + esc(p.filename) + '</span> could not be saved on this device. Tap <b>Try Again</b> to save it in the app\'s own storage instead, which needs no permission. Or open <b>Settings → Apps → CricCast → Permissions</b> and allow <b>Files and media</b>, then download again.'
             : 'To save <span class="dlperm-file">' + esc(p.filename) + '</span> on this device, the app needs <b>Files and media</b> access. Tap <b>Allow &amp; Download</b> and then tap <b>Allow</b> in your phone\'s permission popup — the file is saved only after that.';
         }
         if (allow) allow.textContent = denied ? 'Try Again' : 'Allow & Download';
-        if (share) share.hidden = !denied;
         var m = $('dlPermModal'); if (m) m.classList.add('show');
       }
       function closeDlPermPopup(){ var m = $('dlPermModal'); if (m) m.classList.remove('show'); }
@@ -21647,15 +21643,15 @@
         dlPermPending = null;
         toast('Download cancelled — the file was not saved');
       }
-      function dlPermShareInstead(){
-        var p = dlPermPending; dlPermPending = null;
-        closeDlPermPopup();
-        if (p) deliverViaShareOrAnchor(p.blob, p.filename, p.okMsg);
-      }
       function dlPermAllow(){
         var p = dlPermPending; if (!p) { closeDlPermPopup(); return; }
         closeDlPermPopup();
         var FS = p.FS;
+        /* Already refused once: asking again would only loop, so
+           save straight away — writeFileNative falls back from
+           Documents to the app cache, which needs no permission,
+           and the file still lands on the device as a download. */
+        if (p.denied){ dlPermPending = null; writeFileNative(p.blob, p.filename, p.okMsg, FS, true); return; }
         var proceed = function(){ if (dlPermPending === p){ dlPermPending = null; writeFileNative(p.blob, p.filename, p.okMsg, FS, true); } };
         var refused = function(){ if (dlPermPending === p) showDlPermPopup(true); };
         /* Trigger the phone's own system permission popup. */
@@ -21685,11 +21681,9 @@
             var p;
             try { p = FS.writeFile({ path: filename, data: b64, directory: dirs[i] }); }
             catch(e){ nextDir(i + 1); return; }
-            Promise.resolve(p).then(function(res){
-              var Share = Cap && Cap.Plugins && Cap.Plugins.Share;
-              if (Share && typeof Share.share === 'function' && res && res.uri){
-                try { Promise.resolve(Share.share({ title: filename, url: res.uri })).catch(function(){}); } catch(e){}
-              }
+            Promise.resolve(p).then(function(){
+              /* Saved — that is all. A download never opens the
+                 share sheet afterwards. */
               toast('✓ ' + okMsg + ' — saved on this device as ' + filename);
             }).catch(function(err){
               /* A permission refusal on the shared-storage write is
@@ -21708,25 +21702,10 @@
           })(0);
         });
       }
-      /* Fallback delivery that needs no storage permission: the
-         Web Share sheet with a real file, else a plain browser
-         download (desktop browsers handle the anchor properly). */
-      function deliverViaShareOrAnchor(blob, filename, okMsg){
-        try {
-          if (navigator.share && navigator.canShare && typeof File !== 'undefined'){
-            var file = null;
-            try { file = new File([blob], filename, { type: blob.type || 'application/octet-stream' }); } catch(e){}
-            if (file && navigator.canShare({ files: [file] })){
-              navigator.share({ files: [file], title: filename }).then(function(){
-                toast('✓ ' + okMsg + ' — pick where to save it from the share sheet');
-              }).catch(function(err){
-                if (err && err.name === 'AbortError') return; /* the user closed the sheet — nothing to report */
-                anchorDownload(blob, filename, okMsg);
-              });
-              return;
-            }
-          }
-        } catch(e){}
+      /* Browser delivery: a plain download, straight onto the
+         device. Downloads never open the Web Share sheet — the
+         anchor + download attribute is the whole delivery. */
+      function deliverViaDownload(blob, filename, okMsg){
         anchorDownload(blob, filename, okMsg);
       }
       function deliverFile(blob, filename, okMsg){
@@ -21753,9 +21732,9 @@
             return;
           }
         } catch(e){}
-        /* 2) Web Share / 3) plain browser download — neither needs
-           storage permission, so no popup on this path. */
-        deliverViaShareOrAnchor(blob, filename, okMsg);
+        /* 2) Plain browser download — needs no storage
+           permission, so no popup on this path. */
+        deliverViaDownload(blob, filename, okMsg);
       }
       function dataUrlToBlob(dataUrl){
         var parts = String(dataUrl || '').split(',');
