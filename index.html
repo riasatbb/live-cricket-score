@@ -4444,7 +4444,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v273';
+      var APP_VERSION = 'v274';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -17922,19 +17922,34 @@
           }
         } catch(e){ fbAuth = null; renderAuthBar(); }
       }
-      /* Inside the Android app (Capacitor WebView), Google blocks the
-         web popup/redirect sign-in (disallowed_useragent), so the app
-         carries the native Firebase Authentication plugin instead:
-         it opens the system account picker and hands back a Google
-         credential, which is exchanged for a normal Firebase web
-         session below — ownership, Rules and sync then behave
-         exactly as in a browser. In a real browser the plugin is
-         absent and the popup flow runs unchanged. */
-      function nativeAuthPlugin(){
+      /* Inside the Android apps (Capacitor WebView — Viewer and
+         Control alike), Google blocks the web popup/redirect sign-in
+         (disallowed_useragent), so sign-in there is native only: the
+         Firebase Authentication plugin opens the system account
+         picker and hands back a Google credential, which is exchanged
+         for a normal Firebase web session below — ownership, Rules
+         and sync then behave exactly as in a browser. The web popup
+         flow runs ONLY in a real browser; inside an app it is never
+         attempted, so a tap on Sign In can never throw the user out
+         of the app into a browser. An app build that does not carry
+         the plugin yet gets the in-app fallback message instead. */
+      /* True whenever this page runs inside one of the native apps
+         (Viewer or Control), regardless of which plugins that app
+         build carries. Kept separate from nativeAuthPlugin(): the
+         sign-in flow must know "I am inside an app" even when the
+         native sign-in plugin is missing from that build, so it
+         never falls back to the web popup inside a WebView. */
+      function isNativeApp(){
         try {
           var C = window.Capacitor;
-          if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null;
-          var p = C.Plugins && C.Plugins.FirebaseAuthentication;
+          return !!(C && C.isNativePlatform && C.isNativePlatform());
+        } catch(e){}
+        return false;
+      }
+      function nativeAuthPlugin(){
+        try {
+          if (!isNativeApp()) return null;
+          var p = window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseAuthentication;
           if (p && typeof p.signInWithGoogle === 'function') return p;
         } catch(e){}
         return null;
@@ -18054,6 +18069,20 @@
               toast('⚠️ Google sign-in failed in the app: ' + msg);
             });
           });
+          return;
+        }
+        if (isNativeApp()){
+          /* Inside an app whose build does not carry the native
+             sign-in plugin (the Viewer app today), the web popup /
+             redirect below cannot sign anyone in: Google blocks it
+             in a WebView (disallowed_useragent), so the attempt
+             spills out of the app into a browser — the exact detour
+             the owner asked to remove. Sign-in stays inside the app
+             instead: show the in-app fallback, and the moment the
+             app build carries the same Firebase Authentication
+             plugin as the Control app, the native account picker
+             above takes over with no further page change. */
+          showNativeSignInFallback();
           return;
         }
         var provider = new firebase.auth.GoogleAuthProvider();
