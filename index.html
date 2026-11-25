@@ -1637,6 +1637,11 @@
          Tournament box (grant holders only), then the Tournament
          List — each row opening its tournament like the home cards. */
       .am-start,.atn-create{margin-bottom:14px;text-align:center}
+      /* Resume Scoring boxes on the All Matches page (v295): one
+         per match in progress, shown only to the admin who manages
+         that match, its designated scorer and the Super Admin. */
+      .am-resume{margin-bottom:10px;text-align:center}
+      .am-resume .co-title,.am-resume .co-sub{text-align:center}
       .am-tabs{display:flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
       .am-tab{flex:1 1 0;border:none;background:none;color:var(--muted);font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:12px 2px 10px;border-bottom:3px solid transparent;cursor:pointer;min-width:0;text-align:center}
       .am-tab.active{color:var(--ink);border-bottom-color:var(--green)}
@@ -3090,6 +3095,7 @@
           <h2>Matches</h2>
         </div>
         <div id="amStartBox"></div>
+        <div id="amResumeBox"></div>
         <div class="am-tabs" role="tablist" aria-label="Match lists">
           <button type="button" class="am-tab" data-amtab="live" onclick="setAmTab('live')">Live</button>
           <button type="button" class="am-tab" data-amtab="upcoming" onclick="setAmTab('upcoming')">Upcoming</button>
@@ -4614,7 +4620,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v294';
+      var APP_VERSION = 'v295';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8957,7 +8963,7 @@
            account — only its owner can start over it. */
         if (!requireSignIn('start a match')) return;
         var curOwner = S.ownerUid || '';
-        if (liveMatchExists() && curOwner && curOwner !== currentUid()){
+        if (liveMatchExists() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
           toast('🔒 The current match belongs to ' + (S.ownerName || 'another account') + ' — only its owner can replace it with a new match. You are signed in as ' + authDisplayName() + '.');
           return;
         }
@@ -9234,8 +9240,9 @@
         if (scoringLocked()) return;
         if (!requireLiveOwner('delete this match')) return;
         /* Deleting is the owner's alone: a designated scorer can
-           score the match, but never delete it. */
-        if ((S.ownerUid || '') && S.ownerUid !== currentUid()){
+           score the match, but never delete it. The Super Admin
+           may delete any match (v295). */
+        if ((S.ownerUid || '') && S.ownerUid !== currentUid() && !isSuperAdmin()){
           toast('🔒 Only the match owner (' + (S.ownerName || 'another account') + ') can delete this match — a designated scorer can score it, but not delete it.');
           return;
         }
@@ -11821,11 +11828,15 @@
       }
       function startFixture(id){
         if (!requireSignIn('start a match')) return;
-        if (!requireTnOwner('score matches in this tournament')) return;
         normalizeTournament();
         var fx = null;
         S.tournament.fixtures.forEach(function(f){ if (f.id === id) fx = f; });
         if (!fx) return;
+        /* The fixture's own designated scorer may start (and then
+           score) this one match even though the tournament belongs
+           to its admin (v295); everyone else needs the tournament
+           owner's gate, which the Super Admin also passes. */
+        if (!scorerHashMatches(fx.scorerEmailHash) && !requireTnOwner('score matches in this tournament')) return;
         pendingFixtureStart = { kind: 'tournament', id: id }; /* doStartMatch removes this fixture as the match starts */
         pendingMatchKind = 'tournament'; /* a fixture's match belongs to the tournament */
         /* A tournament fixture starts on the OPEN MATCH screen —
@@ -17112,11 +17123,29 @@
       }
       function openHomeTnItem(t){
         if (!t) return;
+        var viewerSide = isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer');
+        /* A tournament is managed by the admin who created it
+           (v295, owner's rule): when THAT admin taps their own
+           tournament from a viewer surface, they step out of
+           viewer mode — the same door their Create actions use —
+           and land in the tournament manager, where they can
+           schedule, score and edit everything in it. Everyone
+           else gets the read-only viewer, exactly as before; the
+           Super Admin keeps his deliberate door (Enter Super
+           Admin Mode → Console → Tournament), and inside the
+           manager the ownership lock (tournamentLocked) still
+           decides who may change what. */
+        var mine = false;
+        try { mine = !!authUser && !isSuperAdmin() && !!(t.tn && t.tn.ownerUid) && t.tn.ownerUid === currentUid(); } catch(e){}
         if (t.kind === 'current'){
-          if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
+          if (viewerSide){
+            if (mine){ adminEnterControl(); openCurrentTournament(); return; }
+            openTournamentViewerInPage();
+          }
           else openCurrentTournament();
           return;
         }
+        if (viewerSide && mine){ adminEnterControl(); openArchivedTournament(t.id); return; }
         openArchivedTournament(t.id);
       }
       function homeOpenTournament(i){ openHomeTnItem(homeTnTargets[i]); }
@@ -17154,6 +17183,35 @@
           var startHTML = showStart ? '<button type="button" class="console-opt co-single am-start" onclick="adminCreateSingle()"><span class="co-title">🏏 Start Single Match</span></button>' : '';
           if (startBox.innerHTML !== startHTML) startBox.innerHTML = startHTML;
         }
+        /* Resume Scoring boxes (v295, owner's rule): while a match
+           is running, one box per running match appears here for
+           exactly the accounts allowed to score it — the admin who
+           manages it (its owner), its designated scorer and the
+           Super Admin. Built from the server-confirmed state like
+           the rows below; anyone else never sees a box, and the
+           tap handler re-checks the same rule before moving. */
+        var resumeBox = $('amResumeBox');
+        if (resumeBox){
+          var resumeHTML = '';
+          if (fbServerSeen && authUser){
+            try {
+              var ds = liveDisplayState();
+              var mine = [];
+              if (ds && sliceInProgress(ds) && !liveMatchTombstoned(ds) && matchAccessFor(ds)) mine.push(ds);
+              var parkedDs = (ds && Array.isArray(ds.pausedMatches) ? ds.pausedMatches : []).slice().reverse();
+              parkedDs.forEach(function(p){ if (p && sliceInProgress(p) && !liveMatchTombstoned(p) && matchAccessFor(p)) mine.push(p); });
+              resumeHTML = mine.map(function(sl){
+                var line = amResumeLine(sl);
+                var when = sl.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (sl.inningsNo || 1));
+                if (sl.status === 'finished' && sl.awaitingFinish) when = 'Play over — awaiting Finish Match';
+                return '<button type="button" class="console-opt resume am-resume" onclick="amResumeScoring(\'' + esc(String(sl.matchId)) + '\')">'
+                  + '<span class="co-title">▶ Resume Scoring</span>'
+                  + '<span class="co-sub">' + esc((sl.teamA || 'Team 1') + ' vs ' + (sl.teamB || 'Team 2') + (line ? ' — ' + line : '') + ' • ' + when) + '</span></button>';
+              }).join('');
+            } catch(e){ resumeHTML = ''; }
+          }
+          if (resumeBox.innerHTML !== resumeHTML) resumeBox.innerHTML = resumeHTML;
+        }
         document.querySelectorAll('#view-allmatches .am-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-amtab') === amTab); });
         var list = $('amList'); if (!list) return;
         if (!fbServerSeen){
@@ -17166,6 +17224,37 @@
           return;
         }
         list.innerHTML = '<div class="am-listcard">' + rows.join('') + '</div>';
+      }
+      /* The score line inside a Resume Scoring box: each innings
+         of the match, exactly as the console's Resume list shows
+         it. */
+      function amResumeLine(sl){
+        var inns = [];
+        if (sl.prevInnings) inns.push(sl.prevInnings);
+        if (sl.current) inns.push(sl.current);
+        return inns.map(function(x){ return (x.battingTeam || '') + ' ' + x.runs + '/' + x.wickets + ' (' + oversText(x.legalBalls) + ' ov)'; }).join(' • ');
+      }
+      /* A Resume Scoring box tap (v295): entitlement is re-checked
+         against this device's own state — the render above is
+         never trusted on its own — then the session steps out of
+         viewer mode through the same door a granted admin's
+         Create actions use (adminEnterControl) and resumeMatch
+         puts the match on the pad, where the ownership lock
+         (liveMatchLocked) has the final say. This is also the
+         designated scorer's way back into their match: the
+         Scorer Console stays the Super Admin's page, but scoring
+         their own match no longer needs it. */
+      function amResumeScoring(id){
+        if (!authUser){ openSignIn(); return; }
+        id = String(id);
+        var ok = false;
+        try {
+          if (liveMatchInProgress() && String(S.matchId) === id && matchAccessFor(matchSlice())) ok = true;
+          if (!ok) pausedMatches().forEach(function(p){ if (p && String(p.matchId) === id && sliceInProgress(p) && matchAccessFor(p)) ok = true; });
+        } catch(e){}
+        if (!ok){ toast('🔒 This match is managed by another admin — only its admin, its designated scorer or the Super Admin can resume scoring it.'); return; }
+        adminEnterControl();
+        resumeMatch(id);
       }
       function openAllTournaments(){
         try { renderLiveHome(); } catch(e){}
@@ -18739,8 +18828,34 @@
         return hashEmail(authUser.email) === hash;
       }
       function designatedScorer(){ return !!(S && scorerHashMatches(S.scorerEmailHash)); }
+      /* Per-match access (v295, owner's rule): a match is managed
+         by exactly three accounts — the admin who created it (its
+         owner), the scorer designated for it by Gmail, and the
+         Super Admin, who passes every ownership gate in the app.
+         Another admin's match is never theirs to schedule, score
+         or edit. This one test drives the Resume Scoring box on
+         the All Matches page; the pad itself stays gated by
+         liveMatchLocked / requireLiveOwner below, which apply the
+         same three-way rule. */
+      function matchAccessFor(sl){
+        if (!sl || !authUser) return false;
+        if (isSuperAdmin()) return true;
+        if (sl.ownerUid && currentUid() && sl.ownerUid === currentUid()) return true;
+        return scorerHashMatches(sl.scorerEmailHash);
+      }
+      /* liveMatchInProgress() for any match slice (the confirmed
+         live match, or a parked one), not just the one on the pad. */
+      function sliceInProgress(sl){
+        if (!sl || !sl.current) return false;
+        if (sl.status === 'finished') return !!sl.awaitingFinish;
+        if (!sl.teamA || !sl.teamB) return false;
+        var c = sl.current;
+        return c.legalBalls > 0 || c.runs > 0 || c.wickets > 0 || !!sl.prevInnings
+          || sl.status === 'inningsBreak' || typeof sl.oversLimit === 'number';
+      }
       function liveMatchLocked(){
         if (isViewerSession()) return true;
+        if (isSuperAdmin()) return false; /* the Super Admin scores any match (v295) */
         if (!liveMatchExists()) return false;
         var o = S.ownerUid || '';
         if (o && o === currentUid()) return false;
@@ -18750,6 +18865,7 @@
       }
       function tournamentLocked(){
         if (isViewerSession()) return true;
+        if (isSuperAdmin()) return false; /* the Super Admin manages any tournament (v295) */
         var o = tnOwnerUid();
         if (o) return o !== currentUid();
         return !currentUid(); /* unowned: guests read-only; signing in claims it */
@@ -18762,6 +18878,7 @@
       function requireLiveOwner(what){
         if (isViewerSession()){ toast('👀 View-only — open the control link and sign in as the match owner to ' + what + '.'); return false; }
         if (!liveMatchExists()) return true;
+        if (isSuperAdmin()) return true; /* the Super Admin manages every match (v295) */
         if (designatedScorer()) return true; /* the named scorer's Gmail may score this match */
         var o = S.ownerUid || '';
         if (!o){
@@ -18776,6 +18893,7 @@
       }
       function requireTnOwner(what){
         if (isViewerSession()){ toast('👀 View-only — a tournament can be changed only from the control side, by its admin.'); return false; }
+        if (isSuperAdmin()) return true; /* the Super Admin manages every tournament (v295) */
         var o = tnOwnerUid();
         if (!o){
           if (!currentUid()){ toast('🔑 Sign in with Google to ' + what + ' — the first account to sign in on the control side becomes this tournament\'s admin.'); return false; }
@@ -18891,6 +19009,7 @@
          viewer). */
       function histEntryDeletable(e){
         if (!histCanManage() || !e) return false;
+        if (isSuperAdmin()) return true; /* the Super Admin can delete any entry (v295) */
         var o = e.ownerUid || '';
         if (!o) return !!currentUid();
         return o === currentUid();
@@ -18923,6 +19042,29 @@
          the account bar lands on that player's profile page, and
          if that same Gmail holds admin grants, the granted actions
          are theirs to use.
+         PER-MATCH / PER-TOURNAMENT SCOPING (v295, owner's rule):
+         a grant reaches only what its holder manages. Whoever
+         starts a match owns it (ownerUid) and — together with
+         the scorer designated for that match and the Super
+         Admin — is the only one who can schedule, score or edit
+         it; the same holds for a tournament and the admin who
+         created it. One admin can never maintain another admin's
+         match or tournament: every ownership gate
+         (liveMatchLocked, requireLiveOwner, tournamentLocked,
+         requireTnOwner, the fixture starts, Resume Scoring and
+         the History / tournament deletes) applies the same
+         three-way rule, and the Super Admin passes them all.
+         While a match is running, the All Matches page shows a
+         Resume Scoring box for exactly those three accounts;
+         tapping it steps out of viewer mode and resumes the
+         match on the pad — the designated scorer's way back
+         into their match, since the Console itself stays the
+         Super Admin's page. A tournament's own admin likewise
+         opens the tournament manager (not the read-only viewer)
+         when they tap their tournament. The Rules text in the
+         History sync help carries the matching server-side
+         clause (the Super Admin's email may write every node),
+         to be published in Firebase Console like the rest.
          Enforcement is app-level here, like the rest of the app;
          the matching server-side clauses (admins node, plus the
          admin clauses on liveMatch / liveLibrary / matchHistory)
@@ -19030,6 +19172,12 @@
            — the control link opened it before the account was
            known — move them to the Live Matches home now. */
         if (authUser && !isSuperAdmin() && typeof currentViewName !== 'undefined' && currentViewName === 'console'){ try { setView('live'); } catch(e){} }
+        /* The All Matches page's Start / Resume Scoring boxes
+           follow the signed-in account and its grants (v295):
+           re-render the page when either lands while it is open,
+           so a box appears the moment its admin or the match's
+           designated scorer signs in — and goes when they leave. */
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'allmatches'){ try { renderAllMatches(); } catch(e){} }
         document.body.classList.toggle('admin-cep', !!currentUid() && adminHas('editPlayer'));
         document.body.classList.toggle('admin-ceh', !!currentUid() && adminHas('editHistory'));
         try { renderAuthBar(); } catch(e){}
@@ -19821,7 +19969,7 @@
            that owns it. Pre-sign-in entries have no owner — those a
            signed-in control-side account may delete, a guest never. */
         var eOwner = e.ownerUid || '';
-        if (eOwner && eOwner !== currentUid()){
+        if (eOwner && eOwner !== currentUid() && !isSuperAdmin()){
           toast('🔒 Only the match owner (' + (e.ownerName || 'another account') + ') can delete this match. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
           return;
         }
@@ -26369,7 +26517,7 @@
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
             + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
           html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
@@ -28979,7 +29127,7 @@
            like the live one. */
         var target = list[idx];
         var tOwner = target.ownerUid || '';
-        if (tOwner && tOwner !== currentUid() && !scorerHashMatches(target.scorerEmailHash)){
+        if (tOwner && tOwner !== currentUid() && !isSuperAdmin() && !scorerHashMatches(target.scorerEmailHash)){
           toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
           return;
         }
@@ -29630,9 +29778,9 @@
             + '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="omStartFixture(' + f.id + ')">Toss &amp; Start →</button>'
             /* Remove is rendered only for the account that saved
                this fixture (or, for one saved before ownership, a
-               signed-in account) — anyone else never sees it; the
-               handler re-checks the same rule. */
-            + ((currentUid() && (!f.ownerUid || f.ownerUid === currentUid())) ? '<button type="button" class="btn ghost sm" onclick="omRemoveFixture(' + f.id + ')">Remove</button>' : '')
+               signed-in account) and for the Super Admin — anyone
+               else never sees it; the handler re-checks the rule. */
+            + ((currentUid() && (!f.ownerUid || f.ownerUid === currentUid() || isSuperAdmin())) ? '<button type="button" class="btn ghost sm" onclick="omRemoveFixture(' + f.id + ')">Remove</button>' : '')
             + '</div></div>';
         }).join('');
       }
@@ -29641,7 +29789,7 @@
         var f = null;
         list.forEach(function(x){ if (x.id === id) f = x; });
         if (!f) return;
-        if (f.ownerUid && f.ownerUid !== currentUid()){
+        if (f.ownerUid && f.ownerUid !== currentUid() && !isSuperAdmin()){
           toast('🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that account can remove it.');
           return;
         }
@@ -29658,6 +29806,16 @@
         var f = null;
         singleFixtures().forEach(function(x){ if (x.id === id) f = x; });
         if (!f) return;
+        /* A saved fixture is started only by the admin who saved
+           it, by the scorer designated on it, or by the Super
+           Admin (v295) — one admin never starts another admin's
+           fixture. An unowned fixture (saved before ownership)
+           keeps the old rule: any signed-in account may start it,
+           and starting makes it theirs. */
+        if (f.ownerUid && f.ownerUid !== currentUid() && !isSuperAdmin() && !scorerHashMatches(f.scorerEmailHash)){
+          toast('🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that admin, its designated scorer or the Super Admin can start it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
+          return;
+        }
         pendingFixtureStart = { kind: 'single', id: id }; /* doStartMatch removes this fixture as the match starts */
         om.teamA = f.teamA; om.teamB = f.teamB;
         om.overs = f.overs; om.format = f.format || ''; om.wickets = f.wickets || 10; om.ballType = f.ballType || '';
@@ -29719,7 +29877,7 @@
         if (scoringLocked()){ closeTossModal(); toast('⏳ Still connecting to Firebase — scoring unlocks as soon as the live match loads. Try again in a moment.'); return; }
         if (!requireSignIn('start a match')){ closeTossModal(); return; }
         var curOwner = S.ownerUid || '';
-        if (liveMatchExists() && curOwner && curOwner !== currentUid()){
+        if (liveMatchExists() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
           closeTossModal();
           toast('🔒 The current match belongs to ' + (S.ownerName || 'another account') + ' — only its owner can replace it with a new match. You are signed in as ' + authDisplayName() + '.');
           return;
@@ -30195,7 +30353,7 @@
         if (!entry) return;
         var d = entry.data || {};
         var o = d.ownerUid || '';
-        if (o && o !== currentUid()){
+        if (o && o !== currentUid() && !isSuperAdmin()){
           toast('🔒 Only the tournament admin (' + (d.ownerName || 'another account') + ') can delete this tournament. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
           return;
         }
