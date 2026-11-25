@@ -4363,7 +4363,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v270';
+      var APP_VERSION = 'v271';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -9828,7 +9828,10 @@
          Teams players are added on the All Teams side. The reverse
          is NOT true either: adding a team in All Teams does not put
          it inside any tournament — a tournament's own list still
-         changes only from inside that tournament. */
+         changes only from inside that tournament. One exception
+         since v271: players added during a SINGLE Match also join
+         that team's pool squad (see syncMatchSquadToPool) —
+         tournament-match squads still never travel to the pool. */
       function mirrorTeamToPool(name){
         if (!name) return;
         try { ensurePoolTeam(name); } catch(e){}
@@ -10053,11 +10056,33 @@
         if (teamName === S.teamA){ S.squadA = deep(arr); S.squadConfirmed = false; }
         if (teamName === S.teamB){ S.squadB = deep(arr); S.squadConfirmed = false; }
       }
+      /* A Single Match's players also join All Teams (v271): a
+         player added to a single match's squad is added to that
+         team's pool squad too, under the same name — the registry
+         already holds their one Player ID for the team, so the
+         profile and career stats stay whole. ADDITIVE ONLY: the
+         pool is the master list, so removing a player from one
+         match's squad (or reordering it) never shrinks or
+         reshuffles All Teams. Tournament matches never touch the
+         pool squad — their players stay the tournament's. Every
+         squad edit (the setup add box, the "＋ Add new player…"
+         dialog, remove, reorder) funnels through
+         syncMatchSquadToTournament, so hooking the single-match
+         branch there covers them all. */
+      function syncMatchSquadToPool(which){
+        if (S.matchKind !== 'single') return;
+        var teamName = which === 'A' ? S.teamA : S.teamB;
+        var arr = which === 'A' ? S.squadA : S.squadB;
+        if (!teamName || !Array.isArray(arr)) return;
+        ensurePoolTeam(teamName);
+        var pool = poolSquad(teamName);
+        arr.forEach(function(n){ if (n && pool.indexOf(n) === -1) pool.push(n); });
+      }
       function syncMatchSquadToTournament(which){
         /* A Single Match's squads are never written back into a
-           tournament — squad edits during a single match stay with
-           the match (and the player registry) only. */
-        if (S.matchKind === 'single') return;
+           tournament — its players join All Teams instead (see
+           syncMatchSquadToPool). */
+        if (S.matchKind === 'single'){ syncMatchSquadToPool(which); return; }
         normalizeTournament();
         var teamName = which === 'A' ? S.teamA : S.teamB;
         var arr = which === 'A' ? S.squadA : S.squadB;
