@@ -4614,7 +4614,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v293';
+      var APP_VERSION = 'v294';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18649,11 +18649,11 @@
              profile — the profile whose Email (Edit Profile) is
              this Gmail address. */
           var photo = '<button type="button" class="ab-photo-btn" onclick="openMyProfile()" aria-label="Open my player profile" title="My Player Profile">' + face + '</button>';
-          /* Beside the photo: the 👁️ door into Viewer Mode (v293). */
+          /* Before the photo (swapped in v294): the 👁️ door into Viewer Mode (v293). */
           var eye = '<button type="button" class="ab-eye" onclick="enterViewerMode()" aria-label="Viewer Mode" title="Viewer Mode">👁️</button>';
           var badge = isSuperAdmin() ? '<span class="ab-badge">Super Admin</span>'
             : (myAdminRecord() ? '<span class="ab-badge admin">Admin</span>' : '<span class="ab-badge">Signed in</span>');
-          html = '<div class="authbar"><div class="ab-main">' + photo + eye
+          html = '<div class="authbar"><div class="ab-main">' + eye + photo
             + '<div><div class="ab-name">' + esc(nm) + badge + '</div>'
             + '<div class="ab-sub">' + esc(authUser.email || '') + '</div></div></div>'
             + '<button type="button" class="btn ghost sm" onclick="signOutUser()">Sign out</button></div>';
