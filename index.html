@@ -326,6 +326,45 @@
       .authbar .ab-name{font-weight:800;font-size:15.5px;line-height:1.25}
       .authbar .ab-sub{font-size:12.5px;color:var(--muted);line-height:1.35}
       .authbar .ab-badge{display:inline-block;background:var(--gold);color:#241a02;font-size:11px;font-weight:800;border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+      /* ---------- admins (v273): super admin, Manage Admin, granted access ---------- */
+      .authbar .ab-photo-btn{flex:none;padding:0;border:none;background:none;cursor:pointer;border-radius:50%;line-height:0}
+      .authbar .ab-photo-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+      .authbar .ab-badge.admin{background:var(--green);color:#fff}
+      /* A signed-in admin's granted actions on the viewer home: only
+         the permissions actually granted render (applyAdminUi), so
+         this block is empty — and invisible — for everyone else. */
+      .viewer-admin-actions{display:grid;gap:10px;margin:0 0 14px}
+      .viewer-admin-actions:empty{display:none}
+      /* Manage Admin pages: option rows, admin list rows, switches. */
+      .ma-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit}
+      .ma-opt .ma-ic{font-size:22px;line-height:1}
+      .ma-opt .ma-t{font-weight:800;font-size:16.5px}
+      .ma-opt .ma-chev{margin-left:auto;color:var(--muted);font-size:20px}
+      .ma-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit;margin-bottom:10px}
+      .ma-ava{width:42px;height:42px;border-radius:50%;flex:none;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;font-family:"Barlow Condensed",sans-serif}
+      .ma-ava.super{background:var(--gold);color:#241a02}
+      .ma-row .ma-name{font-weight:800;font-size:15.5px;line-height:1.25}
+      .ma-row .ma-mail{font-size:12.5px;color:var(--muted);line-height:1.35;word-break:break-all}
+      .ma-row .ma-perms{font-size:12px;color:var(--muted);margin-top:2px}
+      .perm-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:10px}
+      .perm-row .perm-t{font-weight:800;font-size:15.5px}
+      .perm-row .perm-d{font-size:12.5px;color:var(--muted);margin-top:1px}
+      .perm-sw{margin-left:auto;flex:none;width:52px;height:30px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface2);position:relative;cursor:pointer;padding:0}
+      .perm-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:left .15s ease,background .15s ease}
+      .perm-sw[aria-checked="true"]{background:var(--green);border-color:var(--green)}
+      .perm-sw[aria-checked="true"]::after{left:25px;background:#fff}
+      @media (prefers-reduced-motion: reduce){.perm-sw::after{transition:none}}
+      /* An admin's granted Edit controls stay visible in the viewer
+         app: the blanket viewer hides below lose to these overrides
+         only while the signed-in account actually holds the grant
+         (body classes set by applyAdminUi). */
+      body.link-viewer.admin-cep #pfEditModal{display:none}
+      body.link-viewer.admin-cep #pfEditModal.show{display:flex !important}
+      body.viewer-mode.admin-cep #pfEditModal.show{display:flex !important}
+      body.link-viewer.admin-ceh .hist-edit-btn{display:inline-flex !important}
+      body.viewer-mode.admin-ceh .hist-edit-btn{display:inline-flex !important}
+      body.link-viewer.admin-ceh .sum-manage{display:flex !important}
+      body.viewer-mode.admin-ceh .sum-manage{display:flex !important}
       .btn.google{background:#fff;color:#1f2937;border:1.5px solid var(--line);display:inline-flex;align-items:center;gap:9px}
       .btn.google:hover{background:var(--surface2)}
       .owner-note{display:none;background:#fdf0d5;border:1px solid #eec27a;color:#7a4d05;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
@@ -2906,6 +2945,8 @@
             <h2>Recent Matches</h2>
           </div>
         </div>
+        <div class="authbar-slot"></div>
+        <div class="viewer-admin-actions" id="viewerAdminActions"></div>
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
@@ -2968,7 +3009,48 @@
           <button type="button" class="console-opt co-search" onclick="openSearch()">
             <span class="co-title">🔍 Search Players, Teams &amp; Tournaments</span>
           </button>
+          <button type="button" class="console-opt co-admins" id="consoleManageAdmin" onclick="openManageAdmins()" hidden>
+            <span class="co-title">🛡️ Manage Admin</span>
+          </button>
         </div>
+      </section>
+
+      <!-- ================= MANAGE ADMIN (super admin only) ================= -->
+      <section class="view" id="view-admins">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">🔙</button>
+          <h2>Manage Admin</h2>
+        </div>
+        <div class="console-home" style="margin-bottom:14px">
+          <button type="button" class="ma-opt" onclick="maShowPanel('add')">
+            <span class="ma-ic" aria-hidden="true">➕</span><span class="ma-t">Add Admin</span><span class="ma-chev" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="ma-opt" onclick="maShowPanel('list')">
+            <span class="ma-ic" aria-hidden="true">👥</span><span class="ma-t">Admin List</span><span class="ma-chev" aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div id="maAddPanel" hidden>
+          <div class="card">
+            <div><label for="maEmail">Gmail address</label><input id="maEmail" type="email" inputmode="email" autocomplete="off" placeholder="e.g. someone@gmail.com" /></div>
+            <div style="margin-top:12px"><label for="maName">Name (optional)</label><input id="maName" autocomplete="off" placeholder="Filled from their Google account when they sign in" /></div>
+            <p class="note" id="maAddStatus" style="margin-top:10px"></p>
+            <div class="rowflex" style="margin-top:12px">
+              <button type="button" class="btn" onclick="maAddAdmin()">Add Admin</button>
+            </div>
+          </div>
+        </div>
+        <div id="maListPanel" hidden>
+          <div id="maList"></div>
+        </div>
+      </section>
+
+      <!-- ================= ADMIN DETAIL: one admin's access ================= -->
+      <section class="view" id="view-admindetail">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="maBackToList()" aria-label="Back to Admin List">🔙</button>
+          <h2 id="maDetailTitle">Admin</h2>
+        </div>
+        <div id="maDetailBody"></div>
       </section>
 
       <!-- ================= ALL TEAMS ================= -->
@@ -4362,7 +4444,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v272';
+      var APP_VERSION = 'v273';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5635,7 +5717,7 @@
          the live registry (which keeps the photos) is never reset. */
       function playersSnapshot(){
         ensurePlayerArrays();
-        return S.players.map(function(p){ return { id: p.id, name: p.name, role: p.role || '', jersey: p.jersey || '', nickname: p.nickname || '' }; });
+        return S.players.map(function(p){ return { id: p.id, name: p.name, role: p.role || '', jersey: p.jersey || '', nickname: p.nickname || '', email: p.email || '' }; });
       }
       /* Find a person by Player ID wherever a record of them lives:
          the live registry first, then the snapshots carried inside
@@ -5675,6 +5757,7 @@
           role: (p && p.role) || '',
           jersey: (p && p.jersey) || '',
           nickname: (p && p.nickname) || '',
+          email: (p && p.email) || '',
           photo: (p && p.photo) || ''
         };
       }
@@ -5705,6 +5788,10 @@
          of the app. The save handler re-checks this, so hiding the
          form is never the only protection. */
       function canEditPlayerProfile(){
+        /* A signed-in admin holding the Edit Player grant edits
+           profiles even from the viewer app — that is the point of
+           the grant (v273). The super admin always can. */
+        if (currentUid() && adminHas('editPlayer')) return true;
         if (isViewerSession()) return false;
         if (!currentUid()) return false;
         var tnLocked = false, liveLocked = false;
@@ -17510,6 +17597,11 @@
             fbLibDenied = true;
           });
         } catch(e){ fbLibRef = null; }
+        /* The admins registry (v273): a small node like the library,
+           read up front so a signed-in admin's granted actions are
+           in place from the first render. */
+        if (fbAdminRef){ try{ fbAdminRef.off(); }catch(e){} fbAdminRef = null; }
+        attachAdminsListener();
         /* Permanent history lives at its own path, matchHistory —
            separate from the live match, so a New Match reset of
            liveMatch can never touch it. Everyone reads it (viewers
@@ -17734,6 +17826,8 @@
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
         if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
+        if (fbAdminRef){ try{ fbAdminRef.off(); }catch(e){} fbAdminRef = null; }
+        ADMINS = {}; adminsLoaded = false;
         fbHotState = null; fbColdState = null; fbColdSeen = false;
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
@@ -17796,7 +17890,9 @@
           fbAuth.onAuthStateChanged(function(user){
             authUser = user || null;
             renderAuthBar();
+            try { applyAdminUi(); } catch(e){}
             if (authUser){
+              try { maybeFillAdminName(); } catch(e){}
               try { maybeClaimOwnership(); } catch(e){}
               /* Signing in can un-block history sync on this device:
                  entries this account owns (and unowned ones) that
@@ -17989,11 +18085,17 @@
         if (authUser){
           var nm = authDisplayName();
           var initial = esc((nm || 'U').trim().charAt(0).toUpperCase() || 'U');
-          var photo = authUser.photoURL
+          var face = authUser.photoURL
             ? '<img class="ab-photo" src="' + esc(authUser.photoURL) + '" alt="" referrerpolicy="no-referrer" />'
             : '<span class="ab-avatar" aria-hidden="true">' + initial + '</span>';
+          /* Tapping the photo opens the signed-in player's own
+             profile — the profile whose Email (Edit Profile) is
+             this Gmail address. */
+          var photo = '<button type="button" class="ab-photo-btn" onclick="openMyProfile()" aria-label="Open my player profile" title="My Player Profile">' + face + '</button>';
+          var badge = isSuperAdmin() ? '<span class="ab-badge">Super Admin</span>'
+            : (myAdminRecord() ? '<span class="ab-badge admin">Admin</span>' : '<span class="ab-badge">Signed in</span>');
           html = '<div class="authbar"><div class="ab-main">' + photo
-            + '<div><div class="ab-name">' + esc(nm) + '<span class="ab-badge">Signed in</span></div>'
+            + '<div><div class="ab-name">' + esc(nm) + badge + '</div>'
             + '<div class="ab-sub">' + esc(authUser.email || '') + '</div></div></div>'
             + '<button type="button" class="btn ghost sm" onclick="signOutUser()">Sign out</button></div>';
         } else {
@@ -18231,6 +18333,303 @@
       }
 
       /* ============================================================
+         ADMINS & GRANTED ACCESS (v273)
+         One SUPER ADMIN — riasataliku@gmail.com — controls
+         everything, exactly as the owner always has. From Manage
+         Admin (Scorer Console, visible only to that account) he
+         adds other Google accounts as ADMINS by Gmail address and
+         grants each of them individual permissions. The registry
+         lives in Firebase at `admins/<emailKey>`, where emailKey is
+         the lower-cased Gmail address with '.' replaced by ','
+         (Firebase keys cannot hold '.') — the same escaping the
+         database Rules use (auth.token.email.replace('.', ','))
+         to recognise an admin server-side.
+         A granted admin works from the VIEWER app: they sign in
+         with Google on the home page, and only the actions they
+         were granted appear for them — everything else stays
+         hidden, exactly as for any other viewer. The four grants:
+           createSingle     — Create Single Match
+           createTournament — Create Tournament
+           editPlayer       — Edit Player (player profiles)
+           editHistory      — Edit Previous Match (History entries:
+                              info, balls, scorecard, replace player;
+                              deleting a match stays owner-only)
+         A player's profile carries an Email (Edit Profile → Email):
+         whoever signs in with that Gmail and taps their photo in
+         the account bar lands on that player's profile page, and
+         if that same Gmail holds admin grants, the granted actions
+         are theirs to use.
+         Enforcement is app-level here, like the rest of the app;
+         the matching server-side clauses (admins node, plus the
+         admin clauses on liveMatch / liveLibrary / matchHistory)
+         are in the Rules text in Firebase Setup — until those are
+         published, a granted admin's writes to records owned by
+         another account are held on their device and the page says
+         so, exactly like any other held write.
+         ============================================================ */
+      var SUPER_ADMIN_EMAIL = 'riasataliku@gmail.com';
+      var ADMIN_PERMS = [
+        { key: 'createSingle', label: 'Create Single Match', desc: 'Set up and start a new Single Match' },
+        { key: 'createTournament', label: 'Create Tournament', desc: 'Create a new tournament' },
+        { key: 'editPlayer', label: 'Edit Player', desc: 'Edit player profiles — name, role, jersey, photo, email' },
+        { key: 'editHistory', label: 'Edit Previous Match', desc: 'Edit finished matches in History — info, balls, scorecard, replace player' }
+      ];
+      var ADMINS = {};            /* emailKey -> { email, name, perms:{}, at } */
+      var fbAdminRef = null, adminsLoaded = false;
+      function adminKey(email){ return String(email || '').trim().toLowerCase().replace(/\./g, ','); }
+      function normEmail(email){ return String(email || '').trim().toLowerCase(); }
+      function isSuperAdmin(){ return !!authUser && normEmail(authUser.email) === SUPER_ADMIN_EMAIL; }
+      function myAdminRecord(){
+        if (!authUser || !authUser.email) return null;
+        return ADMINS[adminKey(authUser.email)] || null;
+      }
+      function adminHas(perm){
+        if (!authUser) return false;
+        if (isSuperAdmin()) return true;
+        var r = myAdminRecord();
+        return !!(r && r.perms && r.perms[perm]);
+      }
+      function adminPermLabels(rec){
+        if (!rec || !rec.perms) return 'No access granted yet';
+        var on = ADMIN_PERMS.filter(function(p){ return rec.perms[p.key]; }).map(function(p){ return p.label; });
+        return on.length ? on.join(' • ') : 'No access granted yet';
+      }
+      /* Attach the admins registry alongside the other small nodes.
+         Read by everyone (the viewer app must know a signed-in
+         admin's grants); written only from Manage Admin (super
+         admin) and by an admin's own sign-in filling in their
+         Google name. A rejected read (Rules not yet updated) is
+         not fatal: the registry just stays empty on this device. */
+      function attachAdminsListener(){
+        if (!fbApp) return;
+        try {
+          fbAdminRef = fbApp.database().ref('admins');
+          var myRef = fbAdminRef;
+          myRef.on('value', function(snap){
+            if (fbAdminRef !== myRef) return;
+            ADMINS = snap.val() || {};
+            adminsLoaded = true;
+            try { applyAdminUi(); } catch(e){}
+            try { maybeFillAdminName(); } catch(e){}
+            if (currentViewName === 'admins') try { renderAdminList(); } catch(e){}
+            if (currentViewName === 'admindetail') try { renderAdminDetail(); } catch(e){}
+          }, function(err){ adminsLoaded = false; });
+        } catch(e){ fbAdminRef = null; }
+      }
+      /* The name on an admin record is the name their Gmail account
+         carries: when an admin signs in and their record has no
+         name yet (or a different one), their own client fills it
+         in from the Google profile. The Rules allow exactly this
+         one write — own record, email and perms untouched. */
+      function maybeFillAdminName(){
+        if (!authUser || !fbAdminRef || isSuperAdmin()) return;
+        var rec = myAdminRecord();
+        if (!rec) return;
+        var gn = authUser.displayName || '';
+        if (gn && rec.name !== gn){
+          try { var pr = fbAdminRef.child(adminKey(authUser.email)).update({ name: gn }); if (pr && pr.catch) pr.catch(function(){}); } catch(e){}
+        }
+      }
+      /* Reflect the signed-in account's admin standing everywhere
+         it changes what is shown: the Manage Admin console entry
+         (super admin only), the granted-action buttons on the
+         viewer home (granted permissions only — the rest never
+         render), and the body classes that let a granted admin's
+         Edit controls show inside the viewer app. Runs on sign-in,
+         sign-out and every admins-registry update. */
+      function applyAdminUi(){
+        var cm = $('consoleManageAdmin'); if (cm) cm.hidden = !isSuperAdmin();
+        document.body.classList.toggle('admin-cep', !!currentUid() && adminHas('editPlayer'));
+        document.body.classList.toggle('admin-ceh', !!currentUid() && adminHas('editHistory'));
+        var box = $('viewerAdminActions');
+        if (box){
+          var html = '';
+          if (authUser && (isSuperAdmin() || myAdminRecord())){
+            if (adminHas('createSingle')) html += '<button type="button" class="btn" onclick="adminCreateSingle()">🏏 Create Single Match</button>';
+            if (adminHas('createTournament')) html += '<button type="button" class="btn" onclick="adminCreateTournament()">🏆 Create Tournament</button>';
+            if (adminHas('editHistory')) html += '<button type="button" class="btn ghost" onclick="openViewerPastMatches()">📜 Edit Previous Matches</button>';
+            if (adminHas('editPlayer')) html += '<button type="button" class="btn ghost" onclick="openSearch()">👤 Edit Players — search a player</button>';
+          }
+          if (box.innerHTML !== html) box.innerHTML = html;
+        }
+        try { renderAuthBar(); } catch(e){}
+      }
+      /* A granted admin's Create actions run on the control side:
+         the session steps out of viewer mode (the same door the
+         scorer's own "Open Scorer Controls" uses) and lands on the
+         normal creation screen. What they create is recorded under
+         their own account, like anything they own. */
+      function adminEnterControl(){
+        setDeviceViewerFlag(false);
+        document.body.classList.remove('viewer-mode');
+        document.body.classList.remove('viewer-inpage');
+        document.body.classList.remove('viewer-flow');
+        document.body.classList.remove('link-viewer');
+        document.body.classList.add('link-control');
+      }
+      function adminCreateSingle(){
+        if (!adminHas('createSingle')){ toast('🔒 You do not have access to create a Single Match'); return; }
+        adminEnterControl();
+        consoleStartSingle();
+      }
+      function adminCreateTournament(){
+        if (!adminHas('createTournament')){ toast('🔒 You do not have access to create a Tournament'); return; }
+        adminEnterControl();
+        createTournament();
+      }
+      /* ---------- my profile: photo tap in the account bar ----------
+         The Email saved on a player profile (Edit Profile) links
+         that profile to a Google account: signing in with that
+         Gmail and tapping the photo opens the profile. */
+      function playerByEmail(email){
+        var em = normEmail(email);
+        if (!em) return null;
+        ensurePlayerArrays();
+        for (var i = 0; i < S.players.length; i++){
+          var p = S.players[i];
+          if (p && normEmail(p.email) === em) return p;
+        }
+        return null;
+      }
+      function openMyProfile(){
+        if (!authUser){ openSignIn(); return; }
+        var p = playerByEmail(authUser.email);
+        if (!p){
+          toast('No player profile is linked to ' + (authUser.email || 'this account') + ' yet — the admin can add this email from Edit Profile on your player profile.');
+          return;
+        }
+        var team = '';
+        ensurePlayerArrays();
+        for (var i = 0; i < S.playerIds.length; i++){
+          var m = S.playerIds[i];
+          if (m && m.id === p.id){ team = m.t || ''; if ((m.n || '') === p.name) break; }
+        }
+        openPlayerProfile(team, p.name, p.id);
+      }
+      /* ---------- Manage Admin pages ---------- */
+      var maDetailKey = '';
+      function openManageAdmins(){
+        if (!isSuperAdmin()){
+          toast(authUser ? '🔒 Manage Admin is only for the Super Admin (' + SUPER_ADMIN_EMAIL + ')' : '🔑 Sign in as the Super Admin (' + SUPER_ADMIN_EMAIL + ') to manage admins');
+          return;
+        }
+        maShowPanel('list');
+        setView('admins');
+      }
+      function maShowPanel(which){
+        var add = $('maAddPanel'), list = $('maListPanel');
+        if (add) add.hidden = which !== 'add';
+        if (list) list.hidden = which !== 'list';
+        if (which === 'list') renderAdminList();
+        if (which === 'add'){ var st = $('maAddStatus'); if (st) st.textContent = fbAdminRef ? '' : '⏳ Firebase is still connecting — admins are saved to the database, so wait for the connection before adding.'; }
+      }
+      function maBackToList(){ maShowPanel('list'); setView('admins'); }
+      function renderAdminList(){
+        var box = $('maList'); if (!box) return;
+        var keys = Object.keys(ADMINS).sort(function(a, b){
+          var na = (ADMINS[a].name || ADMINS[a].email || ''), nb = (ADMINS[b].name || ADMINS[b].email || '');
+          return na.localeCompare(nb);
+        });
+        var html = '<div class="ma-row" style="cursor:default">'
+          + '<span class="ma-ava super" aria-hidden="true">' + esc(initialsOf('Riasat Ali')) + '</span>'
+          + '<span><span class="ma-name">Riasat Ali</span><span class="own-chip">SUPER ADMIN</span>'
+          + '<div class="ma-mail">' + esc(SUPER_ADMIN_EMAIL) + '</div>'
+          + '<div class="ma-perms">Full access — controls everything</div></span></div>';
+        if (!keys.length){
+          html += '<p class="note" style="margin-top:6px">' + (adminsLoaded ? 'No admins added yet — tap Add Admin to add the first one by Gmail address.' : '⏳ Loading the admin list from Firebase…') + '</p>';
+        }
+        keys.forEach(function(k){
+          var r = ADMINS[k] || {};
+          var nm = r.name || r.email || '';
+          html += '<button type="button" class="ma-row" onclick="openAdminDetail(\'' + esc(k) + '\')">'
+            + '<span class="ma-ava" aria-hidden="true">' + esc(initialsOf(nm)) + '</span>'
+            + '<span><span class="ma-name">' + esc(r.name || r.email || '') + '</span>'
+            + '<div class="ma-mail">' + esc(r.email || '') + '</div>'
+            + '<div class="ma-perms">' + esc(adminPermLabels(r)) + '</div></span>'
+            + '<span class="ma-chev" aria-hidden="true">›</span></button>';
+        });
+        box.innerHTML = html;
+      }
+      function maAddAdmin(){
+        if (!isSuperAdmin()){ toast('🔒 Only the Super Admin can add admins'); return; }
+        var emEl = $('maEmail'), nmEl = $('maName'), st = $('maAddStatus');
+        var email = normEmail(emEl ? emEl.value : '');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Type a valid Gmail address first'); if (emEl) emEl.focus(); return; }
+        if (email === SUPER_ADMIN_EMAIL){ toast('That is the Super Admin account — it already controls everything'); return; }
+        if (!fbAdminRef){ if (st) st.textContent = '⚠️ Firebase is not connected yet — admins are saved to the database, so this cannot be saved right now. Wait for the connection and try again.'; return; }
+        var key = adminKey(email);
+        if (ADMINS[key]){ toast('That Gmail is already an admin — opening their access page'); openAdminDetail(key); return; }
+        var rec = { email: email, name: (nmEl ? nmEl.value.trim().replace(/\s+/g, ' ') : ''), perms: {}, at: Date.now() };
+        fbAdminRef.child(key).set(rec).then(function(){
+          if (emEl) emEl.value = '';
+          if (nmEl) nmEl.value = '';
+          toast('✓ Admin added — now grant their access');
+          openAdminDetail(key);
+        }).catch(function(err){
+          if (st) st.textContent = '⚠️ Could not save this admin: ' + ((err && err.message) ? err.message : err) + ' — if the database Rules have not been updated yet, publish the Rules from Firebase Setup (they now include the admins node).';
+        });
+      }
+      function openAdminDetail(key){
+        if (!isSuperAdmin()){ toast('🔒 Only the Super Admin can change admin access'); return; }
+        maDetailKey = key;
+        renderAdminDetail();
+        setView('admindetail');
+      }
+      function renderAdminDetail(){
+        var body = $('maDetailBody'); if (!body) return;
+        var r = ADMINS[maDetailKey];
+        var title = $('maDetailTitle');
+        if (!r){ if (title) title.textContent = 'Admin'; body.innerHTML = '<p class="note">This admin is no longer in the list.</p>'; return; }
+        if (title) title.textContent = r.name || r.email || 'Admin';
+        var html = '<div class="card" style="margin-bottom:14px"><div style="display:flex;gap:12px;align-items:center">'
+          + '<span class="ma-ava" aria-hidden="true">' + esc(initialsOf(r.name || r.email || '')) + '</span>'
+          + '<div><div style="font-weight:800;font-size:16.5px">' + esc(r.name || r.email || '') + '</div>'
+          + '<div class="note">' + esc(r.email || '') + '</div></div></div>'
+          + (r.name ? '' : '<p class="note" style="margin-top:10px">Their name appears here from their Google account the first time they sign in.</p>')
+          + '</div>';
+        html += ADMIN_PERMS.map(function(p){
+          var on = !!(r.perms && r.perms[p.key]);
+          return '<div class="perm-row"><div><div class="perm-t">' + esc(p.label) + '</div><div class="perm-d">' + esc(p.desc) + '</div></div>'
+            + '<button type="button" class="perm-sw" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(p.label) + '" onclick="maTogglePerm(\'' + esc(p.key) + '\')"></button></div>';
+        }).join('');
+        html += '<p class="note" id="maPermStatus"></p>';
+        html += '<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
+          + '<div style="font-weight:700;color:var(--red);margin-bottom:10px">Remove Admin</div>'
+          + '<button type="button" class="btn red" onclick="maRemoveAdmin()">🗑 Remove Admin</button></div>';
+        body.innerHTML = html;
+      }
+      function maTogglePerm(perm){
+        if (!isSuperAdmin()){ toast('🔒 Only the Super Admin can change admin access'); return; }
+        var r = ADMINS[maDetailKey]; if (!r || !fbAdminRef) return;
+        var next = !(r.perms && r.perms[perm]);
+        fbAdminRef.child(maDetailKey).child('perms').child(perm).set(next ? true : null).then(function(){
+          toast(next ? '✓ Access granted' : '✓ Access removed');
+        }).catch(function(err){
+          var st = $('maPermStatus');
+          if (st) st.textContent = '⚠️ Could not save: ' + ((err && err.message) ? err.message : err) + ' — if the database Rules have not been updated yet, publish the Rules from Firebase Setup (they now include the admins node).';
+        });
+      }
+      function maRemoveAdmin(){
+        if (!isSuperAdmin()){ toast('🔒 Only the Super Admin can remove admins'); return; }
+        var r = ADMINS[maDetailKey]; if (!r || !fbAdminRef) return;
+        askVerify('Remove Admin', 'Remove ' + (r.name || r.email) + ' as an admin? All their granted access goes with it — they keep watching as a normal viewer.', function(){
+          fbAdminRef.child(maDetailKey).remove().then(function(){
+            toast('✓ Admin removed');
+            maBackToList();
+          }).catch(function(err){ toast('⚠️ Could not remove: ' + ((err && err.message) ? err.message : err)); });
+        });
+      }
+      /* A finished match is EDITABLE by its owner (histEntryDeletable)
+         or by a signed-in admin holding the Edit Previous Match
+         grant. Deleting stays with the owner alone. */
+      function histEntryEditable(e){
+        if (!e) return false;
+        if (histEntryDeletable(e)) return true;
+        if (!currentUid()) return false;
+        return adminHas('editHistory');
+      }
+
+      /* ============================================================
          PERMANENT MATCH HISTORY & PLAYER RECORDS
          Where match data lives:
          (a) the LIVE match — state S, synced through Firebase at
@@ -18331,6 +18730,7 @@
         var o = e.ownerUid || '';
         if (!o || o === uid) return true;
         if (e.scorerEmailHash && scorerHashMatches(e.scorerEmailHash)) return true;
+        if (adminHas('editHistory')) return true;  /* granted Edit Previous Match (v273): the client attempts the publish; the updated Rules accept it */
         if (!histConfirmed[e.id]) return true;  /* never filed yet — a new record any signed-in account may create */
         return false;
       }
@@ -19144,13 +19544,14 @@
         pfEditOpen = false; pfDirty = false; pfPhotoDraft = null;
       }
       function pfEditFormHTML(){
-        var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', nickname: '', photo: '' } : null);
+        var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', nickname: '', email: '', photo: '' } : null);
         if (!ctx) return '';
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : (ctx.photo || '');
         var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === ctx.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
           + (ctx.role && PROFILE_ROLES.indexOf(ctx.role) === -1 ? '<option value="' + esc(ctx.role) + '" selected>' + esc(ctx.role) + '</option>' : '');
         return '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(ctx.name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
           + '<div style="margin-top:10px"><label for="pfNick">Nickname</label><input id="pfNick" value="' + esc(ctx.nickname || '') + '" autocomplete="off" placeholder="e.g. Riasat" oninput="pfMarkDirty()" /></div>'
+          + '<div style="margin-top:10px"><label for="pfEmail">Email (Gmail)</label><input id="pfEmail" type="email" inputmode="email" value="' + esc(ctx.email || '') + '" autocomplete="off" placeholder="e.g. player@gmail.com" oninput="pfMarkDirty()" /><p class="note" style="margin-top:4px">Whoever signs in with this Gmail and taps their photo opens this profile — and uses any admin access granted to this email.</p></div>'
           + '<div class="grid2" style="margin-top:10px">'
           + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
           + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 23" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
@@ -19361,6 +19762,13 @@
         var newRole = roleEl ? roleEl.value : '';
         var newJersey = jerseyEl ? jerseyEl.value.trim().replace(/[^0-9]/g, '').slice(0, 3) : '';
         var newNick = nickEl ? nickEl.value.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
+        /* The profile's Email links this player to a Google account
+           (v273): it must be a valid address, and one Gmail can be
+           linked to only ONE player — two profiles sharing an email
+           would make the sign-in photo tap land on the wrong man. */
+        var emailEl = $('pfEmail');
+        var newEmail = emailEl ? normEmail(emailEl.value) : '';
+        if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){ toast('That email does not look right — check it, or clear the box'); if (emailEl) emailEl.focus(); return; }
         var team = profileCtx.team || '';
         var pid = profileCtx.pid || lookupPlayerId(team, profileCtx.name) || pidHash(team, profileCtx.name);
         var oldName = profileCtx.name;
@@ -19380,6 +19788,11 @@
           checkArr(S.teamA, S.squadA); checkArr(S.teamB, S.squadB);
           if (clash){ toast('⚠️ Another player named “' + newName + '” is already in the squad — pick a different name so the two stay separate'); return; }
         }
+        if (newEmail){
+          var emailClash = null;
+          (S.players || []).forEach(function(x){ if (x && x.id !== pid && normEmail(x.email) === newEmail) emailClash = x; });
+          if (emailClash){ toast('⚠️ That email is already linked to ' + (emailClash.name || 'another player') + ' — one Gmail can open only one profile'); return; }
+        }
         var person = ensurePerson(pid, oldName);
         if (!person){ toast('⚠️ This player could not be saved — try again'); return; }
         /* Rename FIRST, while the registry and mappings still carry
@@ -19390,6 +19803,7 @@
         person.role = newRole;
         person.jersey = newJersey;
         person.nickname = newNick;
+        person.email = newEmail;
         /* The profile is the one place this player's nickname is
            managed: drop every squad-entry nickname mirror that
            resolves to THIS Player ID (under any team), then write
@@ -20561,7 +20975,7 @@
            and jersey — the editable identity of this player. */
         var prof = profileDataFor(useTeam, name, usePid);
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : prof.photo;
-        pfEditCtx = { name: name, team: useTeam, pid: usePid, role: prof.role || '', jersey: prof.jersey || '', nickname: prof.nickname || nickOf(useTeam, name) || '', photo: prof.photo || '' };
+        pfEditCtx = { name: name, team: useTeam, pid: usePid, role: prof.role || '', jersey: prof.jersey || '', nickname: prof.nickname || nickOf(useTeam, name) || '', email: prof.email || '', photo: prof.photo || '' };
         pfData = pfComputeData(name, useTeam, usePid);
         pfData.rec = rec;
         pfData.jersey = prof.jersey || '';
@@ -21037,7 +21451,7 @@
         var e = (typeof HIST !== 'undefined' && HIST) ? HIST[String(id)] : null;
         if (!e) return null;
         var ok = false;
-        try { ok = histEntryDeletable(e); } catch(err){ ok = false; }
+        try { ok = histEntryEditable(e); } catch(err){ ok = false; }
         return ok ? e : null;
       }
       /* Completed rows that today open through openResultMatch
@@ -21310,10 +21724,11 @@
           : '';
         var head = '<div class="hist-match-head"><span>' + esc([e.tournamentName, e.venue].filter(Boolean).join(' • ') || 'Match') + '</span><span class="note">' + esc(date) + (e.live ? ' • <b style="color:var(--red)">● LIVE</b>' : '') + '</span></div>';
         var canManage = !e.live && histEntryDeletable(e);
+        var canEdit = !e.live && histEntryEditable(e);
         var btns = '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="openHistoryMatch(\'' + esc(e.id) + '\')">' + (e.live ? 'Watch Live Scoreboard' : 'View Match') + '</button>'
           + '<button type="button" class="btn ghost sm" onclick="shareMatchCardForHistory(\'' + esc(e.id) + '\')">🖼 Match Card</button>'
           + '<button type="button" class="btn ghost sm" onclick="downloadScorecardPdfForHistory(\'' + esc(e.id) + '\')">📄 Scorecard PDF</button>'
-          + (canManage ? '<button type="button" class="btn ghost sm hist-edit-btn" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button>' : '')
+          + (canEdit ? '<button type="button" class="btn ghost sm hist-edit-btn" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button>' : '')
           + (canManage ? '<button type="button" class="btn ghost sm hist-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
           + '</div>';
         return '<div class="hist-match">' + head + '<div class="note" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Match ID</span>' + matchIdChipHTML(e.id) + '</div>' + lines + (res ? '<div class="mr-result">' + esc(res) + '</div>' : '') + soLine + potm + btns + '</div>';
@@ -23339,7 +23754,7 @@
       function editHistoryMatch(id){
         id = String(id);
         var e = HIST[id]; if (!e) return;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         histEditId = id;
         try { closeHistoryMatch(); } catch(err){}
         var sub = $('histEditSub');
@@ -23378,7 +23793,7 @@
       function saveHistoryEdit(){
         if (!histEditId) return;
         var e = HIST[histEditId]; if (!e){ closeHistoryEdit(); return; }
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         var vEl = $('heVenue'); if (vEl) e.venue = vEl.value.trim();
         var tEl = $('heTournament'); if (tEl) e.tournamentName = tEl.value.trim();
         var dEl = $('heDate'); if (dEl) e.matchDate = dEl.value || '';
@@ -23471,7 +23886,7 @@
       function openBallEditor(id){
         id = String(id);
         var e = HIST[id]; if (!e) return;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         var items = [];
         (e.innings || []).forEach(function(inn, i){
           items.push({ key: 'm' + i, kind: 'main', idx: i, label: (i === 0 ? '1st' : '2nd') + ' Innings — ' + (inn.battingTeam || ''), work: deep(inn), orig: inn });
@@ -24228,7 +24643,7 @@
       function saveBallEdits(){
         if (!beCtx) return;
         var e = beCtx.entry, id = beCtx.id;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         if (!beCtx.dirty){ toast('No corrections yet — tap any ball to fix it'); return; }
         var mainInns = [], soInns = null;
         beCtx.items.forEach(function(it){
@@ -24374,7 +24789,7 @@
       function openScorecardEditor(id){
         id = String(id);
         var e = HIST[id]; if (!e) return;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         if (!(e.innings || []).length){ toast('This match has no scorecard to edit'); return; }
         scCtx = { id: id, entry: e, items: scBuildItems(e) };
         var vs = $('scVs');
@@ -24831,7 +25246,7 @@
       function scSavePlayer(){
         if (!scpCtx || !scCtx) return;
         var e = scCtx.entry, name = scpCtx.name;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can edit this match'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can edit this match'); return; }
         var batTgt = null, bowlTgt = null;
         if (scpCtx.batPos >= 0 && $('scpRuns')){
           var R = scNum('scpRuns'), B = scNum('scpBalls'), F = scNum('scpFours'), X = scNum('scpSixes');
@@ -25020,7 +25435,7 @@
       function openPlayerEditor(id, preset){
         id = String(id);
         var e = HIST[id]; if (!e) return;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can replace a player'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can replace a player'); return; }
         var players = peMatchPlayers(e);
         if (!players.length){ toast('This match has no players on its scorecard'); return; }
         peCtx = { id: id, entry: e, step: 1, players: players, wrong: null, cands: [], repl: null, query: '' };
@@ -25242,7 +25657,7 @@
       function peConfirm(){
         if (!peCtx || !peCtx.wrong || !peCtx.repl) return;
         var e = peCtx.entry, id = peCtx.id, wrong = peCtx.wrong;
-        if (!histEntryDeletable(e)){ toast('Only the match owner can replace a player'); return; }
+        if (!histEntryEditable(e)){ toast('Only the match owner — or an admin granted Edit Previous Match — can replace a player'); return; }
         var repl = { pid: peCtx.repl.pid || '', name: peCtx.repl.name, team: peCtx.repl.team || wrong.team };
         if (peCtx.repl.isNew || !repl.pid){
           repl.pid = playerIdFor(wrong.team, repl.name);
@@ -25349,7 +25764,7 @@
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
             + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
           html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
@@ -26341,16 +26756,20 @@
            has a real History entry behind it (the entry the Edit /
            Edit Balls / Delete actions work on). */
         if (typeof archiveView !== 'undefined' && archiveView && archiveView.entry && !archiveView.readOnly && typeof HIST !== 'undefined' && HIST[String(archiveView.id)]){
-          var avCan = false;
-          try { avCan = histEntryDeletable(archiveView.entry); } catch(e){ avCan = false; }
+          var avCan = false, avDel = false;
+          try { avCan = histEntryEditable(archiveView.entry); } catch(e){ avCan = false; }
+          try { avDel = histEntryDeletable(archiveView.entry); } catch(e){ avDel = false; }
           if (avCan){
             var avId = esc(String(archiveView.id));
             /* An abandoned tournament match also offers Reopen:
                it leaves Completed and returns to the tournament's
-               Upcoming Fixtures (see reopenAbandonedMatch). */
-            var avReopen = (archiveView.entry.abandoned && archiveView.entry.matchKind === 'tournament')
+               Upcoming Fixtures (see reopenAbandonedMatch). Reopen
+               and Delete stay with the owner (avDel); the Edit
+               actions also open for an admin granted Edit Previous
+               Match (v273). */
+            var avReopen = (avDel && archiveView.entry.abandoned && archiveView.entry.matchKind === 'tournament')
               ? '<button type="button" onclick="reopenAbandonedMatch(\'' + avId + '\')">↩ Reopen</button>' : '';
-            html += '<div class="sum-manage"><button type="button" onclick="editHistoryMatch(\'' + avId + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + avId + '\')">🏏 Edit Balls</button><button type="button" onclick="openPlayerEditor(\'' + avId + '\')">👥 Replace Player</button>' + avReopen + '<button type="button" class="sum-del" onclick="deleteHistoryMatch(\'' + avId + '\')">🗑 Delete</button></div>';
+            html += '<div class="sum-manage"><button type="button" onclick="editHistoryMatch(\'' + avId + '\')">✏️ Edit</button><button type="button" onclick="openBallEditor(\'' + avId + '\')">🏏 Edit Balls</button><button type="button" onclick="openPlayerEditor(\'' + avId + '\')">👥 Replace Player</button>' + avReopen + (avDel ? '<button type="button" class="sum-del" onclick="deleteHistoryMatch(\'' + avId + '\')">🗑 Delete</button>' : '') + '</div>';
           }
         }
         html += '</div>';
@@ -29467,6 +29886,8 @@
         var target = $('view-'+v);
         if (target) target.classList.add('show');
         if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('home'); } catch(e){} try { renderHistory(); } catch(e){} }
+        if (v==='admins'){ try { renderAdminList(); } catch(e){} }
+        if (v==='admindetail'){ try { renderAdminDetail(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
         if (v==='search'){ try { renderSearch(); } catch(e){} }
         if (v==='teampage'){ try { renderTeamPage(); } catch(e){} }
@@ -29586,6 +30007,8 @@
         if (v === 'tnaddfx'){ tnFxBack(); return true; }
         if (v === 'openmatch'){ omBackTap(); return true; }
         if (v === 'myteams' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
+        if (v === 'admins'){ setView('console'); return true; }
+        if (v === 'admindetail'){ maBackToList(); return true; }
         /* home / live / console: landing pages with no on-screen
            back control — Back stays on the page. */
         return false;
