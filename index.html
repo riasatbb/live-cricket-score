@@ -1548,7 +1548,14 @@
          off the viewport height. */
       body.viewer-mode #view-live.show{display:flex;flex-direction:column;height:calc(100vh - 44px);height:calc(100dvh - 44px)}
       body.viewer-mode #view-live .live-sticky-head{flex:none;background:var(--bg);padding-bottom:7px}
-      body.viewer-mode #view-live #liveList{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+      /* v292: bottom clearance INSIDE the scroll box. The Tournaments
+         carousel dots are the last thing in #liveList and the box
+         ended flush with them, so at full scroll they sat half-cut
+         against the screen's bottom edge / gesture pill even though
+         empty screen sat below the box. The padding is part of the
+         scrollable area, so the dots now rest fully visible above
+         the edge. */
+      body.viewer-mode #view-live #liveList{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:30px}
       body.viewer-mode #view-live .scorer-entry{flex:none}
       /* ---------- viewer home redesign (v277) ----------
          The viewer landing is three headed sections, like the
@@ -4608,7 +4615,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v291';
+      var APP_VERSION = 'v292';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
