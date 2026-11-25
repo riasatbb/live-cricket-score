@@ -1663,6 +1663,11 @@
       .cb-notstarted .ns-msg{margin-top:12px;font-size:17px;font-weight:700;color:#f2cd6b}
       .cb-notstarted .ns-meta{margin-top:8px;font-size:14px;color:#a8a8a8}
       .scorer-entry{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;padding:12px 2px;color:var(--muted);font-size:14px;font-weight:600}
+      /* The home "Open Scorer Controls" entry is Super Admin only
+         (v290, owner's call): applyAdminUi() toggles its [hidden]
+         flag, and this rule makes [hidden] win over the flex
+         display above. */
+      .scorer-entry[hidden]{display:none}
 
       /* ---------- separate links: control vs viewer ---------- */
       /* Pure viewer link (?view=live / ?view=viewer / ?view=scoreboard):
@@ -3061,7 +3066,7 @@
           </div>
         </div>
         <div id="liveList"></div>
-        <div class="scorer-entry">
+        <div class="scorer-entry" id="homeScorerEntry" hidden>
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
         </div>
       </section>
@@ -4597,7 +4602,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v289';
+      var APP_VERSION = 'v290';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18938,7 +18943,8 @@
       }
       /* Reflect the signed-in account's admin standing everywhere
          it changes what is shown: the Manage Admin console entry
-         (super admin only) and the body classes that let a granted
+         and the home "Open Scorer Controls" entry (both super
+         admin only) and the body classes that let a granted
          admin's Edit controls show inside the viewer app. The
          viewer HOME carries no granted-action buttons at all
          (v288, owner's call): a grant is exercised from where the
@@ -18949,6 +18955,12 @@
          and every admins-registry update. */
       function applyAdminUi(){
         var cm = $('consoleManageAdmin'); if (cm) cm.hidden = !isSuperAdmin();
+        /* The viewer home's "Open Scorer Controls" entry is the
+           Super Admin's door into the control side — nobody else
+           sees it at all (v290, owner's call). It starts hidden in
+           the markup, so it can only ever appear here, for the
+           Super Admin's own signed-in account. */
+        var se = $('homeScorerEntry'); if (se) se.hidden = !isSuperAdmin();
         /* The console gate's second half (see setView): if auth
            has just resolved to a signed-in account that is not
            the Super Admin while the Scorer Console is on screen
