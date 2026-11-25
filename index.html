@@ -1554,7 +1554,7 @@
       body.viewer-mode #view-live.show{display:flex;flex-direction:column;height:calc(100vh - 44px);height:calc(100dvh - 44px)}
       body.viewer-mode #view-live .live-sticky-head{flex:none;background:var(--bg);padding-bottom:8px}
       body.viewer-mode #view-live #liveList{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-      body.viewer-mode #view-live .hist-entry-btn,body.viewer-mode #view-live .scorer-entry{flex:none}
+      body.viewer-mode #view-live .scorer-entry{flex:none}
       /* ---------- viewer home redesign (v277) ----------
          The viewer landing is three headed sections, like the
          reference layout the owner approved: "Matches" — the same
@@ -1577,21 +1577,21 @@
       .hm-track::-webkit-scrollbar{display:none}
       .hm-slide{flex:0 0 calc(100% - 4px);scroll-snap-align:start;min-width:0}
       @media (min-width:900px){.hm-slide{flex-basis:calc(50% - 8px)}}
-      #view-live .hm-slide .ml-row{height:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px 18px;text-align:left}
-      #view-live .hm-slide .ml-label{justify-content:space-between}
-      #view-live .hm-slide .ml-line{justify-content:flex-start}
-      #view-live .hm-slide .ml-status{text-align:left}
+      #view-live .hm-slide .ml-row{height:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px 18px;text-align:center}
+      #view-live .hm-slide .ml-label{justify-content:center}
+      #view-live .hm-slide .ml-line{justify-content:center}
+      #view-live .hm-slide .ml-status{text-align:center}
       .hm-dots{display:flex;justify-content:center;gap:7px;margin-top:9px}
       .hm-dots i{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.3;flex:none}
       .hm-dots i.on{background:#0d9488;opacity:1}
-      .hm-empty{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;color:var(--muted);font-size:14.5px}
+      .hm-empty{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;color:var(--muted);font-size:14.5px;text-align:center}
       /* Profile card: dark photo panel + teal stats panel */
       .hm-profile{display:flex;border-radius:24px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;text-align:left}
       .hm-profile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       .hm-pf-photo{flex:0 0 33%;background:#22282c;display:flex;align-items:center;justify-content:center;padding:20px 10px}
       .hm-pf-photo img{width:78px;height:78px;border-radius:19px;object-fit:cover;display:block}
       .hm-pf-ini{width:78px;height:78px;border-radius:19px;background:#39434a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800}
-      .hm-pf-main{flex:1;min-width:0;background:linear-gradient(130deg,#0e7a6d,#065f56);color:#fff;padding:15px 18px 17px;position:relative;display:block}
+      .hm-pf-main{flex:1;min-width:0;background:linear-gradient(130deg,#0e7a6d,#065f56);color:#fff;padding:15px 18px 17px;position:relative;display:block;text-align:center}
       .hm-pf-name{display:block;font-size:17px;font-weight:700;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .hm-pf-sub{display:block;font-size:12.5px;color:rgba(255,255,255,.8);margin-top:2px;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .hm-pf-rule{display:block;height:1px;background:rgba(255,255,255,.35);margin:11px 0 12px}
@@ -1609,7 +1609,7 @@
       .hm-tn-artname{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;text-align:center;padding:10px 14px}
       .hm-tn-artname .cup{font-size:29px;line-height:1}
       .hm-tn-artname .t{font-family:"Barlow Condensed",sans-serif;font-size:31px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.05}
-      .hm-tn-meta{display:block;padding:12px 16px 14px}
+      .hm-tn-meta{display:block;padding:12px 16px 14px;text-align:center}
       .hm-tn-venue{display:block;font-size:13px;color:var(--muted)}
       .hm-tn-name{display:block;font-size:19px;font-weight:800;text-transform:uppercase;margin-top:1px}
       .hm-tn-sub{display:block;font-size:13.5px;color:var(--muted);margin-top:1px}
@@ -1621,13 +1621,22 @@
          carries. Tournaments: Search Tournament, then a Create
          Tournament box (grant holders only), then the Tournament
          List — each row opening its tournament like the home cards. */
-      .am-start,.atn-create{margin-bottom:14px}
+      .am-start,.atn-create{margin-bottom:14px;text-align:center}
       .am-tabs{display:flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
-      .am-tab{flex:1 1 0;border:none;background:none;color:var(--muted);font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:12px 2px 10px;border-bottom:3px solid transparent;cursor:pointer;min-width:0}
+      .am-tab{flex:1 1 0;border:none;background:none;color:var(--muted);font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:12px 2px 10px;border-bottom:3px solid transparent;cursor:pointer;min-width:0;text-align:center}
       .am-tab.active{color:var(--ink);border-bottom-color:var(--green)}
-      .am-listcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;text-align:left}
+      .am-listcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;text-align:center}
       .am-listcard .ml-row:last-child{border-bottom:none}
-      .atn-listhead{font-size:17px;font-weight:800;margin:18px 2px 10px;color:var(--ink);text-align:left}
+      /* The browse pages carry the same match rows as the viewer
+         home, so they take the same middle alignment the home
+         pages use (v279) — label line, score lines and status
+         line all centred. */
+      #view-allmatches .ml-row{text-align:center}
+      #view-allmatches .ml-label{justify-content:center}
+      #view-allmatches .ml-line{justify-content:center}
+      #view-allmatches .ml-status{text-align:center}
+      #atnSearch{text-align:center}
+      .atn-listhead{font-size:17px;font-weight:800;margin:18px 2px 10px;color:var(--ink);text-align:center}
       .atn-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit;margin-bottom:10px}
       .atn-row:active{transform:scale(.99)}
       .atn-row:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -2820,6 +2829,12 @@
       #segBtnTournament.active{background:var(--gold);border-color:var(--gold);color:#241a02}
       /* Viewer home: the History entry is a warm rust-tinted box */
       #view-live .hist-entry-btn{background:rgba(176,74,36,.09);border-color:rgba(176,74,36,.5);color:var(--ink)}
+      /* Viewer home: the Search entry above it is a teal-tinted box
+         (v280) — teal for players & teams search, rust for Past
+         Matches, so the two stacked entries read as a pair but
+         never blur into one another. */
+      #view-live .home-search-btn{background:rgba(13,148,136,.1);border-color:rgba(13,148,136,.55);color:var(--ink)}
+      @media (prefers-color-scheme: dark){#view-live .home-search-btn{background:rgba(13,148,136,.16)}}
       /* History & Reports options: green for matches, gold for reports */
       .hist-opt .ho-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;font-size:27px;margin:0 auto 8px}
       .hist-opt.ho-matches{background:linear-gradient(165deg,rgba(14,91,60,.12),var(--surface) 62%);border-color:rgba(14,91,60,.4)}
@@ -3023,11 +3038,11 @@
               <div class="lb-sub">by Riasat Ali</div>
             </div>
           </div>
-          <button type="button" class="btn ghost hist-entry-btn" style="margin:10px 0 4px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
+          <button type="button" class="btn ghost hist-entry-btn home-search-btn" style="margin:10px 0 6px" onclick="openSearch('pt')">🔍 Search Players &amp; Teams</button>
+          <button type="button" class="btn ghost hist-entry-btn" style="margin:0 0 4px" onclick="openViewerPastMatches()">📜 View Past Matches</button>
         </div>
         <div class="viewer-admin-actions" id="viewerAdminActions"></div>
         <div id="liveList"></div>
-        <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
         </div>
@@ -4564,7 +4579,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v278';
+      var APP_VERSION = 'v280';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -30114,12 +30129,22 @@
          opening an empty page. */
       var searchReturnView = null;
       var searchHits = { players: [], teams: [], tournaments: [] };
+      /* Set by openSearch('pt') — the viewer home's Search entry
+         (v280): tournaments carry their own search on the
+         Tournaments page, so from home Search covers players and
+         teams only. Every other entry opens the full search. */
+      var searchPlayersTeamsOnly = false;
       var searchSwapS = null;   /* the real state, while a viewer search reads the confirmed snapshot instead (v226) */
-      function openSearch(){
+      function openSearch(scope){
+        searchPlayersTeamsOnly = (scope === 'pt');
         searchReturnView = (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'search') ? currentViewName : null;
         setView('search');
         var box = $('searchBox');
-        if (box){ try { box.focus(); } catch(e){} }
+        if (box){
+          box.placeholder = searchPlayersTeamsOnly ? 'Type a player or team — name or ID' : 'Type a player, team or tournament — name or ID';
+          box.setAttribute('aria-label', searchPlayersTeamsOnly ? 'Search players and teams by name or ID' : 'Search players, teams and tournaments by name or ID');
+          try { box.focus(); } catch(e){}
+        }
       }
       function closeSearch(){
         var back = searchReturnView;
@@ -30234,6 +30259,9 @@
             searchHits.tournaments.push({ current: false, arcId: a.id, name: aName, meta: (d.teams || []).length + ((d.teams || []).length === 1 ? ' team' : ' teams') + ' • ' + (d.matches || []).length + ((d.matches || []).length === 1 ? ' match' : ' matches') + ' completed' + (date ? ' • Saved ' + date : '') + ' • Tour ID ' + tourIdFor(aName) });
           });
         } catch(e){}
+        /* From the viewer home, tournaments are not listed at
+           all (v280) — see searchPlayersTeamsOnly above. */
+        if (searchPlayersTeamsOnly) searchHits.tournaments = [];
         var CAP = 20, html = '';
         if (searchHits.players.length){
           html += '<div class="card"><h3 style="margin-top:0">👤 Players</h3>' + searchHits.players.slice(0, CAP).map(function(p, i){
@@ -30264,7 +30292,7 @@
             return '<button type="button" class="srch-row" onclick="searchOpenTournament(' + i + ')"><span class="srch-ava" aria-hidden="true">🏆</span><span class="srch-main"><span class="srch-name">' + esc(t.name) + '</span><span class="srch-meta">' + esc(t.meta) + '</span></span><span class="srch-arrow" aria-hidden="true">→</span></button>';
           }).join('') + '</div>';
         }
-        if (!html) html = '<div class="card"><p class="note" style="margin:0">No player, team or tournament matches “' + esc(q) + '”.</p></div>';
+        if (!html) html = '<div class="card"><p class="note" style="margin:0">' + (searchPlayersTeamsOnly ? 'No player or team matches “' : 'No player, team or tournament matches “') + esc(q) + '”.</p></div>';
         if (searchSwapS){ S = searchSwapS; searchSwapS = null; }
         wrap.innerHTML = html;
       }
