@@ -4363,7 +4363,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v269';
+      var APP_VERSION = 'v270';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -27526,15 +27526,22 @@
         /* v262: ball-by-ball timeline, win-probability meter,
            top-performer spotlight and the Manhattan chart. Each
            builder returns '' when the match has nothing to show,
-           so an upcoming fixture and a brand-new innings stay clean. */
+           so an upcoming fixture and a brand-new innings stay clean.
+           v270: the Top Performers spotlight and the Momentum
+           (Manhattan) chart appear ONLY once the match is over
+           (finished, or abandoned — an abandoned match is filed as
+           Completed); while the match is live or at the innings
+           break they stay hidden. The ball timeline and the win
+           meter keep their live-only behaviour, unchanged. */
+        var matchOver = finished || !!S.abandoned;
         var btlEl = $('cbBallRow');
         if (btlEl) btlEl.innerHTML = finished ? '' : ballTimelineHTML(inn, !!(fx && fx.newBall));
         var wpEl = $('cbWinProb');
         if (wpEl){ try { wpEl.innerHTML = winProbHTML(); } catch(e){ wpEl.innerHTML = ''; } }
         var spotEl = $('cbSpotlight');
-        if (spotEl){ try { spotEl.innerHTML = spotlightHTML(); } catch(e){ spotEl.innerHTML = ''; } }
+        if (spotEl){ try { spotEl.innerHTML = matchOver ? spotlightHTML() : ''; } catch(e){ spotEl.innerHTML = ''; } }
         var mhEl = $('cbManhattan');
-        if (mhEl){ try { mhEl.innerHTML = manhattanHTML(); } catch(e){ mhEl.innerHTML = ''; } }
+        if (mhEl){ try { mhEl.innerHTML = matchOver ? manhattanHTML() : ''; } catch(e){ mhEl.innerHTML = ''; } }
         /* overs panel — the reference design, for the live match and
            an archived match alike: innings switcher pills on top
            (1st inn / 2nd inn), then one row per over, NEWEST over
