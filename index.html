@@ -1530,7 +1530,7 @@
          logo + name itself, at the top. Shown exactly when the
          header is hidden (viewer mode), so it never doubles up. */
       .live-brand{display:none}
-      body.viewer-mode .live-brand{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 0 2px}
+      body.viewer-mode .live-brand{display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 0 2px}
       .live-brand img{width:47px;height:auto;flex:none}
       /* The byline starts under the "a" of CricCast — the owner's
          layout: "CricCast" on the first line, "by Riasat Ali"
@@ -1552,7 +1552,7 @@
          main's padding (10px top + 34px bottom) is the 44px taken
          off the viewport height. */
       body.viewer-mode #view-live.show{display:flex;flex-direction:column;height:calc(100vh - 44px);height:calc(100dvh - 44px)}
-      body.viewer-mode #view-live .live-sticky-head{flex:none;background:var(--bg);padding-bottom:8px}
+      body.viewer-mode #view-live .live-sticky-head{flex:none;background:var(--bg);padding-bottom:6px}
       body.viewer-mode #view-live #liveList{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
       body.viewer-mode #view-live .scorer-entry{flex:none}
       /* ---------- viewer home redesign (v277) ----------
@@ -1572,10 +1572,18 @@
          kept). A height-tightening pass that shipped alongside
          the centring was dropped again in v283 at the owner's
          word — the head, the three cards and the section spacing
-         keep their original roomier sizes. */
-      #view-live .hm-sec{margin-top:20px;text-align:left}
+         keep their original roomier sizes. v286: at the owner's
+         word ("Total ২০px কমাও") a single small trim totalling
+         exactly 20px of vertical space, spread thin so nothing
+         visibly shrinks: brand padding-top −2, sticky-head
+         bottom −2, entry-row top margin −2, entry buttons −4
+         (2 top + 2 bottom), section gap −2, section-head bottom
+         margin −2, match-card vertical padding −4 (2 + 2) and
+         carousel dots top margin −2. No font, photo, banner or
+         card size changes. */
+      #view-live .hm-sec{margin-top:18px;text-align:left}
       #view-live .hm-sec:first-child{margin-top:2px}
-      .hm-sec-head{position:relative;display:flex;align-items:center;justify-content:center;margin:0 2px 10px}
+      .hm-sec-head{position:relative;display:flex;align-items:center;justify-content:center;margin:0 2px 8px}
       .hm-sec-head h3{font-size:21px;font-weight:800;margin:0;color:var(--ink);letter-spacing:.01em;text-align:center}
       .hm-next{position:absolute;right:0;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--ink);font-size:23px;font-weight:800;line-height:1;padding:2px 4px;letter-spacing:-4px}
       .hm-next:active{color:var(--green)}
@@ -1583,11 +1591,11 @@
       .hm-track::-webkit-scrollbar{display:none}
       .hm-slide{flex:0 0 calc(100% - 4px);scroll-snap-align:start;min-width:0}
       @media (min-width:900px){.hm-slide{flex-basis:calc(50% - 8px)}}
-      #view-live .hm-slide .ml-row{height:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px 18px;text-align:center}
+      #view-live .hm-slide .ml-row{height:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:14px 18px;text-align:center}
       #view-live .hm-slide .ml-label{justify-content:center}
       #view-live .hm-slide .ml-line{justify-content:center}
       #view-live .hm-slide .ml-status{text-align:center}
-      .hm-dots{display:flex;justify-content:center;gap:7px;margin-top:9px}
+      .hm-dots{display:flex;justify-content:center;gap:7px;margin-top:7px}
       .hm-dots i{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.3;flex:none}
       .hm-dots i.on{background:#0d9488;opacity:1}
       .hm-empty{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;color:var(--muted);font-size:14.5px;text-align:center}
@@ -2847,8 +2855,8 @@
          and the home needs less scrolling. Each label stays on a
          single line: a smaller font and tighter side padding than
          the full-width buttons had. */
-      #view-live .live-entry-row{display:flex;gap:8px;margin:10px 0 4px}
-      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:13.5px;white-space:nowrap;text-align:center}
+      #view-live .live-entry-row{display:flex;gap:8px;margin:8px 0 4px}
+      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:8px 6px;font-size:13.5px;white-space:nowrap;text-align:center}
       /* History & Reports options: green for matches, gold for reports */
       .hist-opt .ho-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;font-size:27px;margin:0 auto 8px}
       .hist-opt.ho-matches{background:linear-gradient(165deg,rgba(14,91,60,.12),var(--surface) 62%);border-color:rgba(14,91,60,.4)}
@@ -4595,7 +4603,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v284';
+      var APP_VERSION = 'v286';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
