@@ -329,6 +329,12 @@
       /* ---------- admins (v273): super admin, Manage Admin, granted access ---------- */
       .authbar .ab-photo-btn{flex:none;padding:0;border:none;background:none;cursor:pointer;border-radius:50%;line-height:0}
       .authbar .ab-photo-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+      /* The 👁️ beside the account photo (v293): one tap from the
+         control side into Viewer Mode. Same 40px circle as the
+         photo it sits beside; gone while already in viewer mode. */
+      .authbar .ab-eye{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--chip);font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+      .authbar .ab-eye:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+      body.viewer-mode .authbar .ab-eye{display:none}
       .authbar .ab-badge.admin{background:var(--green);color:#fff}
       /* Manage Admin pages: option rows, admin list rows, switches. */
       .ma-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit}
@@ -4608,7 +4614,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v291';
+      var APP_VERSION = 'v293';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -17546,6 +17552,21 @@
         if (!isSuperAdmin()) return;
         enterControlMode();
       }
+      /* The 👁️ beside the photo in the account bar (v293): one tap
+         from the control side into Viewer Mode — the same pure
+         viewer home the shared viewer link opens (read-only; the
+         device is remembered as a viewer while it lasts). The
+         control chrome comes off first, so the session counts as
+         a viewer session throughout, not a scorer preview. The
+         way back is the viewer home's own "Enter Super Admin
+         Mode" button, whose door (enterControlMode) clears the
+         viewer flag again on the way in. */
+      function enterViewerMode(){
+        try { closeSignIn(); } catch(e){}
+        try { closeDotsMenu(); } catch(e){}
+        document.body.classList.remove('link-control');
+        enterViewerHome(true);
+      }
       /* ---------- public scoreboard: tournament explorer (viewer) ---------- */
       var sbTournamentOpen = false;
       var sbSelectedTeam = null;
@@ -18628,9 +18649,11 @@
              profile — the profile whose Email (Edit Profile) is
              this Gmail address. */
           var photo = '<button type="button" class="ab-photo-btn" onclick="openMyProfile()" aria-label="Open my player profile" title="My Player Profile">' + face + '</button>';
+          /* Beside the photo: the 👁️ door into Viewer Mode (v293). */
+          var eye = '<button type="button" class="ab-eye" onclick="enterViewerMode()" aria-label="Viewer Mode" title="Viewer Mode">👁️</button>';
           var badge = isSuperAdmin() ? '<span class="ab-badge">Super Admin</span>'
             : (myAdminRecord() ? '<span class="ab-badge admin">Admin</span>' : '<span class="ab-badge">Signed in</span>');
-          html = '<div class="authbar"><div class="ab-main">' + photo
+          html = '<div class="authbar"><div class="ab-main">' + photo + eye
             + '<div><div class="ab-name">' + esc(nm) + badge + '</div>'
             + '<div class="ab-sub">' + esc(authUser.email || '') + '</div></div></div>'
             + '<button type="button" class="btn ghost sm" onclick="signOutUser()">Sign out</button></div>';
