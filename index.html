@@ -2856,7 +2856,12 @@
          single line: a smaller font and tighter side padding than
          the full-width buttons had. */
       #view-live .live-entry-row{display:flex;gap:8px;margin:9px 0 4px}
+      #view-live .live-entry-row[hidden]{display:none}
       #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:13.5px;white-space:nowrap;text-align:center}
+      /* The Super Admin's entry takes the entry row's exact slot
+         (same margins, same height) while his account is signed in. */
+      #view-live .super-admin-entry{margin:9px 0 4px;padding:10px 6px;font-size:13.5px;text-align:center;border-color:var(--gold)}
+      #view-live .super-admin-entry[hidden]{display:none}
       /* History & Reports options: green for matches, gold for reports */
       .hist-opt .ho-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;font-size:27px;margin:0 auto 8px}
       .hist-opt.ho-matches{background:linear-gradient(165deg,rgba(14,91,60,.12),var(--surface) 62%);border-color:rgba(14,91,60,.4)}
@@ -3060,10 +3065,11 @@
               <div class="lb-sub">by Riasat Ali</div>
             </div>
           </div>
-          <div class="live-entry-row">
+          <div class="live-entry-row" id="liveEntryRow">
             <button type="button" class="btn ghost hist-entry-btn home-search-btn" onclick="openSearch('pt')">🔍 Search Players &amp; Teams</button>
             <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 View Past Matches</button>
           </div>
+          <button type="button" class="btn ghost hist-entry-btn super-admin-entry" id="homeSuperAdminBtn" hidden onclick="enterSuperAdminMode()">🛡️ Enter Super Admin Mode</button>
         </div>
         <div id="liveList"></div>
         <div class="scorer-entry" id="homeScorerEntry" hidden>
@@ -4602,7 +4608,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v290';
+      var APP_VERSION = 'v291';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11711,7 +11717,20 @@
          All Matches page when a granted admin opened it there. */
       function omBackTap(){
         if (om.tnFx){ setView('tnaddfx'); return; }
-        setView(omReturnView || 'console');
+        var target = omReturnView || 'console';
+        /* An excursion that began on the viewer side (a granted
+           admin's Start Single Match) returns to actual viewer
+           mode: the chrome snapshot taken before the control side
+           stripped it goes back on, so the page it lands on — and
+           the home behind it — wears the big viewer header again,
+           not the compact control header with its Firebase Live
+           bar (v291). Control-side openings have no snapshot and
+           keep the control chrome, as before. */
+        var chrome = omReturnChrome; omReturnChrome = null;
+        if (chrome && (target === 'live' || target === 'allmatches' || target === 'alltn')){
+          chrome.forEach(function(c){ document.body.classList.add(c); });
+        }
+        setView(target);
       }
       /* Build the tournament fixture from the Open Match form in
          tnFx mode, or toast why not and return null. A group
@@ -17515,6 +17534,18 @@
         document.body.classList.add('link-control');
         setView('home');
       }
+      /* The viewer home's "Enter Super Admin Mode" button (v291):
+         shown only while the Super Admin's own account is signed
+         in (applyAdminUi swaps it in for the Search / View Past
+         Matches row). It crosses to the control side through the
+         same chrome switch as the control link and lands on the
+         Scorer Console — his page. The guard is the point: no
+         other account can use the button even if it is somehow
+         shown to them. */
+      function enterSuperAdminMode(){
+        if (!isSuperAdmin()) return;
+        enterControlMode();
+      }
       /* ---------- public scoreboard: tournament explorer (viewer) ---------- */
       var sbTournamentOpen = false;
       var sbSelectedTeam = null;
@@ -18961,6 +18992,15 @@
            the markup, so it can only ever appear here, for the
            Super Admin's own signed-in account. */
         var se = $('homeScorerEntry'); if (se) se.hidden = !isSuperAdmin();
+        /* While the Super Admin's own account is signed in, the
+           viewer home's Search / View Past Matches row is replaced
+           by his "Enter Super Admin Mode" button (v291, owner's
+           call) — the door to the Scorer Console sits where those
+           two entries were. Everyone else keeps the row and never
+           sees the button; it starts hidden in the markup, like the
+           scorer entry above. */
+        var er = $('liveEntryRow'); if (er) er.hidden = isSuperAdmin();
+        var sa = $('homeSuperAdminBtn'); if (sa) sa.hidden = !isSuperAdmin();
         /* The console gate's second half (see setView): if auth
            has just resolved to a signed-in account that is not
            the Super Admin while the Scorer Console is on screen
@@ -18984,8 +19024,20 @@
         document.body.classList.remove('link-viewer');
         document.body.classList.add('link-control');
       }
+      /* The viewer chrome (body classes) exactly as it stands right
+         now, or null when the page is not in viewer mode. A granted
+         admin's Create excursion strips these classes to reach the
+         control side; the Open Match screen's Back restores the
+         snapshot (omBackTap), so the admin lands back in the actual
+         viewer mode they left (v291) instead of coming home under
+         the control chrome — compact header, Firebase Live bar. */
+      function viewerChromeSnapshot(){
+        var cs = ['viewer-mode','viewer-inpage','viewer-flow','link-viewer'].filter(function(c){ return document.body.classList.contains(c); });
+        return cs.length ? cs : null;
+      }
       function adminCreateSingle(){
         if (!adminHas('createSingle')){ toast('🔒 You do not have access to create a Single Match'); return; }
+        omReturnChrome = viewerChromeSnapshot();
         adminEnterControl();
         consoleStartSingle();
       }
@@ -29015,6 +29067,17 @@
          original return. Defaults to the console, the screen's
          original home. */
       var omReturnView = 'console';
+      /* The viewer chrome the Open Match excursion started under,
+         when it started from the viewer side (a granted admin's
+         Start Single Match on the All Matches page): adminCreate-
+         Single snapshots the body classes BEFORE adminEnterControl
+         strips them, and omBackTap puts them back when the return
+         page is a viewer page, so Back lands in actual viewer mode
+         (v291). Null for every control-side opening — the console's
+         own Start Single Match above all — whose Back keeps the
+         control chrome. Consumed by omBackTap either way, so it
+         can never leak into a later, unrelated opening. */
+      var omReturnChrome = null;
       function omNoteReturn(){
         if (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'openmatch') omReturnView = currentViewName;
       }
