@@ -343,6 +343,7 @@
       .ma-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit;margin-bottom:10px}
       .ma-ava{width:42px;height:42px;border-radius:50%;flex:none;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;font-family:"Barlow Condensed",sans-serif}
       .ma-ava.super{background:var(--gold);color:#241a02}
+      img.ma-ava{object-fit:cover;padding:0;border:2px solid var(--gold)}
       .ma-row .ma-name{font-weight:800;font-size:15.5px;line-height:1.25}
       .ma-row .ma-mail{font-size:12.5px;color:var(--muted);line-height:1.35;word-break:break-all}
       .ma-row .ma-perms{font-size:12px;color:var(--muted);margin-top:2px}
@@ -3021,27 +3022,40 @@
           <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">🔙</button>
           <h2>Manage Admin</h2>
         </div>
-        <div class="console-home" style="margin-bottom:14px">
-          <button type="button" class="ma-opt" onclick="maShowPanel('add')">
+        <div id="maSuperCard" style="margin-bottom:14px"></div>
+        <div class="console-home">
+          <button type="button" class="ma-opt" onclick="maOpenAdd()">
             <span class="ma-ic" aria-hidden="true">➕</span><span class="ma-t">Add Admin</span><span class="ma-chev" aria-hidden="true">›</span>
           </button>
-          <button type="button" class="ma-opt" onclick="maShowPanel('list')">
+          <button type="button" class="ma-opt" onclick="maOpenList()">
             <span class="ma-ic" aria-hidden="true">👥</span><span class="ma-t">Admin List</span><span class="ma-chev" aria-hidden="true">›</span>
           </button>
         </div>
-        <div id="maAddPanel" hidden>
-          <div class="card">
-            <div><label for="maEmail">Gmail address</label><input id="maEmail" type="email" inputmode="email" autocomplete="off" placeholder="e.g. someone@gmail.com" /></div>
-            <div style="margin-top:12px"><label for="maName">Name (optional)</label><input id="maName" autocomplete="off" placeholder="Filled from their Google account when they sign in" /></div>
-            <p class="note" id="maAddStatus" style="margin-top:10px"></p>
-            <div class="rowflex" style="margin-top:12px">
-              <button type="button" class="btn" onclick="maAddAdmin()">Add Admin</button>
-            </div>
+      </section>
+
+      <!-- ================= ADD ADMIN: add an admin by Gmail ================= -->
+      <section class="view" id="view-adminadd">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('admins')" aria-label="Back to Manage Admin">🔙</button>
+          <h2>Add Admin</h2>
+        </div>
+        <div class="card">
+          <div><label for="maEmail">Gmail address</label><input id="maEmail" type="email" inputmode="email" autocomplete="off" placeholder="e.g. someone@gmail.com" /></div>
+          <div style="margin-top:12px"><label for="maName">Name (optional)</label><input id="maName" autocomplete="off" placeholder="Filled from their Google account when they sign in" /></div>
+          <p class="note" id="maAddStatus" style="margin-top:10px"></p>
+          <div class="rowflex" style="margin-top:12px">
+            <button type="button" class="btn" onclick="maAddAdmin()">Add Admin</button>
           </div>
         </div>
-        <div id="maListPanel" hidden>
-          <div id="maList"></div>
+      </section>
+
+      <!-- ================= ADMIN LIST: every added admin ================= -->
+      <section class="view" id="view-adminlist">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('admins')" aria-label="Back to Manage Admin">🔙</button>
+          <h2>Admin List</h2>
         </div>
+        <div id="maList"></div>
       </section>
 
       <!-- ================= ADMIN DETAIL: one admin's access ================= -->
@@ -4444,7 +4458,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v274';
+      var APP_VERSION = 'v276';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18440,7 +18454,8 @@
             adminsLoaded = true;
             try { applyAdminUi(); } catch(e){}
             try { maybeFillAdminName(); } catch(e){}
-            if (currentViewName === 'admins') try { renderAdminList(); } catch(e){}
+            if (currentViewName === 'admins') try { renderSuperAdminCard(); } catch(e){}
+            if (currentViewName === 'adminlist') try { renderAdminList(); } catch(e){}
             if (currentViewName === 'admindetail') try { renderAdminDetail(); } catch(e){}
           }, function(err){ adminsLoaded = false; });
         } catch(e){ fbAdminRef = null; }
@@ -18542,30 +18557,43 @@
           toast(authUser ? '🔒 Manage Admin is only for the Super Admin (' + SUPER_ADMIN_EMAIL + ')' : '🔑 Sign in as the Super Admin (' + SUPER_ADMIN_EMAIL + ') to manage admins');
           return;
         }
-        maShowPanel('list');
         setView('admins');
       }
-      function maShowPanel(which){
-        var add = $('maAddPanel'), list = $('maListPanel');
-        if (add) add.hidden = which !== 'add';
-        if (list) list.hidden = which !== 'list';
-        if (which === 'list') renderAdminList();
-        if (which === 'add'){ var st = $('maAddStatus'); if (st) st.textContent = fbAdminRef ? '' : '⏳ Firebase is still connecting — admins are saved to the database, so wait for the connection before adding.'; }
+      /* Add Admin and Admin List are their own pages, opened from
+         the Manage Admin page — nothing of either shows on the
+         Manage Admin page itself beyond the two entry boxes. */
+      function maOpenAdd(){
+        var st = $('maAddStatus');
+        if (st) st.textContent = fbAdminRef ? '' : '⏳ Firebase is still connecting — admins are saved to the database, so wait for the connection before adding.';
+        setView('adminadd');
       }
-      function maBackToList(){ maShowPanel('list'); setView('admins'); }
+      function maOpenList(){ setView('adminlist'); }
+      function maBackToList(){ setView('adminlist'); }
+      /* The Super Admin card sits at the top of the Manage Admin
+         page. It shows the photo on his Gmail account: this page
+         only opens for the signed-in Super Admin himself, so
+         authUser.photoURL is that photo. Initials stay as the
+         fallback when no photo comes back. */
+      function renderSuperAdminCard(){
+        var box = $('maSuperCard'); if (!box) return;
+        var saFace = (authUser && authUser.photoURL)
+          ? '<img class="ma-ava super" src="' + esc(authUser.photoURL) + '" alt="" referrerpolicy="no-referrer" />'
+          : '<span class="ma-ava super" aria-hidden="true">' + esc(initialsOf('Riasat Ali')) + '</span>';
+        box.innerHTML = '<div class="ma-row" style="cursor:default;margin-bottom:0">'
+          + saFace
+          + '<span><span class="ma-name">Riasat Ali</span><span class="own-chip">SUPER ADMIN</span>'
+          + '<div class="ma-mail">' + esc(SUPER_ADMIN_EMAIL) + '</div>'
+          + '<div class="ma-perms">Full access — controls everything</div></span></div>';
+      }
       function renderAdminList(){
         var box = $('maList'); if (!box) return;
         var keys = Object.keys(ADMINS).sort(function(a, b){
           var na = (ADMINS[a].name || ADMINS[a].email || ''), nb = (ADMINS[b].name || ADMINS[b].email || '');
           return na.localeCompare(nb);
         });
-        var html = '<div class="ma-row" style="cursor:default">'
-          + '<span class="ma-ava super" aria-hidden="true">' + esc(initialsOf('Riasat Ali')) + '</span>'
-          + '<span><span class="ma-name">Riasat Ali</span><span class="own-chip">SUPER ADMIN</span>'
-          + '<div class="ma-mail">' + esc(SUPER_ADMIN_EMAIL) + '</div>'
-          + '<div class="ma-perms">Full access — controls everything</div></span></div>';
+        var html = '';
         if (!keys.length){
-          html += '<p class="note" style="margin-top:6px">' + (adminsLoaded ? 'No admins added yet — tap Add Admin to add the first one by Gmail address.' : '⏳ Loading the admin list from Firebase…') + '</p>';
+          html += '<p class="note" style="margin-top:6px">' + (adminsLoaded ? 'No admins added yet — go back and tap Add Admin to add the first one by Gmail address.' : '⏳ Loading the admin list from Firebase…') + '</p>';
         }
         keys.forEach(function(k){
           var r = ADMINS[k] || {};
@@ -29915,7 +29943,8 @@
         var target = $('view-'+v);
         if (target) target.classList.add('show');
         if (v==='history'){ try { syncHistBackLabel(); } catch(e){} try { setHistTab('home'); } catch(e){} try { renderHistory(); } catch(e){} }
-        if (v==='admins'){ try { renderAdminList(); } catch(e){} }
+        if (v==='admins'){ try { renderSuperAdminCard(); } catch(e){} }
+        if (v==='adminlist'){ try { renderAdminList(); } catch(e){} }
         if (v==='admindetail'){ try { renderAdminDetail(); } catch(e){} }
         if (v==='myteams'){ try { renderMyTeams(); } catch(e){} }
         if (v==='search'){ try { renderSearch(); } catch(e){} }
@@ -30037,6 +30066,7 @@
         if (v === 'openmatch'){ omBackTap(); return true; }
         if (v === 'myteams' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
         if (v === 'admins'){ setView('console'); return true; }
+        if (v === 'adminadd' || v === 'adminlist'){ setView('admins'); return true; }
         if (v === 'admindetail'){ maBackToList(); return true; }
         /* home / live / console: landing pages with no on-screen
            back control — Back stays on the page. */
