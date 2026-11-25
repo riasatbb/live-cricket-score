@@ -1566,12 +1566,18 @@
          "Tournaments" — one big banner card per tournament in a
          second carousel. Everything renders inside #liveList, so
          the frozen head / fixed foot layout above is untouched and
-         the sections scroll with the matches. */
+         the sections scroll with the matches.
+         The three section headings sit in the middle of their
+         row, with the » button pinned to the right edge (v282,
+         kept). A height-tightening pass that shipped alongside
+         the centring was dropped again in v283 at the owner's
+         word — the head, the three cards and the section spacing
+         keep their original roomier sizes. */
       #view-live .hm-sec{margin-top:20px;text-align:left}
       #view-live .hm-sec:first-child{margin-top:2px}
-      .hm-sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 10px}
-      .hm-sec-head h3{font-size:21px;font-weight:800;margin:0;color:var(--ink);letter-spacing:.01em}
-      .hm-next{border:none;background:none;color:var(--ink);font-size:23px;font-weight:800;line-height:1;padding:2px 4px;letter-spacing:-4px}
+      .hm-sec-head{position:relative;display:flex;align-items:center;justify-content:center;margin:0 2px 10px}
+      .hm-sec-head h3{font-size:21px;font-weight:800;margin:0;color:var(--ink);letter-spacing:.01em;text-align:center}
+      .hm-next{position:absolute;right:0;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--ink);font-size:23px;font-weight:800;line-height:1;padding:2px 4px;letter-spacing:-4px}
       .hm-next:active{color:var(--green)}
       .hm-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain;padding:2px}
       .hm-track::-webkit-scrollbar{display:none}
@@ -2829,12 +2835,20 @@
       #segBtnTournament.active{background:var(--gold);border-color:var(--gold);color:#241a02}
       /* Viewer home: the History entry is a warm rust-tinted box */
       #view-live .hist-entry-btn{background:rgba(176,74,36,.09);border-color:rgba(176,74,36,.5);color:var(--ink)}
-      /* Viewer home: the Search entry above it is a teal-tinted box
+      /* Viewer home: the Search entry beside it is a teal-tinted box
          (v280) — teal for players & teams search, rust for Past
-         Matches, so the two stacked entries read as a pair but
+         Matches, so the two entries read as a pair but
          never blur into one another. */
       #view-live .home-search-btn{background:rgba(13,148,136,.1);border-color:rgba(13,148,136,.55);color:var(--ink)}
       @media (prefers-color-scheme: dark){#view-live .home-search-btn{background:rgba(13,148,136,.16)}}
+      /* v283: the two entries share ONE row — Search on the left,
+         View Past Matches on the right — instead of two stacked
+         full-width boxes, so the frozen head takes half the height
+         and the home needs less scrolling. Each label stays on a
+         single line: a smaller font and tighter side padding than
+         the full-width buttons had. */
+      #view-live .live-entry-row{display:flex;gap:8px;margin:10px 0 4px}
+      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:13.5px;white-space:nowrap;text-align:center}
       /* History & Reports options: green for matches, gold for reports */
       .hist-opt .ho-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;font-size:27px;margin:0 auto 8px}
       .hist-opt.ho-matches{background:linear-gradient(165deg,rgba(14,91,60,.12),var(--surface) 62%);border-color:rgba(14,91,60,.4)}
@@ -3038,8 +3052,10 @@
               <div class="lb-sub">by Riasat Ali</div>
             </div>
           </div>
-          <button type="button" class="btn ghost hist-entry-btn home-search-btn" style="margin:10px 0 6px" onclick="openSearch('pt')">🔍 Search Players &amp; Teams</button>
-          <button type="button" class="btn ghost hist-entry-btn" style="margin:0 0 4px" onclick="openViewerPastMatches()">📜 View Past Matches</button>
+          <div class="live-entry-row">
+            <button type="button" class="btn ghost hist-entry-btn home-search-btn" onclick="openSearch('pt')">🔍 Search Players &amp; Teams</button>
+            <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 View Past Matches</button>
+          </div>
         </div>
         <div class="viewer-admin-actions" id="viewerAdminActions"></div>
         <div id="liveList"></div>
@@ -4579,7 +4595,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v280';
+      var APP_VERSION = 'v284';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16182,7 +16198,19 @@
       }
 
       /* ---------- public scoreboard: View Tournament (in-page viewer) ---------- */
+      /* The page the in-page tournament viewer was opened FROM
+         (v283): the viewer home, the Tournaments » list, a match's
+         scoreboard, Search, a team page… tnBack returns there.
+         Before v283 the close always landed on the scoreboard, so
+         opening a tournament from Home and pressing 🔙 dropped the
+         viewer inside whatever match the scoreboard happened to
+         show. Captured at open time, mirroring searchReturnView;
+         re-opening while already on the tournament page keeps the
+         first origin. A direct #tournament link has no origin
+         (null) and keeps the old scoreboard landing. */
+      var tnViewerReturnView = null;
       function openTournamentViewerInPage(){
+        if (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'tournament') tnViewerReturnView = currentViewName;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
         var vSub = document.querySelector('#tnTeamsCard .sub');
@@ -16236,7 +16264,17 @@
         var q = '';
         try { q = location.search || ''; } catch(e){}
         if (q.indexOf('viewer') === -1 && !inFlow && !pureViewer) document.body.classList.remove('viewer-mode');
-        setView('scoreboard');
+        /* Back lands where the tournament was opened FROM (v283):
+           the origin captured in openTournamentViewerInPage — the
+           viewer home, the Tournaments » list, Search, a team page,
+           or a match's scoreboard. The tournament page's own
+           sub-pages are never a landing spot, and with no origin
+           (a direct #tournament link) the landing stays the
+           scoreboard, exactly as before v283. */
+        var back = tnViewerReturnView;
+        tnViewerReturnView = null;
+        if (!back || back === 'tournament' || back === 'tnedit' || back === 'tnwinner' || back === 'tnaddfx') back = 'scoreboard';
+        setView(back);
       }
       /* ---------- viewer landing: Recent Matches list ----------
          What viewers see when they open the public link: one list of
@@ -30733,6 +30771,48 @@
 
       /* ---------- init from URL ---------- */
       (function init(){
+        /* Viewer-app guard (v281): the Scorer Console must never be
+           the page a session OPENS on unless it arrived through the
+           scorer's own control link. In-page navigation writes the
+           current screen into the URL hash (setView), so once the
+           console has been opened in the app the address carries
+           #console — and because the hash otherwise wins over the
+           ?view= link on a refresh, the viewer app kept reopening
+           straight onto the console page (?view=#console) instead of
+           the Live Matches home, and enterControlMode even cleared
+           the device's viewer flag, making it stick. So: a console /
+           scorer / control hash WITHOUT the control link is bounced
+           to the viewer home — the address is rewritten to #live
+           before anything renders. The control link itself
+           (?view=scorer / ?view=control, #scorer / #control,
+           control=1) is untouched: the scorer's door works exactly
+           as before, and #scorer / #control hashes already satisfy
+           the control-link test below, so in practice this fires
+           for #console — the reported case.
+           Mechanism (v284 fix): the rewrite must NOT be
+           location.replace(...) followed by return. When the
+           address differs only in its hash (a plain #console
+           arrival), replace() swaps the hash WITHOUT reloading the
+           page, so the return abandoned init() half-run — no
+           routing, no render, no Firebase connect — and the page
+           stayed blank. Instead the address is rewritten IN PLACE
+           with history.replaceState and init FALLS THROUGH: every
+           read below (early viewer test, hash routing) re-reads
+           location.hash / location.search, now sees plain #live
+           with no query, and opens the Live Matches home exactly
+           as a genuine #live arrival does. The final address is
+           still .../#live, as the viewer app requires. */
+        try {
+          var hGuard = (location.hash || '').replace(/^#/, '');
+          if (hGuard === 'console' || hGuard === 'scorer' || hGuard === 'control'){
+            var qGuard = (location.search || '') + ' ' + (location.hash || '');
+            var ctrlGuard = qGuard.indexOf('view=control')>-1 || qGuard.indexOf('view=scorer')>-1 || qGuard.indexOf('#control')>-1 || qGuard.indexOf('#scorer')>-1 || qGuard.indexOf('control=1')>-1;
+            if (!ctrlGuard){
+              try { history.replaceState(null, '', location.pathname + '#live'); }
+              catch(e){ try { location.hash = 'live'; } catch(e2){} }
+            }
+          }
+        } catch(e){}
         /* The six date fields become dd/mm/yyyy entry fields (see
            setupDateFields) before anything reads or writes them. */
         try { setupDateFields(); } catch(e){}
