@@ -330,11 +330,6 @@
       .authbar .ab-photo-btn{flex:none;padding:0;border:none;background:none;cursor:pointer;border-radius:50%;line-height:0}
       .authbar .ab-photo-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       .authbar .ab-badge.admin{background:var(--green);color:#fff}
-      /* A signed-in admin's granted actions on the viewer home: only
-         the permissions actually granted render (applyAdminUi), so
-         this block is empty — and invisible — for everyone else. */
-      .viewer-admin-actions{display:grid;gap:10px;margin:0 0 14px}
-      .viewer-admin-actions:empty{display:none}
       /* Manage Admin pages: option rows, admin list rows, switches. */
       .ma-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit}
       .ma-opt .ma-ic{font-size:22px;line-height:1}
@@ -3065,7 +3060,6 @@
             <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 View Past Matches</button>
           </div>
         </div>
-        <div class="viewer-admin-actions" id="viewerAdminActions"></div>
         <div id="liveList"></div>
         <div class="scorer-entry">
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
@@ -4603,7 +4597,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v287';
+      var APP_VERSION = 'v289';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -11707,10 +11701,12 @@
       }
       /* The Open Match screen's 🔙: inside the Add Fixture flow
          it returns to the flow's selection steps; everywhere else
-         to the Scorer Console, as always. */
+         to the page the screen was opened from (omReturnView) —
+         the Scorer Console when the scorer opened it there, the
+         All Matches page when a granted admin opened it there. */
       function omBackTap(){
         if (om.tnFx){ setView('tnaddfx'); return; }
-        setView('console');
+        setView(omReturnView || 'console');
       }
       /* Build the tournament fixture from the Open Match form in
          tnFx mode, or toast why not and return null. A group
@@ -18942,26 +18938,25 @@
       }
       /* Reflect the signed-in account's admin standing everywhere
          it changes what is shown: the Manage Admin console entry
-         (super admin only), the granted-action buttons on the
-         viewer home (granted permissions only — the rest never
-         render), and the body classes that let a granted admin's
-         Edit controls show inside the viewer app. Runs on sign-in,
-         sign-out and every admins-registry update. */
+         (super admin only) and the body classes that let a granted
+         admin's Edit controls show inside the viewer app. The
+         viewer HOME carries no granted-action buttons at all
+         (v288, owner's call): a grant is exercised from where the
+         work lives — Start Single Match on the All Matches page,
+         Create Tournament on the All Tournaments page, Edit
+         controls inside player profiles and History — never from
+         extra buttons on the home page. Runs on sign-in, sign-out
+         and every admins-registry update. */
       function applyAdminUi(){
         var cm = $('consoleManageAdmin'); if (cm) cm.hidden = !isSuperAdmin();
+        /* The console gate's second half (see setView): if auth
+           has just resolved to a signed-in account that is not
+           the Super Admin while the Scorer Console is on screen
+           — the control link opened it before the account was
+           known — move them to the Live Matches home now. */
+        if (authUser && !isSuperAdmin() && typeof currentViewName !== 'undefined' && currentViewName === 'console'){ try { setView('live'); } catch(e){} }
         document.body.classList.toggle('admin-cep', !!currentUid() && adminHas('editPlayer'));
         document.body.classList.toggle('admin-ceh', !!currentUid() && adminHas('editHistory'));
-        var box = $('viewerAdminActions');
-        if (box){
-          var html = '';
-          if (authUser && (isSuperAdmin() || myAdminRecord())){
-            if (adminHas('createSingle')) html += '<button type="button" class="btn" onclick="adminCreateSingle()">🏏 Create Single Match</button>';
-            if (adminHas('createTournament')) html += '<button type="button" class="btn" onclick="adminCreateTournament()">🏆 Create Tournament</button>';
-            if (adminHas('editHistory')) html += '<button type="button" class="btn ghost" onclick="openViewerPastMatches()">📜 Edit Previous Matches</button>';
-            if (adminHas('editPlayer')) html += '<button type="button" class="btn ghost" onclick="openSearch()">👤 Edit Players — search a player</button>';
-          }
-          if (box.innerHTML !== html) box.innerHTML = html;
-        }
         try { renderAuthBar(); } catch(e){}
       }
       /* A granted admin's Create actions run on the control side:
@@ -28997,6 +28992,20 @@
         return e ? sha256Hex(e) : '';
       }
       var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '', tnFx: null };
+      /* Where the Open Match screen was opened FROM — the page its
+         🔙 returns to (v289, mirroring tnViewerReturnView for the
+         tournament view). It used to always land on the Scorer
+         Console, so a granted admin who opened the screen from the
+         All Matches page fell into the Super Admin's console on
+         Back. Captured by every opener BEFORE setView('openmatch')
+         runs; a re-entry while the screen is already showing (a
+         saved fixture starting from the screen itself) keeps the
+         original return. Defaults to the console, the screen's
+         original home. */
+      var omReturnView = 'console';
+      function omNoteReturn(){
+        if (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'openmatch') omReturnView = currentViewName;
+      }
       var OM_FORMATS = ['T10','T20','Club','L-4i','100','One Day','Test Match'];
       var OM_FORMAT_OVERS = { 'T10': 10, 'T20': 20, 'One Day': 50 };
       /* The raw Team ID computation (name-derived). On its own it
@@ -29269,6 +29278,7 @@
         });
       }
       function openMatchScreen(){
+        omNoteReturn();
         om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
         om.tnFx = null;
@@ -29287,6 +29297,7 @@
          simply show it for the toss. Date / time default to now only
          when the caller left them empty. */
       function openMatchScreenPrefilled(){
+        omNoteReturn();
         om.tnFx = null;
         var now = new Date();
         var dEl = $('omDate'); if (dEl && !dEl.value) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
@@ -30373,6 +30384,18 @@
         else { setView('home'); }
       }
       function setView(v){
+        /* The Scorer Console is the Super Admin's page alone
+           (v289, owner's rule): a signed-in account that is not
+           the Super Admin never lands on it, whichever door it
+           came through — a Back that defaults there, the Single
+           segment, the control link — and is sent to the Live
+           Matches home instead. A session whose account has not
+           resolved yet (signed out, or a saved sign-in still
+           restoring) is left alone here: the moment auth resolves
+           to a non-Super-Admin account, applyAdminUi moves them
+           off the console the same way, so the Super Admin's own
+           restore is never bounced by his own gate. */
+        if (v === 'console' && typeof authUser !== 'undefined' && authUser && typeof isSuperAdmin === 'function' && !isSuperAdmin()) v = 'live';
         /* Navigating away from the tournament page family ends
            tournament view mode (v226): the real current tournament
            is restored before the new view renders. The tournament
