@@ -1555,6 +1555,88 @@
       body.viewer-mode #view-live .live-sticky-head{flex:none;background:var(--bg);padding-bottom:8px}
       body.viewer-mode #view-live #liveList{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
       body.viewer-mode #view-live .hist-entry-btn,body.viewer-mode #view-live .scorer-entry{flex:none}
+      /* ---------- viewer home redesign (v277) ----------
+         The viewer landing is three headed sections, like the
+         reference layout the owner approved: "Matches" — the same
+         match rows as before, one card per match in a swipeable
+         carousel with dots; "Profile" — the signed-in viewer's own
+         player card (photo on a dark panel, name + career Matches /
+         Runs / Wickets on a teal panel; tapping it opens the Player
+         Profile, and for a guest the card is the sign-in); and
+         "Tournaments" — one big banner card per tournament in a
+         second carousel. Everything renders inside #liveList, so
+         the frozen head / fixed foot layout above is untouched and
+         the sections scroll with the matches. */
+      #view-live .hm-sec{margin-top:20px;text-align:left}
+      #view-live .hm-sec:first-child{margin-top:2px}
+      .hm-sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 10px}
+      .hm-sec-head h3{font-size:21px;font-weight:800;margin:0;color:var(--ink);letter-spacing:.01em}
+      .hm-next{border:none;background:none;color:var(--ink);font-size:23px;font-weight:800;line-height:1;padding:2px 4px;letter-spacing:-4px}
+      .hm-next:active{color:var(--green)}
+      .hm-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain;padding:2px}
+      .hm-track::-webkit-scrollbar{display:none}
+      .hm-slide{flex:0 0 calc(100% - 4px);scroll-snap-align:start;min-width:0}
+      @media (min-width:900px){.hm-slide{flex-basis:calc(50% - 8px)}}
+      #view-live .hm-slide .ml-row{height:100%;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:16px 18px;text-align:left}
+      #view-live .hm-slide .ml-label{justify-content:space-between}
+      #view-live .hm-slide .ml-line{justify-content:flex-start}
+      #view-live .hm-slide .ml-status{text-align:left}
+      .hm-dots{display:flex;justify-content:center;gap:7px;margin-top:9px}
+      .hm-dots i{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.3;flex:none}
+      .hm-dots i.on{background:#0d9488;opacity:1}
+      .hm-empty{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;color:var(--muted);font-size:14.5px}
+      /* Profile card: dark photo panel + teal stats panel */
+      .hm-profile{display:flex;border-radius:24px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;text-align:left}
+      .hm-profile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+      .hm-pf-photo{flex:0 0 33%;background:#22282c;display:flex;align-items:center;justify-content:center;padding:20px 10px}
+      .hm-pf-photo img{width:78px;height:78px;border-radius:19px;object-fit:cover;display:block}
+      .hm-pf-ini{width:78px;height:78px;border-radius:19px;background:#39434a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800}
+      .hm-pf-main{flex:1;min-width:0;background:linear-gradient(130deg,#0e7a6d,#065f56);color:#fff;padding:15px 18px 17px;position:relative;display:block}
+      .hm-pf-name{display:block;font-size:17px;font-weight:700;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .hm-pf-sub{display:block;font-size:12.5px;color:rgba(255,255,255,.8);margin-top:2px;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .hm-pf-rule{display:block;height:1px;background:rgba(255,255,255,.35);margin:11px 0 12px}
+      .hm-pf-stats{display:flex;gap:6px}
+      .hm-pf-stat{flex:1;text-align:center;min-width:0}
+      .hm-pf-stat span{display:block;font-size:12.5px;color:rgba(255,255,255,.85)}
+      .hm-pf-stat b{display:block;font-size:30px;font-weight:800;margin-top:1px;font-variant-numeric:tabular-nums;line-height:1.1}
+      .hm-pf-signout{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:99px;font-size:11.5px;font-weight:700;padding:4px 11px;cursor:pointer}
+      .hm-pf-signin{background:#fff;color:#065f56;border:none;border-radius:99px;font-weight:800;font-size:13.5px;padding:9px 16px;display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+      /* Tournament banner cards */
+      .hm-tncard{display:block;width:100%;height:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0;cursor:pointer;color:var(--ink)}
+      .hm-tncard:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+      .hm-tn-art{display:block;position:relative;aspect-ratio:16/7;background:linear-gradient(120deg,#0a4630,#0e5b3c 55%,#0e7a6d);overflow:hidden}
+      .hm-tn-art img{width:100%;height:100%;object-fit:cover;display:block}
+      .hm-tn-artname{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;text-align:center;padding:10px 14px}
+      .hm-tn-artname .cup{font-size:29px;line-height:1}
+      .hm-tn-artname .t{font-family:"Barlow Condensed",sans-serif;font-size:31px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.05}
+      .hm-tn-meta{display:block;padding:12px 16px 14px}
+      .hm-tn-venue{display:block;font-size:13px;color:var(--muted)}
+      .hm-tn-name{display:block;font-size:19px;font-weight:800;text-transform:uppercase;margin-top:1px}
+      .hm-tn-sub{display:block;font-size:13.5px;color:var(--muted);margin-top:1px}
+      /* ---------- Matches / Tournaments browse pages (v278) ----------
+         The pages behind the home sections' » buttons. Matches:
+         a Start Single Match box (only for accounts holding the
+         Create Single Match grant) above LIVE / UPCOMING / RECENT
+         tabs over the same server-confirmed rows the home carousel
+         carries. Tournaments: Search Tournament, then a Create
+         Tournament box (grant holders only), then the Tournament
+         List — each row opening its tournament like the home cards. */
+      .am-start,.atn-create{margin-bottom:14px}
+      .am-tabs{display:flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}
+      .am-tab{flex:1 1 0;border:none;background:none;color:var(--muted);font-family:inherit;font-size:14px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:12px 2px 10px;border-bottom:3px solid transparent;cursor:pointer;min-width:0}
+      .am-tab.active{color:var(--ink);border-bottom-color:var(--green)}
+      .am-listcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;text-align:left}
+      .am-listcard .ml-row:last-child{border-bottom:none}
+      .atn-listhead{font-size:17px;font-weight:800;margin:18px 2px 10px;color:var(--ink);text-align:left}
+      .atn-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);color:var(--ink);cursor:pointer;font-family:inherit;margin-bottom:10px}
+      .atn-row:active{transform:scale(.99)}
+      .atn-row:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+      .atn-thumb{flex:none;width:52px;height:52px;border-radius:12px;object-fit:cover;display:block}
+      .atn-thumb-art{background:linear-gradient(120deg,#0a4630,#0e7a6d);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+      .atn-main{flex:1;min-width:0}
+      .atn-name{display:block;font-size:16.5px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .atn-sub{display:block;font-size:13px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .atn-chev{flex:none;font-size:22px;color:var(--muted);line-height:1}
       /* Upcoming-match page: the not-started block that stands where
          the live score would be, until the first ball is bowled. */
       .cb-notstarted{padding:30px 18px 34px;text-align:center}
@@ -2942,17 +3024,41 @@
             </div>
           </div>
           <button type="button" class="btn ghost hist-entry-btn" style="margin:10px 0 4px" onclick="openSearch()">🔍 Search Players, Teams &amp; Tournaments</button>
-          <div class="mode-intro">
-            <h2>Recent Matches</h2>
-          </div>
         </div>
-        <div class="authbar-slot"></div>
         <div class="viewer-admin-actions" id="viewerAdminActions"></div>
         <div id="liveList"></div>
         <button type="button" class="btn ghost hist-entry-btn" onclick="openViewerPastMatches()">📜 Past Matches</button>
         <div class="scorer-entry">
           <button type="button" class="btn ghost sm" onclick="exitViewerMode()">🎙️ Open Scorer Controls</button>
         </div>
+      </section>
+
+      <!-- ================= ALL MATCHES: LIVE / UPCOMING / RECENT ================= -->
+      <section class="view" id="view-allmatches">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('live')" aria-label="Back to home">🔙</button>
+          <h2>Matches</h2>
+        </div>
+        <div id="amStartBox"></div>
+        <div class="am-tabs" role="tablist" aria-label="Match lists">
+          <button type="button" class="am-tab" data-amtab="live" onclick="setAmTab('live')">Live</button>
+          <button type="button" class="am-tab" data-amtab="upcoming" onclick="setAmTab('upcoming')">Upcoming</button>
+          <button type="button" class="am-tab" data-amtab="recent" onclick="setAmTab('recent')">Recent</button>
+        </div>
+        <div id="amList"></div>
+      </section>
+
+      <!-- ================= ALL TOURNAMENTS: SEARCH / CREATE / LIST ================= -->
+      <section class="view" id="view-alltn">
+        <div class="clean-top">
+          <button type="button" class="clean-back" onclick="setView('live')" aria-label="Back to home">🔙</button>
+          <h2>Tournaments</h2>
+        </div>
+        <div class="card">
+          <input id="atnSearch" type="text" placeholder="🔍 Search Tournament" autocomplete="off" aria-label="Search tournaments" oninput="renderAllTournaments()" />
+        </div>
+        <div id="atnCreateBox"></div>
+        <div id="atnList"></div>
       </section>
 
       <!-- ================= HOME: CHOOSE MODE ================= -->
@@ -4458,7 +4564,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v276';
+      var APP_VERSION = 'v278';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16617,7 +16723,7 @@
            waiting row is shown; the first server snapshot replaces
            it with the real list. */
         if (!fbServerSeen){
-          listEl.innerHTML = '<div class="ml-list"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server…</div></div></div>';
+          listEl.innerHTML = '<div class="hm-sec"><div class="hm-sec-head"><h3>Matches</h3></div><div class="hm-track"><div class="hm-slide"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server…</div></div></div></div></div>';
           return;
         }
         normalizeTournament();
@@ -16632,16 +16738,20 @@
            completed group instead of sitting above the fixtures. */
         var curRow = liveRowHTML();
         var curDone = !liveMatchTombstoned(S) && !!(S.teamA && S.teamB) && (S.status === 'finished' || !!S.abandoned) && !S.awaitingFinish;
-        var html = '<div class="ml-list">';
-        if (!curDone) html += curRow;
+        /* v277: the rows are collected as an array of carousel
+           slides — the same rows, in the same serial order as the
+           old stacked list (in progress, upcoming, completed) —
+           and the Profile and Tournaments sections are appended
+           after them below. */
+        var slides = [];
+        if (!curDone) slides.push(curRow);
         /* Every OTHER match in progress is listed too, right under
            the one on the pad — several matches can be on at once,
            and each is simply In Progress (its own red pill, its own
            tappable row), never a second-class "parked" entry. */
         var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p); });
-        if (parked.length){
-          html += parked.map(function(p){ return inProgressRowHTML(p); }).join('');
-        }
+        var parkedRows = parked.map(function(p){ return inProgressRowHTML(p); });
+        parkedRows.forEach(function(r){ slides.push(r); });
         /* Most recent first. Completed results are gathered from
            EVERY tournament this device holds — the open one and
            the archived ones (v225) — each row labelled below with
@@ -16680,7 +16790,7 @@
           results = [lastFin].concat(results.filter(function(m){ return String(m.id) !== String(lastFin.id); }));
         }
         results = results.slice(0, 6);
-        var resultsHtml = '';
+        var resultRows = [];
         if (results.length){
           /* Per-row tournament label: tournament results (from
              tn.matches) carry the tournament name, but the finished
@@ -16690,7 +16800,7 @@
              kind / tournament name is honoured as stored. The rows
              are built now but only appended after the fixtures —
              completed matches close the list. */
-          resultsHtml = results.map(function(m){
+          resultRows = results.map(function(m){
             /* The row's tournament is the one HOLDING this result
                (resOwnerName, v225) — never just the open one. Its
                stage label is computed from that same holder
@@ -16702,7 +16812,7 @@
             if (m && m.matchKind === 'single'){ rowTnName = ''; rowOwnerTn = null; }
             if (m && typeof m.tournamentName === 'string' && m.tournamentName) rowTnName = m.tournamentName;
             return resultRowHTML(m, rowTnName, rowOwnerTn);
-          }).join('');
+          });
         }
         /* A fixture whose match is already being scored (live now, or
            parked for Resume Scoring) is NOT upcoming — never list it
@@ -16719,18 +16829,308 @@
             return (pr[0] === f.teamA && pr[1] === f.teamB) || (pr[0] === f.teamB && pr[1] === f.teamA);
           });
         }
-        var fixRows = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f) && !bkFixtureDecided(f); }).map(function(f){ return fixtureRowHTML(f, tnName); }).join('');
-        fixRows += (Array.isArray(S.singleFixtures) ? S.singleFixtures : []).filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return singleFixtureRowHTML(f); }).join('');
-        if (fixRows){
-          html += fixRows;
-        }
+        var fixRowArr = tn.fixtures.filter(function(f){ return !fixtureAlreadyOn(f) && !bkFixtureDecided(f); }).map(function(f){ return fixtureRowHTML(f, tnName); });
+        fixRowArr = fixRowArr.concat((Array.isArray(S.singleFixtures) ? S.singleFixtures : []).filter(function(f){ return !fixtureAlreadyOn(f); }).map(function(f){ return singleFixtureRowHTML(f); }));
+        fixRowArr.forEach(function(r){ slides.push(r); });
         /* Completed matches close the list: the pad match's own
            finished row first (it is the newest of them), then the
            saved results, newest first. */
-        if (curDone) html += curRow;
-        html += resultsHtml;
-        html += '</div>';
-        listEl.innerHTML = html;
+        if (curDone) slides.push(curRow);
+        resultRows.forEach(function(r){ slides.push(r); });
+        listEl.innerHTML = '<div class="hm-sec"><div class="hm-sec-head"><h3>Matches</h3>'
+          + '<button type="button" class="hm-next" aria-label="All matches — live, upcoming and recent" onclick="openAllMatches()">&raquo;&raquo;</button>'
+          + '</div><div class="hm-track" id="hmMatchTrack" onscroll="hmSyncDots(this)">'
+          + slides.map(function(r){ return '<div class="hm-slide">' + r + '</div>'; }).join('')
+          + '</div>' + hmDotsHTML(slides.length) + '</div>'
+          + homeProfileHTML()
+          + homeTournamentsHTML();
+        /* The same rows, grouped for the All Matches page behind
+           the Matches » button (LIVE / UPCOMING / RECENT), plus a
+           live refresh for whichever browse page is open — both
+           read only what this server-confirmed render produced,
+           never the device state. */
+        amRows = {
+          live: (!curDone && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(parkedRows),
+          upcoming: fixRowArr.slice(),
+          recent: (curDone ? [curRow] : []).concat(resultRows)
+        };
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'allmatches'){ try { renderAllMatches(); } catch(e){} }
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'alltn'){ try { renderAllTournaments(); } catch(e){} }
+      }
+
+      /* ---------- viewer home (v277): carousel helpers ---------- */
+      function hmDotsHTML(n){
+        if (n < 2) return '';
+        var h = '<div class="hm-dots" aria-hidden="true">';
+        for (var i = 0; i < n; i++) h += '<i' + (i === 0 ? ' class="on"' : '') + '></i>';
+        return h + '</div>';
+      }
+      function hmSyncDots(track){
+        if (!track || !track.parentElement) return;
+        var dots = track.parentElement.querySelector('.hm-dots');
+        if (!dots) return;
+        var slide = track.querySelector('.hm-slide');
+        var w = slide ? (slide.offsetWidth + 12) : track.clientWidth;
+        if (!w) return;
+        var idx = Math.max(0, Math.min(dots.children.length - 1, Math.round(track.scrollLeft / w)));
+        for (var i = 0; i < dots.children.length; i++) dots.children[i].className = (i === idx ? 'on' : '');
+      }
+      function hmNext(id){
+        var track = $(id); if (!track) return;
+        var slide = track.querySelector('.hm-slide');
+        var w = slide ? (slide.offsetWidth + 12) : track.clientWidth;
+        var max = track.scrollWidth - track.clientWidth;
+        var nx = track.scrollLeft + w;
+        if (nx > max + 4) nx = 0; /* at the end, the » wraps back to the first card */
+        try { track.scrollTo({ left: nx, behavior: 'smooth' }); } catch(e){ track.scrollLeft = nx; }
+      }
+      /* ---------- viewer home (v277): Profile section ----------
+         The signed-in viewer's own player card: photo (the player
+         profile's photo first, then the Google photo, then
+         initials) on a dark panel; name and the career Matches /
+         Runs / Wickets — the same aggregatePlayers figures the
+         Player Profile itself shows — on a teal panel. The player
+         is the one whose profile Email is this Gmail (playerByEmail,
+         the v273 link) — the card belongs to whoever is signed in,
+         never to a fixed account: with no email-linked profile it
+         carries the account's own Google name and photo and no
+         figures (v278; display-name matching was removed — it
+         could pin another person's profile onto a like-named
+         login). Tapping the card opens that Player Profile
+         (homeProfileTap — the owner's follow-up ask). A guest gets
+         the same card as the sign-in: Google sign-in lives here
+         now, and a signed-in viewer signs out from the card's
+         corner button. */
+      var homeProfileTarget = null;
+      var homeProfileCache = { stamp: '', rec: null };
+      function homeProfileHTML(){
+        if (!authUser){
+          homeProfileTarget = null;
+          return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
+            + '<div class="hm-profile" role="button" tabindex="0" aria-label="Sign in with Google" onclick="signInWithGoogle()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();signInWithGoogle();}">'
+            + '<span class="hm-pf-photo"><span class="hm-pf-ini" aria-hidden="true">👤</span></span>'
+            + '<span class="hm-pf-main"><span class="hm-pf-name">Guest mode</span><span class="hm-pf-sub">View only</span><span class="hm-pf-rule"></span>'
+            + '<button type="button" class="hm-pf-signin" onclick="event.stopPropagation();signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button>'
+            + '</span></div></div>';
+        }
+        var p = null;
+        try { p = playerByEmail(authUser.email); } catch(e){}
+        var pid = p ? (p.id || '') : '', name = p ? (p.name || '') : '', team = '';
+        /* No display-name matching (v278): this card is the
+           signed-in account's OWN profile or no player's at all.
+           Resolving a registry player by the Google display name
+           alone pinned another person's photo, figures and
+           profile onto whoever signed in with a like-named
+           account — the owner saw his own photo while logged in
+           with a different ID and asked why. The email link above
+           (playerByEmail, v273) is the one identity tie; without
+           it the card below carries the account's own Google name
+           and photo with no figures, and tapping it explains the
+           link (openMyProfile). */
+        var rec = null;
+        if (pid){
+          /* Career totals are recomputed only when the record
+             could have moved (a new recorded match, or the live
+             match's figures) — this section re-renders with every
+             server snapshot while a match is being scored. */
+          try {
+            var recArr = allRecordMatches();
+            var stamp = pid + '|' + recArr.length + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '') + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs) : '');
+            if (homeProfileCache.stamp === stamp) rec = homeProfileCache.rec;
+            else {
+              var recs = aggregatePlayers(recArr).filter(function(r){ return r.pid === pid; });
+              rec = recs[0] || null;
+              homeProfileCache = { stamp: stamp, rec: rec };
+            }
+          } catch(e){}
+          if (rec){ name = rec.name || name; team = rec.team || ''; }
+          if (!team){
+            try {
+              ensurePlayerArrays();
+              for (var i = 0; i < S.playerIds.length; i++){ var mm = S.playerIds[i]; if (mm && mm.id === pid){ team = mm.t || ''; if ((mm.n || '') === name) break; } }
+            } catch(e){}
+          }
+        }
+        homeProfileTarget = pid ? { team: team, name: name || authDisplayName(), pid: pid } : null;
+        var prof = null;
+        try { prof = pid ? profileDataFor(team, name, pid) : null; } catch(e){}
+        var photo = (prof && prof.photo) || authUser.photoURL || '';
+        var dispName = name || authDisplayName();
+        var face = photo
+          ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
+          : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
+        function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
+        var stats = rec
+          ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
+          : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
+        return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
+          + '<div class="hm-profile" role="button" tabindex="0" aria-label="Open my player profile" onclick="homeProfileTap()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();homeProfileTap();}">'
+          + '<span class="hm-pf-photo">' + face + '</span>'
+          + '<span class="hm-pf-main"><button type="button" class="hm-pf-signout" onclick="event.stopPropagation();signOutUser()">Sign out</button>'
+          + '<span class="hm-pf-name">' + esc(dispName) + '</span>'
+          + (authUser.email ? '<span class="hm-pf-sub">' + esc(authUser.email) + '</span>' : '')
+          + '<span class="hm-pf-rule"></span>'
+          + '<span class="hm-pf-stats">' + stats + '</span>'
+          + '</span></div></div>';
+      }
+      /* Tapping the Profile card opens the Player Profile: the
+         resolved player's own profile page; when no player could
+         be resolved for this account, openMyProfile says why (the
+         v273 email-link message). */
+      function homeProfileTap(){
+        if (!authUser){ signInWithGoogle(); return; }
+        if (homeProfileTarget){ openPlayerProfile(homeProfileTarget.team, homeProfileTarget.name, homeProfileTarget.pid); return; }
+        openMyProfile();
+      }
+      /* ---------- viewer home (v277): Tournaments section ----------
+         One banner card per tournament — the current tournament
+         first, then the archived ones, newest first — in the same
+         swipeable carousel as the matches. The banner is the
+         tournament's own uploaded banner when it has one; otherwise
+         a green art panel carries its name. Below it: the venue,
+         the name, and the dates / season (or the team and match
+         counts). Tapping a card opens that tournament exactly as
+         Search opens it. */
+      var homeTnTargets = [];
+      function homeTournamentsHTML(){
+        var items = [];
+        try {
+          var tn = S.tournament;
+          if (tn && tn.present !== false && tournamentHasContent(tn)) items.push({ kind: 'current', tn: tn });
+          tournamentsArchive().slice().reverse().forEach(function(a){ if (a && a.data && (a.data.name || a.name)) items.push({ kind: 'arc', id: a.id, tn: a.data }); });
+        } catch(e){}
+        homeTnTargets = items;
+        var head = '<div class="hm-sec"><div class="hm-sec-head"><h3>Tournaments</h3>'
+          + '<button type="button" class="hm-next" aria-label="All tournaments" onclick="openAllTournaments()">&raquo;&raquo;</button>'
+          + '</div>';
+        if (!items.length) return head + '<div class="hm-empty">No tournaments yet.</div></div>';
+        var cards = items.map(function(t, i){
+          var d = t.tn || {};
+          var nm = d.name || 'Tournament';
+          var sub = d.dates || d.season || '';
+          if (!sub){
+            var tc = (d.teams || []).length, mc = (d.matches || []).length;
+            sub = tc + (tc === 1 ? ' team' : ' teams') + ' • ' + mc + (mc === 1 ? ' match' : ' matches') + ' played';
+          }
+          var art = d.banner
+            ? '<img src="' + esc(d.banner) + '" alt="" loading="lazy" />'
+            : '<span class="hm-tn-artname"><span class="cup" aria-hidden="true">🏆</span><span class="t">' + esc(nm) + '</span></span>';
+          return '<div class="hm-slide"><button type="button" class="hm-tncard" onclick="homeOpenTournament(' + i + ')" aria-label="Open ' + esc(nm) + '">'
+            + '<span class="hm-tn-art">' + art + '</span>'
+            + '<span class="hm-tn-meta">' + (d.venue ? '<span class="hm-tn-venue">' + esc(d.venue) + '</span>' : '')
+            + '<span class="hm-tn-name">' + esc(nm) + '</span>'
+            + '<span class="hm-tn-sub">' + esc(sub) + '</span></span></button></div>';
+        }).join('');
+        return head + '<div class="hm-track" id="hmTnTrack" onscroll="hmSyncDots(this)">' + cards + '</div>' + hmDotsHTML(items.length) + '</div>';
+      }
+      function openHomeTnItem(t){
+        if (!t) return;
+        if (t.kind === 'current'){
+          if (isViewerSession() || document.body.classList.contains('viewer-mode') || document.body.classList.contains('viewer-flow') || document.body.classList.contains('link-viewer')) openTournamentViewerInPage();
+          else openCurrentTournament();
+          return;
+        }
+        openArchivedTournament(t.id);
+      }
+      function homeOpenTournament(i){ openHomeTnItem(homeTnTargets[i]); }
+
+      /* ---------- browse pages behind the home » buttons (v278) ----------
+         Matches » opens a page with three tabs — LIVE / UPCOMING /
+         RECENT, the Cricbuzz-style split the owner asked for — over
+         the very rows the home render grouped into amRows from the
+         server-confirmed state, so a tab can never show a match
+         the server has not confirmed. Above the tabs, accounts
+         holding the Create Single Match grant (adminHas — the
+         Super Admin included) get a Start Single Match box; for
+         everyone else the box never renders. Tournaments » opens
+         a page with Search Tournament at the top, a Create
+         Tournament box under it for Create Tournament grant
+         holders only, and the Tournament List below — the same
+         tournaments, in the same order, as the home section
+         (homeTnTargets, captured by the same display render). */
+      var amTab = 'live';
+      var amRows = null;
+      var atnTargets = [];
+      function openAllMatches(){
+        try { renderLiveHome(); } catch(e){}
+        setView('allmatches');
+      }
+      function setAmTab(t){
+        amTab = t;
+        renderAllMatches();
+      }
+      function renderAllMatches(){
+        var startBox = $('amStartBox');
+        if (startBox){
+          var showStart = false;
+          try { showStart = adminHas('createSingle'); } catch(e){}
+          var startHTML = showStart ? '<button type="button" class="console-opt co-single am-start" onclick="adminCreateSingle()"><span class="co-title">🏏 Start Single Match</span></button>' : '';
+          if (startBox.innerHTML !== startHTML) startBox.innerHTML = startHTML;
+        }
+        document.querySelectorAll('#view-allmatches .am-tab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-amtab') === amTab); });
+        var list = $('amList'); if (!list) return;
+        if (!fbServerSeen){
+          list.innerHTML = '<div class="hm-empty">⏳ Connecting to the server…</div>';
+          return;
+        }
+        var rows = (amRows && amRows[amTab]) || [];
+        if (!rows.length){
+          list.innerHTML = '<div class="hm-empty">' + (amTab === 'live' ? 'No live matches right now.' : amTab === 'upcoming' ? 'No upcoming matches.' : 'No completed matches yet.') + '</div>';
+          return;
+        }
+        list.innerHTML = '<div class="am-listcard">' + rows.join('') + '</div>';
+      }
+      function openAllTournaments(){
+        try { renderLiveHome(); } catch(e){}
+        setView('alltn');
+      }
+      function atnOpenTournament(i){ openHomeTnItem(atnTargets[i]); }
+      function renderAllTournaments(){
+        var createBox = $('atnCreateBox');
+        if (createBox){
+          var showCreate = false;
+          try { showCreate = adminHas('createTournament'); } catch(e){}
+          var createHTML = showCreate ? '<button type="button" class="console-opt co-tournament atn-create" onclick="adminCreateTournament()"><span class="co-title">🏆 Create Tournament</span></button>' : '';
+          if (createBox.innerHTML !== createHTML) createBox.innerHTML = createHTML;
+        }
+        var list = $('atnList'); if (!list) return;
+        if (!fbServerSeen){
+          atnTargets = [];
+          list.innerHTML = '<div class="hm-empty">⏳ Connecting to the server…</div>';
+          return;
+        }
+        var q = '';
+        var sb = $('atnSearch');
+        if (sb) q = String(sb.value || '').trim().toLowerCase();
+        var items = (homeTnTargets || []).filter(function(t){
+          if (!q) return true;
+          var d = (t && t.tn) || {};
+          return String(d.name || '').toLowerCase().indexOf(q) > -1 || String(d.venue || '').toLowerCase().indexOf(q) > -1;
+        });
+        atnTargets = items;
+        if (!items.length){
+          list.innerHTML = '<div class="hm-empty">' + (q ? 'No tournament matches your search.' : 'No tournaments yet.') + '</div>';
+          return;
+        }
+        var rows = items.map(function(t, i){
+          var d = t.tn || {};
+          var nm = d.name || 'Tournament';
+          var sub = d.dates || d.season || '';
+          if (!sub){
+            var tc = (d.teams || []).length, mc = (d.matches || []).length;
+            sub = tc + (tc === 1 ? ' team' : ' teams') + ' • ' + mc + (mc === 1 ? ' match' : ' matches') + ' played';
+          }
+          var meta = [d.venue || '', sub].filter(Boolean).join(' • ');
+          var thumb = d.banner
+            ? '<img class="atn-thumb" src="' + esc(d.banner) + '" alt="" loading="lazy" />'
+            : '<span class="atn-thumb atn-thumb-art" aria-hidden="true">🏆</span>';
+          return '<button type="button" class="atn-row" onclick="atnOpenTournament(' + i + ')" aria-label="Open ' + esc(nm) + '">'
+            + thumb
+            + '<span class="atn-main"><span class="atn-name">' + esc(nm) + '</span>'
+            + (meta ? '<span class="atn-sub">' + esc(meta) + '</span>' : '')
+            + '</span><span class="atn-chev" aria-hidden="true">›</span></button>';
+        }).join('');
+        list.innerHTML = '<h3 class="atn-listhead">Tournament List</h3>' + rows;
       }
 
       function enterViewerHome(pure){
@@ -18148,6 +18548,11 @@
             + '<button type="button" class="btn google" onclick="signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button></div>';
         }
         slots.forEach(function(s){ s.innerHTML = html; });
+        /* The viewer home's Profile card is this page's sign-in
+           surface now (v277), so it follows the account at once —
+           signing in swaps the guest card for the player's own
+           stats card, signing out swaps it back. */
+        try { renderLiveHome(); } catch(e){}
       }
       /* ---------- home 3-dots menu: Sign In + Instructions ----------
          The header's ⋮ button (top right of every home page) opens a
@@ -29955,6 +30360,8 @@
            match was deleted. Entering the scoreboard runs the
            ghost guard for the same reason. */
         if (v==='live'){ try { renderLiveHome(); } catch(e){} }
+        if (v==='allmatches'){ try { renderAllMatches(); } catch(e){} }
+        if (v==='alltn'){ try { renderAllTournaments(); } catch(e){} }
         document.querySelectorAll('.vtab').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
         var segBar = $('segmentBar'); if (segBar) segBar.hidden = !currentSegment;
         var tabs = $('singleTabs'); if (tabs) tabs.hidden = !isSingle;
@@ -30066,6 +30473,7 @@
         if (v === 'openmatch'){ omBackTap(); return true; }
         if (v === 'myteams' || v === 'tournaments' || v === 'resume' || v === 'scorer'){ setView('console'); return true; }
         if (v === 'admins'){ setView('console'); return true; }
+        if (v === 'allmatches' || v === 'alltn'){ setView('live'); return true; }
         if (v === 'adminadd' || v === 'adminlist'){ setView('admins'); return true; }
         if (v === 'admindetail'){ maBackToList(); return true; }
         /* home / live / console: landing pages with no on-screen
