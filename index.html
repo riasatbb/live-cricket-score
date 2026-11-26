@@ -1613,12 +1613,15 @@
       .hm-dots i{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.3;flex:none}
       .hm-dots i.on{background:#0d9488;opacity:1}
       .hm-empty{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;color:var(--muted);font-size:14.5px;text-align:center}
-      /* Profile card: dark photo panel + teal stats panel */
+      /* Profile card: dark photo panel + teal stats panel.
+         v309 (owner's word): the photo fills its whole panel —
+         edge to edge, no small inset tile — and the initials /
+         guest placeholder fills the panel the same way. */
       .hm-profile{display:flex;border-radius:24px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;text-align:left}
       .hm-profile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-      .hm-pf-photo{flex:0 0 33%;background:#22282c;display:flex;align-items:center;justify-content:center;padding:20px 10px}
-      .hm-pf-photo img{width:78px;height:78px;border-radius:19px;object-fit:cover;display:block}
-      .hm-pf-ini{width:78px;height:78px;border-radius:19px;background:#39434a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:27px;font-weight:800}
+      .hm-pf-photo{flex:0 0 33%;position:relative;background:#22282c;overflow:hidden}
+      .hm-pf-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+      .hm-pf-ini{position:absolute;inset:0;background:#39434a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:800}
       .hm-pf-main{flex:1;min-width:0;background:linear-gradient(130deg,#0e7a6d,#065f56);color:#fff;padding:15px 18px 17px;position:relative;display:block;text-align:center}
       .hm-pf-name{display:block;font-size:17px;font-weight:700;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .hm-pf-sub{display:block;font-size:12.5px;color:rgba(255,255,255,.8);margin-top:2px;padding-right:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1633,7 +1636,10 @@
       .hm-tncard{display:block;width:100%;height:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0;cursor:pointer;color:var(--ink)}
       .hm-tncard:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       .hm-tn-art{display:block;position:relative;aspect-ratio:16/7;background:linear-gradient(120deg,#0a4630,#0e5b3c 55%,#0e7a6d);overflow:hidden}
-      .hm-tn-art img{width:100%;height:100%;object-fit:cover;display:block}
+      /* v309 (owner's word): contain, never cover — the
+         tournament logo/banner shows whole, never cropped; the
+         white ground is the artwork's own, so nothing looks cut. */
+      .hm-tn-art img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
       .hm-tn-artname{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;text-align:center;padding:10px 14px}
       .hm-tn-artname .cup{font-size:29px;line-height:1}
       .hm-tn-artname .t{font-family:"Barlow Condensed",sans-serif;font-size:31px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.05}
@@ -3140,6 +3146,92 @@
          (they hang from the bottom of that same area). */
       .modal-back{padding-top:var(--sat);padding-left:var(--sal);padding-right:var(--sar)}
       @media (min-width:640px){.modal-back{padding-top:max(18px,var(--sat));padding-left:max(18px,var(--sal));padding-right:max(18px,var(--sar))}}
+      /* ---------- v308: home pages fit the screen — no scrolling ----------
+         The owner: the Home Page's height must auto-adjust to the
+         screen so nothing needs scrolling. The three home pages
+         (viewer Home, mode chooser, Scorer Console home — the
+         body.home-chrome views) are now a viewport-height flex
+         column: the header takes its natural height, <main> takes
+         exactly what is left, and the page itself never scrolls.
+         Inside the viewer Home, the frozen head keeps its size and
+         the three sections (Matches / Profile / Tournaments) share
+         the remaining height in proportion — the match card, the
+         profile card and the tournament banner stretch or shrink
+         to fill their share (the banner art is flexible now, not a
+         fixed 16/7 slab), so the whole home is always exactly one
+         screen tall, on a short phone and a tall one alike. The
+         carousels still swipe sideways as before. Shorter screens
+         additionally tighten the head, headings and card padding
+         (the max-height passes below) so the fit never comes at
+         the cost of crushed text. Inner pages are untouched: they
+         leave home-chrome and scroll as they always did. */
+      body.home-chrome{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+      body.home-chrome .topbar{flex:none}
+      body.home-chrome main{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;padding-top:calc(8px + var(--sat));padding-bottom:calc(8px + var(--sab));overflow:hidden}
+      body.home-chrome main>.view.show{flex:1 1 auto;min-height:0}
+      /* Viewer Home: one screen, three sharing sections */
+      body.viewer-mode #view-live.show{height:auto}
+      #view-live.show{display:flex;flex-direction:column;overflow:hidden}
+      #view-live .live-sticky-head{flex:none;padding:8px 14px 10px}
+      #view-live #liveList{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+      #view-live .hm-sec{flex:1 1 0;min-height:0;display:flex;flex-direction:column;margin-top:10px}
+      #view-live .hm-sec:first-child{margin-top:2px;flex-grow:1.05}
+      #view-live .hm-sec:nth-child(2){flex-grow:.92}
+      #view-live .hm-sec:nth-child(3){flex-grow:1.18}
+      #view-live .hm-sec-head{flex:none;margin-bottom:6px}
+      #view-live .hm-track{flex:1 1 auto;min-height:0;align-items:stretch}
+      #view-live .hm-slide{display:flex}
+      #view-live .hm-slide .ml-row{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
+      #view-live .hm-empty{flex:1 1 auto;display:flex;align-items:center;justify-content:center}
+      #view-live .hm-dots{flex:none;margin-top:6px}
+      #view-live .hm-profile{flex:1 1 auto;min-height:0}
+      /* v309: no padding, no clamp tile — the profile photo and
+         its placeholder fill the panel edge to edge (base rules). */
+      #view-live .hm-pf-photo{padding:0}
+      #view-live .hm-pf-main{display:flex;flex-direction:column;justify-content:center;padding:10px 16px 12px}
+      #view-live .hm-pf-rule{margin:clamp(6px,1.4vh,11px) 0}
+      #view-live .hm-pf-stat b{font-size:clamp(22px,3.9vh,30px)}
+      #view-live .hm-tncard{display:flex;flex-direction:column}
+      #view-live .hm-tn-art{flex:1 1 auto;min-height:44px;aspect-ratio:auto}
+      #view-live .hm-tn-meta{flex:none;padding:8px 14px 10px}
+      #view-live .scorer-entry{flex:none}
+      /* Mode chooser + Scorer Console home fill their screen too */
+      #view-home.show{display:flex;flex-direction:column;overflow:hidden}
+      #view-home .mode-grid{flex:1 1 auto;min-height:0}
+      #view-home .mode-card{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+      #view-console.show{display:flex;flex-direction:column;overflow:hidden}
+      #view-console .console-home{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+      #view-console .console-opt{flex:1 1 0;min-height:0;display:flex;align-items:center;justify-content:center;padding:10px 14px}
+      /* Shorter screens: tighten, never crush */
+      @media (max-height:760px){
+        #view-live .live-sticky-head{padding:6px 12px 8px}
+        #view-live .live-brand img{width:40px}
+        #view-live .live-brand .lb-name{font-size:28px}
+        #view-live .hm-sec{margin-top:8px}
+        .hm-sec-head h3{font-size:19px}
+        #view-live .hm-slide .ml-row{padding:12px 14px}
+      }
+      @media (max-height:640px){
+        body.home-chrome main{padding-top:calc(5px + var(--sat));padding-bottom:calc(5px + var(--sab))}
+        #view-live .live-sticky-head{padding:5px 12px 7px;border-radius:0 0 16px 16px}
+        #view-live .live-brand img{width:33px}
+        #view-live .live-brand .lb-name{font-size:24px}
+        #view-live .live-entry-row{margin:6px 0 2px}
+        #view-live .live-entry-row .hist-entry-btn{padding:7px 4px;font-size:12.5px}
+        #view-live .hm-sec{margin-top:6px}
+        #view-live .hm-sec-head{margin-bottom:4px}
+        .hm-sec-head h3{font-size:17px;padding-bottom:4px}
+        .hm-sec-head h3::after{height:3px;width:38px}
+        #view-live .hm-dots{margin-top:4px}
+        #view-live .hm-dots i{width:7px;height:7px}
+        #view-live .hm-slide .ml-row{padding:9px 12px}
+        #view-live .hm-pf-main{padding:7px 12px 9px}
+        #view-live .hm-tn-artname .cup{font-size:21px}
+        #view-live .hm-tn-artname .t{font-size:23px}
+        #view-live .hm-tn-meta{padding:5px 10px 7px}
+        #view-live .hm-tn-name{font-size:16px}
+        #view-live .hm-tn-sub{font-size:12.5px}
+      }
     </style>
   </head>
   <body>
@@ -4737,7 +4829,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v307';
+      var APP_VERSION = 'v309';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
