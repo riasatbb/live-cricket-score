@@ -2751,6 +2751,7 @@
       .tp-name{display:block;font-weight:800;font-size:15.5px;text-transform:uppercase;line-height:1.25;word-break:break-word}
       .tp-id{display:block;font-size:12px;color:var(--muted);margin-top:1px}
       .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .gate-msg{margin-top:14px;background:rgba(198,40,40,.10);border:1px solid rgba(198,40,40,.45);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600;line-height:1.45;text-align:left}
       .toss-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px 10px 13px;text-align:center;color:var(--ink);cursor:pointer;width:100%}
       .toss-card:active{transform:scale(.98)}
       .toss-card.sel{border-color:var(--gold);outline:2px solid var(--gold);outline-offset:1px}
@@ -3303,6 +3304,7 @@
             <button type="button" class="btn gold" onclick="omSaveFixture()">Save Fixture</button>
             <button type="button" class="btn" onclick="omStartMatchTap()">Start Match</button>
           </div>
+          <div class="gate-msg" id="omMsg" role="alert" hidden></div>
         </div>
         <div class="card om-card" id="omFxCard" hidden>
           <h2>Saved Fixtures</h2>
@@ -4309,6 +4311,7 @@
           <button type="button" class="chip" id="tossChipBat" onclick="tossDecide('bat')">Bat</button>
           <button type="button" class="chip" id="tossChipBowl" onclick="tossDecide('bowl')">Bowl</button>
         </div>
+        <div class="gate-msg" id="tossMsg" role="alert" hidden></div>
         <button type="button" class="btn" style="width:100%;margin-top:20px" onclick="omStartScoring()">Start Scoring</button>
       </div>
     </div>
@@ -4620,7 +4623,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v295';
+      var APP_VERSION = 'v296';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -8958,13 +8961,18 @@
       function startMatch(){
         if (scoringLocked()) return;
         /* Creating a match requires an account: the creator becomes
-           the match's owner/admin. And a live match that already
+           the match's owner/admin. A match still IN PROGRESS that
            belongs to someone else can never be replaced by another
-           account — only its owner can start over it. */
+           account — only its owner can start over it. A FINISHED
+           match never blocks (v296, same fix as omStartScoring):
+           doStartMatch files it into Match History first, then
+           starts the new match, whoever finished the old one. */
         if (!requireSignIn('start a match')) return;
         var curOwner = S.ownerUid || '';
-        if (liveMatchExists() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
-          toast('🔒 The current match belongs to ' + (S.ownerName || 'another account') + ' — only its owner can replace it with a new match. You are signed in as ' + authDisplayName() + '.');
+        if (liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
+          var blockMsg = '🔒 ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' is still in progress — it is managed by ' + (S.ownerName || 'another admin') + ', so only that admin, its designated scorer or the Super Admin can score it. A new match can start as soon as that one is finished.';
+          toast(blockMsg);
+          var mst = $('matchStatusText'); if (mst) mst.textContent = blockMsg;
           return;
         }
         var newA = $('teamA').value.trim();
@@ -29528,6 +29536,7 @@
         om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
         om.tnFx = null;
+        if (typeof omMsg === 'function') omMsg('');
         var now = new Date();
         var vEl = $('omVenue'); if (vEl) vEl.value = '';
         var dEl = $('omDate'); if (dEl) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
@@ -29545,6 +29554,7 @@
       function openMatchScreenPrefilled(){
         omNoteReturn();
         om.tnFx = null;
+        if (typeof omMsg === 'function') omMsg('');
         var now = new Date();
         var dEl = $('omDate'); if (dEl && !dEl.value) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
         var tEl = $('omTime'); if (tEl && !tEl.value) tEl.value = pad2(now.getHours()) + ':' + pad2(now.getMinutes());
@@ -29738,6 +29748,16 @@
         if (!Array.isArray(S.singleFixtures)) S.singleFixtures = [];
         return S.singleFixtures;
       }
+      /* A blocked tap on this screen explains itself here (v296),
+         under the form's buttons: toast() is a no-op in this app
+         by design, so a gate that only toasted looked like a dead
+         button. */
+      function omMsg(msg){
+        var el = $('omMsg'); if (!el) return;
+        el.textContent = msg || '';
+        el.hidden = !msg;
+        if (msg){ try { el.scrollIntoView({ behavior:'smooth', block:'nearest' }); } catch(e){} }
+      }
       function omSaveFixture(){
         if (om.tnFx){ tnFxSaveFixture(); return; }
         if (!requireSignIn('save a fixture')) return;
@@ -29813,7 +29833,9 @@
            keeps the old rule: any signed-in account may start it,
            and starting makes it theirs. */
         if (f.ownerUid && f.ownerUid !== currentUid() && !isSuperAdmin() && !scorerHashMatches(f.scorerEmailHash)){
-          toast('🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that admin, its designated scorer or the Super Admin can start it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
+          var fxMsg = '🔒 This fixture was saved by ' + (f.ownerName || 'another account') + ' — only that admin, its designated scorer or the Super Admin can start it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.';
+          toast(fxMsg);
+          omMsg(fxMsg);
           return;
         }
         pendingFixtureStart = { kind: 'single', id: id }; /* doStartMatch removes this fixture as the match starts */
@@ -29848,6 +29870,7 @@
         if (om.tnFx && !tnFxArmStart()) return;
         om.tossWinner = ''; om.tossDecision = '';
         renderTossModal();
+        tossMsg('');
         $('tossModal').classList.add('show');
       }
       function closeTossModal(){ $('tossModal').classList.remove('show'); }
@@ -29871,17 +29894,39 @@
         om.tossDecision = d;
         renderTossModal();
       }
+      /* Why a Start Scoring tap could not go ahead, written into
+         the toss sheet itself (v296): toast() is a no-op in this
+         app by design, so a gate that only toasted left the tap
+         looking completely dead — the sheet closed and nothing
+         happened, with no reason shown anywhere. The sheet now
+         stays open and carries the reason until the next tap. */
+      function tossMsg(msg){
+        var el = $('tossMsg'); if (!el) return;
+        el.textContent = msg || '';
+        el.hidden = !msg;
+      }
       function omStartScoring(){
-        if (!om.tossWinner){ toast('⚠️ Who won the toss? Tap the winning team'); return; }
-        if (!om.tossDecision){ toast('⚠️ Decided to Bat or Bowl? Tap one'); return; }
-        if (scoringLocked()){ closeTossModal(); toast('⏳ Still connecting to Firebase — scoring unlocks as soon as the live match loads. Try again in a moment.'); return; }
-        if (!requireSignIn('start a match')){ closeTossModal(); return; }
+        if (!om.tossWinner){ tossMsg('⚠️ Who won the toss? Tap the winning team above.'); return; }
+        if (!om.tossDecision){ tossMsg('⚠️ Decided to Bat or Bowl? Tap one above.'); return; }
+        if (scoringLocked()){ tossMsg('⏳ Still connecting to Firebase — scoring unlocks as soon as the live match loads. Try again in a moment.'); return; }
+        if (!requireSignIn('start a match')){ tossMsg('🔑 Sign in with Google to start a match — the account that starts it becomes its admin.'); return; }
         var curOwner = S.ownerUid || '';
-        if (liveMatchExists() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
-          closeTossModal();
-          toast('🔒 The current match belongs to ' + (S.ownerName || 'another account') + ' — only its owner can replace it with a new match. You are signed in as ' + authDisplayName() + '.');
+        /* Only a match still IN PROGRESS blocks a new start, and
+           only for accounts that do not manage it (v296): before
+           this, ANY match left on the table — including a FINISHED
+           one owned by another admin — stopped a granted admin's
+           Start Scoring dead, and the block was invisible because
+           its only message went to the retired toast (a granted
+           admin with Create Single Match access could not start a
+           match while the Super Admin's completed match sat on the
+           table). A finished match never blocks: doStartMatch
+           files it into Match History first, then starts the new
+           match — whoever finished the old one. */
+        if (liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
+          tossMsg('🔒 ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' is still in progress — it is managed by ' + (S.ownerName || 'another admin') + ', so only that admin, its designated scorer or the Super Admin can score it. Your match can start as soon as that one is finished.');
           return;
         }
+        tossMsg('');
         var v = omFormValues();
         /* Feed the shared start path: the Match Setup inputs carry
            the teams / overs / venue, the toss selects carry the toss,
