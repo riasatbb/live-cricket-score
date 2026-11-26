@@ -206,6 +206,13 @@
       }
       *{box-sizing:border-box}
       html,body{margin:0;padding:0}
+      /* v310 — universal interface: the browser's own text autosizing
+         (a phone's larger system font / text-scaling setting inflating
+         page text on its own) is switched off, so the layout is
+         decided by this stylesheet alone and only ever adapts to the
+         DISPLAY SIZE — the same interface on every device, auto-fit
+         to the screen it is shown on. */
+      html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
       .num{font-family:"Barlow Condensed",system-ui,sans-serif;letter-spacing:.02em;font-variant-numeric:tabular-nums}
       button{font-family:inherit;cursor:pointer}
@@ -1553,7 +1560,7 @@
          the second column, so it lines up with the a in any font —
          a fixed pixel indent would drift whenever the font changes. */
       .live-brand .lb-text{text-align:left;min-width:0;display:grid;grid-template-columns:max-content 1fr}
-      .live-brand .lb-name{display:contents;font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;letter-spacing:.03em;line-height:1}
+      .live-brand .lb-name{display:contents;font-family:"Barlow Condensed",sans-serif;font-size:clamp(24px,8.6vw,33px);font-weight:700;letter-spacing:.03em;line-height:1}
       .live-brand .lb-pre{grid-column:1;grid-row:1}
       .live-brand .lb-rest{grid-column:2;grid-row:1}
       .live-brand .lb-sub{font-size:12.5px;color:var(--muted);margin-top:2px;grid-column:2;grid-row:2}
@@ -1618,6 +1625,11 @@
          edge to edge, no small inset tile — and the initials /
          guest placeholder fills the panel the same way. */
       .hm-profile{display:flex;border-radius:24px;overflow:hidden;box-shadow:var(--shadow);cursor:pointer;text-align:left}
+      /* v310: the GUEST card is not itself a button — only its
+         "Sign in with Google" button starts sign-in, so the card
+         does not wear the tap cursor. The signed-in card keeps it:
+         there, a tap anywhere opens the Player Profile. */
+      .hm-profile.hm-profile-guest{cursor:default}
       .hm-profile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       .hm-pf-photo{flex:0 0 33%;position:relative;background:#22282c;overflow:hidden}
       .hm-pf-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -2935,7 +2947,11 @@
          the full-width buttons had. */
       #view-live .live-entry-row{display:flex;gap:8px;margin:9px 0 4px}
       #view-live .live-entry-row[hidden]{display:none}
-      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:13.5px;white-space:nowrap;text-align:center}
+      /* v310: the label size follows the display width (clamp + vw),
+         and any label that still cannot fit is clipped inside its
+         own button — it can never spill over the neighbouring
+         button the way it did on narrower phones. */
+      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:clamp(11px,3.4vw,13.5px);white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis}
       /* The Super Admin's entry takes the entry row's exact slot
          (same margins, same height) while his account is signed in. */
       #view-live .super-admin-entry{margin:9px 0 4px;padding:10px 6px;font-size:13.5px;text-align:center;border-color:var(--gold)}
@@ -2983,6 +2999,13 @@
       #view-live .hm-slide .ml-row.refcard .ml-line.dim{color:rgba(255,255,255,.62)}
       #view-live .hm-slide .ml-row.refcard .ml-status{color:#ffd98a}
       #view-live .hm-slide .ml-row.refcard .ml-status.muted{color:rgba(255,255,255,.75)}
+      /* v310: the In Progress pill sits in the MIDDLE of its card.
+         The home slide's row is a flex column (v308), whose default
+         cross-axis stretch had been blowing the pill up into a
+         full-width bar with its label pushed to the left edge;
+         centred on its own axis it keeps its natural pill size,
+         dead centre, like the card's other centred lines. */
+      #view-live .hm-slide .ml-pill{align-self:center}
       .hm-dots i.on{background:linear-gradient(90deg,#0e7a6d,#2f9e6e);width:18px;border-radius:99px;opacity:1}
       .ml-line{align-items:center}
       .ml-abbr{flex:1 1 auto;min-width:0;font-size:16.5px;line-height:1.25;white-space:normal;overflow-wrap:break-word;text-align:left}
@@ -3217,7 +3240,7 @@
         #view-live .live-brand img{width:33px}
         #view-live .live-brand .lb-name{font-size:24px}
         #view-live .live-entry-row{margin:6px 0 2px}
-        #view-live .live-entry-row .hist-entry-btn{padding:7px 4px;font-size:12.5px}
+        #view-live .live-entry-row .hist-entry-btn{padding:7px 4px;font-size:clamp(10.5px,3.2vw,12.5px)}
         #view-live .hm-sec{margin-top:6px}
         #view-live .hm-sec-head{margin-bottom:4px}
         .hm-sec-head h3{font-size:17px;padding-bottom:4px}
@@ -4829,7 +4852,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v309';
+      var APP_VERSION = 'v310';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -17917,18 +17940,21 @@
          carries the account's own Google name and photo and no
          figures (v278; display-name matching was removed — it
          could pin another person's profile onto a like-named
-         login). Tapping the card opens that Player Profile
-         (homeProfileTap — the owner's follow-up ask). A guest gets
-         the same card as the sign-in: Google sign-in lives here
-         now, and a signed-in viewer signs out from the card's
-         corner button. */
+         login). Once signed in, tapping the card anywhere opens
+         that Player Profile (homeProfileTap). A guest gets the
+         same card shape as the sign-in surface — but the card
+         itself is NOT a tap target (v310, the owner's ask): only
+         its "Sign in with Google" BUTTON starts sign-in, so a
+         stray tap on the photo panel or the card body can never
+         fire (or cancel) the sign-in popup; a signed-in viewer
+         signs out from the card's corner button. */
       var homeProfileTarget = null;
       var homeProfileCache = { stamp: '', rec: null };
       function homeProfileHTML(){
         if (!authUser){
           homeProfileTarget = null;
           return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
-            + '<div class="hm-profile" role="button" tabindex="0" aria-label="Sign in with Google" onclick="signInWithGoogle()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();signInWithGoogle();}">'
+            + '<div class="hm-profile hm-profile-guest">'
             + '<span class="hm-pf-photo"><span class="hm-pf-ini" aria-hidden="true">👤</span></span>'
             + '<span class="hm-pf-main"><span class="hm-pf-name">Guest mode</span><span class="hm-pf-sub">View only</span><span class="hm-pf-rule"></span>'
             + '<button type="button" class="hm-pf-signin" onclick="event.stopPropagation();signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button>'
