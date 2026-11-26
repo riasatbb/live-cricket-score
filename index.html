@@ -4646,7 +4646,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v298';
+      var APP_VERSION = 'v299';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5366,24 +5366,47 @@
         Object.keys(fbLiveMap).forEach(function(k){ var sl = fbLiveMap[k]; if (sl) parts.push(k + ':' + (sl.updatedAt || 0)); });
         fbLiveSig = parts.sort().join('|');
       }
+      /* A match whose record already sits in permanent History is
+         FINISHED — for good (v299). Its ID can never be live again:
+         no device may publish it as a live match, and no surface
+         may list it as one. The one legitimate exception is a
+         Super Over: a tied match is filed first, then reopened to
+         play the decider — while its Super Over is active the
+         match IS live again, and its finish re-files it (with the
+         Super Over record) and retires it once more. This guard
+         is what stops a stale copy of a finished match — an old
+         tab or a restored backup still holding its mid-match
+         state — from resurrecting it as a phantom LIVE row beside
+         its own Completed record (the duplicate-ID bug). */
+      function matchArchivedClosed(id, st){
+        if (id == null) return false;
+        try {
+          if (typeof HIST === 'undefined' || !HIST[String(id)]) return false;
+          if (st && st.superOver && st.superOver.active) return false;
+          return true;
+        } catch(e){ return false; }
+      }
       /* Every match live on the server right now, as hot slices:
          the slots, plus the legacy node's match when it is not
          slotted (the slot copy of the same matchId always wins —
          it is the one still being written). Only real matches
-         (both teams set) are listed. */
+         (both teams set) are listed — and never a match already
+         filed in permanent History (v299, matchArchivedClosed):
+         a finished match's stale live copy is not a live match,
+         however it reached the server. */
       function liveSlices(){
         var out = [], seen = {};
         Object.keys(fbLiveMap).forEach(function(k){
           var sl = fbLiveMap[k];
-          if (sl && sl.teamA && sl.teamB){ out.push(sl); seen[String(sl.matchId != null ? sl.matchId : k)] = 1; }
+          if (sl && sl.teamA && sl.teamB && !matchArchivedClosed(sl.matchId != null ? sl.matchId : k, sl)){ out.push(sl); seen[String(sl.matchId != null ? sl.matchId : k)] = 1; }
         });
-        if (fbHotState && fbHotState.teamA && fbHotState.teamB && !seen[String(fbHotState.matchId)]) out.push(fbHotState);
+        if (fbHotState && fbHotState.teamA && fbHotState.teamB && !seen[String(fbHotState.matchId)] && !matchArchivedClosed(fbHotState.matchId, fbHotState)) out.push(fbHotState);
         return out;
       }
       function liveSliceById(id){
         id = String(id);
-        if (fbLiveMap[id] && fbLiveMap[id].teamA && fbLiveMap[id].teamB) return fbLiveMap[id];
-        if (fbHotState && String(fbHotState.matchId) === id && fbHotState.teamA && fbHotState.teamB) return fbHotState;
+        if (fbLiveMap[id] && fbLiveMap[id].teamA && fbLiveMap[id].teamB && !matchArchivedClosed(id, fbLiveMap[id])) return fbLiveMap[id];
+        if (fbHotState && String(fbHotState.matchId) === id && fbHotState.teamA && fbHotState.teamB && !matchArchivedClosed(id, fbHotState)) return fbHotState;
         return null;
       }
       /* The server slice for the match on THIS device's pad, from
@@ -5392,8 +5415,11 @@
       function padHot(){
         if (!S || S.matchId == null) return null;
         var id = String(S.matchId);
-        if (fbLiveMap[id]) return fbLiveMap[id];
-        if (fbHotState && String(fbHotState.matchId) === id) return fbHotState;
+        /* A copy of a match already filed in History is no copy
+           (v299): the pad must never adopt the stale live record
+           of a finished match back onto the screen. */
+        if (fbLiveMap[id] && !matchArchivedClosed(id, fbLiveMap[id])) return fbLiveMap[id];
+        if (fbHotState && String(fbHotState.matchId) === id && !matchArchivedClosed(id, fbHotState)) return fbHotState;
         return null;
       }
       /* The hot slice the confirmed display state is built from:
@@ -5408,6 +5434,7 @@
         var best = null;
         liveSlices().forEach(function(sl){ if (!best || (sl.updatedAt || 0) > (best.updatedAt || 0)) best = sl; });
         if (best) return best;
+        if (fbHotState && matchArchivedClosed(fbHotState.matchId, fbHotState)) return null; /* a finished match's stale legacy copy is not a live match (v299) */
         return fbHotState;
       }
       /* The pad match's whole state as the server holds it — its
@@ -5442,8 +5469,30 @@
          listeners (the legacy liveMatch node and the liveMatches
          slots) funnel into here, so the two sources can never
          drive the state in different directions. */
+      /* Cleanup sweep (v299): a live copy of an already-archived
+         match still sitting on the server — left behind by a
+         build that did not retire it at finish, or republished by
+         a stale device before this guard existed — is retired by
+         any entitled device that sees it (its owner, its
+         designated scorer, the Super Admin). retireLiveRecord
+         latches per match, so the sweep costs at most one attempt
+         per match per session; everyone else's screens are
+         covered by the display guards whether or not the record
+         is ever actually removed. */
+      function sweepArchivedLiveCopies(){
+        try {
+          if (!authUser) return;
+          Object.keys(fbLiveMap).forEach(function(k){
+            var sl = fbLiveMap[k];
+            var mid = sl ? (sl.matchId != null ? sl.matchId : k) : null;
+            if (sl && matchArchivedClosed(mid, sl) && matchAccessFor(sl)) retireLiveRecord(String(mid), sl);
+          });
+          if (fbHotState && fbHotState.teamA && matchArchivedClosed(fbHotState.matchId, fbHotState) && matchAccessFor(fbHotState)) retireLiveRecord(String(fbHotState.matchId), fbHotState);
+        } catch(e){}
+      }
       function handleLiveSync(){
         refreshConfirmedState();
+        try { sweepArchivedLiveCopies(); } catch(e){}
         var pad = composedPadState();
         if (pad && shouldAdoptRemote(pad)) adoptRemoteState(pad);
         try { guardViewerScoreboard(); } catch(e){}
@@ -5603,6 +5652,16 @@
            archive slot. (A pre-built candidate state — the delete
            publish — is already folded by its builder.) */
         if (st === S && typeof tnViewCtx !== 'undefined' && tnViewCtx){ var tnFold = tnFoldedState(); full.tournament = tnFold.tournament; full.tournamentsArchive = tnFold.tournamentsArchive; }
+        /* A whole-state seed / re-sync of a match already filed in
+           History must never land (v299): the match is finished
+           for good, so instead of publishing its stale state the
+           write retires whatever live copy the server still holds
+           and stops. (Delete publishes carry removeSlotId and a
+           fresh matchId — they are never this state.) */
+        if (!(opts && opts.removeSlotId) && matchArchivedClosed(full.matchId, full)){
+          try { retireLiveRecord(String(full.matchId), full); } catch(e){}
+          return Promise.resolve();
+        }
         if (fbLibDenied || !fbLibRef){
           return fbRef.set(full).then(function(){
             fbHotState = deep(full);
@@ -5662,6 +5721,37 @@
           return ref.set(blank).then(function(){ return true; }, function(){ return false; });
         });
       }
+      /* Retire a finished match from EVERY live node (v299): its
+         own slot AND the legacy liveMatch node, when that still
+         holds a copy of it. Finishing used to retire only the
+         slot, and only through the scoring push — a copy left in
+         the legacy node (every match scored before slots existed
+         has one) survived the finish and could later resurface as
+         a phantom LIVE row beside the match's Completed history
+         record. The legacy clear writes the same owner-stamped
+         blank the delete publish uses, so the Rules accept it
+         from the match's own scorer; it is attempted once per
+         match per session, and every failure is silent — the
+         display and publish guards (matchArchivedClosed) hide
+         and block the stale copy regardless. */
+      var fbLiveClearedFor = '';
+      function retireLiveRecord(id, sliceHint){
+        if (id == null) return;
+        id = String(id);
+        if (fbLiveClearedFor === id) return;
+        fbLiveClearedFor = id;
+        if (multiLiveOn()){
+          try { retireSlot(id, sliceHint || null).then(function(ok){ if (!ok && fbLiveClearedFor === id) fbLiveClearedFor = ''; }); } catch(e){}
+          delete fbLiveMap[id]; noteLiveSig();
+        }
+        if (fbRef && fbHotState && String(fbHotState.matchId) === id){
+          try {
+            var blankHot = hotPartOf(buildDeletedState());
+            fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); refreshConfirmedState(); }, function(){ if (fbLiveClearedFor === id) fbLiveClearedFor = ''; });
+          } catch(e){}
+        }
+        try { refreshConfirmedState(); } catch(e){}
+      }
       /* The hot half of a split write (v297): the match's own slot
          at liveMatches/<matchId> — or, while the updated Rules are
          not published yet (fbMultiDenied), the legacy liveMatch
@@ -5689,6 +5779,15 @@
           return done;
         }
         if (multiLiveOn()){
+          if (matchArchivedClosed(full.matchId, full)){
+            /* Finished for good (v299): a whole-state write — a
+               first-read seed / re-sync from a device still
+               holding the match's mid-match state — must never
+               resurrect an archived match into its slot; the
+               slot is retired instead. */
+            var aid = String(full.matchId);
+            return retireSlot(aid, full).then(function(){ delete fbLiveMap[aid]; noteLiveSig(); });
+          }
           if (full.teamA && full.teamB && full.matchId != null){
             var id = String(full.matchId);
             return slotRef(id).set(hot).then(function(){ fbLiveMap[id] = deep(hot); noteLiveSig(); }, function(err){
@@ -5700,6 +5799,16 @@
             });
           }
           return Promise.resolve(); /* no match to seed — the library half was the whole write */
+        }
+        if (matchArchivedClosed(full.matchId, full)){
+          /* Finished for good (v299): never write an archived
+             match back into the legacy node — clear the node
+             instead when it still holds this very match. */
+          if (fbHotState && String(fbHotState.matchId) === String(full.matchId)){
+            var blankHot = hotPartOf(buildDeletedState());
+            return fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); });
+          }
+          return Promise.resolve();
         }
         return fbRef.set(hot).then(function(){ fbHotState = deep(hot); });
       }
@@ -5724,6 +5833,17 @@
          yet: one transaction on the single liveMatch node. */
       function pushHotLegacy(){
         var ref = fbRef;
+        /* A match already filed in permanent History is finished
+           for good (v299): never write its stale copy back into
+           the legacy node — clear the node instead when it still
+           holds this very match, so no phantom LIVE row survives
+           beside the Completed record. */
+        if (S && matchArchivedClosed(S.matchId, S)){
+          if (fbHotState && String(fbHotState.matchId) === String(S.matchId)){
+            try { retireLiveRecord(String(S.matchId), S); } catch(e){}
+          }
+          return;
+        }
         var pushed = hotPartOf(S);
         var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
         /* Transaction, not a blind set: if another scoring device
@@ -5783,6 +5903,19 @@
             /* Marked before the write settles so a commit storm
                cannot fire a retire per commit; a failed retire
                clears the mark, so a later commit retries it. */
+            fbSlotRetiredFor = id;
+            try { retireSlot(id, S).then(function(ok){ if (!ok && fbSlotRetiredFor === id) fbSlotRetiredFor = ''; }); } catch(e){}
+            delete fbLiveMap[id]; noteLiveSig();
+            refreshConfirmedState();
+          }
+          return;
+        }
+        /* A match already filed in permanent History is finished
+           for good (v299): a stale copy of it on this pad (an old
+           tab, a restored backup) must never be written back into
+           its slot as a live match — retire the slot instead. */
+        if (matchArchivedClosed(id, S)){
+          if (fbSlotRetiredFor !== id){
             fbSlotRetiredFor = id;
             try { retireSlot(id, S).then(function(ok){ if (!ok && fbSlotRetiredFor === id) fbSlotRetiredFor = ''; }); } catch(e){}
             delete fbLiveMap[id]; noteLiveSig();
@@ -17146,6 +17279,18 @@
             + '<div class="ml-status muted">No match is being scored right now.</div>'
             + '</div>';
         }
+        /* A stale live copy of a match already filed in History
+           (v299) is finished, not live: its Completed record is
+           the only row it gets, never a second LIVE one. A copy
+           whose own status is 'finished' is exempt — that IS
+           the completed row this function builds for the pad
+           match, and it closes the list as designed. */
+        if (!finished && matchArchivedClosed(S.matchId, S)){
+          return '<div class="ml-row">'
+            + mlLabel([], false)
+            + '<div class="ml-status muted">No match is being scored right now.</div>'
+            + '</div>';
+        }
         var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
         var t = target();
         var status = '', statusMuted = false;
@@ -17328,6 +17473,11 @@
            completed group instead of sitting above the fixtures. */
         var curRow = liveRowHTML();
         var curDone = !liveMatchTombstoned(S) && !!(S.teamA && S.teamB) && (S.status === 'finished' || !!S.abandoned) && !S.awaitingFinish;
+        /* The pad copy is a stale live record of a match already
+           in History (v299): it belongs to no group — not LIVE
+           (it is finished) and not the completed group (its real
+           Completed record is already listed from History). */
+        var curStale = S.status !== 'finished' && matchArchivedClosed(S.matchId, S);
         /* v277: the rows are collected as an array of carousel
            slides — the same rows, in the same serial order as the
            old stacked list (in progress, upcoming, completed) —
@@ -17352,7 +17502,7 @@
           return String(sl.matchId) !== String(S.matchId) && sliceInProgress(sl) && !liveMatchTombstoned(sl);
         }).sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); }).map(function(sl){ return inProgressRowHTML(sl); });
         otherLiveRows.forEach(function(r){ slides.push(r); });
-        var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p) && !liveIds[String(p.matchId)]; });
+        var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p) && !matchArchivedClosed(p.matchId, p) && !liveIds[String(p.matchId)]; });
         var parkedRows = parked.map(function(p){ return inProgressRowHTML(p); });
         parkedRows.forEach(function(r){ slides.push(r); });
         /* Most recent first. Completed results are gathered from
@@ -17454,7 +17604,7 @@
            read only what this server-confirmed render produced,
            never the device state. */
         amRows = {
-          live: (!curDone && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(otherLiveRows).concat(parkedRows),
+          live: (!curDone && !curStale && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(otherLiveRows).concat(parkedRows),
           upcoming: fixRowArr.slice(),
           recent: (curDone ? [curRow] : []).concat(resultRows)
         };
@@ -19440,6 +19590,7 @@
          live match, or a parked one), not just the one on the pad. */
       function sliceInProgress(sl){
         if (!sl || !sl.current) return false;
+        if (matchArchivedClosed(sl.matchId, sl)) return false; /* filed in History = completed, never in progress (v299) */
         if (sl.status === 'finished') return !!sl.awaitingFinish;
         if (!sl.teamA || !sl.teamB) return false;
         var c = sl.current;
@@ -20253,6 +20404,15 @@
         delete histDeleted[entry.id];
         saveHistLocal();
         pushHistoryEntry(entry);
+        /* Filing the match retires it from the live nodes for
+           good (v299): its slot AND any legacy-node copy are
+           cleared, so the finished match can never linger — or
+           be resurrected — as a LIVE row beside this Completed
+           record. Attempted only by an account entitled to the
+           match (its owner, its designated scorer, the Super
+           Admin); every other device is covered by the display
+           and publish guards instead. */
+        try { if (typeof matchAccessFor === 'function' && matchAccessFor(S)) retireLiveRecord(entry.id, S); } catch(e){}
         try { renderHistory(); } catch(e){}
       }
       function ensureCurrentArchived(){ archiveFinishedMatch(); }
@@ -20751,7 +20911,7 @@
         if (!hasFigs) return null;
         var id = String(S.matchId || 'live');
         if (isHistGone(id)) return null; /* deleted from history — the live state must not list it again */
-        if (S.status === 'finished' && HIST[id]) return null; /* already filed in permanent history */
+        if (matchArchivedClosed(id, S)) return null; /* already filed in permanent history — a stale live copy of it must never list beside the Completed record (v299) */
         var e = buildHistoryEntry();
         e.id = 'live:' + id; e.live = true; e.at = Date.now();
         if (S.status !== 'finished') e.resultText = '';
@@ -29631,6 +29791,10 @@
          ============================================================ */
       function liveMatchInProgress(){
         if (!S || !S.current) return false;
+        /* A match already filed in permanent History is completed
+           (v299) — a stale live copy of it on this pad is not in
+           progress, however live its stored status claims to be. */
+        if (matchArchivedClosed(S.matchId, S)) return false;
         /* A match whose play has ended but which the scorer has not
            completed yet (Finish Match not tapped) still counts as
            RUNNING: it stays in Resume Scoring and can be parked like
@@ -29779,7 +29943,7 @@
         var el = $('resumeList'); if (!el) return;
         var html = '';
         if (liveMatchInProgress()) html += resumeRowHTML(matchSlice(), true);
-        pausedMatches().slice().reverse().forEach(function(p){ html += resumeRowHTML(p, false); });
+        pausedMatches().slice().reverse().filter(function(p){ return !matchArchivedClosed(p.matchId, p); }).forEach(function(p){ html += resumeRowHTML(p, false); });
         /* Matches live in their own server slots (v297) — scored
            on other devices, or left live when this device moved
            on — are resumable from here too, each exactly once. */
