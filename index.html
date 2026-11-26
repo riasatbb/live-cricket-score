@@ -1516,6 +1516,19 @@
       .ml-line.dim .ml-abbr{font-weight:600}
       .ml-status{color:var(--blue);font-size:14.5px;line-height:1.4;margin-top:6px}
       .ml-status.muted{color:var(--muted)}
+      /* v302: the In Progress card in the reference layout — team
+         lines carry the team's logo (its uploaded logo, else the
+         initials badge in the team's colour), run left-aligned
+         with the score pushed to the right edge, and the status
+         line sits at the left like the reference card. The label
+         line above them stays centred (the centred overrides in
+         the home / All Matches views still own it). */
+      .ml-line .hero-badge{width:30px;height:30px;font-size:12.5px;border-width:2px}
+      .ml-row.refcard .ml-line{align-items:center}
+      .ml-row.refcard .ml-line .ml-abbr{min-width:0}
+      .ml-row.refcard .ml-line .ml-score{margin-left:auto}
+      #view-live .ml-row.refcard .ml-line, #view-allmatches .ml-row.refcard .ml-line{justify-content:flex-start}
+      #view-live .ml-row.refcard .ml-status, #view-allmatches .ml-row.refcard .ml-status{text-align:left}
       /* Per-match status pill at the TOP of every row on the Recent
          Matches list: red In Progress for a match being played,
          Completed for a finished one, Upcoming for a fixture. */
@@ -1735,7 +1748,7 @@
       .cb-inn{background:#2b2b2b;border-bottom:1px solid #3d3d3d}
       .cb-inn-head{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;color:#fff;padding:17px 16px;cursor:pointer;text-align:left;font:inherit}
       .cb-inn-head:active{background:#333}
-      .cb-inn-team{flex:1;min-width:0;font-size:17.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .cb-inn-team{flex:1;min-width:0;font-size:17.5px;font-weight:600;line-height:1.3;overflow-wrap:break-word}
       .cb-inn-score{font-size:17.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
       .cb-inn-score span{color:#cfcfcf;font-weight:500}
       .cb-inn-chev{flex:none;display:flex;color:#a8a8a8;transition:transform .18s ease}
@@ -1763,7 +1776,17 @@
       .cb-pship .ps-proj{white-space:nowrap;color:#d8d8d8;font-size:13.5px;letter-spacing:.05em;text-transform:uppercase;margin-left:auto;text-align:right}
       .cb-pship .ps-proj b{color:#fff;font-size:18px;margin-left:6px;font-variant-numeric:tabular-nums;letter-spacing:0}
       .cb-table{padding:2px 0 6px;background:#2b2b2b}
-      .cb-table table{font-size:15px}
+      .cb-table table{font-size:15px;font-variant-numeric:tabular-nums}
+      /* v300: the figure columns hug the right edge in one compact,
+         evenly-spaced block — the name column takes all the slack —
+         so a phone-width card reads like a real scorecard instead
+         of figures scattered loosely across the full width. */
+      .cb-table th.r,.cb-table td.r{width:1%;white-space:nowrap;padding-left:6px;padding-right:6px}
+      .cb-table th.r:last-child,.cb-table td.r:last-child{padding-right:16px}
+      /* …and with the columns compact, the Extras breakdown wraps
+         onto a second line on a narrow phone rather than forcing
+         the card wider than the screen. */
+      .cb-table .exbd{white-space:normal}
       .cb-table th{color:#a8a8a8;font-size:14px;font-weight:500;border-bottom:1px solid #3d3d3d;padding:9px 10px}
       .cb-table td{border-bottom:1px solid #333;padding:10px;color:#e9e9e9}
       .cb-table th:first-child,.cb-table td:first-child{padding-left:16px}
@@ -2052,7 +2075,7 @@
       .cb-fin-result{color:#64b5e8;font-size:16.5px;font-weight:500;line-height:1.45;margin-top:10px}
       .fin-dot{flex:none;width:11px;height:11px;border-radius:50%;align-self:center;display:inline-block}
       /* ---------- v262 viewer delights (LIVE tab) ----------
-         Hero card, win-probability meter, ball-by-ball timeline,
+         Hero card, ball-by-ball timeline,
          top-performer spotlight, Manhattan momentum chart and the
          boundary / wicket flash effects. Everything sits inside the
          always-dark scoreboard wrap, so colours are fixed dark-theme
@@ -2060,21 +2083,22 @@
          from teamColor() in the script. */
       .cb-wrap{position:relative}
       .hero{position:relative;border:1px solid #454545;border-radius:16px;padding:15px 16px 14px;overflow:hidden;background:linear-gradient(128deg,var(--hca,#333) 0%,#262626 54%,var(--hcb,#333) 135%)}
-      .hero-top{display:flex;align-items:flex-start;gap:10px}
+      .hero-top{text-align:center}
+      .hero-badgerow{display:flex;justify-content:flex-start;margin-bottom:4px}
       .hero-team{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
       .hero-team.right{flex-direction:row-reverse;text-align:right}
       .hero-badge{flex:none;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#1d1d1d;border:2px solid var(--tc,#555);font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:16px;color:#fff;letter-spacing:.03em}
       .hero-badge img{width:100%;height:100%;object-fit:cover;display:block}
-      .hero-tname{font-size:16.5px;font-weight:700;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .hero-sub{font-size:12.5px;color:#cfcfcf;margin-top:2px;white-space:nowrap}
+      .hero-tname{font-size:19px;font-weight:800;color:#fff;line-height:1.25;overflow-wrap:break-word}
+      .hero-sub{font-size:14px;font-weight:600;color:#cfcfcf;margin-top:2px}
       .hero-live{flex:none;display:inline-flex;align-items:center;gap:6px;background:#c62828;color:#fff;font-size:12px;font-weight:800;letter-spacing:.09em;border-radius:999px;padding:5px 11px;margin-top:4px;box-shadow:0 0 0 0 rgba(229,57,53,.5);animation:heropulse 1.6s infinite}
       .hero-live i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blinkdot 1.2s infinite}
       .hero-live.brk{background:#8a5a00;animation:none;box-shadow:none}
       .hero-live.brk i{animation:none}
       @keyframes heropulse{0%{box-shadow:0 0 0 0 rgba(229,57,53,.45)}70%{box-shadow:0 0 0 9px rgba(229,57,53,0)}100%{box-shadow:0 0 0 0 rgba(229,57,53,0)}}
-      .hero-score{font-size:54px;font-weight:800;line-height:1.05;color:#fff;font-variant-numeric:tabular-nums;margin-top:10px;letter-spacing:.01em}
-      .hero-score .hw{font-weight:800}
-      .hero-score .hov{font-size:22px;font-weight:500;color:#d8d8d8}
+      .hero-score{font-size:62px;font-weight:900;line-height:1.05;color:#fff;font-variant-numeric:tabular-nums;margin-top:10px;letter-spacing:.01em;text-align:center}
+      .hero-score .hw{font-weight:900}
+      .hero-score .hov{font-size:25px;font-weight:600;color:#d8d8d8}
       .hero-score.bump{animation:herobump .55s ease}
       @keyframes herobump{0%{transform:scale(1)}30%{transform:scale(1.07)}100%{transform:scale(1)}}
       /* Boundary count-up: while the big number is counting up run
@@ -2087,32 +2111,37 @@
       @keyframes herotick{0%{transform:scale(1)}40%{transform:scale(1.17)}100%{transform:scale(1)}}
       .hero-rates{display:flex;gap:18px;flex-wrap:wrap;margin-top:7px}
       .hero-rates .hr .rlab{font-size:12px;color:#bdbdbd;letter-spacing:.06em}
-      .hero-rates .hr .rval{font-size:18px;color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+      .hero-rates .hr .rval{font-size:20px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums}
+      .hero-rates .hr.right{margin-left:auto;text-align:right}
       .hero-prog{height:10px;border-radius:99px;background:rgba(0,0,0,.45);margin-top:13px;overflow:hidden}
       .hero-prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pf,#64b5e8),#fff);transition:width .7s ease}
       .hero-prog-lab{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:#e2e2e2;margin-top:6px;font-variant-numeric:tabular-nums}
       .hero-prog-lab b{color:#fff}
       .hero-prev{font-size:13.5px;color:#c9c9c9;margin-top:9px;line-height:1.45}
       .hero-prev b{color:#fff}
+      /* v301: phone-width hero — no team logos and no fielding-team
+         name; the batting team's full name and the big score are
+         centre-aligned (a long name wraps to a second line instead
+         of being cut off), and the projected score rides
+         right-aligned on the CRR line. v302: the LIVE pill moved
+         to the top-LEFT of the card, the hero type runs a step
+         larger and heavier at every width, and the innings line
+         no longer appends "• batting". */
+      @media (max-width:420px){.hero{padding:13px 13px 12px}.hero-tname{font-size:17.5px}.hero-score{font-size:52px}.hero-score .hov{font-size:21px}.hero-rates{gap:14px}}
       .btl{background:#2b2b2b;padding:11px 16px 13px;border-top:1px solid #3a3a3a}
       .btl-lab{font-size:12px;font-weight:700;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:8px}
-      .btl-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-      .btl-chip{min-width:31px;height:31px;padding:0 6px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:#3a3a3a;border:1px solid #4c4c4c;color:#e9e9e9;font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
-      .btl-chip.wide{border-radius:99px;font-size:11.5px}
+      /* v302: Recent Balls is ONE line — the last 12 balls, chips
+         flexing to share the row instead of wrapping under it. */
+      .btl-row{display:flex;gap:5px;flex-wrap:nowrap;align-items:center}
+      .btl-chip{flex:1 1 0;min-width:0;max-width:34px;height:30px;padding:0 3px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:#3a3a3a;border:1px solid #4c4c4c;color:#e9e9e9;font-family:"Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}
+      .btl-chip.wide{border-radius:99px;font-size:11px;flex-grow:1.7}
+      @media (max-width:420px){.btl{padding:11px 12px 13px}.btl-row{gap:4px}.btl-chip{height:28px;font-size:12px}.btl-chip.wide{font-size:10.5px}}
       .btl-chip.f4{background:#2470b8;border-color:#2470b8;color:#fff}
       .btl-chip.f6{background:#1f9d63;border-color:#1f9d63;color:#fff}
       .btl-chip.fw{background:#c0392b;border-color:#c0392b;color:#fff}
       .btl-chip.dot{color:#9a9a9a}
       .btl-chip.new{animation:fxpop .5s ease}
       @keyframes fxpop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
-      .wp{background:#262626;border-top:1px solid #3a3a3a;border-bottom:1px solid #3a3a3a;padding:12px 16px 13px}
-      .wp-lab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:#bdbdbd;margin-bottom:8px}
-      .wp-lab .wp-t{font-weight:700;letter-spacing:.09em;text-transform:uppercase;font-size:12px;color:#a8a8a8}
-      .wp-bar{display:flex;height:15px;border-radius:99px;overflow:hidden;background:#191919}
-      .wp-seg{height:100%;transition:width .7s ease;min-width:0}
-      .wp-names{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:14px;font-variant-numeric:tabular-nums}
-      .wp-names b{color:#fff;font-size:16px}
-      .wp-names .r{text-align:right}
       .spot{background:#2b2b2b;padding:14px 16px 4px}
       .spot-head,.mh-head{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#f0ab3c;margin-bottom:11px}
       .spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -2137,7 +2166,7 @@
       @keyframes fxflash{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
       #fxFlash .fx-confetti{position:absolute;top:-16px;width:8px;height:13px;border-radius:2px;animation-name:fxfall;animation-timing-function:cubic-bezier(.2,.6,.6,1);animation-fill-mode:forwards}
       @keyframes fxfall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(46vh) rotate(560deg);opacity:0}}
-      @media (prefers-reduced-motion: reduce){.hero-live{animation:none}.hero-live i{animation:none}.hero-score.bump{animation:none}#heroRuns.tick{animation:none}.btl-chip.new{animation:none}.hero-prog-fill,.wp-seg{transition:none}#fxFlash.go{animation:none}#fxFlash .fx-confetti{animation:none;display:none}}
+      @media (prefers-reduced-motion: reduce){.hero-live{animation:none}.hero-live i{animation:none}.hero-score.bump{animation:none}#heroRuns.tick{animation:none}.btl-chip.new{animation:none}.hero-prog-fill{transition:none}#fxFlash.go{animation:none}#fxFlash .fx-confetti{animation:none;display:none}}
       .cb-potm-wrap{background:#2b2b2b;border-top:1px solid #3a3a3a;padding:14px 16px 16px}
       .cb-potm-lab{font-size:13px;font-weight:600;letter-spacing:.09em;color:#a8a8a8;text-transform:uppercase;margin-bottom:10px}
       .cb-potm-row{display:flex;align-items:center;gap:14px}
@@ -3651,10 +3680,9 @@
                  commentary section below (foot of #cbCommentary),
                  where they belong. -->
             <div class="cb-main" id="cbMainScore"></div>
-            <!-- v262: ball-by-ball timeline + win-probability meter,
-                 filled by renderScoreboardCB under the hero card. -->
+            <!-- v262: ball-by-ball timeline, filled by
+                 renderScoreboardCB under the hero card. -->
             <div id="cbBallRow"></div>
-            <div id="cbWinProb"></div>
             <div class="cb-pship" id="cbPship"></div>
             <!-- No crease line above the batter table: who is at the
                  crease and who is on strike is said ONCE, in the
@@ -4646,7 +4674,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v299';
+      var APP_VERSION = 'v302';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -16976,6 +17004,31 @@
       function mlTeamLine(name){
         return '<div class="ml-line"><span class="ml-abbr">' + esc(teamShort(name)) + '</span></div>';
       }
+      /* v302: the reference-card team lines for the In Progress
+         card — the team's logo badge (heroBadgeHTML: its uploaded
+         logo, else its initials in its own colour) ahead of the
+         abbreviation, the score at the right edge (see .refcard). */
+      function mlInnLineRef(inn, dim, other){
+        return '<div class="ml-line' + (dim ? ' dim' : '') + '">' + heroBadgeHTML(inn.battingTeam, teamColor(inn.battingTeam, other || ''))
+          + '<span class="ml-abbr">' + esc(teamShort(inn.battingTeam)) + '</span><span class="ml-score num">' + inn.runs + '-' + inn.wickets + ' <span class="ml-ov">(' + mlOvers(inn.legalBalls) + ')</span></span></div>';
+      }
+      function mlTeamLineRef(name, other){
+        return '<div class="ml-line">' + heroBadgeHTML(name, teamColor(name, other || ''))
+          + '<span class="ml-abbr">' + esc(teamShort(name)) + '</span></div>';
+      }
+      /* The toss line in the owner's short form for a live card:
+         "<Winner> opt to bat" / "<Winner> opt to bowl" — read from
+         the stored picks when the state carries them, else parsed
+         back out of the combined toss sentence. '' when no toss
+         is recorded at all. */
+      function optToLine(st){
+        var w = (st && st.tossWinner) || '', d = (st && st.tossDecision) || '';
+        if ((!w || !d) && st && st.tossInfo){
+          var m = String(st.tossInfo).match(/^(.+?) won the toss and chose to (bat|bowl)/i);
+          if (m){ if (!w) w = m[1]; if (!d) d = m[2].toLowerCase(); }
+        }
+        return (w && d) ? w + ' opt to ' + d : '';
+      }
       function mlLabel(parts, live){
         var seen = {}, txt = [];
         (parts || []).forEach(function(p){
@@ -17328,10 +17381,15 @@
         else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet.' : 'No match is being scored right now.'; statusMuted = true; }
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
+          /* v302: the chase line in the owner's short form —
+             "<Team> need <N> runs in <M> balls". */
           status = need > 0
-            ? inn.battingTeam + ' needs ' + runW(need) + ' to win' + (isFinite(ballsLeft) ? ' in ' + ballW(ballsLeft) : '') + '.'
+            ? (isFinite(ballsLeft) ? inn.battingTeam + ' need ' + need + ' runs in ' + ballsLeft + ' balls' : inn.battingTeam + ' needs ' + runW(need) + ' to win.')
             : inn.battingTeam + ' have reached the target of ' + t + '.';
         }
+        /* v302: the 1st-innings line is the short toss form —
+           "<Winner> opt to bat / bowl" — not the full sentence. */
+        else if (optToLine(S)) status = optToLine(S);
         else if (S.tossInfo) status = S.tossInfo;
         else status = inn.battingTeam + ' are batting against ' + inn.bowlingTeam + '.';
         var lines = '';
@@ -17347,6 +17405,25 @@
           if (batFirst) lines += mlTeamLine(batFirst);
           if (other && other !== batFirst) lines += mlTeamLine(other);
         }
+        /* v302: the same lines with logos for the In Progress
+           (reference-layout) card, and its label: a tournament
+           match keeps its stage label; a Single Match is headed
+           "Friendly Match • <Playground>" instead of plain
+           "Match" (centred by the home view's label styling). */
+        var refLines = '';
+        if (S.prevInnings){
+          refLines += mlInnLineRef(S.prevInnings, true, inn.battingTeam);
+          refLines += mlInnLineRef(inn, false, S.prevInnings.battingTeam);
+        } else if (started){
+          refLines += mlInnLineRef(inn, false, inn.bowlingTeam);
+          if (inn.bowlingTeam) refLines += mlTeamLineRef(inn.bowlingTeam, inn.battingTeam);
+        } else if (S.teamA || S.teamB){
+          var rBatFirst = inn.battingTeam || S.teamA;
+          var rOther = rBatFirst === S.teamA ? S.teamB : S.teamA;
+          if (rBatFirst) refLines += mlTeamLineRef(rBatFirst, rOther);
+          if (rOther && rOther !== rBatFirst) refLines += mlTeamLineRef(rOther, rBatFirst);
+        }
+        var liveLabel = tnName ? liveRowLabelHTML(tnName) : mlLabel(['Friendly Match', S.venue], false);
         /* The row is tappable ONLY when a real match exists in the
            confirmed state (both teams set). The empty state — "No
            match is being scored right now" — is a plain, inert row:
@@ -17373,10 +17450,10 @@
         if (finished || S.abandoned){
           if (S.awaitingFinish){
             var awAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
-            return '<div class="ml-row tap"' + mlTapAttrs('openCurrentMatch()', awAria) + '>'
+            return '<div class="ml-row tap' + (S.abandoned ? '' : ' refcard') + '"' + mlTapAttrs('openCurrentMatch()', awAria) + '>'
               + mlPill(S.abandoned ? 'done' : 'live')
-              + liveRowLabelHTML(tnName)
-              + lines
+              + (S.abandoned ? liveRowLabelHTML(tnName) : liveLabel)
+              + (S.abandoned ? lines : refLines)
               + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
               + '</div>';
           }
@@ -17389,10 +17466,10 @@
             + '</div>';
         }
         var aria = 'Watch ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2');
-        return '<div class="ml-row tap"' + mlTapAttrs('openLiveMatch()', aria) + '>'
+        return '<div class="ml-row tap refcard"' + mlTapAttrs('openLiveMatch()', aria) + '>'
           + mlPill('live')
-          + liveRowLabelHTML(tnName)
-          + lines
+          + liveLabel
+          + refLines
           + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
           + '</div>';
       }
@@ -17424,12 +17501,32 @@
         var inns = [];
         if (slice.prevInnings) inns.push(slice.prevInnings);
         if (slice.current) inns.push(slice.current);
-        var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
-        if (!lines && (slice.teamA || slice.teamB)) lines = mlTeamLine(slice.teamA || '') + (slice.teamB ? mlTeamLine(slice.teamB) : '');
+        /* v302: reference-layout lines with logos, like the pad
+           match's In Progress card. */
+        var lines = inns.map(function(x, i){
+          var other = (x.battingTeam === slice.teamA) ? slice.teamB : slice.teamA;
+          return mlInnLineRef(x, i === 0 && inns.length > 1, other);
+        }).join('');
+        if (!lines && (slice.teamA || slice.teamB)) lines = mlTeamLineRef(slice.teamA || '', slice.teamB) + (slice.teamB ? mlTeamLineRef(slice.teamB, slice.teamA) : '');
         var status = '';
         if (slice.status === 'finished' && slice.awaitingFinish) status = 'Play over — the scorer is completing this match.';
         else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress.';
-        else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)) status = (slice.current.battingTeam || '') + ' are batting.';
+        else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)){
+          var sc = slice.current;
+          /* v302: the owner's short status forms — 2nd innings
+             "<Team> need <N> runs in <M> balls", 1st innings
+             "<Winner> opt to bat / bowl". */
+          if (slice.inningsNo === 2 && slice.prevInnings){
+            var sTgt = (typeof slice.dlTarget === 'number' && slice.dlTarget > 0) ? slice.dlTarget : slice.prevInnings.runs + 1;
+            var sNeed = sTgt - sc.runs;
+            var sLim = (typeof slice.dlOvers === 'number' && slice.dlOvers > 0) ? slice.dlOvers : slice.oversLimit;
+            var sBalls = (typeof sLim === 'number' && sLim > 0) ? sLim * 6 - sc.legalBalls : NaN;
+            status = sNeed > 0
+              ? (isFinite(sBalls) ? sc.battingTeam + ' need ' + sNeed + ' runs in ' + sBalls + ' balls' : (sc.battingTeam || '') + ' are batting.')
+              : sc.battingTeam + ' have reached the target of ' + sTgt + '.';
+          }
+          else status = optToLine(slice) || ((sc.battingTeam || '') + ' are batting.');
+        }
         else status = 'Match not started yet.';
         var tnName = '', slOwner = null;
         if (slice.matchKind === 'tournament'){
@@ -17438,8 +17535,8 @@
           slOwner = slObj ? slObj.tn : null;
         }
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
-        return '<div class="ml-row tap"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
-          + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice), slOwner))) : mlLabel([slice.venue, tnName], false)) + lines
+        return '<div class="ml-row tap refcard"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
+          + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice), slOwner))) : mlLabel(['Friendly Match', slice.venue], false)) + lines
           + '<div class="ml-status muted">' + esc(status) + '</div></div>';
       }
       /* Live Matches is a viewer surface: it renders ONLY the
@@ -28841,9 +28938,9 @@
       }
       /* ============================================================
          v262 — VIEWER DELIGHTS on the LIVE tab: each team's own
-         colour, the live hero card, the win-probability meter, the
-         ball-by-ball timeline, the top-performer spotlight, the
-         Manhattan momentum chart and the boundary / wicket screen
+         colour, the live hero card, the ball-by-ball timeline,
+         the top-performer spotlight, the Manhattan momentum chart
+         and the boundary / wicket screen
          effects. Everything is derived at render time from the
          state on show — nothing new is stored — so the live match,
          a viewed match and an archived match all render the same.
@@ -28884,7 +28981,14 @@
         var rates = '<div class="hero-rates"><div class="hr"><div class="rlab">CRR</div><div class="rval">' + crr().toFixed(2) + '</div></div>';
         var rr = rrr();
         if (t && rr !== null) rates += '<div class="hr"><div class="rlab">REQ</div><div class="rval">' + rr.toFixed(2) + '</div></div>';
-        if (t) rates += '<div class="hr"><div class="rlab">Target</div><div class="rval">' + t + '</div></div>';
+        if (t) rates += '<div class="hr right"><div class="rlab">Target</div><div class="rval">' + t + '</div></div>';
+        else {
+          /* Projected score rides on the CRR line, right-aligned
+             (it used to sit on the Partnership strip). */
+          var pj = null;
+          try { pj = projectedScore(); } catch(e){}
+          rates += '<div class="hr right"><div class="rlab">Projected</div><div class="rval">' + (pj === null ? '—' : pj) + '</div></div>';
+        }
         rates += '</div>';
         var prog = '';
         if (t && S.inningsNo === 2){
@@ -28895,67 +28999,20 @@
             + '<div class="hero-prog-lab"><span>' + (need > 0 ? 'Need <b>' + need + '</b> off <b>' + (isFinite(ballsLeft) ? ballsLeft : '—') + '</b> balls' : '<b>Target reached</b>') + '</span><span>Target <b>' + t + '</b></span></div>';
         }
         var prev = '';
-        if (S.prevInnings) prev = '<div class="hero-prev">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '-' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ')</b> • Bowling now: ' + esc(bowl) + '</div>';
+        if (S.prevInnings) prev = '<div class="hero-prev">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '-' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ')</b></div>';
         if (S.superOver && S.superOver.active) prev += '<div class="hero-prev">⚡ <b>SUPER OVER</b> in progress</div>';
         return '<div class="hero" style="--hca:' + hexRgba(cA, .40) + ';--hcb:' + hexRgba(cB, .40) + '">'
           + '<div class="hero-top">'
-          + '<div class="hero-team">' + heroBadgeHTML(bat, cA) + '<div style="min-width:0"><div class="hero-tname">' + esc(bat || '—') + '</div><div class="hero-sub">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' innings • batting</div></div></div>'
-          + badge
-          + '<div class="hero-team right">' + heroBadgeHTML(bowl, cB) + '<div style="min-width:0"><div class="hero-tname">' + esc(bowl || '—') + '</div><div class="hero-sub">bowling</div></div></div>'
+          + '<div class="hero-badgerow">' + badge + '</div>'
+          + '<div class="hero-tname">' + esc(bat || '—') + '</div><div class="hero-sub">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' innings</div>'
           + '</div>'
           + '<div class="hero-score' + (heroCountOn(inn) ? ' counting' : '') + '"><span id="heroRuns">' + heroDisplayRuns(inn) + '</span><span class="hw">/' + inn.wickets + '</span> <span class="hov">(' + oversText(inn.legalBalls) + ' ov)</span></div>'
           + rates + prog + prev
           + '</div>';
       }
-      /* ---------- (4) win probability ---------- */
-      /* Estimated win chance (0–100) for the BATTING side, from the
-         match situation alone, recalculated on every render — i.e.
-         on every ball. In a chase: the runs still needed are set
-         against what the balls and wickets left can be expected to
-         produce (a remaining ball is worth less as wickets fall).
-         In the first innings: the projected total is set against a
-         par of 8 runs an over. An estimate for the viewer, never a
-         stored figure. */
-      function winProbBatting(){
-        if (typeof superOverActive === 'function' && superOverActive()) return null;
-        var inn = S.current;
-        var maxB = effMaxBalls();
-        var totalBalls = isFinite(maxB) ? maxB : ((S.oversLimit || 20) * 6);
-        var ballsLeft = Math.max(0, totalBalls - inn.legalBalls);
-        var wkLim = wicketsLimit();
-        var wktsLeft = Math.max(0, wkLim - inn.wickets);
-        var t = target();
-        var p;
-        if (t && S.inningsNo === 2){
-          var need = t - inn.runs;
-          if (need <= 0) return 100;
-          if (!ballsLeft || !wktsLeft) return 1;
-          var perBall = 0.55 + 0.77 * (wktsLeft / wkLim);
-          var margin = inn.runs + ballsLeft * perBall - t;
-          p = 100 / (1 + Math.exp(-margin / (6 + need * 0.08)));
-        } else if (S.inningsNo === 1){
-          if (inn.legalBalls < 6 || !ballsLeft) return null;
-          var par = (S.oversLimit || 20) * 8;
-          var rateNow = inn.runs / (inn.legalBalls / 6);
-          var capRate = (0.55 + 0.77 * (wktsLeft / wkLim)) * 6;
-          var proj = inn.runs + (rateNow * 0.45 + capRate * 0.55) * (ballsLeft / 6);
-          p = 100 / (1 + Math.exp(-(proj - par) / 15));
-        } else return null;
-        return Math.max(1, Math.min(99, Math.round(p)));
-      }
-      function winProbHTML(){
-        if (S.status !== 'live') return '';
-        var p = winProbBatting();
-        if (p === null || typeof p !== 'number' || isNaN(p)) return '';
-        var bat = S.current.battingTeam || '', bowl = S.current.bowlingTeam || '';
-        var cA = teamColor(bat, bowl), cB = teamColor(bowl, bat);
-        return '<div class="wp"><div class="wp-lab"><span class="wp-t">Win probability</span><span>estimate</span></div>'
-          + '<div class="wp-bar"><div class="wp-seg" style="width:' + p + '%;background:' + cA + '"></div><div class="wp-seg" style="width:' + (100 - p) + '%;background:' + cB + '"></div></div>'
-          + '<div class="wp-names"><span>' + esc(teamShort(bat)) + ' <b>' + p + '%</b></span><span class="r"><b>' + (100 - p) + '%</b> ' + esc(teamShort(bowl)) + '</span></div></div>';
-      }
       /* ---------- (5) ball-by-ball timeline ---------- */
       function ballTimelineHTML(inn, markNew){
-        var balls = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-14);
+        var balls = (inn.balls || []).filter(function(b){ return !b.evt; }).slice(-12);
         if (!balls.length) return '';
         var chips = balls.map(function(b, i){
           var tx = String(b.text || '');
@@ -29300,12 +29357,10 @@
           } else {
             pshipEl.className = 'cb-pship';
             pshipEl.style.display = '';
-            var projHtml = (S.inningsNo === 2 && t)
-              ? '<span class="ps-proj">Target:<b>' + t + '</b></span>'
-              : '<span class="ps-proj">Projected Score<b>' + (proj === null ? '—' : proj) + '</b></span>';
-            pshipEl.innerHTML = "<span class=\"ps-lab\">Partnership&nbsp; " + (pBalls ? (pRuns + ' (' + pBalls + ')') : '—') + '</span>'
-              + '<span class="ps-div"></span>'
-              + projHtml;
+            /* Partnership stands alone on this strip, left-aligned;
+               the projected score (and, in a chase, the target) now
+               rides on the hero card's CRR line instead. */
+            pshipEl.innerHTML = "<span class=\"ps-lab\">Partnership&nbsp; " + (pBalls ? (pRuns + ' (' + pBalls + ')') : '—') + '</span>';
           }
         }
         /* No crease line above the batter table: the crease pair
@@ -29326,7 +29381,7 @@
           var pairRows = creasePairOrdered(inn).map(function(name){
             var b = cbBatterFull(inn, name);
             var sr = b.balls > 0 ? (b.runs / b.balls * 100).toFixed(1) : '0.0';
-            return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r">' + b.runs + '</td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
+            return '<tr><td><span class="pname">' + plLink(inn.battingTeam, name) + leadSuffix(inn.battingTeam, name) + (name === inn.striker ? '*' : '') + '</span></td><td class="r"><b>' + b.runs + '</b></td><td class="r">' + b.balls + '</td><td class="r">' + (b.fours || 0) + '</td><td class="r">' + (b.sixes || 0) + '</td><td class="r">' + sr + '</td></tr>';
           }).join('');
           if (btEl) btEl.innerHTML = '<table><thead><tr><th>Batter</th><th class="r">R</th><th class="r">B</th><th class="r">4s</th><th class="r">6s</th><th class="r">SR</th></tr></thead><tbody>' + (pairRows || '<tr><td colspan="6">No batters yet.</td></tr>') + '</tbody></table>';
           /* bowler table — current bowler */
@@ -29334,7 +29389,7 @@
             if (inn.bowler){
               var bw = cbBowlerFull(inn, inn.bowler);
               var er = bw.balls > 0 ? (bw.runs / (bw.balls / 6)).toFixed(1) : '0.0';
-              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r">' + bw.wickets + '</td><td class="r">' + er + '</td></tr></tbody></table>';
+              bwEl.innerHTML = '<table><thead><tr><th>Bowler</th><th class="r">O</th><th class="r">R</th><th class="r">W</th><th class="r">ER</th></tr></thead><tbody><tr><td><span class="pname">' + plLink(inn.bowlingTeam, inn.bowler) + '</span></td><td class="r">' + oversText(bw.balls) + '</td><td class="r">' + bw.runs + '</td><td class="r"><b>' + bw.wickets + '</b></td><td class="r">' + er + '</td></tr></tbody></table>';
             } else bwEl.innerHTML = '';
           }
         }
@@ -29487,21 +29542,19 @@
         /* the per-over cards now live inside the commentary feed above */
         var sumEl = $('cbOverSummary');
         if (sumEl) sumEl.innerHTML = '';
-        /* v262: ball-by-ball timeline, win-probability meter,
-           top-performer spotlight and the Manhattan chart. Each
-           builder returns '' when the match has nothing to show,
-           so an upcoming fixture and a brand-new innings stay clean.
+        /* v262: ball-by-ball timeline, top-performer spotlight
+           and the Manhattan chart. Each builder returns '' when
+           the match has nothing to show, so an upcoming fixture
+           and a brand-new innings stay clean.
            v270: the Top Performers spotlight and the Momentum
            (Manhattan) chart appear ONLY once the match is over
            (finished, or abandoned — an abandoned match is filed as
            Completed); while the match is live or at the innings
-           break they stay hidden. The ball timeline and the win
-           meter keep their live-only behaviour, unchanged. */
+           break they stay hidden. The ball timeline keeps its
+           live-only behaviour, unchanged. */
         var matchOver = finished || !!S.abandoned;
         var btlEl = $('cbBallRow');
         if (btlEl) btlEl.innerHTML = finished ? '' : ballTimelineHTML(inn, !!(fx && fx.newBall));
-        var wpEl = $('cbWinProb');
-        if (wpEl){ try { wpEl.innerHTML = winProbHTML(); } catch(e){ wpEl.innerHTML = ''; } }
         var spotEl = $('cbSpotlight');
         if (spotEl){ try { spotEl.innerHTML = matchOver ? spotlightHTML() : ''; } catch(e){ spotEl.innerHTML = ''; } }
         var mhEl = $('cbManhattan');
