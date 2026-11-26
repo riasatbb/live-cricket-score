@@ -2720,7 +2720,22 @@
       .om-field .om-ph{color:var(--muted)}
       .om-chev{color:var(--muted);font-size:20px;line-height:1;flex:none}
       .om-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+      .om-actions[hidden]{display:none}
       .om-actions .btn{padding:14px 10px;text-transform:uppercase;letter-spacing:.03em}
+      /* Open Match page in LIVE mode (v298): SAVE / DO SCORING for a
+         match already under way, a View Match button under them and
+         a status line naming the score and who holds scoring. */
+      .om-viewmatch{display:flex;justify-content:center;margin-top:16px}
+      .om-viewmatch[hidden]{display:none}
+      .om-viewmatch .btn{border-radius:999px;padding:10px 34px;text-transform:none;letter-spacing:0}
+      .om-live-status{margin-top:16px;text-align:center}
+      .om-live-status[hidden]{display:none}
+      .om-live-score{font-weight:700;font-size:16px}
+      .om-live-sess{color:var(--muted);font-size:14px;margin-top:4px}
+      #view-openmatch .om-card input:disabled{opacity:.55}
+      #view-openmatch .om-circle:disabled{cursor:default}
+      #view-openmatch .om-circle:disabled:active{transform:none}
+      #view-openmatch .om-field:disabled{opacity:.55;cursor:default}
       @media (max-width:380px){.om-actions{grid-template-columns:1fr}}
       .om-h{font-size:17px;font-weight:800;margin:18px 0 8px}
       .om-h:first-of-type{margin-top:6px}
@@ -3300,10 +3315,18 @@
             <label for="omScorer">Select Scorer (Optional) — Gmail</label>
             <input id="omScorer" type="email" placeholder="scorer@gmail.com" autocomplete="off" />
           </div>
-          <div class="om-actions">
+          <div class="om-actions" id="omSetupActions">
             <button type="button" class="btn gold" onclick="omSaveFixture()">Save Fixture</button>
             <button type="button" class="btn" onclick="omStartMatchTap()">Start Match</button>
           </div>
+          <div class="om-actions" id="omLiveActions" hidden>
+            <button type="button" class="btn gold" onclick="lmSave()">Save</button>
+            <button type="button" class="btn" onclick="lmDoScoring()">Do Scoring</button>
+          </div>
+          <div class="om-viewmatch" id="omViewMatchWrap" hidden>
+            <button type="button" class="btn ghost" onclick="lmViewMatch()">View Match</button>
+          </div>
+          <div class="om-live-status" id="omLiveStatus" hidden></div>
           <div class="gate-msg" id="omMsg" role="alert" hidden></div>
         </div>
         <div class="card om-card" id="omFxCard" hidden>
@@ -3382,7 +3405,7 @@
       <!-- ================= SCORER ================= -->
       <section class="view" id="view-scorer">
         <div class="clean-top">
-          <button type="button" class="clean-back" onclick="setView('console')" aria-label="Back to Scorer Console">🔙</button>
+          <button type="button" class="clean-back" onclick="scorerBackTap()" aria-label="Back">🔙</button>
           <h2>Scorer Console</h2>
         </div>
         <div class="sc-popback" id="scPopBack" hidden onclick="closeScorerPop()"></div>
@@ -4623,7 +4646,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v296';
+      var APP_VERSION = 'v298';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5205,6 +5228,230 @@
       var fbColdLocalAt = 0;    /* when this device last changed the library content locally */
       var fbFirstSnapDone = false; /* the first liveMatch snapshot already ran the first-read logic */
       var fbLastSnapAt = 0;     /* last time any Firebase listener delivered data (see refreshFromFirebaseNow) */
+      /* ---------- concurrent live matches (v297): one slot per match ----------
+         WHY: until now the server held ONE live match (the
+         liveMatch node), so a second match could not be scored
+         while one was running — a new start parked or replaced
+         the match on the table, and the start gates refused a
+         second admin outright. The owner asked for many matches
+         to be scored at the same time.
+         NOW every live match has its own slot: liveMatches/
+         <matchId> carries that match's hot slice (the same
+         HOT_KEYS payload liveMatch always carried), written by
+         whichever device is scoring it and read by everyone.
+         Several admins / scorers can therefore score different
+         matches simultaneously; the Recent Matches list shows
+         every live slot as its own In Progress row, each opening
+         its own scoreboard, and Resume Scoring lists them all.
+         This device still scores ONE match at a time (the one on
+         its pad, S) — its pushes go to that match's slot only.
+         The legacy liveMatch node is still read and folded in as
+         one more live match (a match started before slots
+         existed, or by an older build), deduplicated by matchId
+         with the slot copy winning; when that match's own device
+         next pushes, the match moves into its slot and the legacy
+         copy is cleared once (see pushHotSlot).
+         The confirmed display state (fbConfirmedState) is built
+         from a PRIMARY match — the pad match when this device
+         has one on the server, else the most recently updated
+         live match — merged with the shared library, exactly as
+         before; the other live matches reach the lists through
+         liveSlices(). A match that completes (Finish Match,
+         abandon, Super Over finish) retires its slot: its record
+         lives on in History, in the library's lastFinishedSingle
+         and in its tournament's book, so no finished match
+         lingers as a phantom live entry.
+         SAFETY: if the database Rules do not allow liveMatches
+         yet, the first rejected read or write latches
+         fbMultiDenied and everything falls back to the exact
+         legacy single-match behaviour (the liveMatch node, the
+         start gates and all) until the updated Rules — the ones
+         in the History sync help — are published in the Firebase
+         Console. Nothing is ever dropped by the fallback: the
+         push that meets the rejection is retried at once through
+         the legacy node. */
+      var fbLiveRef = null;       /* the liveMatches node (v297) */
+      var fbLiveMap = {};         /* matchId (string) -> hot slice, every match live on the server */
+      var fbLiveSig = '';         /* id:updatedAt signature of fbLiveMap — spots our own pushes echoing back */
+      var fbMultiDenied = false;  /* liveMatches rejected by the Rules — legacy single-match sync is in force */
+      var fbSlotRetiredFor = '';  /* matchId whose slot this device has already retired on completion */
+      var fbLegacyMigratedFor = ''; /* matchId this device has already moved out of the legacy node into its slot */
+      var fbFirstSnapHook = null; /* set by initFirebaseWithConfig: the first-read logic + deferred listeners, run once by handleLiveSync */
+      function multiLiveOn(){ return !!fbLiveRef && !fbMultiDenied; }
+      /* ---------- one scorer at a time (v298): the scoring session ----------
+         A match's score may be written by ONE account at a time.
+         Whoever taps DO SCORING on the match's Open Match page
+         claims that match's scoring session — a small record at
+         matchSessions/<matchId> ({ uid, email, name, at }) — and
+         holds it until they hand it over: leaving the scoring pad
+         brings them back to that page, and its SAVE releases the
+         session, so the match's other entitled account (the admin
+         who owns it, or its designated scorer) can then score.
+         While a session is held, every other account's pad for
+         that match is locked (liveMatchLocked) — the Super Admin
+         included: the Super Admin takes over only through the
+         same page, where SAVE first releases the current holder
+         (everything scored so far is already saved on the server,
+         so nothing is lost) and DO SCORING then claims the
+         session for the Super Admin; the previous scorers stay
+         locked out until the Super Admin hands back with SAVE.
+         The record lives OUTSIDE the match slice on purpose: the
+         pad pushes the whole hot slice per ball, so a flag inside
+         it would be overwritten by the very device being locked
+         out. SAFETY: while the published Rules do not allow the
+         matchSessions node yet, reads / writes are refused,
+         fbSessionDenied latches, the map stays empty and scoring
+         behaves exactly as before (no lock) until the updated
+         Rules from Firebase Setup are published. */
+      var fbSessionRef = null;    /* the matchSessions node (v298) */
+      var fbSessionMap = {};      /* matchId (string) -> { uid, email, name, at } */
+      var fbSessionDenied = false; /* matchSessions refused by the Rules — the session lock is not in force */
+      function matchSession(id){
+        if (id == null) return null;
+        var s = fbSessionMap[String(id)];
+        return (s && s.uid) ? s : null;
+      }
+      function sessionHeldByOther(id){
+        var s = matchSession(id);
+        return !!(s && s.uid !== currentUid());
+      }
+      function writeMatchSession(id, val){
+        if (!fbApp || id == null) return;
+        try {
+          fbApp.database().ref('matchSessions').child(String(id)).set(val).catch(function(err){
+            if (err && /permission/i.test(err.message || '')) fbSessionDenied = true;
+          });
+        } catch(e){}
+        /* This device's own map follows its own write at once, so
+           the holder's pad unlocks / the hand-over shows without
+           waiting for the listener's echo. */
+        if (val) fbSessionMap[String(id)] = val; else delete fbSessionMap[String(id)];
+      }
+      /* Attach (or re-attach) the matchSessions listener. Runs
+         once at connect, and again when an account signs in after
+         the listener was refused while signed out — the node's
+         read needs a signed-in account, so a listener attached
+         too early must not latch the no-lock fallback forever. */
+      function attachSessionListener(){
+        if (!fbApp) return;
+        try {
+          if (fbSessionRef){ try { fbSessionRef.off(); } catch(e){} }
+          fbSessionRef = fbApp.database().ref('matchSessions');
+          var myRef = fbSessionRef;
+          myRef.on('value', function(snap){
+            if (fbSessionRef !== myRef) return;
+            fbSessionDenied = false;
+            fbLastSnapAt = Date.now();
+            fbSessionMap = snap.val() || {};
+            try { applyOwnerLocks(); } catch(e){}
+            if (typeof currentViewName !== 'undefined' && currentViewName === 'openmatch' && typeof om !== 'undefined' && om.liveId){ try { lmRenderLiveStatus(); } catch(e){} }
+          }, function(err){
+            if (fbSessionRef !== myRef) return;
+            fbSessionDenied = true;
+          });
+        } catch(e){ fbSessionRef = null; fbSessionDenied = true; }
+      }
+      function claimMatchSession(id){
+        if (!authUser || id == null) return;
+        /* uid + display name only — never the email: a Gmail is
+           private in this app by design (the match record itself
+           keeps only its one-way hash), while a scorer's name is
+           already public as the match's ownerName. */
+        writeMatchSession(id, { uid: currentUid(), name: authUser.displayName || '', at: Date.now() });
+      }
+      function releaseMatchSession(id){ writeMatchSession(id, null); }
+      function slotRef(id){ return fbLiveRef ? fbLiveRef.child(String(id)) : null; }
+      function noteLiveSig(){
+        var parts = [];
+        Object.keys(fbLiveMap).forEach(function(k){ var sl = fbLiveMap[k]; if (sl) parts.push(k + ':' + (sl.updatedAt || 0)); });
+        fbLiveSig = parts.sort().join('|');
+      }
+      /* Every match live on the server right now, as hot slices:
+         the slots, plus the legacy node's match when it is not
+         slotted (the slot copy of the same matchId always wins —
+         it is the one still being written). Only real matches
+         (both teams set) are listed. */
+      function liveSlices(){
+        var out = [], seen = {};
+        Object.keys(fbLiveMap).forEach(function(k){
+          var sl = fbLiveMap[k];
+          if (sl && sl.teamA && sl.teamB){ out.push(sl); seen[String(sl.matchId != null ? sl.matchId : k)] = 1; }
+        });
+        if (fbHotState && fbHotState.teamA && fbHotState.teamB && !seen[String(fbHotState.matchId)]) out.push(fbHotState);
+        return out;
+      }
+      function liveSliceById(id){
+        id = String(id);
+        if (fbLiveMap[id] && fbLiveMap[id].teamA && fbLiveMap[id].teamB) return fbLiveMap[id];
+        if (fbHotState && String(fbHotState.matchId) === id && fbHotState.teamA && fbHotState.teamB) return fbHotState;
+        return null;
+      }
+      /* The server slice for the match on THIS device's pad, from
+         whichever node holds it (its slot first, the legacy node
+         second). Null while the server holds no copy of it. */
+      function padHot(){
+        if (!S || S.matchId == null) return null;
+        var id = String(S.matchId);
+        if (fbLiveMap[id]) return fbLiveMap[id];
+        if (fbHotState && String(fbHotState.matchId) === id) return fbHotState;
+        return null;
+      }
+      /* The hot slice the confirmed display state is built from:
+         the pad match when this device has one on the server (so
+         the scorer's own screens keep centring on their match,
+         exactly as the single-slot app did), else the most
+         recently updated live match, else whatever the legacy
+         node holds (a blank post-delete state, or null). */
+      function primaryHot(){
+        var pad = padHot();
+        if (pad && pad.teamA && pad.teamB) return pad;
+        var best = null;
+        liveSlices().forEach(function(sl){ if (!best || (sl.updatedAt || 0) > (best.updatedAt || 0)) best = sl; });
+        if (best) return best;
+        return fbHotState;
+      }
+      /* The pad match's whole state as the server holds it — its
+         own slice merged with the shared library. This is what
+         the adoption check runs on: a device follows ONLY its own
+         match, never another admin's. While the pad holds no
+         match of its own (a viewer, a fresh control tab), the
+         primary live match is adopted exactly as the single-slot
+         app always adopted the live match. A teamless copy (a
+         retired slot's tombstone — see retireSlot) is NO copy:
+         the pad's own match must never be "adopted" into the
+         blank its own retirement left behind. */
+      function composedPadState(){
+        var hot = padHot();
+        if (!hot || !hot.teamA || !hot.teamB){
+          if (!liveMatchExists()) return composedState();
+          return null;
+        }
+        var out = freshState();
+        var cold = effectiveCold();
+        if (cold) COLD_KEYS.forEach(function(k){ if (cold[k] !== undefined) out[k] = deep(cold[k]); });
+        HOT_KEYS.forEach(function(k){ if (hot[k] !== undefined) out[k] = deep(hot[k]); });
+        Object.keys(hot).forEach(function(k){ if (out[k] === undefined) out[k] = deep(hot[k]); });
+        return out;
+      }
+      /* One sync pass over the live data (v297): rebuild the
+         confirmed display state from the slots + the legacy node
+         + the library, adopt the pad match's newer server state
+         when one arrived, run the viewer ghost guard, and — on
+         the very first pass of a connection — run the first-read
+         logic through the hook the connection set up. Both live
+         listeners (the legacy liveMatch node and the liveMatches
+         slots) funnel into here, so the two sources can never
+         drive the state in different directions. */
+      function handleLiveSync(){
+        refreshConfirmedState();
+        var pad = composedPadState();
+        if (pad && shouldAdoptRemote(pad)) adoptRemoteState(pad);
+        try { guardViewerScoreboard(); } catch(e){}
+        if (!fbFirstSnapDone){
+          fbFirstSnapDone = true;
+          if (fbFirstSnapHook){ try { fbFirstSnapHook(); } catch(e){} }
+        }
+      }
       function partOf(st, keys){
         var o = {};
         if (!st) return o;
@@ -5229,15 +5476,20 @@
          and fbConfirmedState have always had. Null while the server
          has not produced a live match at all. */
       function composedState(){
-        if (!fbHotState) return null;
+        /* The primary live match (v297 — see primaryHot): the pad
+           match when this device has one on the server, else the
+           most recently updated live slot / legacy match. Null
+           only while the server has produced no live data at all. */
+        var hot = primaryHot();
+        if (!hot) return null;
         var out = freshState();
         var cold = effectiveCold();
         if (cold) COLD_KEYS.forEach(function(k){ if (cold[k] !== undefined) out[k] = deep(cold[k]); });
-        HOT_KEYS.forEach(function(k){ if (fbHotState[k] !== undefined) out[k] = deep(fbHotState[k]); });
+        HOT_KEYS.forEach(function(k){ if (hot[k] !== undefined) out[k] = deep(hot[k]); });
         /* A legacy whole-state liveMatch can carry keys the split
            does not know about — keep them, so nothing a surface
            reads can go missing during the changeover. */
-        Object.keys(fbHotState).forEach(function(k){ if (out[k] === undefined) out[k] = deep(fbHotState[k]); });
+        Object.keys(hot).forEach(function(k){ if (out[k] === undefined) out[k] = deep(hot[k]); });
         return out;
       }
       /* fbConfirmedState is rebuilt from the two nodes whenever
@@ -5342,7 +5594,7 @@
          which must land as one confirmed act. In legacy fallback
          (or with no library node) it is exactly the old single
          liveMatch set. */
-      function writeSplitState(st){
+      function writeSplitState(st, opts){
         var full = deep(st);
         /* Writing the live state while a tournament is being
            viewed folds view mode away first (v233), exactly like
@@ -5363,7 +5615,7 @@
         return fbLibRef.set(payload).then(function(){
           fbColdHash = coldHashOf(cold);
           fbColdState = deep(payload);
-          return fbRef.set(hotPartOf(full));
+          return writeHotForState(full, opts);
         }, function(err){
           if (err && /permission/i.test(err.message || '')){
             /* Rules do not allow the library node yet: fall back to
@@ -5374,57 +5626,218 @@
           }
           throw err;
         }).then(function(){
-          fbHotState = fbLibDenied ? deep(full) : hotPartOf(full);
+          if (fbLibDenied) fbHotState = deep(full);
           refreshConfirmedState();
           try { renderAll(false); } catch(e){}
         });
       }
+      /* Retire a match's live slot (v297): the match is finished,
+         parked or deleted, so its slot must stop presenting it as
+         live. A plain delete is tried first; the Rules refuse a
+         null write from anyone but the Super Admin (their owner
+         clauses demand the written record keep naming its owner —
+         the very reason Delete Match has always published an
+         owner-stamped blank state), so on a permission refusal
+         the slot is BLANKED instead: a tombstone with no teams
+         that preserves the match's owner and scorer hash, passing
+         exactly the clauses that let this account score the
+         match. Either way the slot ends up holding no teams, and
+         every surface lists only slices that have both teams, so
+         the match is gone from every live list at once. Resolves
+         true when either write landed. */
+      function retireSlot(id, sliceHint){
+        if (!fbLiveRef) return Promise.resolve(false);
+        var ref = slotRef(id);
+        return ref.set(null).then(function(){ return true; }, function(err){
+          if (!err || !/permission/i.test(err.message || '')) return false;
+          var blank = hotPartOf(freshState());
+          var src = sliceHint || fbLiveMap[id] || null;
+          if (!src && fbHotState && String(fbHotState.matchId) === String(id)) src = fbHotState;
+          var numId = Number(id);
+          blank.matchId = isNaN(numId) ? id : numId;
+          blank.ownerUid = src ? (src.ownerUid || '') : '';
+          blank.ownerName = src ? (src.ownerName || '') : '';
+          blank.scorerEmailHash = src ? (src.scorerEmailHash || '') : '';
+          blank.updatedAt = Date.now();
+          return ref.set(blank).then(function(){ return true; }, function(){ return false; });
+        });
+      }
+      /* The hot half of a split write (v297): the match's own slot
+         at liveMatches/<matchId> — or, while the updated Rules are
+         not published yet (fbMultiDenied), the legacy liveMatch
+         node exactly as before the slots existed. A delete publish
+         passes opts.removeSlotId instead: that match's slot is
+         retired, and the legacy node is overwritten with the blank
+         state only when it still holds the removed match (or slots
+         are not in force), so no copy of a deleted match survives
+         on either node. A state with no match in it (a library-only
+         seed) writes no slot at all. */
+      function writeHotForState(full, opts){
+        var hot = hotPartOf(full);
+        if (opts && opts.removeSlotId){
+          var rid = String(opts.removeSlotId);
+          var done = Promise.resolve();
+          if (multiLiveOn()){
+            done = retireSlot(rid, null).then(function(ok){
+              if (!ok) throw new Error('PERMISSION_DENIED: the match\'s live slot could not be cleared');
+              delete fbLiveMap[rid]; noteLiveSig();
+            });
+          }
+          if (!multiLiveOn() || (fbHotState && String(fbHotState.matchId) === rid)){
+            done = done.then(function(){ return fbRef.set(hot).then(function(){ fbHotState = deep(hot); }); });
+          }
+          return done;
+        }
+        if (multiLiveOn()){
+          if (full.teamA && full.teamB && full.matchId != null){
+            var id = String(full.matchId);
+            return slotRef(id).set(hot).then(function(){ fbLiveMap[id] = deep(hot); noteLiveSig(); }, function(err){
+              if (err && /permission/i.test(err.message || '')){
+                fbMultiDenied = true;
+                return fbRef.set(hot).then(function(){ fbHotState = deep(hot); });
+              }
+              throw err;
+            });
+          }
+          return Promise.resolve(); /* no match to seed — the library half was the whole write */
+        }
+        return fbRef.set(hot).then(function(){ fbHotState = deep(hot); });
+      }
       function pushToFirebase(){
         if (!fbRef || fbPushing || !fbReady) return;
-        var ref = fbRef;
         /* The library goes first — and only when it changed. During
            scoring it never changes, so a ball costs one small
-           transaction on liveMatch and nothing else. If the library
-           write is rejected, the legacy whole-state push takes over
-           for the rest of the session. */
+           transaction on the live match and nothing else. If the
+           library write is rejected, the legacy whole-state push
+           takes over for the rest of the session. The live match
+           itself goes to its own slot at liveMatches/<matchId>
+           (v297) — or, while the updated Rules are not published
+           yet, to the legacy liveMatch node exactly as before. */
         pushLibraryIfChanged().then(function(){
-          if (fbLibDenied || !fbLibRef){ pushWholeState(ref); return; }
-          var pushed = hotPartOf(S);
-          var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
-          /* Transaction, not a blind set: if another scoring device
-             published a NEWER match since this device last saw the
-             server, this older write aborts instead of erasing that
-             device's balls, and the newer state is adopted. Writes
-             from the state this device last confirmed go through
-             unchanged. */
-          ref.transaction(function(cur){
-            if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
-            if (cur && typeof cur.updatedAt === 'number' && cur.updatedAt > pushed.updatedAt && fbLocalDirty !== true && baseAt === null) return undefined;
-            return pushed;
-          }).then(function(res){
-            if (res && res.committed === false){
-              /* This push never landed, so a waiting profile-save
-                 confirmation must not claim it did — the refresh
-                 notice below tells the scorer to re-check instead. */
-              pendingProfileSaveMsg = null;
-              /* Aborted — a newer state won. Adopt it (merged with
-                 the library) so no ball from either device is
-                 silently lost in a stale overwrite. */
-              try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv){ fbHotState = deep(nv); refreshConfirmedState(); var mg = composedState(); if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg); } } catch(e){}
-              toast('⚠️ Another device scored a newer update — this screen has refreshed to the latest score so no ball is lost. Please re-check before scoring the next ball.');
-              return;
-            }
-            fbErrorShown = false;
-            /* Firebase accepted this exact live match: it is now the
-               confirmed state viewer surfaces may show. */
-            fbHotState = deep(pushed);
+          if (fbLibDenied || !fbLibRef){ pushWholeState(fbRef); return; }
+          if (multiLiveOn()) pushHotSlot();
+          else pushHotLegacy();
+        });
+      }
+      /* The pre-v297 hot push, kept whole as the fallback for
+         databases whose Rules do not allow the liveMatches node
+         yet: one transaction on the single liveMatch node. */
+      function pushHotLegacy(){
+        var ref = fbRef;
+        var pushed = hotPartOf(S);
+        var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
+        /* Transaction, not a blind set: if another scoring device
+           published a NEWER match since this device last saw the
+           server, this older write aborts instead of erasing that
+           device's balls, and the newer state is adopted. Writes
+           from the state this device last confirmed go through
+           unchanged. */
+        ref.transaction(function(cur){
+          if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
+          if (cur && typeof cur.updatedAt === 'number' && cur.updatedAt > pushed.updatedAt && fbLocalDirty !== true && baseAt === null) return undefined;
+          return pushed;
+        }).then(function(res){
+          if (res && res.committed === false){
+            /* This push never landed, so a waiting profile-save
+               confirmation must not claim it did — the refresh
+               notice below tells the scorer to re-check instead. */
+            pendingProfileSaveMsg = null;
+            /* Aborted — a newer state won. Adopt it (merged with
+               the library) so no ball from either device is
+               silently lost in a stale overwrite. */
+            try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv){ fbHotState = deep(nv); refreshConfirmedState(); var mg = composedState(); if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg); } } catch(e){}
+            toast('⚠️ Another device scored a newer update — this screen has refreshed to the latest score so no ball is lost. Please re-check before scoring the next ball.');
+            return;
+          }
+          fbErrorShown = false;
+          /* Firebase accepted this exact live match: it is now the
+             confirmed state viewer surfaces may show. */
+          fbHotState = deep(pushed);
+          refreshConfirmedState();
+          try { renderAll(false); } catch(e){}
+          /* A profile save waiting on this push may now show its
+             "✓ Profile saved" confirmation — the server really has
+             the new profile. */
+          if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
+        }).catch(function(err){ pendingProfileSaveMsg = null; showFirebaseError(err, 'update'); });
+      }
+      /* The per-match hot push (v297): this device's match goes to
+         its OWN slot, liveMatches/<matchId>, under the same
+         transaction guard as the legacy push — another device
+         scoring the SAME match with a newer state wins and is
+         adopted; other matches' slots are never touched, so any
+         number of matches can be scored at once. A completed
+         match (Finish Match tapped, play over and completed)
+         retires its slot instead of writing it: the record lives
+         in History / the library from then on, and later edits
+         (a POTM pick) travel through History, never by
+         resurrecting the slot. A permission rejection means the
+         published Rules predate the slots: latch the legacy
+         fallback and land this very push through the legacy node,
+         so the ball is never lost. */
+      function pushHotSlot(){
+        var id = (S && S.matchId != null) ? String(S.matchId) : '';
+        if (!id) return;
+        if (S.status === 'finished' && !S.awaitingFinish){
+          if (fbSlotRetiredFor !== id){
+            /* Marked before the write settles so a commit storm
+               cannot fire a retire per commit; a failed retire
+               clears the mark, so a later commit retries it. */
+            fbSlotRetiredFor = id;
+            try { retireSlot(id, S).then(function(ok){ if (!ok && fbSlotRetiredFor === id) fbSlotRetiredFor = ''; }); } catch(e){}
+            delete fbLiveMap[id]; noteLiveSig();
             refreshConfirmedState();
-            try { renderAll(false); } catch(e){}
-            /* A profile save waiting on this push may now show its
-               "✓ Profile saved" confirmation — the server really has
-               the new profile. */
-            if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
-          }).catch(function(err){ pendingProfileSaveMsg = null; showFirebaseError(err, 'update'); });
+          }
+          return;
+        }
+        if (!liveMatchExists()) return; /* library-only commits never create a slot */
+        var ref = slotRef(id);
+        var pushed = hotPartOf(S);
+        var baseAt = (fbConfirmedState && typeof fbConfirmedState.updatedAt === 'number') ? fbConfirmedState.updatedAt : null;
+        ref.transaction(function(cur){
+          if (cur && typeof cur.updatedAt === 'number' && baseAt !== null && cur.updatedAt > baseAt && cur.updatedAt > pushed.updatedAt) return undefined;
+          if (cur && typeof cur.updatedAt === 'number' && cur.updatedAt > pushed.updatedAt && fbLocalDirty !== true && baseAt === null) return undefined;
+          return pushed;
+        }).then(function(res){
+          if (res && res.committed === false){
+            pendingProfileSaveMsg = null;
+            try { var nv = res.snapshot && res.snapshot.val ? res.snapshot.val() : null; if (nv){ fbLiveMap[id] = deep(nv); noteLiveSig(); refreshConfirmedState(); var mg = composedPadState(); if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg); } } catch(e){}
+            toast('⚠️ Another device scored a newer update — this screen has refreshed to the latest score so no ball is lost. Please re-check before scoring the next ball.');
+            return;
+          }
+          fbErrorShown = false;
+          if (fbSlotRetiredFor === id) fbSlotRetiredFor = '';
+          /* Firebase accepted this exact live match in its slot:
+             it is now confirmed state viewer surfaces may show. */
+          fbLiveMap[id] = deep(pushed);
+          noteLiveSig();
+          /* Migration: a match that still also sits in the legacy
+             liveMatch node (started before slots existed) moves
+             house with this push — the legacy copy is cleared once
+             with the blank state, so no stale duplicate of the
+             match survives on the old node. Best-effort: a refused
+             clear (e.g. the designated scorer is not the legacy
+             record's owner) leaves the legacy copy in place, and
+             every surface deduplicates by matchId with the slot
+             copy winning. */
+          if (fbHotState && String(fbHotState.matchId) === id && fbLegacyMigratedFor !== id){
+            fbLegacyMigratedFor = id;
+            try {
+              var blankHot = hotPartOf(buildDeletedState());
+              fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); refreshConfirmedState(); }, function(){});
+            } catch(e){}
+          }
+          refreshConfirmedState();
+          try { renderAll(false); } catch(e){}
+          if (pendingProfileSaveMsg){ var psm = pendingProfileSaveMsg; pendingProfileSaveMsg = null; toast(psm); }
+        }).catch(function(err){
+          pendingProfileSaveMsg = null;
+          if (err && /permission/i.test(err.message || '')){
+            fbMultiDenied = true;
+            pushHotLegacy();
+            return;
+          }
+          showFirebaseError(err, 'update');
         });
       }
       /* The pre-split push, kept whole as the fallback for databases
@@ -5544,12 +5957,18 @@
           return;
         }
         deleteInFlight = true;
+        var delId = (S && S.matchId != null) ? String(S.matchId) : '';
         var candidate = buildDeletedState();
         var pushedDelete = deep(candidate);
-        writeSplitState(candidate).then(function(){
+        /* The deleted match's own slot is retired with the publish
+           (v297, writeHotForState's removeSlotId); with slots in
+           force the confirmed state is rebuilt from the remaining
+           live matches instead of being forced to the blank state,
+           so other matches live at the same time stay on screen. */
+        writeSplitState(candidate, delId ? { removeSlotId: delId } : null).then(function(){
           deleteInFlight = false;
           fbPendingDelete = false; fbPendingFreshPublish = false;
-          fbConfirmedState = pushedDelete;
+          if (multiLiveOn()) refreshConfirmedState(); else fbConfirmedState = pushedDelete;
           hideResetRetry();
           applyDeletedState(candidate);
           /* The match is gone, so the scorer leaves the scoring
@@ -8961,15 +9380,24 @@
       function startMatch(){
         if (scoringLocked()) return;
         /* Creating a match requires an account: the creator becomes
-           the match's owner/admin. A match still IN PROGRESS that
-           belongs to someone else can never be replaced by another
-           account — only its owner can start over it. A FINISHED
-           match never blocks (v296, same fix as omStartScoring):
-           doStartMatch files it into Match History first, then
-           starts the new match, whoever finished the old one. */
+           the match's owner/admin. With per-match live slots in
+           force (v297), a match still IN PROGRESS — whosever it
+           is — never blocks a new start: the new match gets its
+           own slot and every live match keeps being scored at the
+           same time; doStartMatch parks the match on this pad only
+           when this account manages it, and never touches another
+           admin's match. Only while the legacy single-match
+           fallback is in force (the database Rules do not allow
+           liveMatches yet, so the one liveMatch node is still the
+           only live place) does another admin's in-progress match
+           keep blocking, exactly as in v296 — starting over it
+           would replace it. A FINISHED match never blocks in
+           either mode: doStartMatch files it into Match History
+           first, then starts the new match, whoever finished the
+           old one. */
         if (!requireSignIn('start a match')) return;
         var curOwner = S.ownerUid || '';
-        if (liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
+        if (!multiLiveOn() && liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
           var blockMsg = '🔒 ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' is still in progress — it is managed by ' + (S.ownerName || 'another admin') + ', so only that admin, its designated scorer or the Super Admin can score it. A new match can start as soon as that one is finished.';
           toast(blockMsg);
           var mst = $('matchStatusText'); if (mst) mst.textContent = blockMsg;
@@ -9053,10 +9481,15 @@
         /* Safety net: a finished match still on the table is filed
            into permanent history before the new match replaces it,
            and a match still IN PROGRESS is parked — never discarded —
-           so Resume Scoring can bring it back. */
+           so Resume Scoring can bring it back. Parking is this
+           account's own housekeeping, though (v297): a match on
+           this pad that belongs to another admin is NOT parked —
+           it stays live in its own slot / the legacy node, scored
+           by its own scorer, completely untouched by this start;
+           the pad simply moves on to the new match. */
         try { archiveFinishedMatch(); } catch(e){}
         try { captureLastFinishedSingle(); } catch(e){}
-        try { parkCurrentMatch(); } catch(e){}
+        try { if (!liveMatchLocked()) parkCurrentMatch(); } catch(e){}
         var prevTeamA = S.teamA, prevTeamB = S.teamB;
         var keepWk = (typeof S.wicketsLimit === 'number') ? S.wicketsLimit : 10;
         var keepA = deep(S.squadA||[]), keepB = deep(S.squadB||[]);
@@ -9221,6 +9654,11 @@
            the commit's render, has already switched it). */
         try { closeScorerPop(); } catch(e){}
         try { syncScorerNode(scorerNodeEmail); } catch(e){}
+        /* The account that starts a match holds its scoring
+           session from the first ball (v298): nobody else can
+           score it until this account hands over with Save on the
+           match's Open Match page. */
+        try { claimMatchSession(S.matchId); } catch(e){}
       }
       /* The designated scorer's Gmail lives ONLY in the separate
          Firebase record at matchScorer — never in the publicly
@@ -9240,9 +9678,33 @@
         if (!addr && S.scorerEmailHash && authUser && authUser.email && hashEmail(authUser.email) === S.scorerEmailHash){
           addr = String(authUser.email).trim().toLowerCase(); /* a scorer starting their own designated match names themselves */
         }
-        var ref = fbApp.database().ref('matchScorer');
-        if (addr) ref.set({ email: addr, ownerUid: currentUid(), matchId: S.matchId || 0 }).catch(function(){});
-        else ref.set(null).catch(function(){});
+        /* The SHARED matchScorer record names ONE match — the one
+           in the legacy liveMatch node. With per-match slots in
+           force (v297) it is written only while this device is in
+           the single-match fallback, or while the pad match is the
+           legacy node's own match; a slotted match's scorer lives
+           in its per-match record below, and overwriting the
+           shared record from here would strip the legacy match's
+           scorer of their server-side write access. */
+        if (!multiLiveOn() || (fbHotState && String(fbHotState.matchId) === String(S.matchId))){
+          var ref = fbApp.database().ref('matchScorer');
+          if (addr) ref.set({ email: addr, ownerUid: currentUid(), matchId: S.matchId || 0 }).catch(function(){});
+          else ref.set(null).catch(function(){});
+        }
+        /* Per-match scorer records (v297): with several matches
+           live at once, one shared matchScorer record cannot name
+           every match's scorer — matchScorers/<matchId> carries
+           this match's own record, and the liveMatches Rules
+           authorise that scorer's writes to this match's slot
+           from it. The shared record above stays for the legacy
+           liveMatch node and the single-match fallback. */
+        try {
+          if (S.matchId != null){
+            var mref = fbApp.database().ref('matchScorers').child(String(S.matchId));
+            if (addr) mref.set({ email: addr, ownerUid: currentUid(), matchId: S.matchId || 0 }).catch(function(){});
+            else mref.set(null).catch(function(){});
+          }
+        } catch(e){}
       }
       function resetMatch(){
         if (scoringLocked()) return;
@@ -9366,7 +9828,17 @@
           try {
             S.pausedMatches = pausedMatches().filter(function(p){ return String(p.matchId) !== String(S.matchId); });
           } catch(e){}
+          /* Completing retires the match's live slot (v297), so a
+             finished Single Match's viewer-home record is captured
+             into the library NOW — not only when the next match
+             starts — and travels with this very commit. */
+          try { captureLastFinishedSingle(); } catch(e){}
           commit(txt);
+          /* A completed match holds no scoring session (v298):
+             whoever was scoring is done, and the record is
+             cleared so nothing about the finished match can lock
+             a later one out. */
+          try { releaseMatchSession(S.matchId); } catch(e){}
           try { archiveFinishedMatch(); } catch(e){}
           /* A match started from a tournament fixture belongs to
              the tournament: completing it files its result there
@@ -9505,6 +9977,10 @@
         S.resultText = winner
           ? ('Match tied — ' + so.resultText)
           : 'Match tied — the Super Over was tied too.';
+        /* Completing retires the live slot (v297): capture the
+           finished Single Match's viewer-home record into the
+           library with this commit, as Finish Match does. */
+        try { captureLastFinishedSingle(); } catch(e){}
         commit(auto ? 'Super Over finished: ' + so.resultText : so.resultText);
         try { archiveFinishedMatch(); } catch(e){}
         /* Settling the tie completes a tournament match too: its
@@ -9847,6 +10323,10 @@
         S.resultText = asSentence('Match abandoned' + (reason ? ' — ' + reason : ''));
         pushFeedEvent(S.current, 'note', '', 'Match abandoned' + (reason ? ' — ' + reason : '') + '.');
         closeMoreModal();
+        /* An abandoned match completes at once, so its live slot
+           is retired by this commit (v297): capture the finished
+           Single Match's viewer-home record into the library too. */
+        try { captureLastFinishedSingle(); } catch(e){}
         commit('Match abandoned');
         /* An abandoned match is a finished match too — it goes into
            permanent history with the score as it stood. */
@@ -11701,6 +12181,7 @@
          format is seeded from the tournament's recent matches, so
          a tournament already under way does not ask twice. */
       function tnFxToForm(){
+        om.liveId = null;
         om.tnFx = { group: tnFx.group, stage: tnFx.stage };
         om.teamA = ''; om.teamB = '';
         var seed = fixtureFormatSeed();
@@ -11730,6 +12211,7 @@
             banner.innerHTML = '🏆 ' + esc(S.tournament.name.trim() || 'Tournament') + '<br><span class="note" style="font-weight:600">' + esc(what) + '</span>';
           }
         }
+        try { lmChrome(); } catch(e){}
       }
       /* The Open Match screen's 🔙: inside the Add Fixture flow
          it returns to the flow's selection steps; everywhere else
@@ -11738,6 +12220,8 @@
          All Matches page when a granted admin opened it there. */
       function omBackTap(){
         if (om.tnFx){ setView('tnaddfx'); return; }
+        om.liveId = null; /* leaving the page ends its live mode (v298) — the next setup opening starts clean */
+        lmPadReturn = null; /* …and the pad's 🔙 goes back to its console landing */
         var target = omReturnView || 'console';
         /* An excursion that began on the viewer side (a granted
            admin's Start Single Match) returns to actual viewer
@@ -16854,8 +17338,21 @@
         /* Every OTHER match in progress is listed too, right under
            the one on the pad — several matches can be on at once,
            and each is simply In Progress (its own red pill, its own
-           tappable row), never a second-class "parked" entry. */
-        var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p); });
+           tappable row), never a second-class "parked" entry. Since
+           v297 that means every match live in its own server slot
+           (liveSlices — scored right now, on any device), then the
+           parked ones. A match live in a slot is never ALSO shown
+           from the parked list: it left the pad without being
+           parked, or an older parked copy of it still sits there. */
+        var liveSl = [];
+        try { liveSl = liveSlices(); } catch(e){ liveSl = []; }
+        var liveIds = {};
+        liveSl.forEach(function(sl){ liveIds[String(sl.matchId)] = 1; });
+        var otherLiveRows = liveSl.filter(function(sl){
+          return String(sl.matchId) !== String(S.matchId) && sliceInProgress(sl) && !liveMatchTombstoned(sl);
+        }).sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); }).map(function(sl){ return inProgressRowHTML(sl); });
+        otherLiveRows.forEach(function(r){ slides.push(r); });
+        var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p) && !liveIds[String(p.matchId)]; });
         var parkedRows = parked.map(function(p){ return inProgressRowHTML(p); });
         parkedRows.forEach(function(r){ slides.push(r); });
         /* Most recent first. Completed results are gathered from
@@ -16930,6 +17427,7 @@
         var onPairs = [];
         if (S.current && (S.status === 'live' || S.status === 'inningsBreak') && S.teamA && S.teamB) onPairs.push([S.teamA, S.teamB]);
         parked.forEach(function(p){ if (p.teamA && p.teamB) onPairs.push([p.teamA, p.teamB]); });
+        liveSl.forEach(function(sl){ if (sl.teamA && sl.teamB) onPairs.push([sl.teamA, sl.teamB]); });
         function fixtureAlreadyOn(f){
           return onPairs.some(function(pr){
             return (pr[0] === f.teamA && pr[1] === f.teamB) || (pr[0] === f.teamB && pr[1] === f.teamA);
@@ -16956,7 +17454,7 @@
            read only what this server-confirmed render produced,
            never the device state. */
         amRows = {
-          live: (!curDone && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(parkedRows),
+          live: (!curDone && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(otherLiveRows).concat(parkedRows),
           upcoming: fixRowArr.slice(),
           recent: (curDone ? [curRow] : []).concat(resultRows)
         };
@@ -17208,6 +17706,15 @@
               if (ds && sliceInProgress(ds) && !liveMatchTombstoned(ds) && matchAccessFor(ds)) mine.push(ds);
               var parkedDs = (ds && Array.isArray(ds.pausedMatches) ? ds.pausedMatches : []).slice().reverse();
               parkedDs.forEach(function(p){ if (p && sliceInProgress(p) && !liveMatchTombstoned(p) && matchAccessFor(p)) mine.push(p); });
+              /* Every OTHER match live in its own slot (v297) that
+                 this account manages gets its box too — several
+                 matches can be running at once, each resumable by
+                 exactly its own admin / scorer / the Super Admin. */
+              var seenMine = {};
+              mine.forEach(function(m){ seenMine[String(m.matchId)] = 1; });
+              liveSlices().forEach(function(sl){
+                if (sl && sliceInProgress(sl) && !liveMatchTombstoned(sl) && matchAccessFor(sl) && !seenMine[String(sl.matchId)]){ mine.push(sl); seenMine[String(sl.matchId)] = 1; }
+              });
               resumeHTML = mine.map(function(sl){
                 var line = amResumeLine(sl);
                 var when = sl.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (sl.inningsNo || 1));
@@ -17242,16 +17749,18 @@
         if (sl.current) inns.push(sl.current);
         return inns.map(function(x){ return (x.battingTeam || '') + ' ' + x.runs + '/' + x.wickets + ' (' + oversText(x.legalBalls) + ' ov)'; }).join(' • ');
       }
-      /* A Resume Scoring box tap (v295): entitlement is re-checked
-         against this device's own state — the render above is
-         never trusted on its own — then the session steps out of
-         viewer mode through the same door a granted admin's
-         Create actions use (adminEnterControl) and resumeMatch
-         puts the match on the pad, where the ownership lock
-         (liveMatchLocked) has the final say. This is also the
-         designated scorer's way back into their match: the
-         Scorer Console stays the Super Admin's page, but scoring
-         their own match no longer needs it. */
+      /* A Resume Scoring box tap (v295, rerouted v298): entitlement
+         is re-checked against this device's own state — the render
+         above is never trusted on its own — then the session steps
+         out of viewer mode through the same door a granted admin's
+         Create actions use (adminEnterControl) and the match's
+         Open Match page opens (v298, the owner's flow): the page
+         shows the match as it stands, its Scorer field names or
+         replaces the designated scorer (SAVE), and DO SCORING
+         takes the pad under the one-scorer-at-a-time session.
+         This is also the designated scorer's way back into their
+         match: the Scorer Console stays the Super Admin's page,
+         but scoring their own match no longer needs it. */
       function amResumeScoring(id){
         if (!authUser){ openSignIn(); return; }
         id = String(id);
@@ -17259,10 +17768,12 @@
         try {
           if (liveMatchInProgress() && String(S.matchId) === id && matchAccessFor(matchSlice())) ok = true;
           if (!ok) pausedMatches().forEach(function(p){ if (p && String(p.matchId) === id && sliceInProgress(p) && matchAccessFor(p)) ok = true; });
+          if (!ok){ var slotSl = liveSliceById(id); if (slotSl && sliceInProgress(slotSl) && matchAccessFor(slotSl)) ok = true; }
         } catch(e){}
         if (!ok){ toast('🔒 This match is managed by another admin — only its admin, its designated scorer or the Super Admin can resume scoring it.'); return; }
+        omReturnChrome = viewerChromeSnapshot();
         adminEnterControl();
-        resumeMatch(id);
+        openLiveMatchPage(id);
       }
       function openAllTournaments(){
         try { renderLiveHome(); } catch(e){}
@@ -18158,6 +18669,7 @@
            database piece (v238). */
         if (typeof firebase === 'undefined' || !firebase.database){ throw new Error('Firebase library did not load'); }
         if (fbRef){ try{ fbRef.off(); }catch(e){} fbRef = null; }
+        if (fbLiveRef){ try{ fbLiveRef.off(); }catch(e){} fbLiveRef = null; }
         if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
         if (fbHistRef){ try{ fbHistRef.off(); }catch(e){} fbHistRef = null; }
         if (fbDelRef){ try{ fbDelRef.off(); }catch(e){} fbDelRef = null; }
@@ -18171,6 +18683,8 @@
         fbReady = false; fbConnecting = true; fbErrorShown = false;
         fbConfirmedState = null; fbServerSeen = false;
         fbHotState = null; fbColdState = null; fbColdSeen = false; fbLibDenied = false;
+        fbLiveMap = {}; fbLiveSig = ''; fbMultiDenied = false;
+        fbSlotRetiredFor = ''; fbLegacyMigratedFor = ''; fbFirstSnapHook = null;
         fbColdHash = ''; fbColdLocalAt = 0; fbFirstSnapDone = false; fbLastSnapAt = 0;
         setPadLocked(true);
         setConnStatus('connecting', '⏳ Connecting to Firebase — loading the live match from the database before scoring unlocks…');
@@ -18178,6 +18692,19 @@
         initAuthForApp();
         fbRef = fbApp.database().ref('liveMatch');
         var myRef = fbRef;
+        /* The first live answer from EITHER live node (the legacy
+           liveMatch or the liveMatches slots) runs the first-read
+           logic once — the ready gate, plus seeding / re-syncing
+           this session's own offline work — and lets the deferred
+           history / tombstone listeners attach (v234). The value
+           the logic compares against is the pad match's own server
+           slice (or the primary live match while the pad holds
+           none), so another admin's live match can never be
+           mistaken for this device's work, or overwritten by it. */
+        fbFirstSnapHook = function(){
+          try { firstLiveSnapshot(padHot() || primaryHot(), isDefault); } catch(e){}
+          try { attachSecondaryListeners(); } catch(e){}
+        };
         /* Socket-level stage signal for the connection panel: once
            .info/connected turns true the database connection itself is
            open, and only the first live-match data is still missing —
@@ -18222,6 +18749,60 @@
             fbLibDenied = true;
           });
         } catch(e){ fbLibRef = null; }
+        /* The per-match live slots (v297): liveMatches/<matchId>
+           holds one hot slice per match being scored right now, so
+           several matches can be live at the same time. Read by
+           everyone, written only by each match's own scorer under
+           the same transaction guard as the legacy push. A read
+           rejection (the published Rules do not allow the node
+           yet) latches the legacy fallback — fbMultiDenied — and
+           the single liveMatch node below keeps carrying the one
+           live match exactly as before, until the updated Rules
+           are published. */
+        try {
+          fbLiveRef = fbApp.database().ref('liveMatches');
+          var myLiveRef = fbLiveRef;
+          myLiveRef.on('value', function(snap){
+            if (fbLiveRef !== myLiveRef) return;
+            fbServerSeen = true;
+            fbLastSnapAt = Date.now();
+            var val = snap.val() || {};
+            var map = {}, sigParts = [];
+            Object.keys(val).forEach(function(k){
+              var sl = val[k];
+              if (sl && typeof sl === 'object'){ map[String(k)] = deep(sl); sigParts.push(String(k) + ':' + (sl.updatedAt || 0)); }
+            });
+            var sig = sigParts.sort().join('|');
+            var changed = sig !== fbLiveSig;
+            fbLiveMap = map;
+            fbLiveSig = sig;
+            var beforeAt = S ? S.updatedAt : 0;
+            handleLiveSync();
+            /* Another match's ball does not move this device's pad
+               state, so the adoption inside handleLiveSync stays
+               silent for it — but the surfaces that list every live
+               match (Recent Matches, Resume Scoring, an open match
+               view) must still follow it, so a genuine change to
+               the slots re-renders once. Our own pushes echo back
+               with the signature already recorded (noteLiveSig),
+               so they never cause a second render. */
+            if (changed && S && S.updatedAt === beforeAt){ try { renderAll(false); } catch(e){} }
+            /* The live Open Match page (v298) follows its match's
+               slot too — a ball scored on another device moves its
+               status line. */
+            if (changed && typeof currentViewName !== 'undefined' && currentViewName === 'openmatch' && typeof om !== 'undefined' && om.liveId){ try { lmRenderLiveStatus(); } catch(e){} }
+          }, function(err){
+            if (fbLiveRef !== myLiveRef) return;
+            fbMultiDenied = true;
+          });
+        } catch(e){ fbLiveRef = null; fbMultiDenied = true; }
+        /* The scoring sessions (v298): matchSessions/<matchId>
+           names the ONE account scoring each match right now.
+           Read by every signed-in surface so a held match locks
+           every other pad and the Open Match page can say who is
+           scoring; a read refusal (Rules not yet published) latches
+           the no-lock fallback, exactly like the live slots. */
+        attachSessionListener();
         /* The admins registry (v273): a small node like the library,
            read up front so a signed-in admin's granted actions are
            in place from the first render. */
@@ -18308,22 +18889,16 @@
              this device's own copy is ahead of it or stranded. The
              server has now answered (even with null = no live
              match), so viewer surfaces may state what it said. The
-             confirmed state is this live match MERGED with the
-             library node (see refreshConfirmedState): since v204
-             this snapshot carries only the match itself. */
+             legacy node's match is folded into the same sync pass
+             as the per-match slots (v297, see handleLiveSync): the
+             confirmed state is the primary live match MERGED with
+             the library node (see refreshConfirmedState), and the
+             first snapshot also runs the first-read logic through
+             the connection's hook. */
           fbServerSeen = true;
           fbLastSnapAt = Date.now();
           fbHotState = v ? deep(v) : null;
-          refreshConfirmedState();
-          var mg = composedState();
-          if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg);
-          try { guardViewerScoreboard(); } catch(e){}
-          /* The first snapshot also runs the first-read logic —
-             the ready gate, plus seeding / re-syncing this
-             session's own offline work. It used to run on a
-             separate once('value') read that downloaded the whole
-             match a SECOND time on every connect and reconnect. */
-          if (!fbFirstSnapDone){ fbFirstSnapDone = true; try { firstLiveSnapshot(v, isDefault); } catch(e){} /* The live match has been read — now the deferred history / tombstone listeners may attach (v234). */ try { attachSecondaryListeners(); } catch(e){} }
+          handleLiveSync();
         }, function(err){
           if (fbRef !== myRef) return;
           /* A failed read must never leave the pad locked forever or the
@@ -18335,12 +18910,16 @@
           showFirebaseError(err, 'read');
           scheduleFbRetry();
         });
-        /* First-read logic, run once per connection on the live
-           listener's first delivery (see the on('value') handler
-           above): adopt remote if it exists — the listener already
-           did — then open the scoring gate, then publish this
-           session's own offline work if the database is empty or
-           older. The database is seeded ONLY with work actually
+        /* First-read logic, run once per connection on the first
+           live delivery from either live node (through the
+           connection's fbFirstSnapHook — see handleLiveSync): adopt
+           remote if it exists — the sync pass already did — then
+           open the scoring gate, then publish this session's own
+           offline work if the database is empty or older. The
+           value compared here is the pad match's own server slice
+           (v297), so with several matches live at once, only this
+           device's own match can trigger a re-sync of its work.
+           The database is seeded ONLY with work actually
            scored or edited in THIS session (fbLocalDirty) that
            carries a real match — a fresh tab's untouched 0/0 demo
            state is never written, and neither is a state merely
@@ -18450,6 +19029,8 @@
       }
       function disconnectFirebase(){
         if (fbRef){ try{ fbRef.off(); }catch(e){} }
+        if (fbLiveRef){ try{ fbLiveRef.off(); }catch(e){} fbLiveRef = null; }
+        fbLiveMap = {}; fbLiveSig = ''; fbMultiDenied = false; fbFirstSnapHook = null;
         if (fbLibRef){ try{ fbLibRef.off(); }catch(e){} fbLibRef = null; }
         if (fbAdminRef){ try{ fbAdminRef.off(); }catch(e){} fbAdminRef = null; }
         ADMINS = {}; adminsLoaded = false;
@@ -18519,6 +19100,10 @@
             if (authUser){
               try { maybeFillAdminName(); } catch(e){}
               try { maybeClaimOwnership(); } catch(e){}
+              /* The scoring-session read needs a signed-in account:
+                 a listener refused while signed out is retried now
+                 that there is one (v298). */
+              if (fbSessionDenied){ try { attachSessionListener(); } catch(e){} }
               /* Signing in can un-block history sync on this device:
                  entries this account owns (and unowned ones) that
                  were stranded in the on-device backup publish now. */
@@ -18863,8 +19448,14 @@
       }
       function liveMatchLocked(){
         if (isViewerSession()) return true;
-        if (isSuperAdmin()) return false; /* the Super Admin scores any match (v295) */
         if (!liveMatchExists()) return false;
+        /* One scorer at a time (v298): while another account holds
+           this match's scoring session, the pad is locked for
+           everyone else — the Super Admin included, whose way in
+           is the takeover on the match's Open Match page (SAVE,
+           then DO SCORING), never a silent override here. */
+        if (sessionHeldByOther(S.matchId)) return true;
+        if (isSuperAdmin()) return false; /* the Super Admin scores any match (v295) */
         var o = S.ownerUid || '';
         if (o && o === currentUid()) return false;
         if (designatedScorer()) return false;
@@ -18886,6 +19477,15 @@
       function requireLiveOwner(what){
         if (isViewerSession()){ toast('👀 View-only — open the control link and sign in as the match owner to ' + what + '.'); return false; }
         if (!liveMatchExists()) return true;
+        /* One scorer at a time (v298): while another account holds
+           this match's scoring session, no scoring-side action runs
+           for anyone else — the Super Admin's takeover lives on
+           the match's Open Match page (SAVE, then DO SCORING). */
+        var rsess = matchSession(S.matchId);
+        if (rsess && rsess.uid && rsess.uid !== currentUid()){
+          toast('🔒 ' + (rsess.name || 'Another scorer') + ' is scoring this match right now — scoring opens when they hand it over with Save.');
+          return false;
+        }
         if (isSuperAdmin()) return true; /* the Super Admin manages every match (v295) */
         if (designatedScorer()) return true; /* the named scorer's Gmail may score this match */
         var o = S.ownerUid || '';
@@ -18952,6 +19552,10 @@
         }
       }
       function ownerLockMessage(){
+        var sess = (S && S.matchId != null) ? matchSession(S.matchId) : null;
+        if (sess && sess.uid && sess.uid !== currentUid()){
+          return '🔒 <b>' + esc(sess.name || 'Another scorer') + ' is scoring this match</b> — scoring opens when they hand it over with Save on the match\'s Open Match page.';
+        }
         var o = S.ownerUid || '';
         if (!o) return '🔑 <b>Sign in with Google to score</b>';
         return '🔒 <b>View-only</b>' + (S.ownerName ? ' — ' + esc(S.ownerName) : '');
@@ -19864,10 +20468,19 @@
             var v = snap.val();
             fbLastSnapAt = Date.now();
             fbHotState = v ? deep(v) : null;
-            refreshConfirmedState();
-            var mg = composedState();
-            if (mg && shouldAdoptRemote(mg)) adoptRemoteState(mg);
+            handleLiveSync();
           }).catch(function(){ fbRefreshInFlight = false; });
+        }
+        if (!fresh && fbLiveRef && !fbMultiDenied){
+          fbLiveRef.once('value').then(function(snap){
+            var val = snap.val() || {};
+            var map = {};
+            Object.keys(val).forEach(function(k){ if (val[k] && typeof val[k] === 'object') map[String(k)] = deep(val[k]); });
+            fbLiveMap = map;
+            noteLiveSig();
+            fbLastSnapAt = Date.now();
+            handleLiveSync();
+          }).catch(function(){});
         }
         if (!fresh && fbHistRef){
           fbHistRef.once('value').then(function(snap){
@@ -20032,8 +20645,8 @@
           try { renderLiveHome(); } catch(e){}
           return;
         }
-        writeSplitState(ns).then(function(){
-          fbConfirmedState = deep(ns);
+        writeSplitState(ns, { removeSlotId: id }).then(function(){
+          if (multiLiveOn()) refreshConfirmedState(); else fbConfirmedState = deep(ns);
           fbPendingDelete = false; fbPendingFreshPublish = false;
           try { hideResetRetry(); } catch(e){}
           applyDeletedState(ns);
@@ -22138,6 +22751,10 @@
         var ds = liveDisplayState();
         var slice = null;
         (ds.pausedMatches || []).forEach(function(p){ if (p && String(p.matchId) === id) slice = p; });
+        /* A match live in its own server slot (v297) opens from
+           its slot copy — it is being scored on another device and
+           was never parked, so the parked list does not hold it. */
+        if (!slice){ try { slice = liveSliceById(id); } catch(e){ slice = null; } }
         if (!slice || liveMatchTombstoned(slice)){ toast('That match is no longer in progress'); try { renderLiveHome(); } catch(e){} return; }
         archiveView = null;
         matchView = { kind: 'slice', id: id, returnView: (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'scoreboard') ? currentViewName : 'live', state: sliceDisplayState(slice, ds) };
@@ -22424,6 +23041,9 @@
           }
           var slice = null;
           (ds.pausedMatches || []).forEach(function(p){ if (p && String(p.matchId) === matchView.id) slice = p; });
+          /* A match live in its own slot (v297) keeps this view
+             following it ball by ball from the slot copy. */
+          if (!slice){ try { slice = liveSliceById(matchView.id); } catch(e){ slice = null; } }
           if (slice && !liveMatchTombstoned(slice)){ matchView.state = sliceDisplayState(slice, ds); return; }
           var becameLive = !!(ds && String(ds.matchId) === matchView.id && ds.teamA && ds.teamB && !liveMatchTombstoned(ds));
           matchView = null;
@@ -26525,7 +27145,7 @@
           var perm = /permission/i.test(histFbError);
           html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
             + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveLibrary": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
+            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveMatches": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorers\').child($matchId).child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" } }, "liveLibrary": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchScorers": { "$matchId": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" } }, "matchSessions": { ".read": "auth != null", "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() && newData.child(\'uid\').val() == auth.uid ) || data.child(\'uid\').val() == auth.uid || root.child(\'liveMatches\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorers\').child($matchId).child(\'email\').val() == auth.token.email || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
             + '<br>' + retryBtn + '</div>';
         } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
           html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
@@ -28994,12 +29614,16 @@
          options: Start Single Match, Resume Scoring (only while at
          least one match is in progress — otherwise it is not shown
          at all) and Tournament.
-         The scoring engine still scores ONE match at a time, so
-         "all live matches" are kept as parked copies inside the
+         Each device's scoring engine still scores ONE match at a
+         time — the one on its pad — but since v297 every live
+         match holds its own server slot (liveMatches/<matchId>),
+         so many devices score many matches at once. A match this
+         device sets aside is kept as a parked copy inside the
          state (S.pausedMatches): starting a new match parks the
          in-progress one instead of discarding it, and Resume
-         Scoring lists the live match plus every parked one —
-         tapping one swaps it back into the scoring screen.
+         Scoring lists the pad match, every parked one and every
+         other match live in its slot — tapping one swaps it onto
+         the scoring screen.
          Tournaments work the same way: one tournament is current
          (S.tournament, the existing Tournament Page); Create
          Tournament and opening another one set the current aside
@@ -29036,10 +29660,37 @@
       function parkCurrentMatch(){
         if (!liveMatchInProgress()) return;
         var slice = matchSlice();
+        /* Parking is the holder walking away from this match
+           (v298): if this account holds its scoring session, the
+           session is handed over as it parks, so the match's other
+           entitled account can score the parked match without
+           waiting for a hand-over that can no longer happen. */
+        var psess = matchSession(slice.matchId);
+        if (psess && psess.uid === currentUid()){ try { releaseMatchSession(slice.matchId); } catch(e){} }
         var list = pausedMatches();
         var idx = -1;
         list.forEach(function(p, i){ if (String(p.matchId) === String(slice.matchId)) idx = i; });
         if (idx > -1) list[idx] = slice; else list.push(slice);
+        /* A parked match leaves its live slot (v297): the parked
+           copy in the library is its home now, so the slot is
+           retired — otherwise the same match would sit in both
+           places at once and be listed twice. The commit that
+           follows publishes the parked copy with the library. */
+        if (multiLiveOn()){
+          var pid = String(slice.matchId);
+          try { retireSlot(pid, slice); } catch(e){}
+          delete fbLiveMap[pid]; noteLiveSig();
+          /* The same match may still sit in the legacy liveMatch
+             node (started before slots existed): clear that copy
+             too, or the parked match would go on posing as a live
+             one. Best-effort, like the push migration — a refused
+             clear leaves the copy, and the lists deduplicate by
+             matchId with the parked copy winning its row. */
+          if (fbHotState && String(fbHotState.matchId) === pid && fbLegacyMigratedFor !== pid){
+            fbLegacyMigratedFor = pid;
+            try { var blankHot = hotPartOf(buildDeletedState()); fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); refreshConfirmedState(); }, function(){}); } catch(e){}
+          }
+        }
       }
       /* The origin chosen for the NEXT match started: 'single' from
          Start Single Match, 'tournament' from a fixture's "Score This
@@ -29086,7 +29737,17 @@
         var btn = $('consoleResume'); if (!btn) return;
         var parked = pausedMatches().length;
         var live = liveMatchInProgress();
-        var count = (live ? 1 : 0) + parked;
+        /* Matches live in their own slots on other devices (v297)
+           count toward Resume Scoring too — they are in progress,
+           and this console can take any of them onto the pad. */
+        var otherLive = 0;
+        try {
+          var seenC = {};
+          if (live) seenC[String(S.matchId)] = 1;
+          pausedMatches().forEach(function(p){ if (p) seenC[String(p.matchId)] = 1; });
+          liveSlices().forEach(function(sl){ if (sl && sliceInProgress(sl) && !seenC[String(sl.matchId)]){ seenC[String(sl.matchId)] = 1; otherLive++; } });
+        } catch(e){}
+        var count = (live ? 1 : 0) + parked + otherLive;
         /* Resume Scoring exists ONLY while a match is in progress. */
         btn.hidden = count === 0;
         if (count > 0){
@@ -29119,6 +29780,17 @@
         var html = '';
         if (liveMatchInProgress()) html += resumeRowHTML(matchSlice(), true);
         pausedMatches().slice().reverse().forEach(function(p){ html += resumeRowHTML(p, false); });
+        /* Matches live in their own server slots (v297) — scored
+           on other devices, or left live when this device moved
+           on — are resumable from here too, each exactly once. */
+        try {
+          var seenR = {};
+          if (liveMatchInProgress()) seenR[String(S.matchId)] = 1;
+          pausedMatches().forEach(function(p){ if (p) seenR[String(p.matchId)] = 1; });
+          liveSlices().forEach(function(sl){
+            if (sl && sliceInProgress(sl) && !seenR[String(sl.matchId)]){ seenR[String(sl.matchId)] = 1; html += resumeRowHTML(sl, false); }
+          });
+        } catch(e){}
         el.innerHTML = html || '<p class="note">No matches in progress right now.</p>';
       }
       function resumeMatch(id){
@@ -29127,13 +29799,22 @@
         var list = pausedMatches();
         var idx = -1;
         list.forEach(function(p, i){ if (String(p.matchId) === id) idx = i; });
-        if (idx < 0){ setView('scorer'); return; }
+        /* A match live in its own server slot (v297) — being scored
+           on another device, or left live when this device moved on
+           to a different match — resumes straight from the confirmed
+           slot copy: it was never parked, so it is not in the parked
+           list. Resuming puts it on this pad; from here this
+           device's pushes write its slot, under the same per-match
+           transaction guard as any shared match. */
+        var slotSlice = null;
+        if (idx < 0){ try { slotSlice = liveSliceById(id); } catch(e){ slotSlice = null; } }
+        if (idx < 0 && !slotSlice){ setView('scorer'); return; }
         /* A parked match can be resumed only by its owner: another
            account (or a guest) can look, but taking it over would
            hand them the scoring of someone else's match. An unowned
            parked match is claimed by the signed-in scorer, exactly
            like the live one. */
-        var target = list[idx];
+        var target = idx > -1 ? list[idx] : slotSlice;
         var tOwner = target.ownerUid || '';
         if (tOwner && tOwner !== currentUid() && !isSuperAdmin() && !scorerHashMatches(target.scorerEmailHash)){
           toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
@@ -29143,18 +29824,37 @@
           toast('🔑 Sign in with Google to resume this match — the first account to sign in on the control side becomes its owner.');
           return;
         }
+        /* One scorer at a time (v298): a match whose scoring
+           session another account holds cannot be taken onto this
+           pad — it opens when the holder hands over with Save on
+           the match's Open Match page. The Super Admin resuming
+           here takes the session over (the console is his alone,
+           and everything scored so far is already saved). */
+        var rsess2 = matchSession(id);
+        if (rsess2 && rsess2.uid && rsess2.uid !== currentUid() && !isSuperAdmin()){
+          toast('🔒 ' + (rsess2.name || 'Another scorer') + ' is scoring this match right now — scoring opens when they hand it over with Save.');
+          return;
+        }
         /* Swap: the match being scored now is parked, the picked one
            takes its place — neither is lost. */
         parkCurrentMatch();
-        var list2 = pausedMatches();
-        var j = -1;
-        list2.forEach(function(p, i){ if (String(p.matchId) === id) j = i; });
-        if (j < 0) return;
-        var slice = list2.splice(j, 1)[0];
-        applyMatchSlice(slice);
+        if (idx > -1){
+          var list2 = pausedMatches();
+          var j = -1;
+          list2.forEach(function(p, i){ if (String(p.matchId) === id) j = i; });
+          if (j < 0) return;
+          var slice = list2.splice(j, 1)[0];
+          applyMatchSlice(slice);
+        } else {
+          applyMatchSlice(deep(slotSlice));
+        }
         clearUndoStack(); pendingExtra = null; renderPending();
         try { cancelWicket(); } catch(e){}
         commit('Resumed: ' + (S.teamA || '') + ' vs ' + (S.teamB || ''), true);
+        /* The resumer holds the scoring session from here (v298)
+           — claimed after the swap, so the parked match's own
+           hand-over in parkCurrentMatch cannot clear it. */
+        try { claimMatchSession(S.matchId); } catch(e){}
         setView('scorer');
         toast('▶ Scoring resumed — ' + S.teamA + ' vs ' + S.teamB);
       }
@@ -29234,7 +29934,7 @@
         var e = String(email || '').trim().toLowerCase();
         return e ? sha256Hex(e) : '';
       }
-      var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '', tnFx: null };
+      var om = { slot: 'A', teamA: '', teamB: '', overs: null, format: '', wickets: 10, ballType: '', tossWinner: '', tossDecision: '', fixtureScorerHash: '', tnFx: null, liveId: null };
       /* Where the Open Match screen was opened FROM — the page its
          🔙 returns to (v289, mirroring tnViewerReturnView for the
          tournament view). It used to always land on the Scorer
@@ -29535,7 +30235,7 @@
         omNoteReturn();
         om.teamA = ''; om.teamB = ''; om.overs = null; om.format = ''; om.wickets = 10; om.ballType = '';
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
-        om.tnFx = null;
+        om.tnFx = null; om.liveId = null;
         if (typeof omMsg === 'function') omMsg('');
         var now = new Date();
         var vEl = $('omVenue'); if (vEl) vEl.value = '';
@@ -29553,7 +30253,7 @@
          when the caller left them empty. */
       function openMatchScreenPrefilled(){
         omNoteReturn();
-        om.tnFx = null;
+        om.tnFx = null; om.liveId = null;
         if (typeof omMsg === 'function') omMsg('');
         var now = new Date();
         var dEl = $('omDate'); if (dEl && !dEl.value) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
@@ -29591,6 +30291,7 @@
       }
       /* ----- Select Team picker ----- */
       function openTeamPicker(slot){
+        if (om.liveId) return; /* a live match's teams are fixed (v298) */
         om.slot = slot;
         var c = $('tpCreate'); if (c) c.hidden = true;
         var s = $('tpSearch'); if (s) s.value = '';
@@ -29686,6 +30387,7 @@
       }
       /* ----- Overs / Match Format dialog ----- */
       function openFormatModal(){
+        if (om.liveId) return; /* a live match's format is fixed (v298) */
         $('fmOvers').value = om.overs || '';
         $('fmWickets').value = om.wickets || 10;
         fmRenderChips();
@@ -29788,8 +30490,9 @@
         if (!card || !el) return;
         /* In Add Fixture mode the Saved Fixtures card (single
            matches) stays out of the way — this form files into
-           the tournament instead. */
-        if (om.tnFx){ card.hidden = true; el.innerHTML = ''; return; }
+           the tournament instead. The live mode (v298) keeps it
+           away for the same reason: the page is one live match. */
+        if (om.tnFx || om.liveId){ card.hidden = true; el.innerHTML = ''; return; }
         var list = singleFixtures().slice().reverse();
         card.hidden = !list.length;
         el.innerHTML = list.map(function(f){
@@ -29921,8 +30624,13 @@
            match while the Super Admin's completed match sat on the
            table). A finished match never blocks: doStartMatch
            files it into Match History first, then starts the new
-           match — whoever finished the old one. */
-        if (liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
+           match — whoever finished the old one. And with per-match
+           live slots in force (v297) even an in-progress match
+           blocks nobody: the new match takes its own slot and all
+           the live matches are scored at the same time. The block
+           below therefore applies only in the legacy single-match
+           fallback (liveMatches not allowed by the Rules yet). */
+        if (!multiLiveOn() && liveMatchInProgress() && curOwner && curOwner !== currentUid() && !isSuperAdmin()){
           tossMsg('🔒 ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' is still in progress — it is managed by ' + (S.ownerName || 'another admin') + ', so only that admin, its designated scorer or the Super Admin can score it. Your match can start as soon as that one is finished.');
           return;
         }
@@ -29944,6 +30652,295 @@
         closeTossModal();
         doStartMatch(om.teamA, om.teamB, om.tossWinner, om.tossDecision);
         setView('scorer');
+      }
+
+      /* ============================================================
+         OPEN MATCH — LIVE MODE (v298, the owner's flow)
+         Once a match has started, tapping its Resume Scoring box
+         no longer jumps straight to the pad: the Open Match page
+         opens FOR THE LIVE MATCH — the same page as the setup
+         screen (team circles with logos, Venue, date / time, the
+         format line, the Scorer field), with the started match's
+         own details filled in and its teams / venue / format
+         locked, and two buttons in place of Save Fixture / Start
+         Match: SAVE and DO SCORING, with View Match under them.
+         - The Scorer field (the match's admin and the Super Admin
+           can edit it) names the match's designated scorer: SAVE
+           writes the new hash into the live match and refreshes
+           the scorer records, so the named account's own Resume
+           Scoring box appears on their device from that moment —
+           the mid-match scorer change the owner asked for, moved
+           off the scoring pad (the v297 pad editor is gone).
+         - DO SCORING takes the pad under the one-scorer-at-a-time
+           session (see matchSessions above): while one entitled
+           account is scoring, the others are blocked here and
+           their pad stays locked; leaving the pad (its 🔙) brings
+           the scorer back to THIS page, where SAVE hands the
+           session over. The Super Admin's SAVE releases even
+           another account's session — the takeover — after which
+           DO SCORING claims the session for the Super Admin and
+           the earlier scorers stay locked out until the Super
+           Admin hands back with SAVE.
+         ============================================================ */
+      var lmSliceCache = null; /* the slice the live page last rendered — drives the Scorer field's editability */
+      var lmPadReturn = null;  /* the match DO SCORING took to the pad: the pad's 🔙 returns to this page for it */
+      /* The freshest copy of one live match, and where it lives:
+         on this device's pad, in the parked list, or in its own
+         server slot (scored on another device / left live). */
+      function livePageSlice(id){
+        id = String(id);
+        if (S && liveMatchExists() && String(S.matchId) === id) return { slice: matchSlice(), source: 'pad' };
+        var pk = null;
+        pausedMatches().forEach(function(p){ if (p && String(p.matchId) === id) pk = p; });
+        if (pk) return { slice: pk, source: 'parked' };
+        var sl = null;
+        try { sl = liveSliceById(id); } catch(e){ sl = null; }
+        if (sl) return { slice: sl, source: 'slot' };
+        return null;
+      }
+      /* The designated scorer is named by the match's admin (its
+         owner) or the Super Admin — the designated scorer and
+         everyone else see the field locked on this page. */
+      function lmCanEditScorer(slice){
+        if (!slice || !authUser) return false;
+        if (isSuperAdmin()) return true;
+        if (slice.ownerUid) return slice.ownerUid === currentUid();
+        return !!currentUid(); /* unowned: a signed-in entitled account claims it by saving, as everywhere else */
+      }
+      /* The Open Match page's dress in live mode: SAVE / DO
+         SCORING + View Match + the status line replace Save
+         Fixture / Start Match, the Saved Fixtures card stays away,
+         and everything about the started match except the Scorer
+         field is locked. Setup mode restores it all. */
+      function lmChrome(){
+        var live = !!om.liveId;
+        var sa = $('omSetupActions'); if (sa) sa.hidden = live;
+        var la = $('omLiveActions'); if (la) la.hidden = !live;
+        var vw = $('omViewMatchWrap'); if (vw) vw.hidden = !live;
+        var st = $('omLiveStatus'); if (st) st.hidden = !live;
+        if (live){ var fx = $('omFxCard'); if (fx) fx.hidden = true; }
+        ['omVenue','omDate','omTime'].forEach(function(i){ var el = $(i); if (el) el.disabled = live; });
+        ['omCircleA','omCircleB','omFormatField'].forEach(function(i){ var el = $(i); if (el) el.disabled = live; });
+        var sc = $('omScorer');
+        if (sc) sc.disabled = live ? !lmCanEditScorer(lmSliceCache) : false;
+      }
+      function openLiveMatchPage(id){
+        id = String(id);
+        var found = livePageSlice(id);
+        if (!found){ toast('That match is no longer in progress.'); return; }
+        var slice = found.slice;
+        omNoteReturn();
+        /* This page is reached from the All Matches page (its
+           Resume Scoring boxes) — and from the pad's 🔙 while
+           scoring it — so its own 🔙 returns to All Matches. */
+        omReturnView = 'allmatches';
+        om.tnFx = null;
+        om.liveId = id;
+        lmSliceCache = slice;
+        om.teamA = slice.teamA || ''; om.teamB = slice.teamB || '';
+        om.overs = (typeof slice.oversLimit === 'number') ? slice.oversLimit : null;
+        om.format = slice.matchFormat || ''; om.wickets = slice.wicketsLimit || 10; om.ballType = slice.ballType || '';
+        om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
+        var vEl = $('omVenue'); if (vEl) vEl.value = slice.venue || '';
+        var dEl = $('omDate'); if (dEl) dEl.value = slice.matchDate || '';
+        var tEl = $('omTime'); if (tEl) tEl.value = slice.matchTime || '';
+        var sEl = $('omScorer');
+        if (sEl){ sEl.value = ''; sEl.placeholder = slice.scorerEmailHash ? 'Designated scorer set — type a Gmail to replace it' : 'scorer@gmail.com'; }
+        if (typeof omMsg === 'function') omMsg('');
+        omApplyModeChrome();
+        omRenderTeams(); omRenderFormatSummary();
+        setView('openmatch');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        lmPrefillScorer(slice);
+        lmRenderLiveStatus();
+      }
+      /* Prefill the Scorer field with the current designated
+         scorer's address, read back from the per-match scorer
+         record — readable only by the match's admin, the Super
+         Admin and that scorer; the match record itself keeps only
+         the one-way hash, as always. If it cannot be read, the
+         box stays empty and its placeholder says a scorer is set:
+         typing a new Gmail replaces them, clearing the box and
+         saving removes them. */
+      function lmPrefillScorer(slice){
+        if (!slice || !slice.scorerEmailHash || !fbApp || slice.matchId == null) return;
+        var fill = function(email){
+          var el = $('omScorer');
+          if (!el || !om.liveId || String(om.liveId) !== String(slice.matchId)) return;
+          if (email && !el.value) el.value = email;
+        };
+        try {
+          fbApp.database().ref('matchScorers').child(String(slice.matchId)).once('value').then(function(snap){
+            var v = snap.val();
+            if (v && v.email){ fill(v.email); return; }
+            fbApp.database().ref('matchScorer').once('value').then(function(snap2){
+              var v2 = snap2.val();
+              fill((v2 && String(v2.matchId) === String(slice.matchId) && v2.email) ? v2.email : '');
+            }, function(){});
+          }, function(){});
+        } catch(e){}
+      }
+      /* The status line under the buttons: the match as it stands
+         (both innings, exactly as the Resume Scoring boxes show
+         it) and who holds its scoring right now. Refreshed by the
+         session listener and the live-slot listener while the
+         page is open, so a hand-over or a takeover shows at once. */
+      function lmRenderLiveStatus(){
+        var st = $('omLiveStatus'); if (!st || !om.liveId) return;
+        var found = livePageSlice(om.liveId);
+        if (!found){ st.innerHTML = '<div class="om-live-sess">This match is no longer in progress.</div>'; return; }
+        var sl = found.slice;
+        lmSliceCache = sl;
+        var line = '';
+        try { line = amResumeLine(sl); } catch(e){}
+        var when = sl.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (sl.inningsNo || 1));
+        if (sl.status === 'finished' && sl.awaitingFinish) when = 'Play over — awaiting Finish Match';
+        var sess = matchSession(om.liveId);
+        var sTxt;
+        if (fbSessionDenied) sTxt = '⚠️ The one-scorer lock is off — it starts working once the updated database Rules (Firebase Setup) are published.';
+        else if (!sess) sTxt = 'Nobody is scoring this match right now.';
+        else if (sess.uid === currentUid()) sTxt = 'You are scoring this match — tap SAVE to hand scoring over.';
+        else sTxt = '🔒 ' + (sess.name || 'Another scorer') + ' is scoring this match right now.';
+        st.innerHTML = '<div class="om-live-score">' + esc((sl.teamA || 'Team 1') + ' vs ' + (sl.teamB || 'Team 2') + (line ? ' — ' + line : '') + ' • ' + when) + '</div>'
+          + '<div class="om-live-sess">' + esc(sTxt) + '</div>';
+        var sc = $('omScorer');
+        if (sc) sc.disabled = !lmCanEditScorer(sl);
+      }
+      /* The per-match scorer record for a match that is not on
+         this device's pad (syncScorerNode serves the pad match):
+         matchScorers/<matchId>, the record the liveMatches Rules
+         authorise that scorer's writes from. */
+      function writeScorerRecord(id, email, ownerUid, matchIdRaw){
+        if (!fbApp || id == null) return;
+        try {
+          var ref = fbApp.database().ref('matchScorers').child(String(id));
+          if (email) ref.set({ email: email, ownerUid: ownerUid || currentUid(), matchId: (matchIdRaw != null ? matchIdRaw : id) }).catch(function(){});
+          else ref.set(null).catch(function(){});
+        } catch(e){}
+      }
+      /* Land a scorer change on the match, wherever the match
+         lives. On the pad it rides the normal commit (a hot field,
+         so it reaches every device with the next sync) plus
+         syncScorerNode; parked, it rides the library commit; in
+         its server slot it is patched into the server's CURRENT
+         copy by transaction, so balls being scored on another
+         device are never rolled back by this page's snapshot. */
+      function lmApplyScorerChange(found, email, newHash){
+        var slice = found.slice, id = String(slice.matchId);
+        if (found.source === 'pad'){
+          if (!S.ownerUid) claimLiveMatch();
+          S.scorerEmailHash = newHash;
+          commit(email ? 'Designated scorer updated' : 'Designated scorer removed', true);
+          try { syncScorerNode(email); } catch(e){}
+          return;
+        }
+        if (found.source === 'parked'){
+          slice.scorerEmailHash = newHash;
+          commit(email ? 'Designated scorer updated' : 'Designated scorer removed', true);
+          writeScorerRecord(id, email, slice.ownerUid, slice.matchId);
+          return;
+        }
+        writeScorerRecord(id, email, slice.ownerUid, slice.matchId);
+        try {
+          if (fbLiveMap[id]){
+            slotRef(id).transaction(function(cur){ if (cur) cur.scorerEmailHash = newHash; return cur; }).then(function(res){
+              if (res && res.committed && res.snapshot && res.snapshot.val){ fbLiveMap[id] = deep(res.snapshot.val()); noteLiveSig(); try { refreshConfirmedState(); } catch(e){} }
+            }, function(){});
+          } else if (fbRef && fbHotState && String(fbHotState.matchId) === id){
+            fbRef.transaction(function(cur){ if (cur && String(cur.matchId) === id) cur.scorerEmailHash = newHash; return cur; }).then(function(res){
+              if (res && res.committed && res.snapshot && res.snapshot.val){ fbHotState = deep(res.snapshot.val()); try { refreshConfirmedState(); } catch(e){} }
+            }, function(){});
+          }
+        } catch(e){}
+      }
+      /* SAVE on the live Open Match page: (1) the designated
+         scorer typed in the Scorer field is saved — the named
+         account can score the match from that moment, and their
+         Resume Scoring box appears on their own device; (2) the
+         scoring hand-over — the session holder's SAVE releases
+         their session so the match's other entitled account can
+         score, and the Super Admin's SAVE releases ANY holder's
+         session (the takeover: everything scored so far is
+         already saved on the server, so the match simply changes
+         hands), after which DO SCORING claims it for them. */
+      function lmSave(){
+        if (!om.liveId) return;
+        var id = String(om.liveId);
+        var found = livePageSlice(id);
+        if (!found){ omMsg('This match is no longer in progress.'); return; }
+        var slice = found.slice;
+        var notes = [];
+        if (lmCanEditScorer(slice)){
+          var email = (($('omScorer') && $('omScorer').value) || '').trim().toLowerCase();
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ omMsg('⚠️ That scorer email does not look like a Gmail address — check it and tap SAVE again.'); return; }
+          var newHash = email ? hashEmail(email) : '';
+          if (newHash !== (slice.scorerEmailHash || '')){
+            lmApplyScorerChange(found, email, newHash);
+            slice.scorerEmailHash = newHash;
+            lmSliceCache = slice;
+            notes.push(email ? ('Designated scorer saved — ' + email + ' can now score this match.') : 'Designated scorer removed.');
+          }
+        }
+        var sess = matchSession(id);
+        if (sess && sess.uid){
+          if (sess.uid === currentUid()){
+            releaseMatchSession(id);
+            notes.push('Scoring handed over — this match\'s other entitled account can score now.');
+          } else if (isSuperAdmin()){
+            releaseMatchSession(id);
+            notes.push('Scoring taken over from ' + (sess.name || 'the scorer') + ' — tap DO SCORING to score.');
+          }
+        }
+        omMsg('✓ Saved.' + (notes.length ? ' ' + notes.join(' ') : ''));
+        lmRenderLiveStatus();
+      }
+      /* DO SCORING: claim the session and take the pad. While
+         another entitled account holds the session the tap is
+         refused with the reason on the page — for the Super
+         Admin too, whose way in is SAVE first (the takeover),
+         exactly as the owner specified. */
+      function lmDoScoring(){
+        if (!om.liveId) return;
+        var id = String(om.liveId);
+        var found = livePageSlice(id);
+        if (!found){ omMsg('This match is no longer in progress.'); return; }
+        if (!matchAccessFor(found.slice)){ omMsg('🔒 Only this match\'s admin, its designated scorer or the Super Admin can score it.'); return; }
+        var sess = matchSession(id);
+        if (sess && sess.uid && sess.uid !== currentUid()){
+          var who = sess.name || 'Another scorer';
+          if (isSuperAdmin()) omMsg('🔒 ' + who + ' is scoring this match — tap SAVE to take over, then DO SCORING.');
+          else omMsg('🔒 ' + who + ' is scoring this match right now — scoring opens when they hand it over with SAVE.');
+          return;
+        }
+        omMsg('');
+        resumeMatch(id);
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'scorer'){
+          lmPadReturn = id;
+          try { claimMatchSession(id); } catch(e){}
+        }
+      }
+      /* View Match: the match's own scoreboard, the same one the
+         Recent Matches rows open — the pad match through
+         openCurrentMatch, a parked / slotted match through
+         openMatchSlice. */
+      function lmViewMatch(){
+        if (!om.liveId) return;
+        var id = String(om.liveId);
+        var found = livePageSlice(id);
+        if (!found){ omMsg('This match is no longer in progress.'); return; }
+        if (found.source === 'pad') openCurrentMatch();
+        else openMatchSlice(id);
+      }
+      /* The pad's 🔙: a pad entered through DO SCORING returns to
+         the match's Open Match page — that page's SAVE is where
+         the scoring hand-over happens — instead of the console.
+         Every other pad entry keeps the console landing. */
+      function scorerBackTap(){
+        if (lmPadReturn && S && String(S.matchId) === String(lmPadReturn)){
+          var found = livePageSlice(lmPadReturn);
+          if (found && matchAccessFor(found.slice)){ openLiveMatchPage(String(lmPadReturn)); return; }
+        }
+        setView('console');
       }
 
       /* ---------- tournaments: create / open / delete ---------- */
