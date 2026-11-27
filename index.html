@@ -4875,7 +4875,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v318';
+      var APP_VERSION = 'v319';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5798,9 +5798,9 @@
          recognised by their signature, so they change nothing. */
       function applyColdFromRemote(payload){
         fbColdState = payload ? deep(payload) : null;
-        if (fbLibDenied){ refreshConfirmedState(); return; }
+        if (fbLibDenied){ refreshConfirmedState(); try { renderLiveHome(); } catch(e){} return; }
         var incoming = payload ? coldPartOf(payload) : null;
-        if (!incoming){ refreshConfirmedState(); return; }
+        if (!incoming){ refreshConfirmedState(); try { renderLiveHome(); } catch(e){} return; }
         /* Before Firebase is ready, this session's own unsynced
            work (fbLocalDirty) wins over the server's library: the
            first-read sync publishes it whole (see
@@ -5808,13 +5808,13 @@
            updates start landing on S. The confirmed display state
            above still tracks the server's library throughout —
            viewers never see the unconfirmed copy. */
-        if (!fbReady && fbLocalDirty){ refreshConfirmedState(); return; }
+        if (!fbReady && fbLocalDirty){ refreshConfirmedState(); try { renderLiveHome(); } catch(e){} return; }
         var h = coldHashOf(incoming);
         /* The echo comparison uses the folded state (v233): while a
            tournament is being viewed, S itself holds the viewed
            copy as its tournament, so comparing against raw S would
            never recognise this device's own library writes. */
-        if (h === coldHashOf(coldPartOf(tnFoldedState()))){ fbColdHash = h; refreshConfirmedState(); return; }
+        if (h === coldHashOf(coldPartOf(tnFoldedState()))){ fbColdHash = h; refreshConfirmedState(); try { renderLiveHome(); } catch(e){} return; }
         /* A library change made on THIS device that has not landed
            yet is newer than anything the server can echo back — an
            older library snapshot must not roll it back. */
@@ -5835,6 +5835,10 @@
         try { tnViewResolve(); } catch(e){}
         saveLocalBackup();
         try { renderAll(false); } catch(e){}
+        /* v319: the player registry is a COLD key — when it lands
+           here the home Profile card can resolve its player, so
+           it is re-rendered explicitly on this path too. */
+        try { renderLiveHome(); } catch(e){}
       }
       /* Write the library node — but only when its content actually
          changed since the last push or confirmed snapshot. Resolves
@@ -18034,7 +18038,7 @@
          fire (or cancel) the sign-in popup; a signed-in viewer
          signs out from the card's corner button. */
       var homeProfileTarget = null;
-      var homeProfileCache = { stamp: '', rec: null };
+      var homeProfileLastGood = { pid: '', rec: null };
       function homeProfileHTML(){
         if (!authUser){
           homeProfileTarget = null;
@@ -18061,41 +18065,28 @@
            link (openMyProfile). */
         var rec = null;
         if (pid){
-          /* Career totals are recomputed only when the record
-             could have moved — this section re-renders with every
-             server snapshot while a match is being scored. The
-             cache key (v318) carries the inputs themselves, not
-             just the recorded-match count: a fingerprint of the
-             player registry (its contents decide playerByEmail
-             above and the ID resolution of pre-ID entries inside
-             aggregatePlayers) and the history change tally
-             (histSeq — every entry that lands, changes or is
-             removed moves it, even when the entry count stays
-             the same). A count-only key left an early "no record"
-             computation cached while the registry and history
-             finished arriving, so the card sat on 0/0/0 although
-             the Player Profile — computed fresh on tap from the
-             same book — already showed the real figures. */
+          /* Career totals are computed FRESH on every render
+             (v319) — exactly as the Player Profile computes them
+             on tap from the same record book. The stamp-keyed
+             cache (v314–v318) was the bug: on a cold start an
+             early render ran while the registry and the history
+             were still arriving, cached "no record", and from
+             then on the card sat on 0/0/0 for the whole session
+             although the Profile already showed the real
+             figures — and the data-arrival paths that could have
+             invalidated it never re-rendered the home page at
+             all. Two guards ride on the fresh figure: until the
+             history has synced once, an empty result is shown
+             as "…" (not yet known) instead of 0/0/0; and once a
+             real record has been shown for this player, a later
+             empty result never replaces it — the last good
+             figures stay on the card. */
           try {
-            var recArr = allRecordMatches();
-            var regSig = '';
-            try {
-              ensurePlayerArrays();
-              var rParts = [];
-              for (var ri = 0; ri < S.playerIds.length; ri++){ var rm2 = S.playerIds[ri]; if (rm2) rParts.push(rm2.id + '~' + (rm2.n || '') + '~' + (rm2.t || '')); }
-              for (var rj = 0; rj < S.players.length; rj++){ var rp2 = S.players[rj]; if (rp2) rParts.push(rp2.id + '~' + (rp2.email || '') + '~' + (rp2.name || '')); }
-              var rStr = rParts.join(';'), rHash = 0;
-              for (var rk = 0; rk < rStr.length; rk++){ rHash = ((rHash * 31) + rStr.charCodeAt(rk)) | 0; }
-              regSig = S.playerIds.length + '/' + S.players.length + '/' + rHash;
-            } catch(e){}
-            var stamp = pid + '|' + recArr.length + '|' + histSeq + '|' + regSig + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '') + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs) : '');
-            if (homeProfileCache.stamp === stamp) rec = homeProfileCache.rec;
-            else {
-              var recs = aggregatePlayers(recArr).filter(function(r){ return r.pid === pid; });
-              rec = recs[0] || null;
-              homeProfileCache = { stamp: stamp, rec: rec };
-            }
+            var recs = aggregatePlayers(allRecordMatches()).filter(function(r){ return r.pid === pid; });
+            rec = recs[0] || null;
           } catch(e){}
+          if (rec) homeProfileLastGood = { pid: pid, rec: rec };
+          else if (homeProfileLastGood.pid === pid && homeProfileLastGood.rec) rec = homeProfileLastGood.rec;
           if (rec){ name = rec.name || name; team = rec.team || ''; }
           if (!team){
             try {
@@ -18113,9 +18104,10 @@
           ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
           : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
         function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
+        var histPending = pid && !histSyncedOnce && (fbHistRef || fbApp);
         var stats = rec
           ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
-          : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
+          : (pid ? (histPending ? stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets') : stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets')) : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
         return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
           + '<div class="hm-profile" role="button" tabindex="0" aria-label="Open my player profile" onclick="homeProfileTap()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();homeProfileTap();}">'
           + '<span class="hm-pf-photo">' + face + '</span>'
@@ -19412,7 +19404,7 @@
         /* If the shallow read cannot complete (offline, blocked),
            do not leave the History status claiming "syncing"
            forever — the entries themselves still arrive per child. */
-        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} } }, 8000);
+        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} try { renderLiveHome(); } catch(e){} } }, 8000);
         }
         function attachDeletedListener(){
         /* Delete tombstones live at their own path, matchHistoryDeleted —
@@ -19660,6 +19652,10 @@
             }
             try { applyOwnerLocks(); } catch(e){}
             try { renderHistory(); } catch(e){}
+            /* v319: the home Profile card belongs to the signed-in
+               account — it re-renders with the account change, so
+               a fresh sign-in fills its figures without a reload. */
+            try { renderLiveHome(); } catch(e){}
             /* The account changed: re-render every surface whose
                add / edit / delete controls are owner-gated at render
                time, so the controls follow the account at once —
@@ -21013,17 +21009,21 @@
       function reconcileHistoryKeys(){
         var base = '';
         try { base = (fbApp && fbApp.options && fbApp.options.databaseURL) || ''; } catch(e){}
-        if (!base || typeof fetch !== 'function'){ histSyncedOnce = true; return; }
+        if (!base || typeof fetch !== 'function'){ histSyncedOnce = true; try { renderLiveHome(); } catch(e){} return; }
         var url = base.replace(/\/+$/, '') + '/matchHistory.json?shallow=true';
         fetch(url).then(function(r){ return (r && r.ok) ? r.json() : null; }).then(function(keys){
           histSyncedOnce = true;
-          if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} return; }
+          if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} try { renderLiveHome(); } catch(e){} return; }
           var changed = false;
           Object.keys(HIST).forEach(function(id){
             if (histConfirmed[id] && !keys[id] && !histDeleted[id]){ delete HIST[id]; delete histConfirmed[id]; changed = true; }
           });
           if (changed){ saveHistLocal(); try { renderHistory(); } catch(e){} }
-        }).catch(function(){ histSyncedOnce = true; });
+          /* v319: the history's sync state just settled — the
+             home Profile card re-renders with it, so its figures
+             resolve from "…" to the real totals. */
+          try { renderLiveHome(); } catch(e){}
+        }).catch(function(){ histSyncedOnce = true; try { renderLiveHome(); } catch(e){} });
       }
       /* ---------- authoritative refresh ----------
          Firebase is the truth on every open AND on every return to
@@ -21126,6 +21126,10 @@
            a later tournament delete can cascade to them. */
         try { stampTournamentIds(); } catch(e){}
         try { renderHistory(); } catch(e){}
+        /* v319: a bulk history merge is one of the paths the home
+           Profile card's figures arrive by — it re-renders here
+           too, so the card fills in from the merged book at once. */
+        try { renderLiveHome(); } catch(e){}
         scheduleHistoryRetry();
       }
       /* ---------- server tombstones (matchHistoryDeleted) ----------
