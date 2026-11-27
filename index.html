@@ -4875,7 +4875,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v314';
+      var APP_VERSION = 'v318';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18062,12 +18062,33 @@
         var rec = null;
         if (pid){
           /* Career totals are recomputed only when the record
-             could have moved (a new recorded match, or the live
-             match's figures) — this section re-renders with every
-             server snapshot while a match is being scored. */
+             could have moved — this section re-renders with every
+             server snapshot while a match is being scored. The
+             cache key (v318) carries the inputs themselves, not
+             just the recorded-match count: a fingerprint of the
+             player registry (its contents decide playerByEmail
+             above and the ID resolution of pre-ID entries inside
+             aggregatePlayers) and the history change tally
+             (histSeq — every entry that lands, changes or is
+             removed moves it, even when the entry count stays
+             the same). A count-only key left an early "no record"
+             computation cached while the registry and history
+             finished arriving, so the card sat on 0/0/0 although
+             the Player Profile — computed fresh on tap from the
+             same book — already showed the real figures. */
           try {
             var recArr = allRecordMatches();
-            var stamp = pid + '|' + recArr.length + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '') + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs) : '');
+            var regSig = '';
+            try {
+              ensurePlayerArrays();
+              var rParts = [];
+              for (var ri = 0; ri < S.playerIds.length; ri++){ var rm2 = S.playerIds[ri]; if (rm2) rParts.push(rm2.id + '~' + (rm2.n || '') + '~' + (rm2.t || '')); }
+              for (var rj = 0; rj < S.players.length; rj++){ var rp2 = S.players[rj]; if (rp2) rParts.push(rp2.id + '~' + (rp2.email || '') + '~' + (rp2.name || '')); }
+              var rStr = rParts.join(';'), rHash = 0;
+              for (var rk = 0; rk < rStr.length; rk++){ rHash = ((rHash * 31) + rStr.charCodeAt(rk)) | 0; }
+              regSig = S.playerIds.length + '/' + S.players.length + '/' + rHash;
+            } catch(e){}
+            var stamp = pid + '|' + recArr.length + '|' + histSeq + '|' + regSig + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '') + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs) : '');
             if (homeProfileCache.stamp === stamp) rec = homeProfileCache.rec;
             else {
               var recs = aggregatePlayers(recArr).filter(function(r){ return r.pid === pid; });
@@ -20642,7 +20663,20 @@
         return histPendingIds().length > 0;
       }
       function isHistGone(id){ return !!(histDeleted[String(id)] || histGone[String(id)]); }
+      /* v318: a tally of every change to the recorded-history
+         inputs of the career aggregates. It is bumped wherever an
+         entry lands, changes or is removed (histChildUpsert /
+         histChildRemoved below) and wherever a mutation pass
+         persists the book (saveHistLocal: full-snapshot merges,
+         tombstone merges, reconcile drops, local filings and the
+         debounced pass whose ID backfills rewrite entries in
+         place). The home Profile card's cache key carries this
+         tally (see homeProfileHTML), so its figures recompute
+         whenever the data itself moves — even when the entry
+         COUNT stays the same. */
+      var histSeq = 0;
       function saveHistLocal(){
+        histSeq++;
         try {
           var arr = Object.keys(HIST).map(function(k){ return HIST[k]; });
           var del = Object.keys(histDeleted).filter(function(k){ return histDeleted[k]; });
@@ -20933,6 +20967,12 @@
           try { stampTournamentIds(); } catch(e){}
           try { repairMatchAttribution(); } catch(e){}
           try { renderHistory(); } catch(e){}
+          /* v318: the home Profile card reads this same book, so
+             it re-renders in the same settled pass — its career
+             figures fill in by themselves the moment the history
+             lands, with no tap and no live snapshot needed (the
+             tombstone merge already re-renders it the same way). */
+          try { renderLiveHome(); } catch(e){}
           flushHistoryPending();
           flushHistoryDeletes();
           scheduleHistoryRetry();
@@ -20941,6 +20981,7 @@
       function histChildUpsert(id, e){
         id = String(id);
         fbLastSnapAt = Date.now();
+        histSeq++;
         histConfirmed[id] = true;
         if (!isHistGone(id) && e && typeof e === 'object'){ e.id = id; HIST[id] = e; }
         afterHistRemoteChange();
@@ -20948,6 +20989,7 @@
       function histChildRemoved(id){
         id = String(id);
         fbLastSnapAt = Date.now();
+        histSeq++;
         /* A match Firebase used to confirm but no longer holds was
            deleted (by the scorer, from any device) — it must vanish
            here too, instead of living on forever in this device's
