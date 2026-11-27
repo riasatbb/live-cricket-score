@@ -363,13 +363,24 @@
       .perm-sw[aria-checked="true"]{background:var(--green);border-color:var(--green)}
       .perm-sw[aria-checked="true"]::after{left:25px;background:#fff}
       @media (prefers-reduced-motion: reduce){.perm-sw::after{transition:none}}
-      /* An admin's granted Edit controls stay visible in the viewer
-         app: the blanket viewer hides below lose to these overrides
-         only while the signed-in account actually holds the grant
-         (body classes set by applyAdminUi). */
+      /* Granted Edit controls stay visible in the viewer app: the
+         blanket viewer hides below lose to these overrides only
+         while the signed-in account is actually entitled. Two
+         entitlements lift the Edit Profile dialog's hide: admin-cep
+         (an admin holding the Edit Player grant, set by
+         applyAdminUi) and pf-edit-allowed — the ONE shared gate
+         (syncPfEditGate, fed by canEditPlayerProfile) that also
+         shows the pencil icon and admits the opener, so the icon,
+         the tap and the dialog can never disagree. pf-edit-allowed
+         is what lets a profile's owner open the editor from the
+         viewer app; without it the v311 dialog stayed display:none
+         even though the JS gate had already let the owner in. */
       body.link-viewer.admin-cep #pfEditModal{display:none}
       body.link-viewer.admin-cep #pfEditModal.show{display:flex !important}
       body.viewer-mode.admin-cep #pfEditModal.show{display:flex !important}
+      body.link-viewer.pf-edit-allowed #pfEditModal{display:none}
+      body.link-viewer.pf-edit-allowed #pfEditModal.show{display:flex !important}
+      body.viewer-mode.pf-edit-allowed #pfEditModal.show{display:flex !important}
       body.link-viewer.admin-ceh .hist-edit-btn{display:inline-flex !important}
       body.viewer-mode.admin-ceh .hist-edit-btn{display:inline-flex !important}
       body.link-viewer.admin-ceh .sum-manage{display:flex !important}
@@ -2951,7 +2962,11 @@
          and any label that still cannot fit is clipped inside its
          own button — it can never spill over the neighbouring
          button the way it did on narrower phones. */
-      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 6px;font-size:clamp(11px,3.4vw,13.5px);white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis}
+      /* v312: the owner rejected the ellipsis — the label must show
+         IN FULL on ONE line, so the font itself shrinks with the
+         display width (2.9vw tracks the half-row button width) until
+         "Search Players & Teams" fits whole; no more "Tea…". */
+      #view-live .live-entry-row .hist-entry-btn{flex:1 1 0;min-width:0;width:auto;margin:0;padding:10px 5px;font-size:clamp(9.5px,2.9vw,13px);white-space:nowrap;text-align:center;overflow:hidden}
       /* The Super Admin's entry takes the entry row's exact slot
          (same margins, same height) while his account is signed in. */
       #view-live .super-admin-entry{margin:9px 0 4px;padding:10px 6px;font-size:13.5px;text-align:center;border-color:var(--gold)}
@@ -3240,7 +3255,7 @@
         #view-live .live-brand img{width:33px}
         #view-live .live-brand .lb-name{font-size:24px}
         #view-live .live-entry-row{margin:6px 0 2px}
-        #view-live .live-entry-row .hist-entry-btn{padding:7px 4px;font-size:clamp(10.5px,3.2vw,12.5px)}
+        #view-live .live-entry-row .hist-entry-btn{padding:7px 4px;font-size:clamp(9.5px,2.9vw,11.5px)}
         #view-live .hm-sec{margin-top:6px}
         #view-live .hm-sec-head{margin-bottom:4px}
         .hm-sec-head h3{font-size:17px;padding-bottom:4px}
@@ -4626,6 +4641,7 @@
             <button class="sq-x big" onclick="closePlayerProfile()" aria-label="Close player profile">×</button>
           </div>
         </div>
+        <div class="owner-note" id="pfEditDenied" role="alert" style="max-width:760px;margin:0 auto 10px"></div>
         <div id="playerModalBody"></div>
       </div>
     </div>
@@ -4852,7 +4868,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v310';
+      var APP_VERSION = 'v312';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -6777,6 +6793,33 @@
         if (!tnLocked) return true;
         if (!liveLocked && liveMatchExists()) return true;
         return false;
+      }
+      /* The ONE shared entitlement for the profile editor: the
+         pencil icon, pfOpenEdit and the dialog's CSS visibility
+         all read this single result, so they can never disagree
+         (the v311 bug: canEditPlayerProfile let the owner in and
+         showed the pencil, but the viewer CSS kept #pfEditModal
+         display:none because only the admin-cep overrides lifted
+         it). Recomputed whenever the open profile renders and
+         whenever auth/admin state lands; mirrored onto the body
+         as .pf-edit-allowed for the CSS overrides above. */
+      function syncPfEditGate(){
+        var allowed = false;
+        try { allowed = canEditPlayerProfile(); } catch(e){}
+        document.body.classList.toggle('pf-edit-allowed', allowed);
+        var editBtn = $('pfEditBtn'); if (editBtn) editBtn.hidden = !allowed;
+        return allowed;
+      }
+      /* A denied Edit tap must say so ON the page: toast() is a
+         no-op in this app, so a silent return reads as a dead
+         button (the same trap as the v296 Start Scoring box). */
+      function pfShowEditDenied(msg){
+        var n = $('pfEditDenied'); if (!n) return;
+        n.textContent = msg;
+        n.classList.add('show');
+      }
+      function pfHideEditDenied(){
+        var n = $('pfEditDenied'); if (n) n.classList.remove('show');
       }
       function setPlayerMapping(team, name, id){
         if (!name || !id) return;
@@ -20267,6 +20310,11 @@
         if (typeof currentViewName !== 'undefined' && currentViewName === 'allmatches'){ try { renderAllMatches(); } catch(e){} }
         document.body.classList.toggle('admin-cep', !!currentUid() && adminHas('editPlayer'));
         document.body.classList.toggle('admin-ceh', !!currentUid() && adminHas('editHistory'));
+        /* Auth/admin state just landed: re-run the one shared
+           profile-edit gate so the pencil and the dialog's CSS
+           entitlement follow the account that is now known (e.g.
+           sign-in completing while a profile is open). */
+        try { syncPfEditGate(); } catch(e){}
         try { renderAuthBar(); } catch(e){}
       }
       /* A granted admin's Create actions run on the control side:
@@ -21380,7 +21428,7 @@
         renderPlayerProfile(true);
         var m = $('playerModal'); if (m) m.classList.add('show');
       }
-      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); var em = $('pfEditModal'); if (em) em.classList.remove('show'); pfEditOpen = false; profileCtx = null; pfDirty = false; pfPhotoDraft = null; }
+      function closePlayerProfile(){ var m = $('playerModal'); if (m) m.classList.remove('show'); var em = $('pfEditModal'); if (em) em.classList.remove('show'); pfEditOpen = false; profileCtx = null; pfDirty = false; pfPhotoDraft = null; pfHideEditDenied(); document.body.classList.remove('pf-edit-allowed'); }
       /* Open the Edit Profile dialog. Only someone who may edit this
          profile (canEditPlayerProfile — signed-in owner/admin on the
          control side) ever sees the pencil icon; the check runs
@@ -21388,10 +21436,15 @@
          the only protection. */
       function pfOpenEdit(){
         if (!profileCtx) return;
-        if (!canEditPlayerProfile()){
-          toast(isViewerSession() ? '👀 View-only — profiles can be edited only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to edit this profile — only the owner/admin can change it.');
+        /* The opener reads the same shared gate as the pencil and
+           the CSS (syncPfEditGate): if it says no, the reason shows
+           on the page itself — toast() is a no-op here, so the old
+           silent return made the tap look dead. */
+        if (!syncPfEditGate()){
+          pfShowEditDenied(isViewerSession() ? '👀 View-only — only this profile\u2019s owner (signed in with the profile\u2019s Gmail) or an admin can edit it.' : '🔑 Only this profile\u2019s owner or an admin can edit it.');
           return;
         }
+        pfHideEditDenied();
         var body = $('pfEditBody'); if (!body) return;
         body.innerHTML = pfEditFormHTML();
         pfEditOpen = true;
@@ -22844,8 +22897,12 @@
         var titleEl = $('playerModalTitle'); if (titleEl) titleEl.textContent = 'Player Profile';
         /* The header pencil icon (left of the ×) shows only for
            someone who may edit this profile; viewers and guests
-           never see it, so their profile header holds just the ×. */
-        var editBtn = $('pfEditBtn'); if (editBtn) editBtn.hidden = !canEditPlayerProfile();
+           never see it, so their profile header holds just the ×.
+           syncPfEditGate is the one shared entitlement: it drives
+           this icon, the opener and the dialog's CSS visibility
+           from the same canEditPlayerProfile result. */
+        syncPfEditGate();
+        pfHideEditDenied();
         var teamsLine = (rec.teams && rec.teams.length) ? rec.teams.join(' • ') : (useTeam || '—');
         var sameNameCount = knownPlayers().filter(function(p){ return p.name === name; }).length;
         /* Profile header: photo (or initials), full name, team, role
