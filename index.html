@@ -17833,7 +17833,18 @@
            waiting row is shown; the first server snapshot replaces
            it with the real list. */
         if (!fbServerSeen){
-          listEl.innerHTML = '<div class="hm-sec"><div class="hm-sec-head"><h3>Matches</h3></div><div class="hm-track"><div class="hm-slide"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server…</div></div></div></div></div>';
+          listEl.innerHTML = '<div class="hm-sec"><div class="hm-sec-head"><h3>Matches</h3></div><div class="hm-track"><div class="hm-slide"><div class="ml-row"><div class="ml-label"><span class="ml-lab-text">Match</span></div><div class="ml-status muted">⏳ Connecting to the server…</div></div></div></div></div>'
+            /* v316: the Profile card is not match data — its identity
+               comes from the Google account itself and its figures
+               from the server-confirmed record book — so it is no
+               longer held hostage to the first live-match snapshot.
+               A signed-in viewer's card renders right here, figures
+               in their loading state until the recorded history has
+               answered (see homeProfileHTML), and fills in on its
+               own when it lands. The Matches section above still
+               states nothing until the server answers, and a guest
+               still sees only the waiting row. */
+            + (authUser ? homeProfileHTML() : '');
           return;
         }
         normalizeTournament();
@@ -18092,9 +18103,24 @@
           ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
           : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
         function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
+        /* v316: while the data these figures come from is still on
+           its way — the player registry (the library node) not yet
+           seen, so the email link cannot resolve, or the recorded
+           history not yet answered for — the figures show a loading
+           mark, never 0/0/0: those read as real career figures for
+           a player whose record simply has not arrived yet (the
+           cold-start report: the card sat on 0/0/0 long after the
+           Player Profile inside already showed the true totals).
+           Once the server has answered, a missing record IS the
+           truth and shows real zeros — a linked player with no
+           recorded match — exactly as before; an account with no
+           linked profile at all keeps '—'. */
+        var statsPending = (!pid && !fbColdSeen && !fbServerSeen) || (!!pid && !rec && !histSyncedOnce);
         var stats = rec
           ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
-          : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
+          : statsPending
+            ? stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets')
+            : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
         return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
           + '<div class="hm-profile" role="button" tabindex="0" aria-label="Open my player profile" onclick="homeProfileTap()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();homeProfileTap();}">'
           + '<span class="hm-pf-photo">' + face + '</span>'
@@ -19342,17 +19368,25 @@
            see the same record book); only the scorer's side writes.
            A rejected read/write (e.g. Rules that still allow only
            liveMatch) surfaces the real error in the History view. */
-        /* The history and tombstone listeners attach LATE (v234):
-           they used to be registered in the same breath as the live
-           match, so opening the app immediately downloaded the whole
-           record book — every archived match, growing forever —
-           before the first live snapshot could land. Now only the
-           live match (and the small library node) load up front;
-           history attaches the moment the first live snapshot has
-           been read, or after 2.5 s at the latest, and flushes any
-           pending writes then. Every history write path already
-           guards a missing fbHistRef and stays enrolled in the
-           retry engine, so nothing scored in the gap is lost. */
+        /* The history and tombstone listeners attach IMMEDIATELY
+           (v316, the owner's direction — reversing the v234 deferral):
+           sign-in and the Firebase connect itself are fast, so the
+           recorded history must start loading the moment the app
+           connects, not wait for the first live-match snapshot.
+           The deferral existed so the record book's download could
+           not delay that first snapshot on a slow connection; the
+           cost was the home Profile card sitting empty — or on
+           false 0/0/0 figures — long after the same record book
+           was already readable inside the Player Profile. The live
+           listeners above are registered first, so the live match
+           still gets first claim on the connection; the per-entry
+           history listeners (v204) then stream the book in entry
+           by entry, and the home re-renders as they land (see
+           afterHistRemoteChange). The first-snapshot hook and the
+           2.5 s timer remain as no-op backstops. Every history
+           write path already guards a missing fbHistRef and stays
+           enrolled in the retry engine, so nothing is lost either
+           way. */
         var myAppForSecondary = fbApp;
         var secondaryAttached = false, secondaryTimer = null;
         function attachSecondaryListeners(){
@@ -19363,6 +19397,7 @@
           attachDeletedListener();
           try { flushHistoryPending(); flushHistoryDeletes(); } catch(e){}
         }
+        try { attachSecondaryListeners(); } catch(e){}
         secondaryTimer = setTimeout(attachSecondaryListeners, 2500);
         function attachHistoryListeners(){
         histSyncedOnce = false;
@@ -19391,7 +19426,7 @@
         /* If the shallow read cannot complete (offline, blocked),
            do not leave the History status claiming "syncing"
            forever — the entries themselves still arrive per child. */
-        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} } }, 8000);
+        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} try { renderLiveHome(); } catch(e){} } }, 8000);
         }
         function attachDeletedListener(){
         /* Delete tombstones live at their own path, matchHistoryDeleted —
@@ -19650,6 +19685,11 @@
             try { renderTournamentList(); } catch(e){}
             try { renderMyTeams(); } catch(e){}
             try { renderOmFixtures(); } catch(e){}
+            /* v316: the home Profile card belongs to the signed-in
+               account — it renders the moment sign-in lands, from
+               the Google identity, without waiting for any data
+               snapshot to re-render the home. */
+            try { renderLiveHome(); } catch(e){}
           }, function(err){ renderAuthBar(); });
           /* A redirect sign-in (the fallback when popups are blocked)
              completes here; a failure is reported, never hidden. */
@@ -20933,6 +20973,12 @@
           try { stampTournamentIds(); } catch(e){}
           try { repairMatchAttribution(); } catch(e){}
           try { renderHistory(); } catch(e){}
+          /* v316: the home Profile card's figures come from this
+             very record book — when it lands (above all the initial
+             burst right after a cold start), the card must fill in
+             on its own, not wait for the next live-match snapshot
+             to happen to re-render the home. */
+          try { renderLiveHome(); } catch(e){}
           flushHistoryPending();
           flushHistoryDeletes();
           scheduleHistoryRetry();
@@ -20975,13 +21021,17 @@
         var url = base.replace(/\/+$/, '') + '/matchHistory.json?shallow=true';
         fetch(url).then(function(r){ return (r && r.ok) ? r.json() : null; }).then(function(keys){
           histSyncedOnce = true;
+          /* v316: the server has now answered about the record book
+             — the home Profile card leaves its loading state here
+             even when not a single entry changed. */
+          try { renderLiveHome(); } catch(e){}
           if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} return; }
           var changed = false;
           Object.keys(HIST).forEach(function(id){
             if (histConfirmed[id] && !keys[id] && !histDeleted[id]){ delete HIST[id]; delete histConfirmed[id]; changed = true; }
           });
           if (changed){ saveHistLocal(); try { renderHistory(); } catch(e){} }
-        }).catch(function(){ histSyncedOnce = true; });
+        }).catch(function(){ histSyncedOnce = true; try { renderLiveHome(); } catch(e){} });
       }
       /* ---------- authoritative refresh ----------
          Firebase is the truth on every open AND on every return to
