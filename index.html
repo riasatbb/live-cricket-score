@@ -1534,6 +1534,10 @@
       .ml-line.dim .ml-abbr{font-weight:600}
       .ml-status{color:var(--blue);font-size:14.5px;line-height:1.4;margin-top:6px}
       .ml-status.muted{color:var(--muted)}
+      /* v314: during the innings break the match card's status line
+         is only the words "Innings Break", in red (owner's rule). */
+      .ml-status.brk{color:#d43a2f;font-weight:800}
+      @media (prefers-color-scheme: dark){.ml-status.brk{color:#ff8a80}}
       /* v302: the In Progress card in the reference layout — team
          lines carry the team's logo (its uploaded logo, else the
          initials badge in the team's colour), run left-aligned
@@ -3014,6 +3018,9 @@
       #view-live .hm-slide .ml-row.refcard .ml-line.dim{color:rgba(255,255,255,.62)}
       #view-live .hm-slide .ml-row.refcard .ml-status{color:#ffd98a}
       #view-live .hm-slide .ml-row.refcard .ml-status.muted{color:rgba(255,255,255,.75)}
+      /* v314: the break line stays red on the green card too — a
+         brighter red, readable on the dark green gradient. */
+      #view-live .hm-slide .ml-row.refcard .ml-status.brk, #view-live .ml-row.refcard .ml-status.brk, #view-allmatches .ml-row.refcard .ml-status.brk{color:#ff8a80}
       /* v310: the In Progress pill sits in the MIDDLE of its card.
          The home slide's row is a flex column (v308), whose default
          cross-axis stretch had been blowing the pill up into a
@@ -4868,7 +4875,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v313';
+      var APP_VERSION = 'v314';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -17612,7 +17619,7 @@
         }
         var started = inn.legalBalls > 0 || inn.runs > 0 || inn.wickets > 0 || !!S.prevInnings;
         var t = target();
-        var status = '', statusMuted = false;
+        var status = '', statusMuted = false, statusBrk = false;
         if (S.abandoned) status = fixResultText(String(S.resultText || 'Match abandoned').replace(/🏆/g, ''));
         else if (finished){
           /* The finished match's row shows the match's own result
@@ -17643,7 +17650,11 @@
         if (finished || S.abandoned){
           if (finished && !S.abandoned && status && liveMatchIsFinal()) status = '🏆 ' + status;
         }
-        else if (S.status === 'inningsBreak' && S.prevInnings) status = 'Innings Break — ' + S.prevInnings.battingTeam + ' scored ' + S.prevInnings.runs + '/' + S.prevInnings.wickets + (t ? ' • Target ' + t : '') + '.';
+        /* v314: during the innings break the card shows ONLY the
+           words "Innings Break", in red (the .brk class) — no
+           scored / target sentence; the innings lines above already
+           carry both teams' scores. */
+        else if (S.status === 'inningsBreak'){ status = 'Innings Break'; statusBrk = true; }
         else if (!started){ status = (S.teamA && S.teamB) ? 'Match not started yet.' : 'No match is being scored right now.'; statusMuted = true; }
         else if (S.inningsNo === 2 && S.prevInnings && t){
           var need = t - inn.runs, ballsLeft = effMaxBalls() - inn.legalBalls;
@@ -17737,7 +17748,7 @@
           + mlPill('live')
           + liveLabel
           + refLines
-          + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
+          + (status ? '<div class="ml-status' + (statusBrk ? ' brk' : (statusMuted ? ' muted' : '')) + '">' + esc(status) + '</div>' : '')
           + '</div>';
       }
       function resultRowHTML(m, tnName, ownerTn){
@@ -17777,7 +17788,7 @@
         if (!lines && (slice.teamA || slice.teamB)) lines = mlTeamLineRef(slice.teamA || '', slice.teamB) + (slice.teamB ? mlTeamLineRef(slice.teamB, slice.teamA) : '');
         var status = '';
         if (slice.status === 'finished' && slice.awaitingFinish) status = 'Play over — the scorer is completing this match.';
-        else if (slice.status === 'inningsBreak') status = 'Innings break — match in progress.';
+        else if (slice.status === 'inningsBreak') status = 'Innings Break';
         else if (slice.current && (slice.current.legalBalls > 0 || slice.current.runs > 0 || slice.current.wickets > 0)){
           var sc = slice.current;
           /* v302: the owner's short status forms — 2nd innings
@@ -17804,7 +17815,7 @@
         var aria = 'Watch ' + (slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2');
         return '<div class="ml-row tap refcard"' + mlTapAttrs('openMatchSlice(' + fxIdArg(String(slice.matchId)) + ')', aria) + '>'
           + mlPill('live') + (tnName ? stageLabelHTML([tnName].concat(matchStageSegs(stageRecordFor(slice), slOwner))) : friendlyLabelHTML(slice.venue)) + lines
-          + '<div class="ml-status muted">' + esc(status) + '</div></div>';
+          + '<div class="ml-status' + (slice.status === 'inningsBreak' ? ' brk' : ' muted') + '">' + esc(status) + '</div></div>';
       }
       /* Live Matches is a viewer surface: it renders ONLY the
          Firebase-confirmed state (see fbConfirmedState), so a match
