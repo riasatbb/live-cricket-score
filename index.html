@@ -4875,7 +4875,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v314';
+      var APP_VERSION = 'v317';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18046,6 +18046,11 @@
          signs out from the card's corner button. */
       var homeProfileTarget = null;
       var homeProfileCache = { stamp: '', rec: null };
+      /* v317: the last real career figures computed for a player
+         on this card in this session (see homeProfileHTML) —
+         session memory only, never persisted, never read from the
+         device backup. */
+      var homeProfileLastGood = null;
       function homeProfileHTML(){
         if (!authUser){
           homeProfileTarget = null;
@@ -18103,6 +18108,30 @@
           ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
           : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
         function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
+        /* v317: figures this card has shown must never un-show
+           themselves. On a cold start the true totals can compute
+           for one render — while the confirmed live state and the
+           record book momentarily line up (the record book leans
+           on the live match's entry, liveHistoryEntry, for as long
+           as that slice is the confirmed state) — and compute
+           EMPTY on the next, when that slice moves on before the
+           archived entries have all streamed in. With nothing
+           holding them, the card fell back to 0/0/0 and stayed
+           there until the slow history signal finally landed (the
+           owner's video: the true 10/51/4 flashed at ~4 s, then
+           0/0/0 for the rest of the clip). So the last real
+           figures computed for a player are kept (this session
+           only), and a later render that computes no record for
+           that same player shows them again instead of zeros or a
+           loading mark. A later real computation replaces them —
+           but never with a smaller match count, which on this
+           card can only be the same transient half-empty record
+           book, not a truer total. */
+        if (rec && (!homeProfileLastGood || homeProfileLastGood.pid !== pid || rec.matches >= homeProfileLastGood.matches)){
+          homeProfileLastGood = { pid: pid, matches: rec.matches, runs: rec.runs, wkts: rec.wkts };
+        }
+        var shownRec = rec;
+        if (pid && homeProfileLastGood && homeProfileLastGood.pid === pid && (!shownRec || homeProfileLastGood.matches > shownRec.matches)) shownRec = homeProfileLastGood;
         /* v316: while the data these figures come from is still on
            its way — the player registry (the library node) not yet
            seen, so the email link cannot resolve, or the recorded
@@ -18114,10 +18143,15 @@
            Once the server has answered, a missing record IS the
            truth and shows real zeros — a linked player with no
            recorded match — exactly as before; an account with no
-           linked profile at all keeps '—'. */
-        var statsPending = (!pid && !fbColdSeen && !fbServerSeen) || (!!pid && !rec && !histSyncedOnce);
-        var stats = rec
-          ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
+           linked profile at all keeps '—'. v317: "answered" for
+           this card also comes from the fast signal the history
+           stream itself raises the moment its entries land and go
+           quiet (histCardSettled, see noteHistEntryLanded) — the
+           card no longer waits on the shallow key reconcile or
+           the 8 s fallback to leave its loading state. */
+        var statsPending = (!pid && !fbColdSeen && !fbServerSeen) || (!!pid && !rec && !histSyncedOnce && !histCardSettled);
+        var stats = shownRec
+          ? stat(shownRec.matches, 'Matches') + stat(shownRec.runs, 'Runs') + stat(shownRec.wkts, 'Wickets')
           : statsPending
             ? stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets')
             : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
@@ -19401,6 +19435,7 @@
         secondaryTimer = setTimeout(attachSecondaryListeners, 2500);
         function attachHistoryListeners(){
         histSyncedOnce = false;
+        histCardSettled = false; if (histSettleTimer){ clearTimeout(histSettleTimer); histSettleTimer = null; }
         fbHistRef = myAppForSecondary.database().ref('matchHistory');
         var myHistRef = fbHistRef;
         /* Per-entry listeners (v204): the old whole-history 'value'
@@ -20963,6 +20998,28 @@
          initial burst of child_added events — one per archived
          match — costs one render, not one per match. */
       var histMergeTimer = null;
+      /* v317: the home Profile card's fast history signal. The
+         card used to learn "the record book has answered" only
+         from histSyncedOnce, whose setters are the slow paths —
+         the shallow key reconcile's REST fetch (which can hang
+         for many seconds on a weak connection) or the 8 s
+         fallback — so after a cold start the card sat in its
+         loading / false-zero state long after the entries
+         themselves had already streamed in. The child stream IS
+         the arrival: every upsert re-arms a short quiet timer,
+         and when the stream has been quiet for half a second the
+         burst is taken as landed, this flag flips and the home
+         re-renders at once. It gates ONLY the Profile card's
+         loading state (see homeProfileHTML); histSyncedOnce and
+         everything that reads it keep their exact meaning. */
+      var histCardSettled = false, histSettleTimer = null;
+      function noteHistEntryLanded(){
+        if (histSettleTimer) clearTimeout(histSettleTimer);
+        histSettleTimer = setTimeout(function(){
+          histSettleTimer = null;
+          if (!histCardSettled){ histCardSettled = true; try { renderLiveHome(); } catch(e){} }
+        }, 500);
+      }
       function afterHistRemoteChange(){
         if (histMergeTimer) return;
         histMergeTimer = setTimeout(function(){
@@ -20989,6 +21046,7 @@
         fbLastSnapAt = Date.now();
         histConfirmed[id] = true;
         if (!isHistGone(id) && e && typeof e === 'object'){ e.id = id; HIST[id] = e; }
+        noteHistEntryLanded();
         afterHistRemoteChange();
       }
       function histChildRemoved(id){
