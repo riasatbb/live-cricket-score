@@ -6724,11 +6724,42 @@
          for them the profile stays read-only, exactly like the rest
          of the app. The save handler re-checks this, so hiding the
          form is never the only protection. */
+      /* Is the profile currently open the signed-in account's OWN
+         profile — the player whose profile Email is this account's
+         Gmail (the v273 sign-in link)? Ownership is what lets a
+         player edit their own profile from either app. */
+      function pfOwnsOpenProfile(){
+        if (!authUser || !profileCtx) return false;
+        var em = normEmail(authUser.email);
+        if (!em) return false;
+        var d = profileDataFor(profileCtx.team || '', profileCtx.name, profileCtx.pid || '');
+        return !!d && !!d.email && normEmail(d.email) === em;
+      }
+      /* Full (admin-level) profile rights: the Super Admin, or an
+         admin holding the Edit Player grant (adminHas covers both).
+         Full rights keep the Email field editable and the Delete
+         Profile button visible on every profile. */
+      function pfHasFullProfileRights(){
+        return !!(currentUid() && adminHas('editPlayer'));
+      }
+      /* Owner-restricted editing: the profile's owner editing their
+         OWN profile without admin rights. They may edit everything
+         except the Email — only an admin can change that — and
+         Delete Profile stays hidden from them. */
+      function pfOwnerRestricted(){
+        return pfOwnsOpenProfile() && !pfHasFullProfileRights();
+      }
       function canEditPlayerProfile(){
         /* A signed-in admin holding the Edit Player grant edits
            profiles even from the viewer app — that is the point of
            the grant (v273). The super admin always can. */
         if (currentUid() && adminHas('editPlayer')) return true;
+        /* The profile's owner edits their OWN profile from either
+           app — the Gmail they signed in with is the Email saved
+           on the profile. Only their own: another player's profile
+           never matches their Gmail, so it stays read-only to
+           them. Owner editing is restricted (pfOwnerRestricted). */
+        if (pfOwnsOpenProfile()) return true;
         if (isViewerSession()) return false;
         if (!currentUid()) return false;
         var tnLocked = false, liveLocked = false;
@@ -21373,12 +21404,18 @@
       function pfEditFormHTML(){
         var ctx = pfEditCtx || (profileCtx ? { name: profileCtx.name, team: profileCtx.team, pid: profileCtx.pid || '', role: '', jersey: '', nickname: '', email: '', photo: '' } : null);
         if (!ctx) return '';
+        /* The owner editing their own profile (no admin rights)
+           gets the restricted form: Email read-only with the
+           Contact Admin line under it, and no Delete Profile. */
+        var restricted = pfOwnerRestricted();
         var shownPhoto = (pfPhotoDraft !== null) ? pfPhotoDraft : (ctx.photo || '');
         var roleOpts = '<option value="">Not set</option>' + PROFILE_ROLES.map(function(r){ return '<option value="' + esc(r) + '"' + (r === ctx.role ? ' selected' : '') + '>' + esc(r) + '</option>'; }).join('')
           + (ctx.role && PROFILE_ROLES.indexOf(ctx.role) === -1 ? '<option value="' + esc(ctx.role) + '" selected>' + esc(ctx.role) + '</option>' : '');
         return '<div><label for="pfName">Full name</label><input id="pfName" value="' + esc(ctx.name) + '" autocomplete="off" oninput="pfMarkDirty()" /></div>'
           + '<div style="margin-top:10px"><label for="pfNick">Nickname</label><input id="pfNick" value="' + esc(ctx.nickname || '') + '" autocomplete="off" placeholder="e.g. Riasat" oninput="pfMarkDirty()" /></div>'
-          + '<div style="margin-top:10px"><label for="pfEmail">Email (Gmail)</label><input id="pfEmail" type="email" inputmode="email" value="' + esc(ctx.email || '') + '" autocomplete="off" placeholder="e.g. player@gmail.com" oninput="pfMarkDirty()" /><p class="note" style="margin-top:4px">Whoever signs in with this Gmail and taps their photo opens this profile — and uses any admin access granted to this email.</p></div>'
+          + (restricted
+            ? '<div style="margin-top:10px"><label for="pfEmail">Email (Gmail)</label><input id="pfEmail" type="email" inputmode="email" value="' + esc(ctx.email || '') + '" autocomplete="off" readonly /><p class="note" style="margin-top:4px">Contact Admin to change your Email.<br />Link: <a href="https://wa.me/riasat.riad" target="_blank" rel="noopener" style="color:#25d366;font-weight:700">https://wa.me/riasat.riad</a></p></div>'
+            : '<div style="margin-top:10px"><label for="pfEmail">Email (Gmail)</label><input id="pfEmail" type="email" inputmode="email" value="' + esc(ctx.email || '') + '" autocomplete="off" placeholder="e.g. player@gmail.com" oninput="pfMarkDirty()" /><p class="note" style="margin-top:4px">Whoever signs in with this Gmail and taps their photo opens this profile — and uses any admin access granted to this email.</p></div>')
           + '<div class="grid2" style="margin-top:10px">'
           + '<div><label for="pfRole">Playing role</label><select id="pfRole" onchange="pfMarkDirty()">' + roleOpts + '</select></div>'
           + '<div><label for="pfJersey">Jersey number</label><input id="pfJersey" type="number" min="0" max="999" inputmode="numeric" placeholder="e.g. 23" value="' + esc(ctx.jersey) + '" oninput="pfMarkDirty()" /></div>'
@@ -21390,9 +21427,9 @@
           + '<input type="file" id="pfPhotoFile" class="pf-file" accept="image/*" onchange="pfPhotoChosen(this)" aria-label="Choose a profile photo" />'
           + '</div></div>'
           + '<div class="rowflex" style="margin-top:14px"><button type="button" class="btn" onclick="savePlayerProfile()">Save Profile</button></div>'
-          + '<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
+          + (restricted ? '' : '<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'
           + '<div style="font-weight:700;color:var(--red);margin-bottom:10px">Delete Profile</div>'
-          + '<button type="button" class="btn red" onclick="pfDeleteProfile()">🗑 Delete Profile</button></div>';
+          + '<button type="button" class="btn red" onclick="pfDeleteProfile()">🗑 Delete Profile</button></div>');
       }
       function pfMarkDirty(){ pfDirty = true; }
       /* Photo picking: the chosen image is drawn onto a small canvas
@@ -21595,6 +21632,12 @@
            would make the sign-in photo tap land on the wrong man. */
         var emailEl = $('pfEmail');
         var newEmail = emailEl ? normEmail(emailEl.value) : '';
+        /* An owner editing their own profile without admin rights
+           can never change the Email: the form shows it read-only,
+           and the value is forced back to the signed-in account's
+           Gmail here as well, so the lock does not rest on the
+           form alone. Only an admin can change a profile's Email. */
+        if (pfOwnerRestricted()) newEmail = normEmail(authUser.email);
         if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){ toast('That email does not look right — check it, or clear the box'); if (emailEl) emailEl.focus(); return; }
         var team = profileCtx.team || '';
         var pid = profileCtx.pid || lookupPlayerId(team, profileCtx.name) || pidHash(team, profileCtx.name);
@@ -21789,6 +21832,13 @@
         if (!profileCtx) return;
         if (!canEditPlayerProfile()){
           toast(isViewerSession() ? '👀 View-only — profiles can be deleted only from the control side, by the signed-in owner.' : '🔑 Sign in with Google on the control side to delete this profile — only the owner/admin can change it.');
+          return;
+        }
+        /* The profile's owner never deletes their own profile —
+           the button is hidden from them in the form, and the
+           delete is refused here too. Deletion stays admin-only. */
+        if (pfOwnerRestricted()){
+          toast('🔒 Only the admin can delete a profile — contact the admin if you need this profile removed.');
           return;
         }
         ensurePlayerArrays();
