@@ -4868,7 +4868,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v312';
+      var APP_VERSION = 'v313';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -30294,7 +30294,7 @@
         var when = (slice.status === 'finished' && slice.awaitingFinish) ? 'Play over — awaiting Finish Match' : (slice.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (slice.inningsNo || 1)));
         var kind = slice.matchKind === 'tournament' ? 'Tournament match' : 'Single match';
         var own = slice.ownerName ? ' • Owner: ' + slice.ownerName : '';
-        return '<button type="button" class="tn-pick" onclick="resumeMatch(\'' + esc(String(slice.matchId)) + '\')">'
+        return '<button type="button" class="tn-pick" onclick="consoleResumeTap(\'' + esc(String(slice.matchId)) + '\')">'
           + '<span><span class="tp-name">' + esc((slice.teamA || 'Team 1') + ' vs ' + (slice.teamB || 'Team 2')) + '</span>'
           + '<span class="tp-meta">' + esc(lines || 'Not started yet') + ' • ' + esc(when) + ' • ' + esc(kind) + esc(own) + '</span></span>'
           + (isCurrent ? '<span class="tp-badge">SCORING NOW</span>' : '<span class="tp-open">Resume →</span>')
@@ -30317,6 +30317,41 @@
           });
         } catch(e){}
         el.innerHTML = html || '<p class="note">No matches in progress right now.</p>';
+      }
+      /* A console Resume Scoring row tap (v313): the console's
+         rows used to call resumeMatch directly and land straight
+         on the pad, skipping the Open Match page the All Matches
+         Resume boxes open (v298). Now the row runs the SAME gates
+         resumeMatch applies before the pad — the match must still
+         be in progress, only its owner / designated scorer / the
+         Super Admin may proceed, and a scoring session another
+         account holds blocks the way with the reason — and then
+         opens the match's Open Match page, whose DO SCORING calls
+         resumeMatch for the pad itself (re-running the gates) and
+         whose 🔙 returns to this Resume page. */
+      function consoleResumeTap(id){
+        id = String(id);
+        var target = null;
+        if (liveMatchInProgress() && String(S.matchId) === id) target = matchSlice();
+        if (!target) pausedMatches().forEach(function(p){ if (p && String(p.matchId) === id) target = p; });
+        if (!target){ try { var slC = liveSliceById(id); if (slC && sliceInProgress(slC)) target = slC; } catch(e){} }
+        if (!target){ toast('That match is no longer in progress.'); return; }
+        var tOwner = target.ownerUid || '';
+        if (tOwner && tOwner !== currentUid() && !isSuperAdmin() && !scorerHashMatches(target.scorerEmailHash)){
+          toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
+          return;
+        }
+        if (!tOwner && !currentUid()){
+          toast('🔑 Sign in with Google to resume this match — the first account to sign in on the control side becomes its owner.');
+          return;
+        }
+        var rsessC = matchSession(id);
+        if (rsessC && rsessC.uid && rsessC.uid !== currentUid() && !isSuperAdmin()){
+          toast('🔒 ' + (rsessC.name || 'Another scorer') + ' is scoring this match right now — scoring opens when they hand it over with Save.');
+          return;
+        }
+        omReturnChrome = null; /* control-side opening: no viewer chrome to restore on Back */
+        openLiveMatchPage(id, 'resume');
       }
       function resumeMatch(id){
         id = String(id);
@@ -31249,16 +31284,22 @@
         var sc = $('omScorer');
         if (sc) sc.disabled = live ? !lmCanEditScorer(lmSliceCache) : false;
       }
-      function openLiveMatchPage(id){
+      function openLiveMatchPage(id, ret){
         id = String(id);
         var found = livePageSlice(id);
         if (!found){ toast('That match is no longer in progress.'); return; }
         var slice = found.slice;
+        var prevReturn = omReturnView;
         omNoteReturn();
         /* This page is reached from the All Matches page (its
-           Resume Scoring boxes) — and from the pad's 🔙 while
-           scoring it — so its own 🔙 returns to All Matches. */
-        omReturnView = 'allmatches';
+           Resume Scoring boxes), from the Scorer Console's Resume
+           Scoring page (v313 — its rows pass that page as ret) —
+           and from the pad's 🔙 while scoring it, which keeps the
+           return the excursion started with — so its own 🔙 goes
+           back to the page the scorer actually came from. */
+        if (ret) omReturnView = ret;
+        else if (typeof currentViewName !== 'undefined' && currentViewName === 'scorer' && prevReturn && prevReturn !== 'openmatch' && prevReturn !== 'scorer') omReturnView = prevReturn;
+        else omReturnView = 'allmatches';
         om.tnFx = null;
         om.liveId = id;
         lmSliceCache = slice;
