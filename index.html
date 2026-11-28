@@ -2769,6 +2769,7 @@
       .hist-search-row .hist-search{flex:1 1 220px;min-width:0}
       .hist-month-wrap{flex:0 1 200px;min-width:150px}
       .hist-month-wrap select{margin-bottom:4px}
+      .hist-mt-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
       .rep-output{width:100%;min-height:260px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre;resize:vertical}
       .hist-quick{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:-4px 0 14px}
       body.viewer-mode .hist-quick .scorer-entry-btn,body.link-viewer .hist-quick .scorer-entry-btn{display:none !important}
@@ -4010,15 +4011,24 @@
             <div id="histSyncStatus"></div>
             <div class="hist-search-row">
               <input class="hist-search" id="histSearch" type="search" placeholder="Search past matches — team, player, venue or tournament" aria-label="Search past matches" oninput="histSearchInput(this)" />
-              <div class="hist-month-wrap">
+            </div>
+            <div class="hist-mt-row">
+              <div>
                 <label for="histMonthFilter">Month</label>
                 <select id="histMonthFilter" onchange="histMonthChanged()" aria-label="Filter past matches by month"><option value="">All months</option></select>
               </div>
+              <div>
+                <label for="histTypeFilter">Match Type</label>
+                <select id="histTypeFilter" onchange="histTypeChanged()" aria-label="Filter past matches by match type"><option value="">All match types</option><option value="single">Single Match</option><option value="tournament">Tournament Match</option></select>
+              </div>
             </div>
-            <div class="grid3" style="margin-top:12px">
-              <div><label for="repTnFilter">Tournament</label><select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select></div>
-              <div><label for="repTeamFilter">Team</label><select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select></div>
-              <div><label for="repPlayerFilter">Player (name contains)</label><div class="ac-wrap"><input id="repPlayerFilter" data-ac="fill" placeholder="e.g. Riasat" oninput="repFilterChanged()" /></div></div>
+            <div id="histTnFilterWrap" style="margin-top:12px" hidden>
+              <label for="repTnFilter">Tournament</label>
+              <select id="repTnFilter" onchange="repFilterChanged()"><option value="">All tournaments</option></select>
+            </div>
+            <div style="margin-top:12px">
+              <label for="repTeamFilter">Team</label>
+              <select id="repTeamFilter" onchange="repFilterChanged()"><option value="">All teams</option></select>
             </div>
           </div>
           <div id="histList"></div>
@@ -4913,7 +4923,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v329';
+      var APP_VERSION = 'v332';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -10717,13 +10727,13 @@
           var cur = -1;
           potmCandidateList.forEach(function(c, i){ if (c.name === S.potmName && c.team === S.potmTeam) cur = i; });
           sel.innerHTML = '<option value="">— Not decided yet —</option>' + potmCandidateList.map(function(c, i){
-            return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(dispName(c.team, c.name)) + ' (' + esc(c.team) + ')</option>';
+            return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.team) + ')</option>';
           }).join('');
           sel.value = cur > -1 ? String(cur) : '';
         }
         var curEl = $('potmCurrent');
         if (curEl){
-          curEl.textContent = S.potmName ? 'Current: ' + dispName(S.potmTeam, S.potmName) : '';
+          curEl.textContent = S.potmName ? 'Current: ' + S.potmName : '';
         }
       }
       function applyPotm(){
@@ -10750,7 +10760,7 @@
         /* The award can be picked (or changed) long after the finish —
            the archived copy in permanent history follows it. */
         try { archiveFinishedMatch(); } catch(e){}
-        toast('🏆 Player of the Match: ' + dispName(c.team, c.name));
+        toast('🏆 Player of the Match: ' + c.name);
       }
       /* The chosen player's match figures, in the reference format:
          batting "15*(8)" (star when not out) and bowling "1-22",
@@ -18943,6 +18953,31 @@
         if (!histMonth) return true;
         return histEntryMonthKey(e) === histMonth;
       }
+      /* Match Type filter for the Past Matches list, sitting beside
+         Month: '' shows both kinds, 'single' only Single Matches
+         (entries with no tournament name), 'tournament' only
+         Tournament Matches. Choosing Tournament Match is also what
+         reveals the Tournament filter box below; any other choice
+         hides that box again and clears a tournament pick made
+         earlier, so a hidden filter never stays active. Like the
+         Month filter it is applied only in renderHistList. */
+      var histMatchType = '';
+      function histTypeChanged(){
+        var s = $('histTypeFilter');
+        histMatchType = s ? (s.value || '') : '';
+        var wrap = $('histTnFilterWrap');
+        if (wrap) wrap.hidden = histMatchType !== 'tournament';
+        if (histMatchType !== 'tournament' && repTn){
+          repTn = '';
+          var t = $('repTnFilter'); if (t) t.value = '';
+        }
+        try { renderHistory(); } catch(e){}
+      }
+      function histTypeMatch(e){
+        if (histMatchType === 'single') return !e.tournamentName;
+        if (histMatchType === 'tournament') return !!e.tournamentName;
+        return true;
+      }
       function histMonthLabel(key){
         var p = String(key).split('-');
         var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, 1);
@@ -21391,10 +21426,10 @@
           });
         });
       }
-      /* Manual retry, offered by the History sync status whenever
-         anything is unconfirmed or a write has failed: re-read the
-         authoritative history from Firebase, then push every pending
-         write and delete again, right now. */
+      /* Manual retry (kept for console/debug use; the automatic
+         retry engine in scheduleHistoryRetry does this on its own):
+         re-read the authoritative history from Firebase, then push
+         every pending write and delete again, right now. */
       function retryHistorySync(){
         histRetryDelayMs = 5000;
         if (histRetryTimer){ clearTimeout(histRetryTimer); histRetryTimer = null; }
@@ -24219,7 +24254,7 @@
           if (hcFin) res = '🏆 ' + res;
         }
         var potm = e.potmName
-          ? '<div class="hist-potm">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
+          ? '<div class="hist-potm">🏆 Player of the Match: ' + esc(e.potmName) + '</div>'
           : (!e.live && !e.abandoned ? '<div class="hist-potm">🏆 Player of the Match: Not Decided Yet</div>' : '');
         var soLine = (e.superOver && e.superOver.id)
           ? '<div class="hist-so"><span>⚡ Super Over: ' + esc(fixResultText(e.superOver.resultText || '')) + '</span>' + superOverIdChipHTML(e.superOver) + '</div>'
@@ -24328,7 +24363,7 @@
               + (dateOf(e) ? '\n  ' + dateOf(e) : '') + (e.venue ? ' • ' + e.venue : '')
               + (lines ? '\n  ' + lines : '')
               + '\n  Result: ' + resOf(e)
-              + (e.potmName ? '\n  Player of the Match: ' + dispIn(e.nicknames, e.potmTeam, e.potmName) + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') : '');
+              + (e.potmName ? '\n  Player of the Match: ' + e.potmName + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') : '');
           }).join('\n\n') + '\n';
         } else if (type === 'batting' || type === 'bowling'){
           var players = aggregatePlayers(matches);
@@ -24384,7 +24419,7 @@
           } else {
             var counts = {};
             awards.forEach(function(e){
-              var disp = dispIn(e.nicknames, e.potmTeam, e.potmName);
+              var disp = e.potmName;
               var key = disp + '|' + (e.potmTeam || '');
               if (!counts[key]) counts[key] = { name: disp, team: e.potmTeam || '', n: 0, list: [] };
               counts[key].n++;
@@ -24394,7 +24429,7 @@
             text += '\nAWARDS BY PLAYER\n' + rows.map(function(r, i){
               return (i + 1) + '. ' + r.name + (r.team ? ' (' + r.team + ')' : '') + ' — ' + r.n + (r.n === 1 ? ' award' : ' awards');
             }).join('\n') + '\n\nAWARD IN EACH MATCH\n' + awards.map(function(e, i){
-              return (i + 1) + '. ' + (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2') + (dateOf(e) ? ' — ' + dateOf(e) : '') + '\n  Player of the Match: ' + dispIn(e.nicknames, e.potmTeam, e.potmName) + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') + '\n  Result: ' + resOf(e);
+              return (i + 1) + '. ' + (e.teamA || 'Team 1') + ' vs ' + (e.teamB || 'Team 2') + (dateOf(e) ? ' — ' + dateOf(e) : '') + '\n  Player of the Match: ' + e.potmName + (e.potmTeam ? ' (' + e.potmTeam + ')' : '') + '\n  Result: ' + resOf(e);
             }).join('\n\n') + '\n';
           }
         }
@@ -24857,7 +24892,7 @@
           d.rrect(MX, d.y, CW, 30, 6, MRC.goldBg, null, 0);
           d.fill(MX, d.y, 4, 30, MRC.goldBar);
           d.text('PLAYER OF THE MATCH', MX + 14, d.y + 19, 2, 8, MRC.goldTx, 'l', 1.2);
-          var potm = dispLead(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
+          var potm = (S.potmName + leadSuffix(S.potmTeam, S.potmName)) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
           var lx = MX + 14 + mrTextW('PLAYER OF THE MATCH', 8, true) + 1.2 * 18 + 12;
           d.text(mrFit(potm, 11.5, true, RX - 10 - lx), lx, d.y + 19.5, 2, 11.5, MRC.ink, 'l');
           d.y += 42;
@@ -25291,7 +25326,7 @@
           d.rrect(MX, d.y, CW, 30, 6, MRC.goldBg, null, 0);
           d.fill(MX, d.y, 4, 30, MRC.goldBar);
           d.text('PLAYER OF THE MATCH', MX + 14, d.y + 19, 2, 8, MRC.goldTx, 'l', 1.2);
-          var potm = dispLead(S.potmTeam, S.potmName) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
+          var potm = (S.potmName + leadSuffix(S.potmTeam, S.potmName)) + (S.potmTeam ? '  (' + S.potmTeam + ')' : '');
           var lx = MX + 14 + mrTextW('PLAYER OF THE MATCH', 8, true) + 1.2 * 18 + 12;
           d.text(mrFit(potm, 11.5, true, RX - 10 - lx), lx, d.y + 19.5, 2, 11.5, MRC.ink, 'l');
           d.y += 42;
@@ -25779,7 +25814,7 @@
         c.moveTo(wx + 26, fy - 44); c.lineTo(wx + wedgeW - 26, fy - 44); c.lineTo(wx + wedgeW, fy + 44); c.lineTo(wx, fy + 44);
         c.closePath(); c.fill();
         c.fillStyle = '#0a2320'; c.textAlign = 'center';
-        var potmTxt = S.potmName ? dispLead(S.potmTeam, S.potmName) : 'Not Decided Yet';
+        var potmTxt = S.potmName ? (S.potmName + leadSuffix(S.potmTeam, S.potmName)) : 'Not Decided Yet';
         mcFitFont(c, potmTxt, wedgeW - 70, 36, 24, '700', COND);
         c.fillText(mcWrap(c, potmTxt, wedgeW - 70, 1)[0] || '', W / 2, fy + 2);
         c.font = '600 21px ' + SANS; c.fillStyle = 'rgba(10,35,32,0.75)';
@@ -25928,7 +25963,7 @@
         if (S.potmName){
           var pf = '';
           try { pf = potmFigures(S.potmName, S.potmTeam); } catch(e){}
-          potm = { name: dispLead(S.potmTeam, S.potmName), team: S.potmTeam || '', text: pf || '' };
+          potm = { name: S.potmName + leadSuffix(S.potmTeam, S.potmName), team: S.potmTeam || '', text: pf || '' };
         }
         var livePair = null;
         if (!finished && started && S.current && S.current.striker){
@@ -26305,7 +26340,7 @@
           var cur = -1;
           histEditPotmList.forEach(function(c, i){ if (c.name === e.potmName && c.team === e.potmTeam) cur = i; });
           sel.innerHTML = '<option value="">— Not decided yet —</option>' + histEditPotmList.map(function(c, i){
-            return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(dispIn(e.nicknames, c.team, c.name)) + ' (' + esc(c.team) + ')</option>';
+            return '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + esc(c.name) + ' (' + esc(c.team) + ')</option>';
           }).join('');
           sel.value = cur >= 0 ? String(cur) : '';
         }
@@ -28259,57 +28294,13 @@
       }
       function renderHistStatus(){
         var el = $('histSyncStatus'); if (!el) return;
-        /* Viewers see the Past Matches page with no sync-status
-           message at all — no "Synced with Firebase", no syncing or
-           held notices: sync is the scorer's concern, and a viewer
-           can act on none of it. The control side keeps the full
-           status exactly as before. */
-        if (isViewerSurface()){ el.innerHTML = ''; return; }
-        var ids = Object.keys(HIST);
-        var total = ids.length;
-        var pending = histPendingIds().length;
-        var pendingDel = histPendingDeleteIds().length;
-        var pendingSyncable = histPendingIds().filter(function(id){ return histEntrySyncable(HIST[id]); }).length;
-        var pendingHeld = pending - pendingSyncable;
-        var shownCount = Object.keys(HIST).filter(function(id){ return histConfirmed[id]; }).length;
-        var retryBtn = ' <button type="button" class="btn sm" style="margin-top:8px" onclick="retryHistorySync()">Retry Sync Now</button>';
-        var html;
-        /* Honest status, always one of four states: SYNCED (Firebase
-           has confirmed everything this page shows), SYNCING (writes
-           or deletes are still unconfirmed — automatic retry is
-           running), FAILED (Firebase answered with a real error,
-           shown verbatim), or HELD (matches are stranded in this
-           device's backup because this session may not write them —
-           no sync is running for them, and the status says exactly
-           what un-blocks them instead of claiming "Syncing…"). */
-        if (histFbError){
-          var perm = /permission/i.test(histFbError);
-          html = '<div class="hist-status err"><b>⚠️ Sync failed.</b><br>Firebase said: ' + esc(histFbError)
-            + '<br>' + total + (total === 1 ? ' match is' : ' matches are') + ' safe in the backup on this device, but not yet confirmed in Firebase. Pending writes and deletes retry automatically.'
-            + (perm ? '<br><b>Fix:</b> the database Rules do not allow this write. History writes need a signed-in account: sign in with Google on this device (any account can file a finished match; editing an existing entry needs its owner), and make sure the Rules published in Firebase Console → Realtime Database → Rules are the owner Rules from Firebase Setup (step 6):<br><span class="mono">{ "rules": { "liveMatch": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" }, "liveMatches": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid ) && newData.child(\'ownerUid\').val() == auth.uid || ( root.child(\'matchScorers\').child($matchId).child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'matchScorer\').child(\'email\').val() == auth.token.email && newData.child(\'ownerUid\').val() == data.child(\'ownerUid\').val() && newData.child(\'scorerEmailHash\').val() == data.child(\'scorerEmailHash\').val() ) || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true && newData.child(\'ownerUid\').val() == auth.uid ) )" } }, "liveLibrary": { ".read": true, ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !root.child(\'liveMatch\').child(\'ownerUid\').exists() || root.child(\'liveMatch\').child(\'ownerUid\').val() == \'\' || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || !data.child(\'tournament\').child(\'ownerUid\').exists() || data.child(\'tournament\').child(\'ownerUid\').val() == \'\' || data.child(\'tournament\').child(\'ownerUid\').val() == auth.uid || ( root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createTournament\').val() == true && newData.child(\'tournament\').child(\'ownerUid\').val() == auth.uid ) || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editPlayer\').val() == true || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'createSingle\').val() == true )" }, "matchScorer": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" }, "matchScorers": { "$matchId": { ".read": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || auth.uid == data.child(\'ownerUid\').val() || auth.token.email == data.child(\'email\').val() )", ".write": "auth.token.email == \'riasataliku@gmail.com\' || auth != null && newData.child(\'ownerUid\').val() == auth.uid" } }, "matchSessions": { ".read": "auth != null", "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( !data.exists() && newData.child(\'uid\').val() == auth.uid ) || data.child(\'uid\').val() == auth.uid || root.child(\'liveMatches\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'liveMatch\').child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorers\').child($matchId).child(\'email\').val() == auth.token.email || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "matchHistory": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !data.exists() || !data.child(\'ownerUid\').exists() || data.child(\'ownerUid\').val() == \'\' || data.child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email || root.child(\'admins\').child(auth.token.email.replace(\'.\', \',\')).child(\'perms\').child(\'editHistory\').val() == true )" } }, "matchHistoryDeleted": { ".read": true, "$matchId": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || !root.child(\'matchHistory\').child($matchId).exists() || !root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').exists() || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == \'\' || root.child(\'matchHistory\').child($matchId).child(\'ownerUid\').val() == auth.uid || root.child(\'matchScorer\').child(\'email\').val() == auth.token.email )" } }, "admins": { ".read": true, "$k": { ".write": "auth != null && ( auth.token.email == \'riasataliku@gmail.com\' || ( data.exists() && auth.token.email.replace(\'.\', \',\') == $k && newData.child(\'email\').val() == data.child(\'email\').val() && newData.child(\'at\').val() == data.child(\'at\').val() && newData.child(\'perms\').child(\'createSingle\').val() == data.child(\'perms\').child(\'createSingle\').val() && newData.child(\'perms\').child(\'createTournament\').val() == data.child(\'perms\').child(\'createTournament\').val() && newData.child(\'perms\').child(\'editPlayer\').val() == data.child(\'perms\').child(\'editPlayer\').val() && newData.child(\'perms\').child(\'editHistory\').val() == data.child(\'perms\').child(\'editHistory\').val() ) )" } } } }</span><br>Then tap Retry Sync — the backup syncs itself.' : '')
-            + '<br>' + retryBtn + '</div>';
-        } else if (fbHistRef && histSyncedOnce && pending === 0 && pendingDel === 0){
-          html = '<div class="hist-status ok">✓ <b>Synced with Firebase</b> — ' + shownCount + (shownCount === 1 ? ' match' : ' matches') + ' archived. This is the same Firebase record (<span class="mono">matchHistory</span>) every device and every version of the app reads, so the history, leaderboards and player profiles match everywhere.</div>';
-        } else if (fbHistRef && histSyncedOnce && pendingHeld > 0 && pendingSyncable === 0){
-          html = '<div class="hist-status">⏸ <b>On this device only.</b> '
-            + pendingHeld + (pendingHeld === 1 ? ' match' : ' matches') + ' finished on this device '
-            + (pendingHeld === 1 ? 'has' : 'have') + ' not reached Firebase, so '
-            + (pendingHeld === 1 ? 'it is' : 'they are') + ' not shown in History, the leaderboards or anywhere else yet. '
-            + (pendingDel > 0 ? pendingDel + (pendingDel === 1 ? ' delete is' : ' deletes are') + ' also waiting for the owner to sign in. ' : '')
-            + 'The record is safe in this device\u2019s backup. To publish it, open the control link on THIS device and sign in with Google \u2014 any signed-in account can file a finished match (the match keeps its recorded owner, and a designated scorer can file the match they scored). It then syncs, appears on every device, and can be managed like any other match.'
-            + '<br>' + retryBtn + '</div>';
-        } else if (fbHistRef && histSyncedOnce){
-          html = '<div class="hist-status">⏳ <b>Syncing…</b> '
-            + (pending > 0 ? pending + (pending === 1 ? ' match is' : ' matches are') + ' still syncing to Firebase. ' : '')
-            + (pendingDel > 0 ? pendingDel + (pendingDel === 1 ? ' delete is' : ' deletes are') + ' still being confirmed. ' : '')
-            + 'Automatic retry is on — this turns to “Synced” as soon as Firebase confirms, with nothing for you to do.'
-            + '<br>' + retryBtn + '</div>';
-        } else if (fbHistRef){
-          html = '<div class="hist-status">⏳ <b>Syncing…</b> Loading the latest history from Firebase — the on-device backup (' + total + (total === 1 ? ' match' : ' matches') + ') is shown only until Firebase answers.</div>';
-        } else {
-          html = '<div class="hist-status"><b>Not synced</b> — Firebase is not connected, so history is being kept on this device only (' + total + (total === 1 ? ' match' : ' matches') + '). Other devices cannot see it until Firebase connects; pending matches then sync automatically.</div>';
-        }
-        el.innerHTML = html;
+        /* No sync-status banner on the Past Matches page at all —
+           no "Synced with Firebase", no syncing, held or failed
+           notices (owner's call, 2026-11-28: "Synced with Firebase
+           এসব লাগবেনা"). The sync machinery underneath is unchanged:
+           pending writes and deletes still retry automatically via
+           scheduleHistoryRetry / flushHistoryPending. */
+        el.innerHTML = ''; return;
       }
       function renderHistFilters(){
         var all = allRecordMatches();
@@ -28393,7 +28384,7 @@
       function renderHistList(){
         var el = $('histList'); if (!el) return;
         var all = allRecordMatches();
-        var matches = all.filter(matchInFilter).filter(histSearchMatch).filter(histMonthMatch);
+        var matches = all.filter(matchInFilter).filter(histSearchMatch).filter(histMonthMatch).filter(histTypeMatch);
         if (!all.length){
           el.innerHTML = '<div class="card"><p class="note" style="margin:0">No matches recorded yet.</p></div>';
           return;
@@ -29263,7 +29254,7 @@
         if (S.potmName){ try { pFig = potmFigures(S.potmName, S.potmTeam); } catch(e){ pFig = ''; } }
         html += '<div class="sum-potm"><div class="cb-potm-lab">Player of the Match</div>'
           + (S.potmName
-            ? '<div class="cb-potm-name">' + esc(dispName(S.potmTeam, S.potmName)) + '</div>' + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
+            ? '<div class="cb-potm-name">' + esc(S.potmName) + '</div>' + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
             : '<div class="cb-potm-name" style="color:#bdbdbd">Not Decided Yet</div>')
           + '</div>';
         /* Buttons: Match Summary bottom-left and Scorecard on the
@@ -30230,8 +30221,10 @@
           if (finished){
             /* The partnership strip becomes the Player of the Match
                band, like the reference: label, avatar placeholder, the
-               scorer's chosen player (nickname when one is set) with
-               their match figures. Until the scorer chooses, it reads
+               scorer's chosen player — always by FULL name here (the
+               owner's rule: Player of the Match shows the full name
+               everywhere, never the nickname) — with their match
+               figures. Until the scorer chooses, it reads
                "Not Decided Yet" — a name is never auto-picked. */
             pshipEl.className = 'cb-potm-wrap';
             pshipEl.style.display = '';
@@ -30240,7 +30233,7 @@
               var potmProf = profileDataFor(S.potmTeam, S.potmName, S.potmPid || '');
               pshipEl.innerHTML = '<div class="cb-potm-lab">Player of the Match</div><div class="cb-potm-row">'
                 + '<span class="cb-potm-ava">' + (potmProf.photo ? '<img src="' + esc(potmProf.photo) + '" alt="" style="width:100%;height:100%;object-fit:cover" />' : '<svg width="34" height="34" viewBox="0 0 24 24" fill="#8a8a8a" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z"/></svg>') + '</span>'
-                + '<div><div class="cb-potm-name">' + plLink(S.potmTeam, S.potmName) + '</div>'
+                + '<div><div class="cb-potm-name">' + plLink(S.potmTeam, S.potmName, S.potmName, S.potmPid || '') + '</div>'
                 + (pFig ? '<div class="cb-potm-fig">' + esc(pFig) + '</div>' : '')
                 + '</div></div>';
             } else {
