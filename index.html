@@ -4879,7 +4879,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v321';
+      var APP_VERSION = 'v322';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5772,6 +5772,26 @@
            does not know about — keep them, so nothing a surface
            reads can go missing during the changeover. */
         Object.keys(hot).forEach(function(k){ if (out[k] === undefined) out[k] = deep(hot[k]); });
+        /* Firebase stores no empty arrays (v322): an innings that
+           has not started — or in which nobody has batted, bowled
+           or faced a ball yet — arrives WITHOUT its batters /
+           bowlers / balls lists, while every locally built innings
+           carries them and readers across the app read their
+           .length directly. Normalise the two innings slots here,
+           where the server state enters, so the confirmed state
+           has the same shape as a locally built one; before this,
+           a live match sitting at an innings break made those
+           readers throw on every viewer render (the home Profile
+           card's career aggregate among them — it painted 0/0/0
+           and never recovered). */
+        ['current', 'prevInnings'].forEach(function(k){
+          var inn = out[k];
+          if (inn && typeof inn === 'object'){
+            if (!Array.isArray(inn.batters)) inn.batters = [];
+            if (!Array.isArray(inn.bowlers)) inn.bowlers = [];
+            if (!Array.isArray(inn.balls)) inn.balls = [];
+          }
+        });
         return out;
       }
       /* fbConfirmedState is rebuilt from the two nodes whenever
@@ -20731,7 +20751,16 @@
       function buildHistoryEntry(){
         var inns = [];
         if (S.prevInnings) inns.push(deep(S.prevInnings));
-        if (S.current && (S.current.batters.length || S.current.bowlers.length || S.current.legalBalls > 0 || S.prevInnings)) inns.push(deep(S.current));
+        /* The array reads are guarded (v322): on a Firebase-delivered
+           state (the viewer display state this also runs under, via
+           liveHistoryEntry) an innings whose lists are still empty
+           arrives WITHOUT batters / bowlers at all — the database
+           stores no empty arrays — and the unguarded .length read
+           threw, which silently emptied every surface that builds
+           the live entry through here (the home Profile card's
+           career figures most visibly: its aggregate died on this
+           throw and the card painted 0/0/0 forever). */
+        if (S.current && ((S.current.batters || []).length || (S.current.bowlers || []).length || S.current.legalBalls > 0 || S.prevInnings)) inns.push(deep(S.current));
         /* The match's OWN tournament (v225), resolved from the
            start-of-match stamp — so filing (or re-filing, when a
            POTM is picked later) this match while a DIFFERENT
@@ -28923,11 +28952,15 @@
         return '<b>' + esc(t) + '</b>';
       }
       function cbBatterFull(inn, name){
-        for (var i = 0; i < inn.batters.length; i++) if (inn.batters[i].name === name) return inn.batters[i];
+        /* Guarded (v322): an innings delivered from Firebase whose
+           lists are still empty arrives without the arrays at all. */
+        var bs = (inn && inn.batters) || [];
+        for (var i = 0; i < bs.length; i++) if (bs[i].name === name) return bs[i];
         return { name: name, runs: 0, balls: 0, fours: 0, sixes: 0 };
       }
       function cbBowlerFull(inn, name){
-        for (var i = 0; i < inn.bowlers.length; i++) if (inn.bowlers[i].name === name) return inn.bowlers[i];
+        var bs = (inn && inn.bowlers) || [];
+        for (var i = 0; i < bs.length; i++) if (bs[i].name === name) return bs[i];
         return { name: name, balls: 0, runs: 0, wickets: 0 };
       }
       /* ---------- per-over snapshots, rebuilt from the ball record ----------
