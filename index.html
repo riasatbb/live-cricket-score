@@ -4923,7 +4923,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v332';
+      var APP_VERSION = 'v333';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -21474,6 +21474,20 @@
              History arrival must re-render it too, or its figures
              stay at whatever the first, pre-History render left. */
           try { renderLiveHome(); } catch(e){}
+          /* v333: the record book is also what closes a finished
+             match everywhere else (matchArchivedClosed reads HIST).
+             On a slow link the live slots land long before the book
+             does, so a Resume Scoring list rendered in that gap
+             lists a finished match's stale live copy — and nothing
+             ever re-rendered the list or re-ran the cleanup sweep
+             once the book arrived, so the phantom row (and the
+             stale server copy behind it) survived the whole
+             session. A History arrival now re-runs the sweep —
+             retiring any stale live copy an entitled account may
+             clear — and re-renders the console, whose Resume list
+             excludes every match the book holds. */
+          try { sweepArchivedLiveCopies(); } catch(e){}
+          try { renderConsoleHome(); } catch(e){}
           flushHistoryPending();
           flushHistoryDeletes();
           scheduleHistoryRetry();
@@ -21646,6 +21660,11 @@
         /* v320: the bulk merge is a History arrival too — the home
            Profile card re-renders with the completed book. */
         try { renderLiveHome(); } catch(e){}
+        /* v333: a History arrival, as in afterHistRemoteChange —
+           re-run the stale-live-copy sweep and the console render
+           now that the book is known. */
+        try { sweepArchivedLiveCopies(); } catch(e){}
+        try { renderConsoleHome(); } catch(e){}
         scheduleHistoryRetry();
       }
       /* ---------- server tombstones (matchHistoryDeleted) ----------
@@ -30837,7 +30856,10 @@
       }
       function renderConsoleHome(){
         var btn = $('consoleResume'); if (!btn) return;
-        var parked = pausedMatches().length;
+        /* A parked copy of a match already filed in History is
+           finished, not in progress (v333): it never counts toward
+           Resume Scoring, exactly as renderResumeList never rows it. */
+        var parked = pausedMatches().filter(function(p){ return p && !matchArchivedClosed(p.matchId, p); }).length;
         var live = liveMatchInProgress();
         /* Matches live in their own slots on other devices (v297)
            count toward Resume Scoring too — they are in progress,
@@ -30913,6 +30935,24 @@
         if (!target) pausedMatches().forEach(function(p){ if (p && String(p.matchId) === id) target = p; });
         if (!target){ try { var slC = liveSliceById(id); if (slC && sliceInProgress(slC)) target = slC; } catch(e){} }
         if (!target){ toast('That match is no longer in progress.'); return; }
+        if (matchArchivedClosed(id, target)){
+          /* Filed in History = finished for good (v333): a stale
+             copy that was still listed when this page rendered is
+             cleaned up, never opened — its live record is retired
+             when this account is entitled to clear it, any parked
+             copy is dropped, and the list re-renders without it.
+             (A live Super Over is the one exception, and
+             matchArchivedClosed already lets it through.) */
+          try { if (matchAccessFor(target)) retireLiveRecord(id, target); } catch(e){}
+          try {
+            var pkA = pausedMatches(), piA = -1;
+            pkA.forEach(function(p, ix){ if (p && String(p.matchId) === id) piA = ix; });
+            if (piA > -1){ pkA.splice(piA, 1); commit('Finished match removed from Resume Scoring', true); }
+          } catch(e){}
+          try { renderConsoleHome(); } catch(e){}
+          toast('That match is no longer in progress.');
+          return;
+        }
         var tOwner = target.ownerUid || '';
         if (tOwner && tOwner !== currentUid() && !isSuperAdmin() && !scorerHashMatches(target.scorerEmailHash)){
           toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
@@ -30952,6 +30992,19 @@
            parked match is claimed by the signed-in scorer, exactly
            like the live one. */
         var target = idx > -1 ? list[idx] : slotSlice;
+        /* Filed in History = finished for good (v333): never take
+           an archived match back onto the pad — a stale parked copy
+           of it is dropped and its live record retired instead of
+           resumed, so a finished match can never be resurrected
+           from here. (A live Super Over is the one exception, and
+           matchArchivedClosed already lets it through.) */
+        if (matchArchivedClosed(id, target)){
+          try { if (matchAccessFor(target)) retireLiveRecord(id, target); } catch(e){}
+          if (idx > -1){ try { list.splice(idx, 1); commit('Finished match removed from Resume Scoring', true); } catch(e){} }
+          try { renderConsoleHome(); } catch(e){}
+          toast('That match is no longer in progress.');
+          return;
+        }
         var tOwner = target.ownerUid || '';
         if (tOwner && tOwner !== currentUid() && !isSuperAdmin() && !scorerHashMatches(target.scorerEmailHash)){
           toast('🔒 This match belongs to ' + (target.ownerName || 'another account') + ' — only its owner' + (target.scorerEmailHash ? ' or its designated scorer' : '') + ' can resume scoring it. You are ' + (authUser ? ('signed in as ' + authDisplayName()) : 'in guest mode') + '.');
