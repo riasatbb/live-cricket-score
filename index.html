@@ -4955,7 +4955,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v338';
+      var APP_VERSION = 'v340';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -24622,15 +24622,19 @@
          blob-URL anchor click is silently dropped by the Android
          WebView the app runs in, so inside the app deliverFile goes
          straight to the native Filesystem plugin and writes the file
-         onto the device immediately, inside the same tap:
-           DOWNLOADS → DOCUMENTS → EXTERNAL → DATA → CACHE.
-         The first two are the phone's shared folders (the ones the
-         user looks in); on Android 10+ the plugin writes there
-         through scoped storage, which needs NO storage permission
-         at all. EXTERNAL / DATA / CACHE are the app's own storage
-         and never need a permission on any Android version — so at
-         least one step of the cascade can always land the file, and
-         a permission state can never block a download again.
+         onto the device immediately, inside the same tap.
+         ONE FOLDER ONLY (v340, the owner's explicit rule): every
+         in-app download lands in
+           /storage/emulated/0/Download/CricCast/
+         and NOWHERE else. There is no fallback cascade any more:
+         if that one folder refuses the write, the file is NOT
+         quietly saved to Documents, app storage or cache instead —
+         the save fails visibly (see below) rather than landing
+         somewhere the owner did not ask for. The CricCast folder
+         is auto-created (mkdir, recursive) before each write, so
+         a missing folder never blocks a save. On Android 10+ the
+         plugin writes to Download through scoped storage, which
+         needs NO storage permission at all.
          ANDROID PERMISSION PROBLEMS, FIXED AT THE ROOT: the old
          flow asked checkPermissions() BEFORE saving and stopped at
          an in-page popup whenever the answer was denied / prompt.
@@ -24640,13 +24644,14 @@
          though every write would succeed — and the download died
          behind a popup (or, in earlier builds, silently). The gate
          is gone: nothing is checked up front, the write is simply
-         attempted. Only if EVERY folder refuses AND a refusal
-         smells like a permission error does the flow ask Android
-         for the permission itself — automatically, as part of the
-         same tap (the phone's own system dialog, once) — and then
-         retries the whole cascade once. If the file still cannot
-         land anywhere, the Download Check popup opens with the
-         plugin's real per-folder errors instead of a silent no-op.
+         attempted. Only if the Download/CricCast write refuses
+         AND the refusal smells like a permission error does the
+         flow ask Android for the permission itself —
+         automatically, as part of the same tap (the phone's own
+         system dialog, once) — and then retries that SAME folder
+         once. If the file still cannot land there, the Download
+         Check popup opens with the plugin's real error instead of
+         a silent no-op, and the file is not saved anywhere else.
          A save that lands is confirmed on screen by the #dlDoneModal
          receipt (file name + the folder it landed in), because the
          retired toast() can no longer be the only witness.
@@ -24782,9 +24787,9 @@
              really there;
            - what checkPermissions() actually returns (the raw
              answer, plus the state the save flow reads from it);
-           - a real test save of a tiny text file through the
-             same folder cascade a real download uses (v338:
-             Downloads → Documents → app storage), with the
+           - a real test save of a tiny text file into the one
+             folder a real download uses (v340:
+             /storage/emulated/0/Download/CricCast/ only), with the
              plugin's own error, message and code, when it fails.
              A step that never answers is reported as such after
              10 seconds instead of hanging the probe.
@@ -24873,46 +24878,48 @@
           }
           var fname = 'CricCast-download-test.txt';
           var data = 'CricCast download test — ' + new Date().toISOString();
-          /* The test walks the SAME folder cascade a real download
-             uses (v338), stopping at the first folder that takes
-             the file — so a green verdict here means a real
-             download lands in that same folder. */
+          /* The test writes into the SAME single folder a real
+             download uses (v340: Download/CricCast only) — so a
+             green verdict here means a real download lands in
+             that same folder, and nowhere else. */
           var tryDirAt = function(i){
             if (i >= DL_DIRS.length){
-              push('Verdict', 'The test file could not be saved anywhere. The errors above are the real reason downloads fail inside the app.', false);
+              push('Verdict', 'The test file could not be saved in Download/CricCast — and it was not saved anywhere else. The error above is the real reason downloads fail inside the app.', false);
               return;
             }
             var dir = DL_DIRS[i];
-            var p;
-            try { p = FS.writeFile({ path: fname, data: data, directory: dir, encoding: 'utf8' }); }
-            catch(e){
-              push('Test save → ' + dir, 'Threw at once: ' + dlErrText(e), false);
-              tryDirAt(i + 1);
-              return;
-            }
-            dlProbeWithTimeout(p, 10000).then(function(res){
-              var uri = '';
-              try { uri = (res && (res.uri || res.path)) || ''; } catch(e){}
-              push('Test save → ' + dir, 'Saved' + (uri ? ' — ' + uri : ''), true);
-              var verdict = function(){ push('Verdict', 'Saving works on this device — a real download lands in the ' + dlDirLabel(dir) + ' the same way. If a real download still fails, its own error now appears on this screen too.', true); };
-              /* Clean the test file back up; a cleanup failure is
-                 reported but does not change the verdict. */
-              try {
-                if (typeof FS.deleteFile === 'function'){
-                  Promise.resolve(FS.deleteFile({ path: fname, directory: dir })).then(function(){
-                    push('Test file cleanup', 'Deleted', true);
-                    verdict();
-                  }, function(e2){
-                    push('Test file cleanup', 'Could not delete: ' + dlErrText(e2));
-                    verdict();
-                  });
-                  return;
-                }
-              } catch(e){}
-              verdict();
-            }).catch(function(err){
-              push('Test save → ' + dir, 'FAILED: ' + dlErrText(err), false);
-              tryDirAt(i + 1);
+            dlEnsureFolder(FS, dir).then(function(){
+              var p;
+              try { p = FS.writeFile({ path: dlNativePath(fname), data: data, directory: dir, encoding: 'utf8' }); }
+              catch(e){
+                push('Test save → ' + dir, 'Threw at once: ' + dlErrText(e), false);
+                tryDirAt(i + 1);
+                return;
+              }
+              dlProbeWithTimeout(p, 10000).then(function(res){
+                var uri = '';
+                try { uri = (res && (res.uri || res.path)) || ''; } catch(e){}
+                push('Test save → ' + dir, 'Saved' + (uri ? ' — ' + uri : ''), true);
+                var verdict = function(){ push('Verdict', 'Saving works on this device — a real download lands in the ' + dlDirLabel(dir) + ' the same way. If a real download still fails, its own error now appears on this screen too.', true); };
+                /* Clean the test file back up; a cleanup failure is
+                   reported but does not change the verdict. */
+                try {
+                  if (typeof FS.deleteFile === 'function'){
+                    Promise.resolve(FS.deleteFile({ path: dlNativePath(fname), directory: dir })).then(function(){
+                      push('Test file cleanup', 'Deleted', true);
+                      verdict();
+                    }, function(e2){
+                      push('Test file cleanup', 'Could not delete: ' + dlErrText(e2));
+                      verdict();
+                    });
+                    return;
+                  }
+                } catch(e){}
+                verdict();
+              }).catch(function(err){
+                push('Test save → ' + dir, 'FAILED: ' + dlErrText(err), false);
+                tryDirAt(i + 1);
+              });
             });
           };
           tryDirAt(0);
@@ -24936,24 +24943,42 @@
         }
       }
       /* ---------- Native save: one tap, straight onto the device ----------
-         The folder cascade, best first. DOWNLOADS and DOCUMENTS
-         are the phone's shared folders — where a downloaded file
-         is expected to be found — and on Android 10+ the plugin
-         reaches them through scoped storage with no permission at
-         all. EXTERNAL (the app's own folder on shared storage),
-         DATA and CACHE are app-private: no Android version can
-         permission-block them, so the cascade as a whole cannot be
-         stopped by a permission state. A folder this plugin build
-         does not know (e.g. DOWNLOADS on an old build) simply
-         rejects and the cascade moves on. */
-      var DL_DIRS = ['DOWNLOADS', 'DOCUMENTS', 'EXTERNAL', 'DATA', 'CACHE'];
+         ONE FOLDER ONLY (v340): the list below holds exactly one
+         entry — DOWNLOADS — so every native save targets
+         /storage/emulated/0/Download/CricCast/ and nothing else
+         is ever tried. Earlier builds cascaded to Documents and
+         app-private storage when Download refused; the owner
+         ruled that out explicitly ("this folder only, nowhere
+         else"), so a refused write now fails visibly instead of
+         landing in a folder nobody asked for. On Android 10+ the
+         plugin reaches Download through scoped storage with no
+         permission at all. */
+      var DL_DIRS = ['DOWNLOADS'];
+      /* v340 — every download lands in the "CricCast" subfolder
+         of Download, exactly where the owner looks for it:
+         /storage/emulated/0/Download/CricCast/<file>. The folder
+         is created automatically before the write (mkdir,
+         recursive) — if it already exists that call simply
+         fails quietly and the write goes ahead anyway. */
+      var DL_SUBFOLDER = 'CricCast';
+      function dlNativePath(filename){ return DL_SUBFOLDER + '/' + filename; }
+      function dlEnsureFolder(FS, dir){
+        return new Promise(function(resolve){
+          try {
+            if (!FS || typeof FS.mkdir !== 'function'){ resolve(); return; }
+            var mp;
+            try { mp = FS.mkdir({ path: DL_SUBFOLDER, directory: dir, recursive: true }); }
+            catch(e){ resolve(); return; }
+            if (mp && typeof mp.then === 'function'){
+              dlProbeWithTimeout(mp, 10000).then(function(){ resolve(); }, function(){ resolve(); });
+            } else resolve();
+          } catch(e){ resolve(); }
+        });
+      }
       function dlDirLabel(dir){
-        if (dir === 'DOWNLOADS') return 'Downloads folder';
-        if (dir === 'DOCUMENTS') return 'Documents folder';
-        if (dir === 'EXTERNAL') return 'app storage folder (Android/data)';
-        if (dir === 'DATA') return 'app storage';
-        if (dir === 'CACHE') return 'app cache storage';
-        return dir;
+        /* The only folder a download may ever land in (v340). */
+        if (dir === 'DOWNLOADS') return 'Download/CricCast folder (/storage/emulated/0/Download/CricCast/)';
+        return 'Download/CricCast folder (/storage/emulated/0/Download/CricCast/)';
       }
       function dlIsPermError(err){
         var msg = '';
@@ -24971,22 +24996,21 @@
             openDlProbe(prepLines);
             return;
           }
-          /* Per-folder outcomes of THIS save, kept so a total
-             failure can show the plugin's real errors on the probe
-             popup instead of vanishing into the retired toast. */
+          /* The outcome of THIS save, kept so a failure can show
+             the plugin's real error on the probe popup instead of
+             vanishing into the retired toast. */
           var saveLog = [];
           var permAsked = false;
           (function nextDir(i){
             if (i >= DL_DIRS.length){
-              /* Every folder refused. If a refusal looks like a
-                 permission problem and Android has not been asked
-                 yet during THIS tap, ask now — automatically, as
-                 part of the same tap: the phone's own system dialog
-                 is the only extra step Android itself can demand,
-                 and only ever once. Then retry the cascade once.
-                 Whatever the answer (granted, refused, or the ask
-                 itself failing), the retry still ends at the
-                 app-private folders, which need no permission. */
+              /* The one allowed folder refused. If the refusal
+                 looks like a permission problem and Android has
+                 not been asked yet during THIS tap, ask now —
+                 automatically, as part of the same tap: the
+                 phone's own system dialog is the only extra step
+                 Android itself can demand, and only ever once.
+                 Then retry the SAME Download/CricCast folder once.
+                 No other folder is ever tried (v340). */
               var sawPerm = false;
               for (var q = 0; q < saveLog.length; q++){ if (saveLog[q][3]) sawPerm = true; }
               if (sawPerm && !permAsked && FS && typeof FS.requestPermissions === 'function'){
@@ -25002,27 +25026,32 @@
               var failLines = dlProbeEnvLines();
               failLines.push(['File', filename]);
               for (var s = 0; s < saveLog.length; s++) failLines.push(saveLog[s]);
-              failLines.push(['Verdict', 'This download could not be saved anywhere on the device. The errors above are exactly what the file-saving plugin reported.', false]);
+              failLines.push(['Verdict', 'This download could not be saved in /storage/emulated/0/Download/CricCast/ — and it was not saved anywhere else. The error above is exactly what the file-saving plugin reported.', false]);
               openDlProbe(failLines);
               return;
             }
             var dir = DL_DIRS[i];
-            var p;
-            try { p = FS.writeFile({ path: filename, data: b64, directory: dir }); }
-            catch(e){ saveLog.push(['Save → ' + dir, 'Threw at once: ' + dlErrText(e), false, dlIsPermError(e)]); nextDir(i + 1); return; }
-            /* A write that never answers must not hang the tap
-               forever: after 20s that folder counts as failed and
-               the cascade moves on. */
-            dlProbeWithTimeout(p, 20000).then(function(res){
-              /* Saved — show the receipt: file, folder, and the
-                 full path the plugin returned. A download never
-                 opens the share sheet afterwards. */
-              var uri = '';
-              try { uri = (res && (res.uri || res.path)) || ''; } catch(e){}
-              showDlDone(filename, dlDirLabel(dir), uri);
-            }).catch(function(err){
-              saveLog.push(['Save → ' + dir, 'FAILED: ' + dlErrText(err), false, dlIsPermError(err)]);
-              nextDir(i + 1);
+            /* Auto-create the CricCast subfolder inside Download
+               first (v340); whether that call succeeds, reports
+               "already exists", or is unavailable, the write
+               itself is attempted right after. */
+            dlEnsureFolder(FS, dir).then(function(){
+              var p;
+              try { p = FS.writeFile({ path: dlNativePath(filename), data: b64, directory: dir }); }
+              catch(e){ saveLog.push(['Save → Download/CricCast', 'Threw at once: ' + dlErrText(e), false, dlIsPermError(e)]); nextDir(i + 1); return; }
+              /* A write that never answers must not hang the tap
+                 forever: after 20s it counts as failed. */
+              dlProbeWithTimeout(p, 20000).then(function(res){
+                /* Saved — show the receipt: file, folder, and the
+                   full path the plugin returned. A download never
+                   opens the share sheet afterwards. */
+                var uri = '';
+                try { uri = (res && (res.uri || res.path)) || ''; } catch(e){}
+                showDlDone(filename, dlDirLabel(dir), uri);
+              }).catch(function(err){
+                saveLog.push(['Save → Download/CricCast', 'FAILED: ' + dlErrText(err), false, dlIsPermError(err)]);
+                nextDir(i + 1);
+              });
             });
           })(0);
         });
@@ -25038,8 +25067,9 @@
            No permission check first (v338): on modern Android the
            check reports a legacy permission that gates nothing
            this app writes, and gating on it was what stood between
-           the tap and the file. writeFileNative's cascade and its
-           one automatic permission ask handle every real refusal. */
+           the tap and the file. writeFileNative writes ONLY to
+           Download/CricCast (v340) and its one automatic
+           permission ask handles a permission refusal there. */
         try {
           var Cap = window.Capacitor;
           var FS = Cap && Cap.Plugins && Cap.Plugins.Filesystem;
