@@ -4955,7 +4955,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v340';
+      var APP_VERSION = 'v341';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -24655,6 +24655,23 @@
          A save that lands is confirmed on screen by the #dlDoneModal
          receipt (file name + the folder it landed in), because the
          retired toast() can no longer be the only witness.
+         v341 — THE MISSING-PARENT FIX. The v340 Download Check
+         probe, run on the owner's phone, came back with the
+         plugin's own words: "Missing parent directory - possibly
+         recursive=false was passed or parent directory creation
+         failed. · code: OS-PLUG-FILE-0011". The separate mkdir
+         that was supposed to create Download/CricCast first had
+         failed, and dlEnsureFolder swallowed that error, so the
+         write walked into a folder that was never there. Three
+         changes, all still inside Download/CricCast only: the
+         write itself now passes recursive:true, so the plugin
+         creates the parent folder as part of the write — the
+         remedy its own error message names; dlEnsureFolder
+         returns the mkdir outcome (verified afterwards with
+         stat) instead of swallowing it, and both the probe and
+         a failed real save print that outcome next to the write
+         error; the probe gains a "Create CricCast folder" line
+         so the folder step is visible on its own.
          In a plain browser the anchor + download attribute is the
          delivery, exactly as before. Inside an app build that
          carries no Filesystem plugin there is no save path at all,
@@ -24888,9 +24905,19 @@
               return;
             }
             var dir = DL_DIRS[i];
-            dlEnsureFolder(FS, dir).then(function(){
+            dlEnsureFolder(FS, dir).then(function(ens){
+              /* v341: the folder step gets its own line, with
+                 mkdir's real error when it failed — in v340 that
+                 error was swallowed, which is exactly why the
+                 write's "Missing parent directory" failure could
+                 not be explained from the probe screenshot. The
+                 write below still runs either way: it passes
+                 recursive:true, so the plugin creates the folder
+                 as part of the write itself. */
+              if (ens && ens.ok) push('Create CricCast folder', 'Ready — Download/CricCast is there', true);
+              else push('Create CricCast folder', 'FAILED: ' + ((ens && ens.error) || 'unknown error') + ' — the test save below still tries; it creates the folder itself', false);
               var p;
-              try { p = FS.writeFile({ path: dlNativePath(fname), data: data, directory: dir, encoding: 'utf8' }); }
+              try { p = FS.writeFile({ path: dlNativePath(fname), data: data, directory: dir, encoding: 'utf8', recursive: true }); }
               catch(e){
                 push('Test save → ' + dir, 'Threw at once: ' + dlErrText(e), false);
                 tryDirAt(i + 1);
@@ -24956,24 +24983,56 @@
       var DL_DIRS = ['DOWNLOADS'];
       /* v340 — every download lands in the "CricCast" subfolder
          of Download, exactly where the owner looks for it:
-         /storage/emulated/0/Download/CricCast/<file>. The folder
-         is created automatically before the write (mkdir,
-         recursive) — if it already exists that call simply
-         fails quietly and the write goes ahead anyway. */
+         /storage/emulated/0/Download/CricCast/<file>.
+         v341 — the folder step no longer fails quietly. The
+         v340 probe proved the old arrangement broken on the
+         owner's phone: mkdir's error was swallowed here, the
+         folder was never created, and the write then died with
+         OS-PLUG-FILE-0011 "Missing parent directory".
+         dlEnsureFolder now RETURNS its outcome as data —
+         { ok:true } or { ok:false, error:'…' } — and verifies
+         the folder with stat() after mkdir, because a mkdir
+         that claims success is not proof the folder exists.
+         Callers print the outcome; nobody swallows it. And the
+         write that follows passes recursive:true, so the plugin
+         creates the folder as part of the write even when this
+         separate mkdir could not. */
       var DL_SUBFOLDER = 'CricCast';
       function dlNativePath(filename){ return DL_SUBFOLDER + '/' + filename; }
       function dlEnsureFolder(FS, dir){
-        return new Promise(function(resolve){
-          try {
-            if (!FS || typeof FS.mkdir !== 'function'){ resolve(); return; }
-            var mp;
-            try { mp = FS.mkdir({ path: DL_SUBFOLDER, directory: dir, recursive: true }); }
-            catch(e){ resolve(); return; }
-            if (mp && typeof mp.then === 'function'){
-              dlProbeWithTimeout(mp, 10000).then(function(){ resolve(); }, function(){ resolve(); });
-            } else resolve();
-          } catch(e){ resolve(); }
-        });
+        if (!FS || typeof FS.mkdir !== 'function'){
+          return Promise.resolve({ ok: false, error: 'mkdir is not available on this plugin' });
+        }
+        var mp;
+        try { mp = FS.mkdir({ path: DL_SUBFOLDER, directory: dir, recursive: true }); }
+        catch(e){ return Promise.resolve({ ok: false, error: dlErrText(e) }); }
+        var verify = function(mk){
+          /* stat() is the ground truth: the folder counts as
+             ready only if the plugin can actually see it. If
+             mkdir rejected merely because the folder was
+             already there, stat still succeeds and the outcome
+             is ok. If mkdir claimed success but stat cannot see
+             a folder, stat's error is the one that matters. */
+          if (typeof FS.stat !== 'function') return mk;
+          var sp;
+          try { sp = FS.stat({ path: DL_SUBFOLDER, directory: dir }); }
+          catch(e){ return { ok: false, error: 'Folder check threw at once: ' + dlErrText(e) }; }
+          return dlProbeWithTimeout(sp, 10000).then(function(st){
+            var t = '';
+            try { t = String((st && st.type) || ''); } catch(e){}
+            if (t && t !== 'directory') return { ok: false, error: 'Download/CricCast exists but is a file, not a folder' };
+            return { ok: true };
+          }, function(e2){
+            return mk.ok
+              ? { ok: false, error: 'mkdir reported success but the folder is not there afterwards: ' + dlErrText(e2) }
+              : mk;
+          });
+        };
+        if (mp && typeof mp.then === 'function'){
+          return dlProbeWithTimeout(mp, 10000).then(function(){ return verify({ ok: true }); },
+            function(e){ return verify({ ok: false, error: dlErrText(e) }); });
+        }
+        return Promise.resolve(verify({ ok: true }));
       }
       function dlDirLabel(dir){
         /* The only folder a download may ever land in (v340). */
@@ -25032,12 +25091,19 @@
             }
             var dir = DL_DIRS[i];
             /* Auto-create the CricCast subfolder inside Download
-               first (v340); whether that call succeeds, reports
-               "already exists", or is unavailable, the write
-               itself is attempted right after. */
-            dlEnsureFolder(FS, dir).then(function(){
+               first (v340). v341: mkdir's outcome is kept — if
+               it failed, its real error joins the save log, so a
+               total failure shows BOTH errors instead of only
+               the write's. Either way the write is attempted
+               right after, and it passes recursive:true so the
+               plugin creates the parent folder as part of the
+               write — the fix the plugin's own OS-PLUG-FILE-0011
+               error ("possibly recursive=false was passed")
+               points at. */
+            dlEnsureFolder(FS, dir).then(function(ens){
+              if (ens && !ens.ok) saveLog.push(['Create CricCast folder', 'FAILED: ' + (ens.error || 'unknown error'), false, dlIsPermError({ message: ens.error || '' })]);
               var p;
-              try { p = FS.writeFile({ path: dlNativePath(filename), data: b64, directory: dir }); }
+              try { p = FS.writeFile({ path: dlNativePath(filename), data: b64, directory: dir, recursive: true }); }
               catch(e){ saveLog.push(['Save → Download/CricCast', 'Threw at once: ' + dlErrText(e), false, dlIsPermError(e)]); nextDir(i + 1); return; }
               /* A write that never answers must not hang the tap
                  forever: after 20s it counts as failed. */
