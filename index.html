@@ -832,6 +832,15 @@
       .mc-finish{border-top:1px solid var(--line);margin-top:12px;padding:14px;background:var(--surface2)}
       .mc-fixtoss{text-align:center;margin-top:10px}
       .mc-finish-btn{width:100%;font-size:17.5px;font-weight:800;padding:14px 16px}
+      /* Finish-state bar (v324): the persistent Finishing / Retry /
+         Completed line shown while a completion waits for the
+         server to confirm it — toast() is a no-op in this build,
+         so confirmation state lives in the page, never in a
+         fading message. */
+      .finish-state{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14.5px;font-weight:700;line-height:1.45;color:var(--ink)}
+      .finish-state.done{color:#1b7a43}
+      .finish-state.pending{color:#b3261e}
+      @media (prefers-color-scheme: dark){.finish-state.done{color:#7bd88f}.finish-state.pending{color:#ff9d94}}
       .mc-potm{border-top:1px solid var(--line);margin-top:12px;padding:13px 14px 15px;background:var(--surface2)}
       .mc-potm label{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:7px}
       .mc-potm .note{margin:8px 0 0}
@@ -3739,6 +3748,7 @@
           <div class="mc-finish" id="mcFinishBar" hidden>
             <button type="button" class="btn gold mc-finish-btn" onclick="finishMatch()">✓ Finish Match</button>
           </div>
+          <div class="mc-finish" id="mcFinishState" hidden></div>
           <div class="mc-potm" id="mcPotm" hidden>
             <label for="potmSelect">🏆 Player of the Match (optional)</label>
             <div class="rowflex" style="flex-wrap:nowrap">
@@ -4879,7 +4889,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v323';
+      var APP_VERSION = 'v324';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5614,9 +5624,27 @@
       function matchArchivedClosed(id, st){
         if (id == null) return false;
         try {
-          if (typeof HIST === 'undefined' || !HIST[String(id)]) return false;
           if (st && st.superOver && st.superOver.active) return false;
-          return true;
+          if (typeof HIST !== 'undefined' && HIST[String(id)]) return true;
+          /* Confirmed finish (v324): a finish-pending marker — set
+             ONLY by an explicit completion tap on this device (see
+             the CONFIRMED FINISH section) — closes the match here
+             too, from the very first paint after the tap, before
+             any History snapshot has loaded: the stale live copy
+             of a just-finished match is never adopted or listed
+             while its filing is still unconfirmed. A copy that
+             came back to life after the tap (live status with a
+             newer timestamp — play was resumed) is NOT closed;
+             the heal tick drops the marker for it instead. A
+             merely-finished local backup carries no marker and
+             closes nothing. */
+          var fp = (typeof finishPending !== 'undefined') ? finishPending[String(id)] : null;
+          if (fp){
+            if (!st) return true;
+            if (st.status === 'finished') return true;
+            if (typeof st.updatedAt !== 'number' || st.updatedAt <= (fp.at || 0)) return true;
+          }
+          return false;
         } catch(e){ return false; }
       }
       /* Every match live on the server right now, as hot slices:
@@ -5726,6 +5754,10 @@
       function handleLiveSync(){
         refreshConfirmedState();
         try { sweepArchivedLiveCopies(); } catch(e){}
+        /* Confirmed finish (v324): every live sync is also a heal
+           tick — a finish this device tapped that the server has
+           not confirmed yet is re-driven until it lands. */
+        try { tickPendingFinish(false); armFinishHeal(); } catch(e){}
         var pad = composedPadState();
         if (pad && shouldAdoptRemote(pad)) adoptRemoteState(pad);
         try { guardViewerScoreboard(); } catch(e){}
@@ -5988,22 +6020,46 @@
          display and publish guards (matchArchivedClosed) hide
          and block the stale copy regardless. */
       var fbLiveClearedFor = '';
+      /* The awaitable form of the retirement (v324): performs the
+         same slot retire + legacy clear WITHOUT the once-per-session
+         latch, and resolves true only when every part the server
+         still holds has actually been cleared (or nothing was left
+         to clear and a connection exists to know it). The confirmed
+         Finish flow awaits this; the fire-and-forget wrapper below
+         keeps the old behaviour for the sweep and the other
+         best-effort callers. */
+      function retireLiveRecordAsync(id, sliceHint){
+        if (id == null) return Promise.resolve(false);
+        id = String(id);
+        if (!fbLiveRef && !fbRef) return Promise.resolve(false); /* no connection — nothing can be confirmed */
+        var jobs = [];
+        if (multiLiveOn()){
+          if (fbLiveRef){
+            jobs.push(retireSlot(id, sliceHint || null));
+            delete fbLiveMap[id]; noteLiveSig();
+          } else if (fbLiveMap[id]){
+            return Promise.resolve(false); /* slots are in force but unreachable right now */
+          }
+        }
+        if (fbRef && fbHotState && String(fbHotState.matchId) === id){
+          var blankHot = hotPartOf(buildDeletedState());
+          jobs.push(fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); return true; }, function(){ return false; }));
+        }
+        if (!jobs.length){ try { refreshConfirmedState(); } catch(e){} return Promise.resolve(true); }
+        return Promise.all(jobs).then(function(res){
+          var ok = true;
+          res.forEach(function(x){ if (!x) ok = false; });
+          if (ok) fbLiveClearedFor = id;
+          try { refreshConfirmedState(); } catch(e){}
+          return ok;
+        });
+      }
       function retireLiveRecord(id, sliceHint){
         if (id == null) return;
         id = String(id);
         if (fbLiveClearedFor === id) return;
         fbLiveClearedFor = id;
-        if (multiLiveOn()){
-          try { retireSlot(id, sliceHint || null).then(function(ok){ if (!ok && fbLiveClearedFor === id) fbLiveClearedFor = ''; }); } catch(e){}
-          delete fbLiveMap[id]; noteLiveSig();
-        }
-        if (fbRef && fbHotState && String(fbHotState.matchId) === id){
-          try {
-            var blankHot = hotPartOf(buildDeletedState());
-            fbRef.set(blankHot).then(function(){ fbHotState = deep(blankHot); refreshConfirmedState(); }, function(){ if (fbLiveClearedFor === id) fbLiveClearedFor = ''; });
-          } catch(e){}
-        }
-        try { refreshConfirmedState(); } catch(e){}
+        retireLiveRecordAsync(id, sliceHint).then(function(ok){ if (!ok && fbLiveClearedFor === id) fbLiveClearedFor = ''; });
       }
       /* The hot half of a split write (v297): the match's own slot
          at liveMatches/<matchId> — or, while the updated Rules are
@@ -9427,6 +9483,9 @@
            Scoring; until then the match stays running. */
         var fbEl = $('mcFinishBar');
         if (fbEl) fbEl.hidden = !(S.status === 'finished' && S.awaitingFinish);
+        /* Finish-state bar (v324): Finishing / Retry / Completed
+           while a completion waits for the server to confirm it. */
+        try { renderFinishState(); } catch(e){}
         /* End Innings bar — shown only while the completed 1st
            innings waits for the scorer's tap (see checkInningsEnd). */
         var eiBarEl = $('mcEndInnBar');
@@ -10284,6 +10343,13 @@
              a later one out. */
           try { releaseMatchSession(S.matchId); } catch(e){}
           try { archiveFinishedMatch(); } catch(e){}
+          /* Confirmed finish (v324): record the finish-pending
+             marker and drive the server filing + live-record
+             retirement to a confirmed end — the pad keeps showing
+             the Finishing / Retry state until Firebase confirms
+             both, so this tap can never look completed and then
+             come back live after an app close. */
+          beginConfirmedFinish();
           /* A match started from a tournament fixture belongs to
              the tournament: completing it files its result there
              (points table + statistics) automatically — no separate
@@ -10427,6 +10493,10 @@
         try { captureLastFinishedSingle(); } catch(e){}
         commit(auto ? 'Super Over finished: ' + so.resultText : so.resultText);
         try { archiveFinishedMatch(); } catch(e){}
+        /* Confirmed finish (v324): the Super Over finish completes
+           the match outright, so it gets the same awaited server
+           confirmation as a Finish Match tap. */
+        beginConfirmedFinish();
         /* Settling the tie completes a tournament match too: its
            result (Super Over included) joins the tournament
            automatically, like any Finish Match completion. */
@@ -10775,6 +10845,10 @@
         /* An abandoned match is a finished match too — it goes into
            permanent history with the score as it stood. */
         try { archiveFinishedMatch(); } catch(e){}
+        /* Confirmed finish (v324): an abandon completes the match
+           exactly like a Finish Match tap, so it gets the same
+           awaited server confirmation. */
+        beginConfirmedFinish();
         /* And into its tournament's results as a COMPLETED match
            (never an upcoming one), so the tournament Matches list
            shows it alongside the other finished matches. */
@@ -19703,6 +19777,10 @@
                  entries this account owns (and unowned ones) that
                  were stranded in the on-device backup publish now. */
               try { flushHistoryPending(); flushHistoryDeletes(); scheduleHistoryRetry(); } catch(e){}
+              /* Signing in can also un-block a confirmed finish
+                 (v324): a finish tapped while signed out completes
+                 now that an account is here to file it. */
+              try { tickPendingFinish(true); armFinishHeal(); } catch(e){}
             }
             try { applyOwnerLocks(); } catch(e){}
             try { renderHistory(); } catch(e){}
@@ -20889,7 +20967,12 @@
       }
       function ensureCurrentArchived(){ archiveFinishedMatch(); }
       function pushHistoryEntry(entry){
-        if (!histEntrySyncable(entry)){ scheduleHistoryRetry(); return; }  /* held (e.g. signed out) — stay enrolled in the retry engine until a sign-in un-blocks it */
+        /* Resolves true only when Firebase has confirmed the entry
+           (v324): the confirmed Finish flow awaits this promise, so
+           a match is never declared completed on an unconfirmed
+           write. Every older caller ignores the return value,
+           exactly as before. */
+        if (!histEntrySyncable(entry)){ scheduleHistoryRetry(); return Promise.resolve(false); }  /* held (e.g. signed out) — stay enrolled in the retry engine until a sign-in un-blocks it */
         /* An entry with no owner yet is claimed by the account
            filing it — the same first-signer-claims rule as the live
            match (maybeClaimOwnership), so a match scored before
@@ -20904,21 +20987,23 @@
           entry.ownerName = authDisplayName();
           saveHistLocal();
         }
-        if (!fbHistRef){ scheduleHistoryRetry(); return; }  /* flushed when Firebase connects */
+        if (!fbHistRef){ scheduleHistoryRetry(); return Promise.resolve(false); }  /* flushed when Firebase connects */
         var id = entry.id;
-        fbHistRef.child(id).set(entry).then(function(){
+        return fbHistRef.child(id).set(entry).then(function(){
           histConfirmed[id] = true; histFbError = '';
           histSeq++;
           histRetryDelayMs = 5000;
           saveHistLocal();
           try { renderHistory(); } catch(e){}
           try { renderLiveHome(); } catch(e){}
+          return true;
         }).catch(function(err){
           histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
           try { renderHistory(); } catch(e){}
           /* A failed write is never left sitting at "still syncing":
              it retries automatically until Firebase confirms it. */
           scheduleHistoryRetry();
+          return false;
         });
       }
       function flushHistoryPending(){
@@ -20927,6 +21012,164 @@
         Object.keys(HIST).forEach(function(id){
           if (!histConfirmed[id] && !histDeleted[id]) pushHistoryEntry(HIST[id]);
         });
+      }
+      /* ============================================================
+         CONFIRMED FINISH (v324)
+         The bug this closes: Finish Match used to flip the local
+         state to finished and fire the two server writes that make
+         it real — filing the match into matchHistory and retiring
+         its live record — without waiting for either. Closing the
+         app inside that window lost both writes, and the next
+         launch adopted the server's surviving live copy: a match
+         the scorer had finished (POTM picked, Completed on screen)
+         was LIVE again.
+         Now an explicit completion (Finish Match, Abandon, a Super
+         Over finish) records a finish-pending marker on this
+         device — the match id, the tap time and the exact History
+         entry built at that moment — and the completion is driven
+         to a confirmed end:
+           - the pad shows a persistent Finishing / Retry state
+             (toast() is a no-op in this build, so the state lives
+             in the page, not in a fading message) until Firebase
+             has confirmed the History entry AND the live record
+             is retired;
+           - the marker makes matchArchivedClosed treat the match
+             as closed on this device from the first paint of the
+             next launch, so its stale live copy is never adopted
+             or listed while the filing is still unconfirmed;
+           - a heal tick (live sync, sign-in, a 10-second timer
+             while any marker is pending) re-issues the filing and
+             the retirement idempotently until both confirm, then
+             clears the marker.
+         A marker exists ONLY where a completion was tapped under
+         this build — never from a merely-finished local backup —
+         and a live copy that came back to life after the tap
+         (resumed scoring: live status, newer timestamp) drops the
+         marker instead of being forced closed: resumed play wins.
+         ============================================================ */
+      var LS_FINISH_PENDING_KEY = 'live-cricket-score-finish-pending-v1';
+      var finishPending = loadFinishPending();
+      var finishFlow = null;   /* { id, phase } — the pad finish-state bar's state */
+      var finishTickBusy = false, finishTickAt = 0, finishHealTimer = null;
+      function loadFinishPending(){
+        try { var v = JSON.parse(localStorage.getItem(LS_FINISH_PENDING_KEY) || '{}'); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; } catch(e){ return {}; }
+      }
+      function saveFinishPending(){ try { localStorage.setItem(LS_FINISH_PENDING_KEY, JSON.stringify(finishPending)); } catch(e){} }
+      function markFinishPending(id, entry){
+        if (id == null || !entry) return;
+        finishPending[String(id)] = { at: Date.now(), entry: deep(entry) };
+        saveFinishPending();
+      }
+      function clearFinishPending(id){ if (finishPending[String(id)]){ delete finishPending[String(id)]; saveFinishPending(); } }
+      function setFinishFlow(id, phase){
+        finishFlow = { id: String(id), phase: phase };
+        try { renderScorerCentre(); } catch(e){}
+      }
+      /* The pad's finish-state bar: while a completion is
+         unconfirmed the scorer sees exactly where it stands, with
+         a Retry that re-drives the confirmation immediately. A
+         relaunched app with a finish still pending shows the
+         pending state even before any tick has run. */
+      function renderFinishState(){
+        var el = $('mcFinishState'); if (!el) return;
+        var f = null;
+        if (typeof S !== 'undefined' && S && S.matchId != null && S.status === 'finished' && !S.awaitingFinish){
+          if (finishFlow && finishFlow.id === String(S.matchId)) f = finishFlow;
+          else if (finishPending[String(S.matchId)]) f = { id: String(S.matchId), phase: 'pending' };
+        }
+        if (!f){ el.hidden = true; el.innerHTML = ''; return; }
+        el.hidden = false;
+        if (f.phase === 'working') el.innerHTML = '<div class="finish-state" role="status">⏳ Finishing match — saving the result to the server…</div>';
+        else if (f.phase === 'done') el.innerHTML = '<div class="finish-state done" role="status">✓ Match completed — the result is saved on the server, and the match is in Past Matches.</div>';
+        else el.innerHTML = '<div class="finish-state pending" role="status"><span>⚠️ This match is finished on this device, but the server has not confirmed it yet. It completes automatically when the connection allows — or retry now.</span><button type="button" class="btn gold sm" onclick="retryFinishNow()">Retry now</button></div>';
+      }
+      function retryFinishNow(){ tickPendingFinish(true); }
+      /* Drive one marked match to its confirmed end: file its
+         History entry (awaited), then retire its live record
+         (awaited). Resolves true only when both are confirmed —
+         or when the filing is confirmed and this account is not
+         one that may retire the record (the v299 display guards
+         and an entitled device's sweep cover that half). Every
+         step is idempotent, so the heal may re-run this freely. */
+      function confirmFinishFor(id){
+        id = String(id);
+        var fp = finishPending[id];
+        if (!fp) return Promise.resolve(true);
+        var entry = HIST[id] || fp.entry;
+        if (!entry) return Promise.resolve(false);
+        if (!HIST[id] && !isViewerSession()){ HIST[id] = entry; saveHistLocal(); }
+        var filed = histConfirmed[id] ? Promise.resolve(true) : pushHistoryEntry(entry);
+        return filed.then(function(ok){
+          if (!ok) return false;
+          if (typeof matchAccessFor === 'function' && !matchAccessFor(entry)) return true;
+          return retireLiveRecordAsync(id, entry);
+        }).then(function(ok){
+          if (ok) clearFinishPending(id);
+          return !!ok;
+        });
+      }
+      function settleOnePendingFinish(id){
+        var fp = finishPending[id];
+        if (!fp) return Promise.resolve();
+        /* Resumed play wins: a live copy of this match whose play
+           continued after the Finish tap (live status, newer
+           timestamp) means the match was taken back up — abandon
+           the finish, never force it closed. */
+        var live = null;
+        try { live = fbLiveMap[id] || ((fbHotState && String(fbHotState.matchId) === id) ? fbHotState : null); } catch(e){}
+        if (live && live.status !== 'finished' && typeof live.updatedAt === 'number' && live.updatedAt > (fp.at || 0)){
+          clearFinishPending(id);
+          if (finishFlow && finishFlow.id === id) finishFlow = null;
+          try { renderAll(false); } catch(e){}
+          return Promise.resolve();
+        }
+        if (!authUser) return Promise.resolve(); /* filing + retirement need a signed-in account; the sign-in hook ticks again */
+        var isPad = (typeof S !== 'undefined' && S && String(S.matchId) === id);
+        return confirmFinishFor(id).then(function(done){
+          if (done){
+            if (isPad) setFinishFlow(id, 'done');
+            try { renderLiveHome(); } catch(e){}
+            try { renderHistory(); } catch(e){}
+          } else if (isPad){
+            setFinishFlow(id, 'pending');
+          }
+        });
+      }
+      function tickPendingFinish(force){
+        if (typeof finishPending === 'undefined') return;
+        var ids = Object.keys(finishPending);
+        if (!ids.length || finishTickBusy) return;
+        var now = Date.now();
+        if (!force && now - finishTickAt < 5000) return;
+        finishTickAt = now;
+        finishTickBusy = true;
+        var chain = Promise.resolve();
+        ids.forEach(function(id){ chain = chain.then(function(){ return settleOnePendingFinish(id); }); });
+        chain.then(function(){ finishTickBusy = false; }, function(){ finishTickBusy = false; });
+      }
+      function armFinishHeal(){
+        if (finishHealTimer) return;
+        if (typeof finishPending === 'undefined' || !Object.keys(finishPending).length) return;
+        finishHealTimer = setTimeout(function(){
+          finishHealTimer = null;
+          tickPendingFinish(false);
+          armFinishHeal();
+        }, 10000);
+      }
+      /* Called by every explicit completion path (Finish Match,
+         Abandon, Super Over finish) right after the match has been
+         filed locally: record the marker from the entry just built
+         and start driving the confirmation. */
+      function beginConfirmedFinish(){
+        try {
+          if (typeof S === 'undefined' || !S || S.matchId == null) return;
+          var e = HIST[String(S.matchId)];
+          if (!e) return;
+          markFinishPending(S.matchId, e);
+          setFinishFlow(String(S.matchId), 'working');
+          tickPendingFinish(true);
+          armFinishHeal();
+        } catch(err){}
       }
       /* ---------- pending-write retry engine ----------
          A match whose Firebase write has not been confirmed is
