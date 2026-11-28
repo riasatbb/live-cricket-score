@@ -4923,7 +4923,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v334';
+      var APP_VERSION = 'v335';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18826,10 +18826,24 @@
         if (archiveView){
           var rv = archiveView.returnView || 'history';
           var rht = archiveView.returnHistTab;
+          /* A match opened through the View Match / Edit Match
+             chooser (cmChooseView) carries viaChooser: the chooser
+             is a step on the way in, so it is a step on the way
+             back too (v335). Back first lands on the page the
+             chooser was opened from, exactly as below, and then
+             the chooser is shown again over it at its first step —
+             one more Back there closes it onto that page. A match
+             opened any other way has no viaChooser and its Back is
+             unchanged. If the entry can no longer be edited (or is
+             gone), the chooser simply does not reappear and the
+             plain return stands. */
+          var viaCh = !!archiveView.viaChooser;
+          var chId = archiveView.id;
           archiveView = null; cbOversInnSel = -1;
           setView(rv);
           if (rv === 'history' && rht){ try { setHistTab(rht); } catch(e){} }
           try { renderAll(); } catch(e){}
+          if (viaCh){ try { var ce = cmEditableEntry(chId); if (ce) cmShowChooser(chId, ce); } catch(e){} }
           return;
         }
         /* From a match view (another in-progress match, or a
@@ -24007,9 +24021,20 @@
          here registers a one-shot return hook (pgBackFns) so its
          🔙 / ✕ lands back on the Edit Match page — one step back,
          never all the way to the start. Editors opened from
-         anywhere else have no hook and close as they always did. */
+         anywhere else have no hook and close as they always did.
+         View Match carries the same one-step rule (v335): the open
+         it starts is marked viaChooser, so the scoreboard's Back
+         lands on this chooser again (step 1, over the page it was
+         opened from) instead of skipping straight past it, and one
+         more Back closes the chooser onto that page. */
       var cmStep = 1;
       var cmOpenReadOnly = false;
+      /* Set by cmChooseView for the duration of the open it starts:
+         the match was reached THROUGH this chooser, so the
+         scoreboard's Back owes the reader the chooser again as a
+         return step (v335) — copied onto archiveView as viaChooser,
+         exactly the way cmOpenReadOnly is copied as readOnly. */
+      var cmViaChooser = false;
       var pgBackFns = {};
       function pgFireBack(key){
         var f = pgBackFns[key]; pgBackFns[key] = null;
@@ -24066,8 +24091,10 @@
            suppressed for a read-only opening) — editing starts
            only from the Edit Match page. */
         cmOpenReadOnly = true;
+        cmViaChooser = true;
         openResultMatch(id);
         cmOpenReadOnly = false;
+        cmViaChooser = false;
       }
       function cmDoEdit(kind){
         var id = cmId;
@@ -24107,6 +24134,7 @@
         closeHistoryMatch();
         archiveView = { id: id, entry: e, returnView: (typeof currentViewName !== 'undefined' && currentViewName && currentViewName !== 'scoreboard') ? currentViewName : 'live', returnHistTab: null, state: archiveDisplayState(e) };
         if (typeof cmOpenReadOnly !== 'undefined' && cmOpenReadOnly) archiveView.readOnly = true;
+        if (typeof cmViaChooser !== 'undefined' && cmViaChooser) archiveView.viaChooser = true;
         cbOversInnSel = -1;
         document.body.classList.add('viewer-mode');
         document.body.classList.add('viewer-inpage');
@@ -24227,6 +24255,7 @@
         var ret = (currentViewName && currentViewName !== 'scoreboard') ? currentViewName : (archiveView ? archiveView.returnView : 'history');
         archiveView = { id: id, entry: e, returnView: ret, returnHistTab: (ret === 'history' ? histTab : null), state: archiveDisplayState(e) };
         if (typeof cmOpenReadOnly !== 'undefined' && cmOpenReadOnly) archiveView.readOnly = true;
+        if (typeof cmViaChooser !== 'undefined' && cmViaChooser) archiveView.viaChooser = true;
         cbOversInnSel = -1;
         setView('scoreboard');
         /* An archived match is a completed match: it opens on the
