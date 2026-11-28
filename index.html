@@ -4879,7 +4879,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v320';
+      var APP_VERSION = 'v321';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18038,13 +18038,20 @@
          fire (or cancel) the sign-in popup; a signed-in viewer
          signs out from the card's corner button. */
       var homeProfileTarget = null;
-      var homeProfileCache = { stamp: '', rec: null };
-      /* v320: the last real figures this card showed, per player.
-         A later computation that finds NO record (the book still
-         arriving, a History snapshot mid-merge) must never paint
-         over figures already shown with 0/0/0 — the card keeps the
-         last good ones until a fresh computation replaces them. */
-      var homeProfileLastGood = { pid: '', rec: null };
+      /* v321: the card carries NO cached computation at all — no
+         stamp, no last-good fallback. Every render computes the
+         figures fresh, with the exact expression the Player
+         Profile itself uses (aggregatePlayers over
+         allRecordMatches, filtered by Player ID — see
+         renderPlayerProfile). The v320 stamp cache, and the
+         cached / last-good machinery around it, let an early
+         computation over a still-arriving book (the live match
+         alone: 1/22/0) sit on the card forever, even though
+         History was present in the same session and the Profile
+         computed the full figures (10/51/4) from it. With no
+         cache there is nothing for a partial result to hide
+         behind: the next render after any History arrival shows
+         the real totals. */
       /* v320: the last sign-in failure, written on the guest card
          itself. Every failure path used to report through toast(),
          which is a no-op in this app by the owner's rule — so a
@@ -18055,23 +18062,6 @@
       function noteSignInError(msg){
         homeSignInError = msg || '';
         try { renderLiveHome(); } catch(e){}
-      }
-      /* v320: a cheap signature of the player registry (the email
-         links and the (team, name) -> Player ID mappings). The card
-         resolves its player and its aggregate's IDs through this
-         registry, so a registry arrival or edit must move the
-         card's cache stamp just as a History change does. */
-      function homeRegSig(){
-        var s = '';
-        try {
-          ensurePlayerArrays();
-          s = S.players.length + '/' + S.playerIds.length;
-          for (var i = 0; i < S.playerIds.length; i++){ var m = S.playerIds[i]; if (m) s += '|' + (m.t || '') + '~' + (m.n || '') + '~' + (m.id || ''); }
-          for (var j = 0; j < S.players.length; j++){ var q = S.players[j]; if (q) s += '|' + (q.id || '') + '~' + (q.email || '') + '~' + (q.name || ''); }
-        } catch(e){}
-        var h = 0;
-        for (var k = 0; k < s.length; k++){ h = ((h << 5) - h + s.charCodeAt(k)) | 0; }
-        return s.length + ':' + h;
       }
       function homeProfileHTML(){
         if (!authUser){
@@ -18100,34 +18090,19 @@
            link (openMyProfile). */
         var rec = null;
         if (pid){
-          /* Career totals are recomputed only when the record
-             could have moved — this section re-renders with every
-             server snapshot while a match is being scored. The
-             stamp (v320) is content-sensitive: the record-book
-             sequence (histSeq — every History arrival, replacement
-             or removal moves it, even at the same entry count),
-             the registry signature (the email link and the ID
-             mappings the aggregate resolves through), the live
-             match's own id and status, and BOTH innings' figures
-             including the previous innings' wickets, which the
-             v314 stamp omitted. The v314 stamp — pid, entry count
-             and the live figures only — let an early computation
-             over a still-arriving book sit in the cache forever:
-             History landing later changed none of its parts. */
+          /* v321: computed FRESH on every render, with the Player
+             Profile's own expression — aggregatePlayers over
+             allRecordMatches(), filtered by this Player ID (the
+             same lines renderPlayerProfile runs at tap time).
+             There is deliberately no cache, no stamp comparison
+             and no last-good fallback: whatever the record book
+             holds at this render is what the card states, so a
+             History arrival can never be masked by an earlier,
+             partial computation. */
           try {
-            var recArr = allRecordMatches();
-            var stamp = pid + '|' + histSeq + '|' + recArr.length + '|' + homeRegSig()
-              + '|' + (S.matchId || '') + ':' + (S.status || '')
-              + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '')
-              + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs + ':' + S.prevInnings.wickets) : '');
-            if (homeProfileCache.stamp === stamp) rec = homeProfileCache.rec;
-            else {
-              var recs = aggregatePlayers(recArr).filter(function(r){ return r.pid === pid; });
-              rec = recs[0] || null;
-              homeProfileCache = { stamp: stamp, rec: rec };
-            }
+            var recs = aggregatePlayers(allRecordMatches()).filter(function(r){ return r.pid === pid; });
+            rec = recs[0] || null;
           } catch(e){}
-          if (rec && rec.matches > 0) homeProfileLastGood = { pid: pid, rec: rec };
           if (rec){ name = rec.name || name; team = rec.team || ''; }
           if (!team){
             try {
@@ -18145,21 +18120,27 @@
           ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
           : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
         function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
-        /* v320: no record found for a linked player is NOT the
-           same as a record of zero. Until History has synced once
-           in this session the book may simply not have arrived —
-           the card says so ('…') instead of stating a false 0/0/0;
-           figures already shown for this player are never painted
-           back over with either (homeProfileLastGood). Only a
-           synced book with no entry for the player earns real
-           zeros. */
-        var shownRec = rec || (homeProfileLastGood.pid === pid ? homeProfileLastGood.rec : null);
-        var stats = shownRec
-          ? stat(shownRec.matches, 'Matches') + stat(shownRec.runs, 'Runs') + stat(shownRec.wkts, 'Wickets')
-          : (pid ? (histSyncedOnce
-              ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets')
-              : stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets'))
-            : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
+        /* v321: the '…' gate is checked BEFORE the fresh record
+           is displayed, and it gates the DISPLAY only — never the
+           computation. Until the History listener has delivered
+           a confirmed snapshot in this session, the book may hold
+           nothing but the live match, whose partial figures
+           (1/22/0) are NOT a career record: the card shows '…'
+           instead. The v320 order was the bug — a non-null
+           partial record (the live entry alone always yields one)
+           took precedence over the '…' branch, so the gate never
+           fired and the partial figures were what every later
+           render kept restating. Once History has synced, the
+           fresh computation above is shown exactly as computed;
+           only a synced book with no entry for the player earns
+           real zeros. */
+        var stats = !pid
+          ? stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets')
+          : (!histSyncedOnce
+              ? stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets')
+              : (rec
+                  ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
+                  : stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets')));
         return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
           + '<div class="hm-profile" role="button" tabindex="0" aria-label="Open my player profile" onclick="homeProfileTap()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();homeProfileTap();}">'
           + '<span class="hm-pf-photo">' + face + '</span>'
@@ -20633,13 +20614,13 @@
          lists or resurrects that match again, ever. */
       var histGone = {};
       var fbHistRef = null, fbDelRef = null, histSyncedOnce = false, histFbError = '';
-      /* v320: bumped on EVERY change to the record book (per-entry
+      /* Bumped on EVERY change to the record book (per-entry
          upsert / removal, the bulk snapshot merge, the tombstone
          merge, the key reconciliation, a locally filed match being
-         confirmed). The home Profile card folds it into its cache
-         stamp, so a History arrival that replaces entries at the
-         same count can no longer leave a stale cached aggregate —
-         the v314 stamp counted entries but never looked inside. */
+         confirmed). v320 folded it into the home Profile card's
+         cache stamp; v321 removed that cache entirely — the card
+         recomputes fresh on every render — and the counter stays
+         as a plain record-book change count. */
       var histSeq = 0;
       var repTn = '', repTeam = '', repPlayer = '', repSig = '';
 
@@ -21029,12 +21010,22 @@
         histSeq++;
         histConfirmed[id] = true;
         if (!isHistGone(id) && e && typeof e === 'object'){ e.id = id; HIST[id] = e; }
+        /* v321: the home Profile card re-renders DIRECTLY from
+           this confirmed-data callback, not only through the
+           debounced bulk pass in afterHistRemoteChange — the card
+           has no cache any more, so this render already states
+           the figures from the book as it now stands, and the
+           final upsert of the initial burst leaves the full
+           career totals on the card with no tap needed. */
+        try { renderLiveHome(); } catch(e){}
         afterHistRemoteChange();
       }
       function histChildRemoved(id){
         id = String(id);
         fbLastSnapAt = Date.now();
         histSeq++;
+        /* v321: direct home re-render, as in histChildUpsert. */
+        try { renderLiveHome(); } catch(e){}
         /* A match Firebase used to confirm but no longer holds was
            deleted (by the scorer, from any device) — it must vanish
            here too, instead of living on forever in this device's
