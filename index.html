@@ -1659,6 +1659,10 @@
       .hm-pf-stat b{display:block;font-size:30px;font-weight:800;margin-top:1px;font-variant-numeric:tabular-nums;line-height:1.1}
       .hm-pf-signout{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:99px;font-size:11.5px;font-weight:700;padding:4px 11px;cursor:pointer}
       .hm-pf-signin{background:#fff;color:#065f56;border:none;border-radius:99px;font-weight:800;font-size:13.5px;padding:9px 16px;display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+      /* v320: a sign-in failure is written on the guest card itself
+         (toast is a no-op in this app, so a failure reported only
+         there was invisible). */
+      .hm-pf-err{display:block;margin-top:10px;font-size:12.5px;font-weight:600;line-height:1.45;color:#ffd9d9;background:rgba(120,10,10,.35);border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:8px 10px}
       /* Tournament banner cards */
       .hm-tncard{display:block;width:100%;height:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0;cursor:pointer;color:var(--ink)}
       .hm-tncard:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -4875,7 +4879,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v314';
+      var APP_VERSION = 'v320';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -18035,6 +18039,40 @@
          signs out from the card's corner button. */
       var homeProfileTarget = null;
       var homeProfileCache = { stamp: '', rec: null };
+      /* v320: the last real figures this card showed, per player.
+         A later computation that finds NO record (the book still
+         arriving, a History snapshot mid-merge) must never paint
+         over figures already shown with 0/0/0 — the card keeps the
+         last good ones until a fresh computation replaces them. */
+      var homeProfileLastGood = { pid: '', rec: null };
+      /* v320: the last sign-in failure, written on the guest card
+         itself. Every failure path used to report through toast(),
+         which is a no-op in this app by the owner's rule — so a
+         failed sign-in looked exactly like a tap that did nothing.
+         The card is the surface the tap happened on, so the card
+         carries the failure. */
+      var homeSignInError = '';
+      function noteSignInError(msg){
+        homeSignInError = msg || '';
+        try { renderLiveHome(); } catch(e){}
+      }
+      /* v320: a cheap signature of the player registry (the email
+         links and the (team, name) -> Player ID mappings). The card
+         resolves its player and its aggregate's IDs through this
+         registry, so a registry arrival or edit must move the
+         card's cache stamp just as a History change does. */
+      function homeRegSig(){
+        var s = '';
+        try {
+          ensurePlayerArrays();
+          s = S.players.length + '/' + S.playerIds.length;
+          for (var i = 0; i < S.playerIds.length; i++){ var m = S.playerIds[i]; if (m) s += '|' + (m.t || '') + '~' + (m.n || '') + '~' + (m.id || ''); }
+          for (var j = 0; j < S.players.length; j++){ var q = S.players[j]; if (q) s += '|' + (q.id || '') + '~' + (q.email || '') + '~' + (q.name || ''); }
+        } catch(e){}
+        var h = 0;
+        for (var k = 0; k < s.length; k++){ h = ((h << 5) - h + s.charCodeAt(k)) | 0; }
+        return s.length + ':' + h;
+      }
       function homeProfileHTML(){
         if (!authUser){
           homeProfileTarget = null;
@@ -18043,6 +18081,7 @@
             + '<span class="hm-pf-photo"><span class="hm-pf-ini" aria-hidden="true">👤</span></span>'
             + '<span class="hm-pf-main"><span class="hm-pf-name">Guest mode</span><span class="hm-pf-sub">View only</span><span class="hm-pf-rule"></span>'
             + '<button type="button" class="hm-pf-signin" onclick="event.stopPropagation();signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button>'
+            + (homeSignInError ? '<span class="hm-pf-err">' + esc(homeSignInError) + '</span>' : '')
             + '</span></div></div>';
         }
         var p = null;
@@ -18062,12 +18101,25 @@
         var rec = null;
         if (pid){
           /* Career totals are recomputed only when the record
-             could have moved (a new recorded match, or the live
-             match's figures) — this section re-renders with every
-             server snapshot while a match is being scored. */
+             could have moved — this section re-renders with every
+             server snapshot while a match is being scored. The
+             stamp (v320) is content-sensitive: the record-book
+             sequence (histSeq — every History arrival, replacement
+             or removal moves it, even at the same entry count),
+             the registry signature (the email link and the ID
+             mappings the aggregate resolves through), the live
+             match's own id and status, and BOTH innings' figures
+             including the previous innings' wickets, which the
+             v314 stamp omitted. The v314 stamp — pid, entry count
+             and the live figures only — let an early computation
+             over a still-arriving book sit in the cache forever:
+             History landing later changed none of its parts. */
           try {
             var recArr = allRecordMatches();
-            var stamp = pid + '|' + recArr.length + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '') + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs) : '');
+            var stamp = pid + '|' + histSeq + '|' + recArr.length + '|' + homeRegSig()
+              + '|' + (S.matchId || '') + ':' + (S.status || '')
+              + '|' + (S.current ? (S.current.legalBalls + ':' + S.current.runs + ':' + S.current.wickets) : '')
+              + '|' + (S.prevInnings ? (S.prevInnings.legalBalls + ':' + S.prevInnings.runs + ':' + S.prevInnings.wickets) : '');
             if (homeProfileCache.stamp === stamp) rec = homeProfileCache.rec;
             else {
               var recs = aggregatePlayers(recArr).filter(function(r){ return r.pid === pid; });
@@ -18075,6 +18127,7 @@
               homeProfileCache = { stamp: stamp, rec: rec };
             }
           } catch(e){}
+          if (rec && rec.matches > 0) homeProfileLastGood = { pid: pid, rec: rec };
           if (rec){ name = rec.name || name; team = rec.team || ''; }
           if (!team){
             try {
@@ -18092,9 +18145,21 @@
           ? '<img src="' + esc(photo) + '" alt="" referrerpolicy="no-referrer" />'
           : '<span class="hm-pf-ini" aria-hidden="true">' + esc(initialsOf(dispName)) + '</span>';
         function stat(v, l){ return '<span class="hm-pf-stat"><span>' + l + '</span><b>' + v + '</b></span>'; }
-        var stats = rec
-          ? stat(rec.matches, 'Matches') + stat(rec.runs, 'Runs') + stat(rec.wkts, 'Wickets')
-          : (pid ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets') : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
+        /* v320: no record found for a linked player is NOT the
+           same as a record of zero. Until History has synced once
+           in this session the book may simply not have arrived —
+           the card says so ('…') instead of stating a false 0/0/0;
+           figures already shown for this player are never painted
+           back over with either (homeProfileLastGood). Only a
+           synced book with no entry for the player earns real
+           zeros. */
+        var shownRec = rec || (homeProfileLastGood.pid === pid ? homeProfileLastGood.rec : null);
+        var stats = shownRec
+          ? stat(shownRec.matches, 'Matches') + stat(shownRec.runs, 'Runs') + stat(shownRec.wkts, 'Wickets')
+          : (pid ? (histSyncedOnce
+              ? stat(0, 'Matches') + stat(0, 'Runs') + stat(0, 'Wickets')
+              : stat('…', 'Matches') + stat('…', 'Runs') + stat('…', 'Wickets'))
+            : stat('—', 'Matches') + stat('—', 'Runs') + stat('—', 'Wickets'));
         return '<div class="hm-sec"><div class="hm-sec-head"><h3>Profile</h3></div>'
           + '<div class="hm-profile" role="button" tabindex="0" aria-label="Open my player profile" onclick="homeProfileTap()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();homeProfileTap();}">'
           + '<span class="hm-pf-photo">' + face + '</span>'
@@ -19391,7 +19456,7 @@
         /* If the shallow read cannot complete (offline, blocked),
            do not leave the History status claiming "syncing"
            forever — the entries themselves still arrive per child. */
-        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} } }, 8000);
+        setTimeout(function(){ if (fbHistRef === myHistRef && !histSyncedOnce){ histSyncedOnce = true; try { renderHistory(); } catch(e){} try { renderLiveHome(); } catch(e){} } }, 8000);
         }
         function attachDeletedListener(){
         /* Delete tombstones live at their own path, matchHistoryDeleted —
@@ -19623,6 +19688,7 @@
           fbAuth = fbApp.auth();
           fbAuth.onAuthStateChanged(function(user){
             authUser = user || null;
+            if (authUser) homeSignInError = '';   /* v320: a landed sign-in clears the guest card's failure note */
             renderAuthBar();
             try { applyAdminUi(); } catch(e){}
             if (authUser){
@@ -19656,7 +19722,7 @@
           if (fbAuth.getRedirectResult){
             fbAuth.getRedirectResult().then(function(res){
               if (res && res.user) toast('✓ Signed in as ' + (res.user.displayName || res.user.email || 'Google user'));
-            }).catch(function(err){ toast('⚠️ Google sign-in did not complete: ' + ((err && err.message) ? err.message : err)); });
+            }).catch(function(err){ noteSignInError('⚠️ Google sign-in did not complete: ' + ((err && err.message) ? err.message : err)); });
           }
         } catch(e){ fbAuth = null; renderAuthBar(); }
       }
@@ -19781,12 +19847,17 @@
             + '<button type="button" class="btn ghost sm" onclick="renderAuthBar()">Back</button></div>';
         });
         toast('⚠️ In-app Google sign-in is unavailable in this app build — tap "Open in browser to sign in" to sign in from your browser instead.');
+        /* v320: the same failure on the home guest card, whose
+           button is where the tap usually happens (the auth-bar
+           slots above are not on every surface). */
+        noteSignInError('⚠️ Google sign-in is unavailable in this app build — open the control page in your browser to sign in instead.');
       }
       function signInWithGoogle(){
+        if (homeSignInError){ homeSignInError = ''; try { renderLiveHome(); } catch(e){} }   /* v320: a fresh attempt clears the guest card's last failure */
         if (!fbAuth){
-          if (!fbApp) toast('⏳ Firebase is still connecting — try signing in again in a moment.');
-          else if (!window.__fbAuthLibReady && !window.__fbLibFailed) toast('⏳ Google sign-in is still loading — it runs separately from the live connection now, so give it a moment and tap again.');
-          else toast('⚠️ Google sign-in is unavailable right now — the sign-in library did not load. Live scores still work; check the connection and reload the page.');
+          if (!fbApp) noteSignInError('⏳ Firebase is still connecting — try signing in again in a moment.');
+          else if (!window.__fbAuthLibReady && !window.__fbLibFailed) noteSignInError('⏳ Google sign-in is still loading — it runs separately from the live connection now, so give it a moment and tap again.');
+          else noteSignInError('⚠️ Google sign-in is unavailable right now — the sign-in library did not load. Live scores still work; check the connection and reload the page.');
           return;
         }
         var nativeAuth = nativeAuthPlugin();
@@ -19804,7 +19875,7 @@
               var msg = (err && err.message) ? err.message : String(err);
               if (/cancel|12501|popup-closed/i.test(code + ' ' + msg)){ toast('Google sign-in was cancelled.'); return; }
               if (isNativePluginCrash(msg)){ showNativeSignInFallback(); return; }
-              toast('⚠️ Google sign-in failed in the app: ' + msg);
+              noteSignInError('⚠️ Google sign-in failed in the app: ' + msg);
             });
           });
           return;
@@ -19828,11 +19899,11 @@
           var code = (err && err.code) ? err.code : '';
           if (code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user' || code === 'auth/operation-not-supported-in-this-environment' || code === 'auth/cancelled-popup-request'){
             toast('Opening Google sign-in…');
-            fbAuth.signInWithRedirect(provider).catch(function(e2){ toast('⚠️ Google sign-in failed: ' + ((e2 && e2.message) ? e2.message : e2)); });
+            fbAuth.signInWithRedirect(provider).catch(function(e2){ noteSignInError('⚠️ Google sign-in failed: ' + ((e2 && e2.message) ? e2.message : e2)); });
           } else if (code === 'auth/unauthorized-domain'){
-            toast('⚠️ This domain is not authorized for Google sign-in — add it in Firebase Console → Authentication → Settings → Authorized domains (see Firebase Setup, step 2).');
+            noteSignInError('⚠️ This domain is not authorized for Google sign-in — add it in Firebase Console → Authentication → Settings → Authorized domains (see Firebase Setup, step 2).');
           } else {
-            toast('⚠️ Google sign-in failed: ' + ((err && err.message) ? err.message : err));
+            noteSignInError('⚠️ Google sign-in failed: ' + ((err && err.message) ? err.message : err));
           }
         });
       }
@@ -20562,6 +20633,14 @@
          lists or resurrects that match again, ever. */
       var histGone = {};
       var fbHistRef = null, fbDelRef = null, histSyncedOnce = false, histFbError = '';
+      /* v320: bumped on EVERY change to the record book (per-entry
+         upsert / removal, the bulk snapshot merge, the tombstone
+         merge, the key reconciliation, a locally filed match being
+         confirmed). The home Profile card folds it into its cache
+         stamp, so a History arrival that replaces entries at the
+         same count can no longer leave a stale cached aggregate —
+         the v314 stamp counted entries but never looked inside. */
+      var histSeq = 0;
       var repTn = '', repTeam = '', repPlayer = '', repSig = '';
 
       /* ---------- device viewer flag ----------
@@ -20819,9 +20898,11 @@
         var id = entry.id;
         fbHistRef.child(id).set(entry).then(function(){
           histConfirmed[id] = true; histFbError = '';
+          histSeq++;
           histRetryDelayMs = 5000;
           saveHistLocal();
           try { renderHistory(); } catch(e){}
+          try { renderLiveHome(); } catch(e){}
         }).catch(function(err){
           histFbError = (err && err.message) ? err.message : String(err || 'unknown error');
           try { renderHistory(); } catch(e){}
@@ -20933,6 +21014,10 @@
           try { stampTournamentIds(); } catch(e){}
           try { repairMatchAttribution(); } catch(e){}
           try { renderHistory(); } catch(e){}
+          /* v320: the home Profile card reads this same book — a
+             History arrival must re-render it too, or its figures
+             stay at whatever the first, pre-History render left. */
+          try { renderLiveHome(); } catch(e){}
           flushHistoryPending();
           flushHistoryDeletes();
           scheduleHistoryRetry();
@@ -20941,6 +21026,7 @@
       function histChildUpsert(id, e){
         id = String(id);
         fbLastSnapAt = Date.now();
+        histSeq++;
         histConfirmed[id] = true;
         if (!isHistGone(id) && e && typeof e === 'object'){ e.id = id; HIST[id] = e; }
         afterHistRemoteChange();
@@ -20948,6 +21034,7 @@
       function histChildRemoved(id){
         id = String(id);
         fbLastSnapAt = Date.now();
+        histSeq++;
         /* A match Firebase used to confirm but no longer holds was
            deleted (by the scorer, from any device) — it must vanish
            here too, instead of living on forever in this device's
@@ -20975,13 +21062,18 @@
         var url = base.replace(/\/+$/, '') + '/matchHistory.json?shallow=true';
         fetch(url).then(function(r){ return (r && r.ok) ? r.json() : null; }).then(function(keys){
           histSyncedOnce = true;
-          if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} return; }
+          histSeq++;
+          if (!keys || typeof keys !== 'object'){ try { renderHistory(); } catch(e){} try { renderLiveHome(); } catch(e){} return; }
           var changed = false;
           Object.keys(HIST).forEach(function(id){
             if (histConfirmed[id] && !keys[id] && !histDeleted[id]){ delete HIST[id]; delete histConfirmed[id]; changed = true; }
           });
           if (changed){ saveHistLocal(); try { renderHistory(); } catch(e){} }
-        }).catch(function(){ histSyncedOnce = true; });
+          /* v320: reconciliation completing is the moment the book
+             is known — the home Profile card settles with it (its
+             '…' state resolves) even when nothing was dropped. */
+          try { renderLiveHome(); } catch(e){}
+        }).catch(function(){ histSyncedOnce = true; try { renderLiveHome(); } catch(e){} });
       }
       /* ---------- authoritative refresh ----------
          Firebase is the truth on every open AND on every return to
@@ -21047,6 +21139,7 @@
       window.addEventListener('focus', function(){ refreshFromFirebaseNow(); });
       function mergeRemoteHistory(val){
         histSyncedOnce = true;
+        histSeq++;
         fbLastSnapAt = Date.now();
         var remote = (val && typeof val === 'object') ? val : {};
         /* Firebase is AUTHORITATIVE for history: whatever the
@@ -21084,6 +21177,9 @@
            a later tournament delete can cascade to them. */
         try { stampTournamentIds(); } catch(e){}
         try { renderHistory(); } catch(e){}
+        /* v320: the bulk merge is a History arrival too — the home
+           Profile card re-renders with the completed book. */
+        try { renderLiveHome(); } catch(e){}
         scheduleHistoryRetry();
       }
       /* ---------- server tombstones (matchHistoryDeleted) ----------
@@ -21118,6 +21214,7 @@
           if (histGone[id] && !remote[id] && !histDeleted[id]){ delete histGone[id]; changed = true; }
         });
         if (changed){
+          histSeq++;
           saveHistLocal();
           try { renderHistory(); } catch(e){}
           try { renderLiveHome(); } catch(e){}
