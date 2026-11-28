@@ -325,6 +325,7 @@
       .sync-gate{display:none;background:#e8eff8;border:1px solid #b9d2ea;color:#175d8f;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px}
       @media (prefers-color-scheme: dark){.sync-gate{background:#16283a;color:#a8cdf0;border-color:#2c4a68}}
       .sync-gate.show{display:block}
+      #omTakeoverBtn{background:#b3261e;border-color:#8f1d17;color:#fff}
       /* ---------- accounts & ownership (Google sign-in) ---------- */
       .authbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px}
       .authbar .ab-main{flex:1;min-width:200px;display:flex;gap:11px;align-items:center}
@@ -3564,6 +3565,7 @@
           <div class="om-actions" id="omLiveActions" hidden>
             <button type="button" class="btn gold" onclick="lmSave()">Save</button>
             <button type="button" class="btn" onclick="lmDoScoring()">Do Scoring</button>
+            <button type="button" class="btn" id="omTakeoverBtn" hidden onclick="lmTakeOver()">Take over scoring</button>
           </div>
           <div class="om-viewmatch" id="omViewMatchWrap" hidden>
             <button type="button" class="btn ghost" onclick="lmViewMatch()">View Match</button>
@@ -4889,7 +4891,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v324';
+      var APP_VERSION = 'v326';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -5368,6 +5370,10 @@
         var now = Date.now();
         document.querySelectorAll('.conn-elapsed').forEach(function(el){ el.textContent = Math.max(0, Math.round((now - fbStageAt) / 1000)) + 's'; });
         if (fbRetryAt) document.querySelectorAll('.conn-countdown').forEach(function(el){ el.textContent = Math.max(0, Math.ceil((fbRetryAt - now) / 1000)) + 's'; });
+        /* The pad gate note follows the connection attempt on the
+           same tick: plain "Connecting…" at first, the named-stage
+           stuck variant with Retry once it runs long (v325). */
+        try { renderSyncGate(); } catch(e){}
         /* While the first connection is still being attempted, the
            pill itself carries the current stage, so "Connecting…"
            visibly shows WHAT it is doing (v237; per-stage label
@@ -5400,11 +5406,47 @@
       }, 1000);
 
       /* ---------- scoring gate (locked until first Firebase read) ---------- */
+      var fbConnectStartAt = 0; /* when the current connection attempt began — drives the gate's "stuck" threshold */
+      var syncGateKey = '';     /* the gate-note variant currently painted — the 1s ticker re-renders only on a change */
+      /* The pad's gate note tells the truth about WHY the pad is
+         waiting (v325). It appears ONLY while a Firebase connection
+         attempt is genuinely still unanswered: a pad locked by the
+         ownership / session rules carries its reason in the owner
+         note below it, and painting "Connecting to Firebase…" over
+         that lock — forever, with no way out — was the stuck-pad
+         bug: the real blocker was the lock (or a sign-in that had
+         not landed), and the note never changed. Past ~12 s
+         unanswered the note names the stage it is stuck in, says
+         when the Google sign-in has not landed either, and offers
+         Retry — the same retry the connection logic itself runs. */
+      function renderSyncGate(){
+        var note = $('syncGateNote'); if (!note) return;
+        if (!(fbConnecting && !fbReady)){
+          if (note.classList.contains('show')) note.classList.remove('show');
+          if (syncGateKey){ syncGateKey = ''; note.textContent = '⏳ Connecting to Firebase…'; }
+          return;
+        }
+        note.classList.add('show');
+        var stuck = (Date.now() - (fbConnectStartAt || fbStageAt)) > 12000;
+        var key = stuck ? ('stuck:' + fbStage + ':' + (authUser ? 'in' : 'out')) : 'wait';
+        if (key === syncGateKey) return;
+        syncGateKey = key;
+        if (!stuck){ note.textContent = '⏳ Connecting to Firebase…'; return; }
+        var stage = fbStageLabel();
+        var html = '<div>⏳ Still connecting to Firebase — ' + esc(stage.charAt(0).toLowerCase() + stage.slice(1)) + '. This is taking longer than usual: check the internet connection, or tap Retry now. Scoring unlocks as soon as Firebase answers.</div>';
+        if (!authUser) html += '<div style="margin-top:6px">Your Google sign-in has not landed on this device yet either — scoring stays locked until it does.</div>';
+        html += '<button type="button" class="btn sm" style="margin-top:8px" onclick="retryFirebaseConnection()">↻ Retry now</button>';
+        note.innerHTML = html;
+      }
       function setPadLocked(locked){
-        var note = $('syncGateNote'); if (note) note.classList.toggle('show', !!locked);
+        var note = $('syncGateNote');
+        renderSyncGate();
         var padCard = note ? (note.closest('.mc') || note.closest('.card')) : null;
         if (padCard){
           padCard.querySelectorAll('button').forEach(function(b){
+            /* The gate / lock notes carry their own way out (Retry
+               now) — those buttons stay tappable while locked. */
+            if (b.closest && (b.closest('#syncGateNote') || b.closest('#ownerLockNote'))) return;
             /* The Save Result button's enabled state belongs to
                renderTournament (finished two-innings matches only) —
                unlocking the pad must not re-enable it mid-match. The
@@ -5549,6 +5591,7 @@
       var fbSessionRef = null;    /* the matchSessions node (v298) */
       var fbSessionMap = {};      /* matchId (string) -> { uid, email, name, at } */
       var fbSessionDenied = false; /* matchSessions refused by the Rules — the session lock is not in force */
+      var fbSessionNeedsAuth = false; /* matchSessions refused only because this device is not signed in yet — NOT a Rules problem (v325) */
       function matchSession(id){
         if (id == null) return null;
         var s = fbSessionMap[String(id)];
@@ -5562,7 +5605,7 @@
         if (!fbApp || id == null) return;
         try {
           fbApp.database().ref('matchSessions').child(String(id)).set(val).catch(function(err){
-            if (err && /permission/i.test(err.message || '')) fbSessionDenied = true;
+            if (err && /permission/i.test(err.message || '')){ if (authUser) fbSessionDenied = true; else fbSessionNeedsAuth = true; }
           });
         } catch(e){}
         /* This device's own map follows its own write at once, so
@@ -5584,15 +5627,23 @@
           myRef.on('value', function(snap){
             if (fbSessionRef !== myRef) return;
             fbSessionDenied = false;
+            fbSessionNeedsAuth = false;
             fbLastSnapAt = Date.now();
             fbSessionMap = snap.val() || {};
             try { applyOwnerLocks(); } catch(e){}
             if (typeof currentViewName !== 'undefined' && currentViewName === 'openmatch' && typeof om !== 'undefined' && om.liveId){ try { lmRenderLiveStatus(); } catch(e){} }
           }, function(err){
             if (fbSessionRef !== myRef) return;
-            fbSessionDenied = true;
+            /* A refusal while this device is not signed in yet is
+               the Rules doing their job (the node needs an account),
+               not missing Rules — latching fbSessionDenied there
+               painted the "publish the updated Rules" warning on
+               every signed-out / still-signing-in device and hid
+               the real reason (v325). The sign-in handler re-attaches
+               this listener, and its first answer clears the flag. */
+            if (authUser) fbSessionDenied = true; else fbSessionNeedsAuth = true;
           });
-        } catch(e){ fbSessionRef = null; fbSessionDenied = true; }
+        } catch(e){ fbSessionRef = null; if (authUser) fbSessionDenied = true; else fbSessionNeedsAuth = true; }
       }
       function claimMatchSession(id){
         if (!authUser || id == null) return;
@@ -17957,27 +18008,39 @@
            and the Profile and Tournaments sections are appended
            after them below. */
         var slides = [];
-        if (!curDone) slides.push(curRow);
-        /* Every OTHER match in progress is listed too, right under
-           the one on the pad — several matches can be on at once,
-           and each is simply In Progress (its own red pill, its own
-           tappable row), never a second-class "parked" entry. Since
-           v297 that means every match live in its own server slot
-           (liveSlices — scored right now, on any device), then the
-           parked ones. A match live in a slot is never ALSO shown
+        /* v326: every match in progress — the one on the pad, the
+           ones live in their own server slots (liveSlices, v297)
+           and the parked ones — forms ONE group ordered by when
+           each match STARTED: a matchId is stamped with Date.now()
+           when its match is created, so the largest id belongs to
+           the most recently started match, and that match leads
+           the carousel; the rest follow in the same order, reached
+           by sliding. (They used to be ordered pad-first, then by
+           last update.) A match live in a slot is never ALSO shown
            from the parked list: it left the pad without being
            parked, or an older parked copy of it still sits there. */
+        function liveStartKey(o){ var n = Number(o && o.matchId); return (isFinite(n) && n > 0) ? n : ((o && o.updatedAt) || 0); }
+        var liveEntries = [];
+        var padLive = !curDone && !curStale && !liveMatchTombstoned(S) && !!(S.teamA && S.teamB);
+        if (padLive) liveEntries.push({ k: liveStartKey(S), html: curRow });
         var liveSl = [];
         try { liveSl = liveSlices(); } catch(e){ liveSl = []; }
         var liveIds = {};
         liveSl.forEach(function(sl){ liveIds[String(sl.matchId)] = 1; });
-        var otherLiveRows = liveSl.filter(function(sl){
+        liveSl.filter(function(sl){
           return String(sl.matchId) !== String(S.matchId) && sliceInProgress(sl) && !liveMatchTombstoned(sl);
-        }).sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); }).map(function(sl){ return inProgressRowHTML(sl); });
-        otherLiveRows.forEach(function(r){ slides.push(r); });
+        }).forEach(function(sl){ liveEntries.push({ k: liveStartKey(sl), html: inProgressRowHTML(sl) }); });
         var parked = pausedMatches().slice().reverse().filter(function(p){ return !liveMatchTombstoned(p) && !matchArchivedClosed(p.matchId, p) && !liveIds[String(p.matchId)]; });
-        var parkedRows = parked.map(function(p){ return inProgressRowHTML(p); });
-        parkedRows.forEach(function(r){ slides.push(r); });
+        parked.forEach(function(p){ liveEntries.push({ k: liveStartKey(p), html: inProgressRowHTML(p) }); });
+        liveEntries.sort(function(a, b){ return b.k - a.k; });
+        var liveRows = liveEntries.map(function(e){ return e.html; });
+        liveRows.forEach(function(r){ slides.push(r); });
+        /* With nothing live, the pad row is only the empty "No
+           match is being scored right now." placeholder: it still
+           leads here, but the completed block below replaces it
+           with the latest Completed match whenever one exists
+           (v326). */
+        if (!liveRows.length && !curDone) slides.push(curRow);
         /* Most recent first. Completed results are gathered from
            EVERY tournament this device holds — the open one and
            the archived ones (v225) — each row labelled below with
@@ -18064,6 +18127,25 @@
            saved results, newest first. */
         if (curDone) slides.push(curRow);
         resultRows.forEach(function(r){ slides.push(r); });
+        /* v326: when NO match is live, the latest Completed match
+           leads the carousel instead of the empty placeholder —
+           the newest finished row (the pad match's own when it has
+           just finished, else the newest saved result) moves to
+           the front and the "No match is being scored right now."
+           slide is dropped. With no completed match either, the
+           placeholder stays, exactly as before. */
+        if (!liveRows.length){
+          var leadDone = curDone ? curRow : (resultRows.length ? resultRows[0] : '');
+          if (leadDone){
+            var leadIdx = slides.indexOf(leadDone);
+            if (leadIdx > -1) slides.splice(leadIdx, 1);
+            if (!curDone){
+              var phIdx = slides.indexOf(curRow);
+              if (phIdx > -1) slides.splice(phIdx, 1);
+            }
+            slides.unshift(leadDone);
+          }
+        }
         listEl.innerHTML = '<div class="hm-sec"><div class="hm-sec-head"><h3>Matches</h3>'
           + '<button type="button" class="hm-next" aria-label="All matches — live, upcoming and recent" onclick="openAllMatches()">&raquo;&raquo;</button>'
           + '</div><div class="hm-track" id="hmMatchTrack" onscroll="hmSyncDots(this)">'
@@ -18077,7 +18159,7 @@
            read only what this server-confirmed render produced,
            never the device state. */
         amRows = {
-          live: (!curDone && !curStale && S.teamA && S.teamB && !liveMatchTombstoned(S) ? [curRow] : []).concat(otherLiveRows).concat(parkedRows),
+          live: liveRows.slice(),
           upcoming: fixRowArr.slice(),
           recent: (curDone ? [curRow] : []).concat(resultRows)
         };
@@ -19349,6 +19431,7 @@
         fbRetryStopped = false;
         setFbStage('db-connecting');
         fbReady = false; fbConnecting = true; fbErrorShown = false;
+        fbConnectStartAt = Date.now();
         fbConfirmedState = null; fbServerSeen = false;
         fbHotState = null; fbColdState = null; fbColdSeen = false; fbLibDenied = false;
         fbLiveMap = {}; fbLiveSig = ''; fbMultiDenied = false;
@@ -19772,7 +19855,7 @@
               /* The scoring-session read needs a signed-in account:
                  a listener refused while signed out is retried now
                  that there is one (v298). */
-              if (fbSessionDenied){ try { attachSessionListener(); } catch(e){} }
+              if (fbSessionDenied || fbSessionNeedsAuth){ try { attachSessionListener(); } catch(e){} }
               /* Signing in can un-block history sync on this device:
                  entries this account owns (and unowned ones) that
                  were stranded in the on-device backup publish now. */
@@ -20235,6 +20318,7 @@
         if (sess && sess.uid && sess.uid !== currentUid()){
           return '🔒 <b>' + esc(sess.name || 'Another scorer') + ' is scoring this match</b> — scoring opens when they hand it over with Save on the match\'s Open Match page.';
         }
+        if (!authUser) return '🔑 <b>Not signed in on this device</b> — sign in with Google to score this match. If you already signed in and this stays, sign in again from the ⋮ menu.';
         var o = S.ownerUid || '';
         if (!o) return '🔑 <b>Sign in with Google to score</b>';
         return '🔒 <b>View-only</b>' + (S.ownerName ? ' — ' + esc(S.ownerName) : '');
@@ -31171,6 +31255,7 @@
         om.tossWinner = ''; om.tossDecision = ''; om.fixtureScorerHash = '';
         om.tnFx = null; om.liveId = null;
         if (typeof omMsg === 'function') omMsg('');
+        lmShowTakeover(null);
         var now = new Date();
         var vEl = $('omVenue'); if (vEl) vEl.value = '';
         var dEl = $('omDate'); if (dEl) dEl.value = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
@@ -31687,6 +31772,7 @@
         var sEl = $('omScorer');
         if (sEl){ sEl.value = ''; sEl.placeholder = slice.scorerEmailHash ? 'Designated scorer set — type a Gmail to replace it' : 'scorer@gmail.com'; }
         if (typeof omMsg === 'function') omMsg('');
+        lmShowTakeover(null);
         omApplyModeChrome();
         omRenderTeams(); omRenderFormatSummary();
         setView('openmatch');
@@ -31736,8 +31822,10 @@
         var when = sl.status === 'inningsBreak' ? 'Innings break' : ('Innings ' + (sl.inningsNo || 1));
         if (sl.status === 'finished' && sl.awaitingFinish) when = 'Play over — awaiting Finish Match';
         var sess = matchSession(om.liveId);
+        try { if (!(sess && sess.uid && sess.uid !== currentUid() && isSuperAdmin())) lmShowTakeover(null); } catch(e){}
         var sTxt;
         if (fbSessionDenied) sTxt = '⚠️ The one-scorer lock is off — it starts working once the updated database Rules (Firebase Setup) are published.';
+        else if (fbSessionNeedsAuth || !authUser) sTxt = '⚠️ The one-scorer lock is waiting for your Google sign-in on this device — sign in and the lock starts working.';
         else if (!sess) sTxt = 'Nobody is scoring this match right now.';
         else if (sess.uid === currentUid()) sTxt = 'You are scoring this match — tap SAVE to hand scoring over.';
         else sTxt = '🔒 ' + (sess.name || 'Another scorer') + ' is scoring this match right now.';
@@ -31831,6 +31919,7 @@
             notes.push('Scoring taken over from ' + (sess.name || 'the scorer') + ' — tap DO SCORING to score.');
           }
         }
+        lmShowTakeover(null);
         omMsg('✓ Saved.' + (notes.length ? ' ' + notes.join(' ') : ''));
         lmRenderLiveStatus();
       }
@@ -31848,10 +31937,46 @@
         var sess = matchSession(id);
         if (sess && sess.uid && sess.uid !== currentUid()){
           var who = sess.name || 'Another scorer';
-          if (isSuperAdmin()) omMsg('🔒 ' + who + ' is scoring this match — tap SAVE to take over, then DO SCORING.');
-          else omMsg('🔒 ' + who + ' is scoring this match right now — scoring opens when they hand it over with SAVE.');
+          if (isSuperAdmin()){
+            /* The Super Admin's takeover, offered right here
+               (v325): the button below releases the holder's
+               session — everything scored so far is already saved
+               on the server, so nothing is lost — and then runs
+               DO SCORING's normal path, which claims the session
+               and opens the pad. SAVE-then-DO-SCORING stays as the
+               alternative, exactly as before. */
+            lmShowTakeover(id);
+            omMsg('🔒 ' + who + ' is scoring this match right now. As Super Admin you can take over below — or tap SAVE to take over first, then DO SCORING.');
+          }
+          else { lmShowTakeover(null); omMsg('🔒 ' + who + ' is scoring this match right now — scoring opens when they hand it over with SAVE.'); }
           return;
         }
+        lmShowTakeover(null);
+        omMsg('');
+        resumeMatch(id);
+        if (typeof currentViewName !== 'undefined' && currentViewName === 'scorer'){
+          lmPadReturn = id;
+          try { claimMatchSession(id); } catch(e){}
+        }
+      }
+      /* The Take over scoring button (v325): shown by DO SCORING
+         when another account holds the session and the visitor is
+         the Super Admin; hidden again whenever that stops being
+         true (the status render re-checks on every session or
+         slot change while the page is open). */
+      var lmTakeoverFor = null; /* the match the visible Take over button acts on */
+      function lmShowTakeover(id){
+        lmTakeoverFor = id ? String(id) : null;
+        var b = $('omTakeoverBtn'); if (b) b.hidden = !lmTakeoverFor;
+      }
+      function lmTakeOver(){
+        var id = lmTakeoverFor; if (!id) return;
+        if (!isSuperAdmin()){ lmShowTakeover(null); return; }
+        var found = livePageSlice(id);
+        if (!found){ omMsg('This match is no longer in progress.'); lmShowTakeover(null); return; }
+        var sess = matchSession(id);
+        if (sess && sess.uid && sess.uid !== currentUid()) releaseMatchSession(id);
+        lmShowTakeover(null);
         omMsg('');
         resumeMatch(id);
         if (typeof currentViewName !== 'undefined' && currentViewName === 'scorer'){
