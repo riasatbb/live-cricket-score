@@ -4879,7 +4879,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v322';
+      var APP_VERSION = 'v323';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -29423,28 +29423,27 @@
           rates += '<div class="hr right"><span class="rlab">Projected Score:</span><span class="rval">' + (pj === null ? '—' : pj) + '</span></div>';
         }
         rates += '</div>';
-        var prog = '';
-        if (t && S.inningsNo === 2){
-          var pct = Math.max(0, Math.min(100, inn.runs / t * 100));
-          var need = t - inn.runs;
-          var ballsLeft = effMaxBalls() - inn.legalBalls;
-          prog = '<div class="hero-prog"><div class="hero-prog-fill" style="width:' + pct.toFixed(1) + '%;--pf:' + cA + '"></div></div>'
-            + '<div class="hero-prog-lab"><span>' + (need > 0 ? 'Need <b>' + need + '</b> off <b>' + (isFinite(ballsLeft) ? ballsLeft : '—') + '</b> balls' : '<b>Target reached</b>') + '</span><span>Target <b>' + t + '</b></span></div>';
-        }
+        /* v323: the chase progress strip (bar + "Need N off M balls ·
+           Target T") no longer renders on the hero — the status line
+           directly above the card already says exactly that, and
+           Target already sits in the rates row. */
         /* v305: hero overs read "(bowled/total over)" — e.g.
            (2.1/10 over). The total is the EFFECTIVE limit, so a
            D/L-shortened chase and a Super Over (1) show theirs. */
         var heroOvLim = null;
         try { heroOvLim = effOversLimit(); } catch(e){}
+        /* v323: the "1st innings: TEAM runs-wkts (overs)" line no
+           longer renders on the hero either — the 1st-innings score
+           lives on the Scorecard tab and Target is already in the
+           rates row. Only the Super Over marker keeps this slot. */
         var prev = '';
-        if (S.prevInnings) prev = '<div class="hero-prev">1st innings: <b>' + esc(S.prevInnings.battingTeam) + ' ' + S.prevInnings.runs + '-' + S.prevInnings.wickets + ' (' + oversText(S.prevInnings.legalBalls) + ')</b></div>';
-        if (S.superOver && S.superOver.active) prev += '<div class="hero-prev">⚡ <b>SUPER OVER</b> in progress</div>';
+        if (S.superOver && S.superOver.active) prev = '<div class="hero-prev">⚡ <b>SUPER OVER</b> in progress</div>';
         return '<div class="hero" style="--hca:' + hexRgba(cA, .40) + ';--hcb:' + hexRgba(cB, .40) + '">'
           + '<div class="hero-top">'
           + '<div class="hero-tname">' + esc(bat || '—') + '</div><div class="hero-sub">' + (S.inningsNo === 1 ? '1st' : '2nd') + ' innings</div>'
           + '</div>'
           + '<div class="hero-score' + (heroCountOn(inn) ? ' counting' : '') + '"><span class="hmain"><span id="heroRuns">' + heroDisplayRuns(inn) + '</span><span class="hw">/' + inn.wickets + '</span></span><span class="hov">(' + oversText(inn.legalBalls) + (heroOvLim ? '/' + heroOvLim : '') + ' over)</span></div>'
-          + rates + prog + prev
+          + rates + prev
           + '</div>';
       }
       /* ---------- (5) ball-by-ball timeline ---------- */
