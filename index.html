@@ -4923,7 +4923,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v333';
+      var APP_VERSION = 'v334';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -32935,8 +32935,20 @@
            tournament view mode (v226): the real current tournament
            is restored before the new view renders. The tournament
            page's own sub-pages (team page, Edit Info, Select
-           Winner) keep the viewed tournament on screen. */
-        if (tnViewCtx && v !== 'tournament' && v !== 'teampage' && v !== 'tnedit' && v !== 'tnwinner' && v !== 'tnaddfx'){ try { exitTnView(); } catch(e){} }
+           Winner) keep the viewed tournament on screen — and so
+           does the scoreboard (v334): a match opened from the
+           viewed tournament (its Matches tab's live / fixture /
+           result rows, or a match opened from its team page) is a
+           detour off that page, not a navigation away from it.
+           Ending view mode there swapped the real current
+           tournament back in underneath, so the scoreboard's Back
+           landed on the WRONG tournament page instead of the one
+           the match was opened from. With view mode kept, the
+           viewed tournament stays pinned under the scoreboard
+           (tnViewResolve keeps it following the server) and Back
+           returns to it on the tab it was left on; navigating
+           anywhere else still ends view mode as before. */
+        if (tnViewCtx && v !== 'tournament' && v !== 'teampage' && v !== 'tnedit' && v !== 'tnwinner' && v !== 'tnaddfx' && v !== 'scoreboard'){ try { exitTnView(); } catch(e){} }
         /* Leaving the scoreboard also ends the scorer's detour from
            the scoring pad: the "Back to Scoring Pad" bar belongs
            only to a scoreboard the scorer opened from the pad. */
