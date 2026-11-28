@@ -3078,6 +3078,18 @@
       .hist-match{background:var(--surface);box-shadow:var(--shadow);border-top:3px solid rgba(14,91,60,.55)}
       .hist-match-head span:first-child{color:var(--green)}
       @media (prefers-color-scheme: dark){.hist-match-head span:first-child{color:#7fd6a8}}
+      /* v329: Past Matches cards wear the home carousel's match-row
+         format (see histMatchCardHTML): a card surface of its own
+         with the green-to-gold top strip, the pill / label / team
+         lines / result centred like the home slides, and the
+         Player of the Match line directly under the result. */
+      #histList .ml-row{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:15px 16px 16px;margin-bottom:12px;text-align:center}
+      #histList .ml-row::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#0e7a6d,#2f9e6e,#e19a26)}
+      #histList .ml-label{justify-content:center}
+      #histList .ml-line{justify-content:center}
+      #histList .ml-status{text-align:center}
+      .hist-potm{margin-top:5px;font-size:14px;font-weight:600;color:var(--gold-ink)}
+      .hist-so{margin-top:4px;font-size:13.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
       /* Leaderboards: gold-ruled board titles, tinted header row */
       .rep-board h3{color:var(--green);border-bottom:2px solid rgba(225,154,38,.55);padding-bottom:5px}
       .rep-board thead th{background:rgba(225,154,38,.13)}
@@ -4901,7 +4913,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v328';
+      var APP_VERSION = 'v329';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -20820,13 +20832,17 @@
           }).catch(function(err){ toast('⚠️ Could not remove: ' + ((err && err.message) ? err.message : err)); });
         });
       }
-      /* A finished match is EDITABLE by its owner (histEntryDeletable)
-         or by a signed-in admin holding the Edit Previous Match
-         grant. Deleting stays with the owner alone. */
+      /* A finished match is EDITABLE by its owner (histEntryDeletable),
+         by the match's designated scorer (the Gmail named for this
+         match — the same account matchAccessFor lets score it, and
+         the one the database Rules let write its history entry), or
+         by a signed-in admin holding the Edit Previous Match grant.
+         Deleting stays with the owner alone. */
       function histEntryEditable(e){
         if (!e) return false;
         if (histEntryDeletable(e)) return true;
         if (!currentUid()) return false;
+        if (e.scorerEmailHash && scorerHashMatches(e.scorerEmailHash)) return true;
         return adminHas('editHistory');
       }
 
@@ -23902,9 +23918,11 @@
          page with a per-player Edit Player page) and Replace
          Player (its own page). Each page's 🔙 / ✕ steps back one
          page at a time through this flow.
-         The gate is the same owner check every edit action already
-         uses (histEntryDeletable): anyone else — a viewer, or an
-         admin who does not own the match — skips the chooser and
+         The gate is the edit check every edit action already uses
+         (histEntryEditable): the match's own admin (its owner), its
+         designated scorer, the Super Admin, or an admin holding the
+         Edit Previous Match grant. Anyone else — a viewer, or an
+         admin with no stake in the match — skips the chooser and
          their tap opens the match directly, unchanged.
          ============================================================ */
       var cmId = '';
@@ -24163,10 +24181,30 @@
         renderArchiveScoreboard();
       }
       function closeHistoryMatch(){ var m = $('histModal'); if (m) m.classList.remove('show'); }
-      /* ---------- one match card for the Past Matches panel ---------- */
+      /* ---------- one match card for the Past Matches panel ----------
+         v329: the card wears the SAME format as the home carousel's
+         match rows (resultRowHTML / the finished branch of
+         liveRowHTML) — the status pill on top (Completed, or In
+         Progress for the live entry), then ONE label line (the
+         tournament / stage label for a tournament match, "•
+         Friendly Match •" for a Single Match — never the venue as
+         a heading, never the bare word "Match"), the logo-badge
+         team lines with scores as runs-wickets (overs), the result
+         line, and Player of the Match directly under the result.
+         No Match ID chip and NO buttons under the match: Match
+         Card, the Scorecard PDF and — for whoever may edit — Edit
+         and Delete all live inside the match's Summary tab. The
+         whole card is the tap target (histMatchTap): a viewer goes
+         straight into the match, while the match's own admin, its
+         designated scorer and the Super Admin get the View Match /
+         Edit Match chooser (completedMatchTapHist). */
       function histMatchCardHTML(e){
-        var date = e.at ? fmtDMYTime(e.at) : '';
-        var lines = (e.innings || []).map(function(inn){ return '<div>' + esc(inn.battingTeam) + ' <span class="mr-score num">' + inn.runs + '/' + inn.wickets + '</span> <span class="note">(' + oversText(inn.legalBalls) + ' ov)</span></div>'; }).join('');
+        var inns = e.innings || [];
+        var lines = inns.map(function(inn, i){
+          var other = inn.bowlingTeam || (inn.battingTeam === e.teamA ? (e.teamB || '') : (e.teamA || ''));
+          return mlInnLineRef(inn, i === 0 && inns.length > 1, other);
+        }).join('');
+        if (!lines && (e.teamA || e.teamB)) lines = mlTeamLineRef(e.teamA || '', e.teamB || '') + (e.teamB ? mlTeamLineRef(e.teamB, e.teamA || '') : '');
         var resTxt = e.live ? (e.resultText || '') : healedResultText(e.resultText || '', e.innings, e.wicketsLimit);
         var res = e.live
           ? (resTxt ? fixResultText(String(resTxt).replace(/ 🏆/g, '')) : '● Match in progress.')
@@ -24181,21 +24219,41 @@
           if (hcFin) res = '🏆 ' + res;
         }
         var potm = e.potmName
-          ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
-          : (!e.live && !e.abandoned ? '<div class="note" style="margin-top:2px">🏆 Player of the Match: Not Decided Yet</div>' : '');
+          ? '<div class="hist-potm">🏆 Player of the Match: ' + esc(dispIn(e.nicknames, e.potmTeam, e.potmName)) + '</div>'
+          : (!e.live && !e.abandoned ? '<div class="hist-potm">🏆 Player of the Match: Not Decided Yet</div>' : '');
         var soLine = (e.superOver && e.superOver.id)
-          ? '<div class="note" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>⚡ Super Over: ' + esc(fixResultText(e.superOver.resultText || '')) + '</span>' + superOverIdChipHTML(e.superOver) + '</div>'
+          ? '<div class="hist-so"><span>⚡ Super Over: ' + esc(fixResultText(e.superOver.resultText || '')) + '</span>' + superOverIdChipHTML(e.superOver) + '</div>'
           : '';
-        var head = '<div class="hist-match-head"><span>' + esc([e.tournamentName, e.venue].filter(Boolean).join(' • ') || 'Match') + '</span><span class="note">' + esc(date) + (e.live ? ' • <b style="color:var(--red)">● LIVE</b>' : '') + '</span></div>';
-        var canManage = !e.live && histEntryDeletable(e);
-        var canEdit = !e.live && histEntryEditable(e);
-        var btns = '<div class="rowflex" style="margin-top:9px"><button type="button" class="btn sm" onclick="openHistoryMatch(\'' + esc(e.id) + '\')">' + (e.live ? 'Watch Live Scoreboard' : 'View Match') + '</button>'
-          + '<button type="button" class="btn ghost sm" onclick="shareMatchCardForHistory(\'' + esc(e.id) + '\')">🖼 Match Card</button>'
-          + '<button type="button" class="btn ghost sm" onclick="downloadScorecardPdfForHistory(\'' + esc(e.id) + '\')">📄 Scorecard PDF</button>'
-          + (canEdit ? '<button type="button" class="btn ghost sm hist-edit-btn" onclick="editHistoryMatch(\'' + esc(e.id) + '\')">✏️ Edit</button>' : '')
-          + (canManage ? '<button type="button" class="btn ghost sm hist-del" onclick="deleteHistoryMatch(\'' + esc(e.id) + '\')">🗑 Delete</button>' : '')
-          + '</div>';
-        return '<div class="hist-match">' + head + '<div class="note" style="margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Match ID</span>' + matchIdChipHTML(e.id) + '</div>' + lines + (res ? '<div class="mr-result">' + esc(res) + '</div>' : '') + soLine + potm + btns + '</div>';
+        /* The label follows the match's OWN tournament (the v328
+           rule: a tournament match never shows "Friendly Match"):
+           its stage label, resolved against the tournament that
+           owns it; a Single Match gets "• Friendly Match •". */
+        var label;
+        if (e.tournamentName){
+          var ownerTn = null;
+          try {
+            var o1 = (typeof e.tournamentId === 'string' && e.tournamentId) ? tournamentForKey(e.tournamentId) : null;
+            if (o1) ownerTn = o1.tn;
+            if (!ownerTn && !e.live){ var o2 = tournamentHolderOfMatch(e.id); if (o2) ownerTn = o2.tn; }
+          } catch(err){ ownerTn = null; }
+          label = recentStageLabelHTML(e, e.tournamentName, ownerTn);
+        } else label = friendlyLabelHTML(e.venue);
+        var aria = (e.live ? 'Watch ' : 'View ') + (e.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (e.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + (e.live ? '' : ' — completed match');
+        return '<div class="ml-row tap"' + mlTapAttrs('histMatchTap(' + fxIdArg(String(e.id)) + ',event)', aria) + '>'
+          + mlPill(e.live ? 'live' : 'done') + label + lines
+          + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + soLine + potm + '</div>';
+      }
+      /* A Past Matches card tap: a tap that lands on a control
+         inside the card (the Super Over ID chip) is that control's,
+         never the card's. Otherwise the completed-match rule
+         applies (completedMatchTapHist): straight into the match —
+         except the accounts that may edit this match (its admin /
+         owner, its designated scorer, the Super Admin, or an admin
+         holding the Edit Previous Match grant), who get the View
+         Match / Edit Match chooser first. */
+      function histMatchTap(id, ev){
+        if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+        completedMatchTapHist(id);
       }
       /* ---------- Reports: scope options + text report generator ----------
          Reports are computed ONLY from the real record book
