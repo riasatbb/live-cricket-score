@@ -169,7 +169,13 @@
           var g = gen;
           window.__fbLibFailed = false;
           if (!libDone) racePiece(g, 1, function(){ finishLib(g); }, function(){ failAll(g); });
-          if (!authDone) racePiece(g, 2, function(){ finishAuth(g, true); }, function(){ finishAuth(g, false); });
+          /* v327: an Auth race that finished DEAD (every mirror
+             failed or timed out on a slow connection) used to be
+             final — authDone stayed true, so this retry skipped the
+             one piece sign-in needs and the tap later died on the
+             missing provider. A dead Auth piece is a missing piece:
+             reset its done flag and race it again. */
+          if (!window.__fbAuthLibReady){ authDone = false; racePiece(g, 2, function(){ finishAuth(g, true); }, function(){ finishAuth(g, false); }); }
           armWatchdog(g);
         };
         /* Exposed so the connection retry can run the whole mirror
@@ -1673,6 +1679,10 @@
          (toast is a no-op in this app, so a failure reported only
          there was invisible). */
       .hm-pf-err{display:block;margin-top:10px;font-size:12.5px;font-weight:600;line-height:1.45;color:#ffd9d9;background:rgba(120,10,10,.35);border:1px solid rgba(255,255,255,.35);border-radius:10px;padding:8px 10px}
+      /* v327: the Retry button under a "sign-in still loading" note
+         on the guest card — re-runs the sign-in attempt (which first
+         re-races the missing Auth library piece). */
+      .hm-pf-retry{display:inline-block;margin-top:9px;background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.75);border-radius:99px;font-weight:800;font-size:13px;padding:7px 18px;cursor:pointer}
       /* Tournament banner cards */
       .hm-tncard{display:block;width:100%;height:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:var(--shadow);padding:0;cursor:pointer;color:var(--ink)}
       .hm-tncard:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -4891,7 +4901,7 @@
          published build (this build: the one after v96). The update
          checker below re-fetches the served page and compares its
          stamp against this one to spot a newer published build. */
-      var APP_VERSION = 'v326';
+      var APP_VERSION = 'v328';
       var bc = null;
       try { bc = new BroadcastChannel('live-cricket-score-v1'); } catch(e) { bc = null; }
 
@@ -17884,11 +17894,20 @@
               + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
               + '</div>';
           }
+          /* v328: a finished match's row wears the SAME format as
+             its In Progress card — the logo-badge lines (refLines)
+             and the live label (liveLabel: the stage label for a
+             tournament match, "• Friendly Match •" for a Single
+             Match) — exactly as the awaiting-Finish row above
+             already does. It used to fall back to the plain lines
+             and liveRowLabelHTML, which for a Single Match prints
+             the bare word "Match" and no team logos at all. An
+             abandoned match keeps the plain form, as above. */
           var finAria = 'View ' + (S.teamA || 'Team 1') + ' vs ' + (S.teamB || 'Team 2') + ' — completed match';
           return '<div class="ml-row tap"' + mlTapAttrs('completedMatchTap(' + fxIdArg(String(S.matchId)) + ')', finAria) + '>'
             + mlPill('done')
-            + liveRowLabelHTML(tnName)
-            + lines
+            + (S.abandoned ? liveRowLabelHTML(tnName) : liveLabel)
+            + (S.abandoned ? lines : refLines)
             + (status ? '<div class="ml-status' + (statusMuted ? ' muted' : '') + '">' + esc(status) + '</div>' : '')
             + '</div>';
         }
@@ -17902,11 +17921,21 @@
       }
       function resultRowHTML(m, tnName, ownerTn){
         var inns = m.innings || [];
-        var lines = inns.map(function(x, i){ return mlInnLine(x, i === 0 && inns.length > 1); }).join('');
+        /* v328: a saved result's row wears the same format as the
+           live card, like the pad match's own finished row above —
+           logo-badge lines (mlInnLineRef, the opposing team passed
+           for the badge colour) and, for a Single Match, the
+           "• Friendly Match •" label (friendlyLabelHTML) instead
+           of the plain lines and the bare "Match" label mlLabel
+           produced. A tournament result keeps its stage label. */
+        var lines = inns.map(function(x, i){
+          var other = x.bowlingTeam || (x.battingTeam === m.teamA ? (m.teamB || '') : (m.teamA || ''));
+          return mlInnLineRef(x, i === 0 && inns.length > 1, other);
+        }).join('');
         var res = matchResultText(m, ownerTn);
         var aria = 'View ' + (m.teamA || (inns[0] && inns[0].battingTeam) || 'Team 1') + ' vs ' + (m.teamB || (inns[0] && inns[0].bowlingTeam) || 'Team 2') + ' — completed match';
         return '<div class="ml-row tap"' + mlTapAttrs('completedMatchTap(' + fxIdArg(String(m.id)) + ')', aria) + '>'
-          + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName, ownerTn) : mlLabel([m.venue, tnName], false)) + lines
+          + mlPill('done') + (tnName ? recentStageLabelHTML(m, tnName, ownerTn) : friendlyLabelHTML(m.venue)) + lines
           + (res ? '<div class="ml-status">' + esc(res) + '</div>' : '') + '</div>';
       }
       function fixtureRowHTML(f, tnName){
@@ -18235,9 +18264,26 @@
          The card is the surface the tap happened on, so the card
          carries the failure. */
       var homeSignInError = '';
-      function noteSignInError(msg){
+      /* v327: true while the note on the guest card is the
+         "still loading" one — the card then also shows a Retry
+         button under the note, so the next attempt is one tap
+         from the surface that reported the wait. */
+      var homeSignInRetry = false;
+      function noteSignInError(msg, withRetry){
         homeSignInError = msg || '';
+        homeSignInRetry = !!withRetry;
         try { renderLiveHome(); } catch(e){}
+      }
+      /* v327: the Auth library is a separate download from the live
+         connection and can lag behind it on a slow network. When a
+         sign-in tap lands before the provider exists, say so on the
+         card, ask the head loader to re-race just the Auth piece,
+         and offer Retry — never the raw TypeError the tap used to
+         surface ('Cannot read properties of undefined (reading
+         'GoogleAuthProvider')'). */
+      function noteSignInLoading(){
+        try { if (window.__fbRetryMissingPieces) window.__fbRetryMissingPieces(); } catch(e){}
+        noteSignInError('⏳ Signing in is still loading — the sign-in library arrives separately from the live scores and can lag on a slow connection. Fetching it again now; tap Retry in a moment.', true);
       }
       function homeProfileHTML(){
         if (!authUser){
@@ -18248,6 +18294,7 @@
             + '<span class="hm-pf-main"><span class="hm-pf-name">Guest mode</span><span class="hm-pf-sub">View only</span><span class="hm-pf-rule"></span>'
             + '<button type="button" class="hm-pf-signin" onclick="event.stopPropagation();signInWithGoogle()">' + googleGlyph() + 'Sign in with Google</button>'
             + (homeSignInError ? '<span class="hm-pf-err">' + esc(homeSignInError) + '</span>' : '')
+            + (homeSignInError && homeSignInRetry ? '<button type="button" class="hm-pf-retry" onclick="event.stopPropagation();signInWithGoogle()">Retry</button>' : '')
             + '</span></div></div>';
         }
         var p = null;
@@ -19846,7 +19893,7 @@
           fbAuth = fbApp.auth();
           fbAuth.onAuthStateChanged(function(user){
             authUser = user || null;
-            if (authUser) homeSignInError = '';   /* v320: a landed sign-in clears the guest card's failure note */
+            if (authUser){ homeSignInError = ''; homeSignInRetry = false; }   /* v320: a landed sign-in clears the guest card's failure note */
             renderAuthBar();
             try { applyAdminUi(); } catch(e){}
             if (authUser){
@@ -20014,12 +20061,27 @@
            slots above are not on every surface). */
         noteSignInError('⚠️ Google sign-in is unavailable in this app build — open the control page in your browser to sign in instead.');
       }
+      /* v327: true only when the Google provider can actually be
+         constructed on the CURRENT firebase global — the Auth build
+         has arrived (__fbAuthLibReady) AND its registration is
+         visible here. The flag alone was not enough: after a data
+         clear on a slow connection the tap could run while the Auth
+         piece was still in flight (or a library reload had swapped
+         the global), and both provider constructions below threw
+         'Cannot read properties of undefined (reading
+         GoogleAuthProvider)'. Every provider use is gated on this. */
+      function authProviderReady(){
+        try {
+          return !!(window.__fbAuthLibReady && typeof firebase !== 'undefined'
+            && typeof firebase.auth === 'function'
+            && typeof firebase.auth.GoogleAuthProvider === 'function');
+        } catch(e){ return false; }
+      }
       function signInWithGoogle(){
-        if (homeSignInError){ homeSignInError = ''; try { renderLiveHome(); } catch(e){} }   /* v320: a fresh attempt clears the guest card's last failure */
-        if (!fbAuth){
+        if (homeSignInError){ homeSignInError = ''; homeSignInRetry = false; try { renderLiveHome(); } catch(e){} }   /* v320: a fresh attempt clears the guest card's last failure */
+        if (!fbAuth || !authProviderReady()){
           if (!fbApp) noteSignInError('⏳ Firebase is still connecting — try signing in again in a moment.');
-          else if (!window.__fbAuthLibReady && !window.__fbLibFailed) noteSignInError('⏳ Google sign-in is still loading — it runs separately from the live connection now, so give it a moment and tap again.');
-          else noteSignInError('⚠️ Google sign-in is unavailable right now — the sign-in library did not load. Live scores still work; check the connection and reload the page.');
+          else noteSignInLoading();
           return;
         }
         var nativeAuth = nativeAuthPlugin();
@@ -20030,6 +20092,12 @@
             nativeAuth.signInWithGoogle().then(function(res){
               var cred = res && res.credential;
               if (!cred || !cred.idToken) throw new Error('No Google credential returned by the app sign-in.');
+              /* v327: the account picker can stay open a long time;
+                 re-check the provider on the way back — if the Auth
+                 piece dropped out meanwhile (a library reload swaps
+                 the firebase global), report the wait and re-fetch
+                 it instead of throwing on the missing provider. */
+              if (!authProviderReady()){ noteSignInLoading(); return null; }
               var credential = firebase.auth.GoogleAuthProvider.credential(cred.idToken, cred.accessToken || null);
               return fbAuth.signInWithCredential(credential);
             }).then(function(){ /* onAuthStateChanged renders the signed-in state */ }).catch(function(err){
